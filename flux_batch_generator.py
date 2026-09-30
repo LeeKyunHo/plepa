@@ -294,7 +294,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--ckpt", default=DEFAULT_SDXL_CKPT, help=f"SDXL 모드에서 사용할 체크포인트 파일명 (기본: {DEFAULT_SDXL_CKPT})")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
-    parser.add_argument("--skip-existing", action="store_true", help="이미 존재하는 WebP 파일은 생략하고 건너뜀")
+    parser.add_argument("--overwrite", "-f", "--force", action="store_true", help="기존 파일이 있어도 강제로 덮어쓰기 (교체/리롤용)")
+    parser.add_argument("--skip-existing", action="store_true", help="기존 파일 건너뛰기 (기본값으로 항상 활성화됨)")
     parser.add_argument("--face-detailer", action="store_true", help="Face Detailer 얼굴 보정 활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
@@ -358,6 +359,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
     if args.engine == "flux":
         print(f"  LoRA: {args.lora} (강도: {args.lora_weight})")
+    is_overwrite = bool(args.overwrite)
+    print(f"  작업 모드: {'강제 덮어쓰기 (--overwrite / -f)' if is_overwrite else '빈칸 채우기 (기본: 기존 파일 보존)'}")
     print(f"  보정 옵션: Face Detailer={'활성' if args.face_detailer else '비활성'}, Upscale={'활성' if args.upscale else '비활성'}")
     print("=" * 60)
 
@@ -430,13 +433,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
             print(f"  [{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) ➔ {out_name}", end="", flush=True)
 
-            if args.dry_run:
-                print(" [DRY-RUN 완료]")
+            # 기본 동작: 빈칸 채우기 (기존 파일이 있고 --overwrite/-f가 아니면 자동 건너뜀)
+            if not is_overwrite and out_path.exists() and out_path.stat().st_size > 0:
+                print(" [기존 파일 보존: 건너뜀]")
                 results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
                 continue
 
-            if args.skip_existing and out_path.exists() and out_path.stat().st_size > 0:
-                print(" [기존 파일 존재: 건너뜀]")
+            if args.dry_run:
+                print(" [DRY-RUN 완료]")
                 results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
                 continue
 

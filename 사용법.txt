@@ -77,9 +77,14 @@
   ── 다중 캐릭터 동시 지정 생성 (쉼표 구분) ──────────────────────────────────
   python -u flux_batch_generator.py -r don -c bjh,ksn,shn -p 00,01 --engine sdxl
 
-  ── [강력 추천] 기존 생성 파일 건너뛰고 누락분만 생성 (--skip-existing) ───
-  # 작업이 중간에 중단되었거나, 새 캐릭터/포즈만 추가로 뽑을 때:
-  python -u flux_batch_generator.py -r don -c all -p all --engine sdxl --skip-existing
+  ── [기본 동작] 빈칸만 채우기 (기존 파일 자동 보존) ───────────────────────
+  # 옵션 없이 실행하면 이미 생성된 파일은 0초 만에 건너뛰고 누락분만 안전하게 채웁니다:
+  python -u flux_batch_generator.py -r don -c all -p all --engine sdxl
+
+  ── [파일 교체] 특정 포즈 다시 뽑아서 덮어쓰기 (--overwrite / -f) ─────────
+  # 마음에 안 드는 특정 포즈를 새로 뽑아서 덮어쓰고 싶을 때 붙입니다:
+  python -u flux_batch_generator.py -r don -c bjh -p 00 --engine sdxl --overwrite
+  python -u flux_batch_generator.py -r don -c bjh -p 00,01 --engine sdxl -f
 
   ── 섹션 및 번호 대역별 분할 생성 ──────────────────────────────────────────
   python -u flux_batch_generator.py -r don -c bjh -p emotions --engine sdxl # 00~19 (감정 20종)
@@ -95,13 +100,7 @@
   python -u flux_batch_generator.py -r don -c bjh -p 00..05 --engine sdxl --bg-preset room
   python -u flux_batch_generator.py -r don -c bjh -p 00..05 --engine sdxl --bg-preset elevator
 
-  ── 특정 파일 1개만 다시 만들기 (재생성) ──────────────────────────────────
-  # 1. 다시 만들고 싶은 webp 파일을 삭제합니다:
-  Remove-Item "projects\don\assets\bjh\bjh_00.webp"
-  # 2. 해당 번호를 실행하면 삭제된 파일만 새로 생성됩니다:
-  python -u flux_batch_generator.py -r don -c bjh -p 00 --engine sdxl
-
-  ── 실행 전 미리보기 (GPU 가동 없이 프롬프트/파일명만 점검) ───────────────
+  ── 실행 전 미리보기 (GPU 가동 없이 건너뜀/생성 대상 점검) ───────────────
   python flux_batch_generator.py -r don -c all -p 00,01 --engine sdxl --dry-run
 
   ── 파이프라인 시스템 무결성 자체 진단 (FLUX + SDXL 동시 점검) ───────────
