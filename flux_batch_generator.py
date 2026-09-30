@@ -85,6 +85,32 @@ def find_character(char_name: str, roster: str = DEFAULT_ROSTER) -> tuple[Charac
     raise FileNotFoundError(f"캐릭터 설정 파일을 찾을 수 없습니다: {char_name} (로스터: {roster})")
 
 
+def resolve_characters(char_expr: str, roster: str = DEFAULT_ROSTER) -> List[tuple[CharacterConfig, str]]:
+    """'all', 쉼표 구분, 또는 단일 캐릭터 표현식을 해석하여 캐릭터 목록 반환."""
+    expr = char_expr.strip().lower()
+    if expr == "all":
+        char_dir = PROJECTS_DIR / roster / "characters"
+        if not char_dir.exists():
+            raise FileNotFoundError(f"로스터 캐릭터 폴더를 찾을 수 없습니다: {char_dir}")
+        results = []
+        for file in sorted(char_dir.glob("*.json")):
+            with open(file, "r", encoding="utf-8") as f:
+                results.append((CharacterConfig.from_dict(json.load(f), file_path=file), roster))
+        if not results:
+            raise FileNotFoundError(f"로스터에 등록된 캐릭터 JSON 파일이 없습니다: {roster}")
+        return results
+
+    if "," in char_expr:
+        results = []
+        for token in char_expr.split(","):
+            token = token.strip()
+            if token:
+                results.append(find_character(token, roster=roster))
+        return results
+
+    return [find_character(char_expr, roster=roster)]
+
+
 def load_character(char_name: str, roster: str = DEFAULT_ROSTER) -> CharacterConfig:
     """하위 호환용 래퍼 함수."""
     char, _ = find_character(char_name, roster=roster)
@@ -251,15 +277,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         db = load_pose_db()
-        char, actual_roster = find_character(args.character, roster=args.roster)
+        target_chars = resolve_characters(args.character, roster=args.roster)
         codes = resolve_pose_codes(args.pose, db)
-        bg_prompt = load_background_preset(actual_roster, key=args.bg_preset)
     except Exception as e:
         print(f"[설정 오류] {e}")
         return 1
-
-    output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     client = ComfyClient(host=COMFY_HOST)
     if not args.dry_run:
@@ -270,76 +292,86 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 1
 
     print("=" * 60)
-    print(f"  [플에파] FLUX.1 [dev] 에셋 배치 생성 시작: {char.name} ({char.prefix}) [로스터: {actual_roster}]")
-    print(f"  대상 항목: 총 {len(codes)}개 에셋 | 저장 폴더: {output_dir}")
-    if bg_prompt:
-        print(f"  배경 프리셋: '{args.bg_preset}' 적용 완료")
+    print(f"  [플에파] FLUX.1 [dev] 에셋 배치 생성 파이프라인 가동")
+    print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
+    print(f"  캐릭터당 포즈: 총 {len(codes)}개 ({', '.join(codes)}) | 총 {len(target_chars) * len(codes)}개 에셋")
     print(f"  옵션: Face Detailer={'비활성' if args.no_face_detailer else '활성'}, Upscale={'활성' if args.upscale else '비활성'}")
     print("=" * 60)
 
-    results: List[GenerationResult] = []
-    total_start = time.time()
+    last_output_dir = None
 
-    for idx, code in enumerate(codes, 1):
-        pose = db[code]
-        prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
-        out_name = asset_filename(char.prefix, code)
-        out_path = output_dir / out_name
+    for char_idx, (char, actual_roster) in enumerate(target_chars, 1):
+        bg_prompt = load_background_preset(actual_roster, key=args.bg_preset)
+        output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
+        output_dir.mkdir(parents=True, exist_ok=True)
+        last_output_dir = output_dir
 
-        target = GenerationTarget(
-            code=code,
-            section=pose.section,
-            label=pose.label,
-            assembled_prompt=prompt,
-            is_nude=is_nude,
-            output_filename=out_name,
-        )
+        print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
+        if bg_prompt:
+            print(f"  배경 프리셋: '{args.bg_preset}' 적용")
 
-        print(f"[{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) ➔ {out_name}", end="", flush=True)
+        results: List[GenerationResult] = []
+        total_start = time.time()
 
-        if args.dry_run:
-            print(" [DRY-RUN 완료]")
-            results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
-            continue
+        for idx, code in enumerate(codes, 1):
+            pose = db[code]
+            prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
+            out_name = asset_filename(char.prefix, code)
+            out_path = output_dir / out_name
 
-        item_start = time.time()
-        workflow = build_flux_workflow(
-            prompt=prompt,
-            output_prefix=f"{char.prefix}_{code}",
-            width=args.width,
-            height=args.height,
-            steps=args.steps,
-            use_face_detailer=not args.no_face_detailer,
-            use_upscale=args.upscale,
-            unet_name=args.unet,
-        )
+            target = GenerationTarget(
+                code=code,
+                section=pose.section,
+                label=pose.label,
+                assembled_prompt=prompt,
+                is_nude=is_nude,
+                output_filename=out_name,
+            )
 
-        try:
-            client.generate_image(workflow=workflow, output_path=out_path)
-            duration = time.time() - item_start
-            print(f" [완료: {duration:.1f}초]")
-            results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration))
-        except ComfyClientError as ce:
-            duration = time.time() - item_start
-            print(f" [실패: {ce}]")
-            results.append(GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ce)))
+            print(f"  [{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) ➔ {out_name}", end="", flush=True)
 
-    total_duration = time.time() - total_start
+            if args.dry_run:
+                print(" [DRY-RUN 완료]")
+                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
+                continue
 
-    # 결과 요약 콘솔 출력
-    print_batch_summary(char.prefix, results, output_dir, total_duration)
+            item_start = time.time()
+            workflow = build_flux_workflow(
+                prompt=prompt,
+                output_prefix=f"{char.prefix}_{code}",
+                width=args.width,
+                height=args.height,
+                steps=args.steps,
+                use_face_detailer=not args.no_face_detailer,
+                use_upscale=args.upscale,
+                unet_name=args.unet,
+            )
 
-    # 젠잇 마크다운 블록 조립 및 출력
-    genit_block = build_genit_block(char.prefix, results, db)
-    if genit_block:
-        print(genit_block)
-        genit_file = output_dir / f"{char.prefix}_genit_guide.md"
-        with open(genit_file, "w", encoding="utf-8") as gf:
-            gf.write(genit_block)
-        print(f"✔ 젠잇 마크다운 가이드 파일 저장: {genit_file}")
+            try:
+                client.generate_image(workflow=workflow, output_path=out_path)
+                duration = time.time() - item_start
+                print(f" [완료: {duration:.1f}초]")
+                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration))
+            except ComfyClientError as ce:
+                duration = time.time() - item_start
+                print(f" [실패: {ce}]")
+                results.append(GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ce)))
 
-    if not args.dry_run:
-        open_in_explorer(output_dir)
+        total_duration = time.time() - total_start
+
+        # 결과 요약 콘솔 출력
+        print_batch_summary(char.prefix, results, output_dir, total_duration)
+
+        # 젠잇 마크다운 블록 조립 및 저장
+        genit_block = build_genit_block(char.prefix, results, db)
+        if genit_block:
+            genit_file = output_dir / f"{char.prefix}_genit_guide.md"
+            with open(genit_file, "w", encoding="utf-8") as gf:
+                gf.write(genit_block)
+            print(f"✔ 젠잇 마크다운 가이드 파일 저장: {genit_file}")
+
+    if not args.dry_run and last_output_dir and last_output_dir.parent.exists():
+        open_in_explorer(last_output_dir.parent)
 
     return 0
 
