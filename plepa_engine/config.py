@@ -20,7 +20,7 @@ COMFY_URL = f"http://{COMFY_HOST}"
 COMFY_WS_URL = f"ws://{COMFY_HOST}/ws"
 
 # ── 플럭스 모델 기본 식별자 ──
-DEFAULT_UNET_GGUF = os.environ.get("PLEPA_UNET", "flux1-dev-Q5_K_S.gguf")
+DEFAULT_UNET_GGUF = os.environ.get("PLEPA_UNET", "flux1-dev-Q6_K.gguf")
 DEFAULT_CLIP_1 = os.environ.get("PLEPA_CLIP1", "t5xxl_fp8_e4m3fn.safetensors")
 DEFAULT_CLIP_2 = os.environ.get("PLEPA_CLIP2", "clip_l.safetensors")
 DEFAULT_VAE = os.environ.get("PLEPA_VAE", "ae.safetensors")
