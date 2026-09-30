@@ -12,11 +12,11 @@
 
 1. **ComfyUI 포터블 다운로드**: [ComfyUI GitHub Releases](https://github.com/comfyanonymous/ComfyUI/releases)에서 `ComfyUI_windows_portable_nvidia.7z` 다운로드 후 압축 해제.
 2. **필수 모델 다운로드 & 배치**:
-   - **GGUF 모델**: [`flux1-dev-Q5_K_M.gguf`](https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_M.gguf) ➡️ `ComfyUI/models/unet/`
+   - **GGUF 모델**: [`flux1-dev-Q5_K_S.gguf`](https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_S.gguf) ➡️ `ComfyUI/models/unet/`
    - **T5 인코더**: [`t5xxl_fp8_e4m3fn.safetensors`](https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors) ➡️ `ComfyUI/models/clip/`
    - **CLIP-L 인코더**: [`clip_l.safetensors`](https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors) ➡️ `ComfyUI/models/clip/`
-   - **VAE**: [`ae.safetensors`](https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/ae.safetensors) ➡️ `ComfyUI/models/vae/`
-   - **업스케일러**: [`4x-UltraSharp.pth`](https://huggingface.co/lokcx/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth) ➡️ `ComfyUI/models/upscale_models/`
+   - **VAE**: [`ae.safetensors`](https://huggingface.co/ffxvs/vae-flux/resolve/main/ae.safetensors) ➡️ `ComfyUI/models/vae/`
+   - **업스케일러**: [`4x-UltraSharp.pth`](https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth) ➡️ `ComfyUI/models/upscale_models/`
 3. **필수 확장 노드 (Custom Nodes)**:
    - `ComfyUI-Manager`
    - `ComfyUI-GGUF` (GGUF 모델 구동용)
