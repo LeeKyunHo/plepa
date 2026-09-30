@@ -45,35 +45,35 @@
   ── [★초고속 양산] SDXL (언홀리 9.0) 쾌속 모드 (장당 약 14초) ─────────────
   # 언홀리 9.0 체크포인트 + Danbooru 2D 셀화 화풍으로 쾌속 생성:
   python -u flux_batch_generator.py -r don -c all -p all --engine sdxl
-  python -u flux_batch_generator.py -r don -c bjh -p 00,01 --engine sdxl
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl  # 00,01 입력도 자동 지원
   python -u flux_batch_generator.py -r don -c bjh,ksn -p emotions --engine sdxl
 
   ── [고품질 서술형] FLUX.1 [dev] 기본 모드 (장당 약 80~190초) ───────────
   # 12B 파운데이션 모델 + T5 영문 서술형 프롬프트:
-  python -u flux_batch_generator.py -r don -c all -p 00,01 --engine flux
+  python -u flux_batch_generator.py -r don -c all -p 000,001 --engine flux
   python -u flux_batch_generator.py -r don -c bjh -p emotions               # --engine 생략 시 기본값 flux
 
   ── [ComfyUI 특화] 얼굴 초정밀 자동 보정 (--face-detailer) ────────────────
   # 전신/카우보이 샷에서 얼굴 영역을 자동 감지해 고해상도로 정밀 복구:
-  python -u flux_batch_generator.py -r don -c bjh -p 00,01 --engine sdxl --face-detailer
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --face-detailer
 
   ── [ComfyUI 특화] 4x 초고해상도 AI 업스케일러 (--upscale) ────────────────
   # 4x-UltraSharp 모델을 파이프라인에 직결하여 초고화질 에셋 저장:
-  python -u flux_batch_generator.py -r don -c bjh -p 00,01 --engine sdxl --face-detailer --upscale
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --face-detailer --upscale
 
   ── [원클릭] 로스터 전체 캐릭터 80종 일괄 생성 ─────────────────────────────
   python -u flux_batch_generator.py -r don -c all -p all --engine sdxl
 
-  ── [원클릭] 로스터 전체 캐릭터 특정 포즈만 일괄 생성 (예: 00, 01번) ──────────
-  python -u flux_batch_generator.py -r don -c all -p 00,01 --engine sdxl
+  ── [원클릭] 로스터 전체 캐릭터 특정 포즈만 일괄 생성 (예: 000, 001번) ────────
+  python -u flux_batch_generator.py -r don -c all -p 000,001 --engine sdxl
 
   ── 단일 캐릭터 생성 ───────────────────────────────────────────────────────
   python -u flux_batch_generator.py -r don -c bjh -p all --engine sdxl      # 배지혜 전체 80종 (약 18분 소요)
   python -u flux_batch_generator.py -r don -c ksn -p emotions --engine sdxl # 강시내 감정 20종 (약 4.5분 소요)
-  python -u flux_batch_generator.py -r don -c shn -p 00,01 --engine sdxl    # 신하늘 00, 01번 (약 28초 소요)
+  python -u flux_batch_generator.py -r don -c shn -p 000,001 --engine sdxl  # 신하늘 000, 001번 (약 28초 소요)
 
   ── 다중 캐릭터 동시 지정 생성 (쉼표 구분) ──────────────────────────────────
-  python -u flux_batch_generator.py -r don -c bjh,ksn,shn -p 00,01 --engine sdxl
+  python -u flux_batch_generator.py -r don -c bjh,ksn,shn -p 000,001 --engine sdxl
 
   ── [기본 동작] 빈칸만 채우기 (기존 파일 자동 보존) ───────────────────────
   # 옵션 없이 실행하면 이미 생성된 파일은 0초 만에 건너뛰고 누락분만 안전하게 채웁니다:
@@ -81,25 +81,25 @@
 
   ── [파일 교체] 특정 포즈 다시 뽑아서 덮어쓰기 (--overwrite / -f) ─────────
   # 마음에 안 드는 특정 포즈를 새로 뽑아서 덮어쓰고 싶을 때 붙입니다:
-  python -u flux_batch_generator.py -r don -c bjh -p 00 --engine sdxl --overwrite
-  python -u flux_batch_generator.py -r don -c bjh -p 00,01 --engine sdxl -f
+  python -u flux_batch_generator.py -r don -c bjh -p 000 --engine sdxl --overwrite
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl -f
 
-  ── 섹션 및 번호 대역별 분할 생성 ──────────────────────────────────────────
-  python -u flux_batch_generator.py -r don -c bjh -p emotions --engine sdxl # 00~19 (감정 20종)
-  python -u flux_batch_generator.py -r don -c bjh -p poses --engine sdxl    # 20~39 (일상/포즈 20종)
-  python -u flux_batch_generator.py -r don -c bjh -p h_scenes --engine sdxl # 40~59 (H씬 20종)
+  ── 섹션 및 번호 대역별 분할 생성 (키로 동일 3자리 000~159 체계) ────────
+  python -u flux_batch_generator.py -r don -c bjh -p emotions --engine sdxl # 000~019 (감정 20종)
+  python -u flux_batch_generator.py -r don -c bjh -p poses --engine sdxl    # 020~039 (일상/포즈 20종)
+  python -u flux_batch_generator.py -r don -c bjh -p h_scenes --engine sdxl # 040~059 (H씬 20종)
   python -u flux_batch_generator.py -r don -c shn -p otokonoko --engine sdxl# 140~159 (오토코노코 씬 20종)
-  python -u flux_batch_generator.py -r don -c bjh -p 00..05 --engine sdxl   # 00번부터 05번까지 범위 지정
-  python -u flux_batch_generator.py -r don -c bjh -p 00,05,12 --engine sdxl # 특정 번호만 쉼표로 나열
+  python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl # 000번부터 005번까지 범위 지정
+  python -u flux_batch_generator.py -r don -c bjh -p 000,005,012 --engine sdxl # 특정 번호 나열 (0, 00 입력도 호환)
 
-  ── 배경 프리셋 변경 (감정 씬 00~19 대상) ─────────────────────────────────
+  ── 배경 프리셋 변경 (감정 씬 000~019 대상) ─────────────────────────────────
   # projects/[로스터]/background.json 에 등록된 키를 지정합니다:
-  python -u flux_batch_generator.py -r don -c bjh -p 00..05 --engine sdxl --bg-preset default
-  python -u flux_batch_generator.py -r don -c bjh -p 00..05 --engine sdxl --bg-preset room
-  python -u flux_batch_generator.py -r don -c bjh -p 00..05 --engine sdxl --bg-preset elevator
+  python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg-preset default
+  python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg-preset room
+  python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg-preset elevator
 
   ── 실행 전 미리보기 (GPU 가동 없이 건너뜀/생성 대상 점검) ───────────────
-  python flux_batch_generator.py -r don -c all -p 00,01 --engine sdxl --dry-run
+  python flux_batch_generator.py -r don -c all -p 000,001 --engine sdxl --dry-run
 
   ── 파이프라인 시스템 무결성 자체 진단 (FLUX + SDXL 동시 점검) ───────────
   python flux_batch_generator.py --test

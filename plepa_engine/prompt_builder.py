@@ -14,9 +14,12 @@ def is_nude_pose(entry: PoseEntry) -> bool:
     """해당 포즈가 탈의/나체 상태를 요구하는지 판별."""
     if entry.section in ("h_scenes", "scenes_otokonoko"):
         return True
-    # 착의 포즈(20~39) 중 나체 씬 명시적 포함 항목
-    if entry.code in ("30", "38", "39"):
-        return True
+    # 착의 포즈(20~39 / 020~039) 중 나체 씬 명시적 포함 항목
+    try:
+        if int(entry.code) in (30, 38, 39):
+            return True
+    except (ValueError, TypeError):
+        pass
     return False
 
 

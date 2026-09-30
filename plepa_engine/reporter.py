@@ -13,10 +13,9 @@ from plepa_engine.models import GenerationResult, PoseEntry
 SEPARATOR = "═" * 70
 
 
-def asset_filename(prefix: str, code: str) -> str:
-    """플에파 에셋 파일명 형식: prefix_code.webp"""
-    # 2자리 이상 유지 (예: 00, 01, 140)
-    return f"{prefix}_{code}.webp"
+def asset_filename(prefix: str, code: str | int) -> str:
+    """플에파 에셋 파일명 형식: prefix_000.webp (3자리 제로패딩)"""
+    return f"{prefix}_{int(code):03d}.webp"
 
 
 def open_in_explorer(path: Path) -> None:

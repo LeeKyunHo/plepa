@@ -65,7 +65,7 @@ def load_pose_db(engine: str = "flux", path: Optional[Path] = None) -> Dict[str,
     for section in ("emotions", "poses", "h_scenes", "scenes_otokonoko"):
         sec_dict = data.get(section, {})
         for code, item in sec_dict.items():
-            code_str = f"{int(code):02d}" if int(code) < 100 else str(code)
+            code_str = f"{int(code):03d}"
             entries[code_str] = PoseEntry(
                 code=code_str,
                 section=section,
@@ -155,31 +155,31 @@ def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry]) -> List[str]:
     if expr in ("otokonoko", "scenes_otokonoko", "oto"):
         return [c for c, e in db.items() if e.section == "scenes_otokonoko"]
 
-    # 범위 연산자 지원: 00..19
+    # 범위 연산자 지원: 00..19, 000..019 등
     if ".." in expr:
         start_s, end_s = expr.split("..", 1)
         start, end = int(start_s), int(end_s)
         codes = []
         for i in range(start, end + 1):
-            c_str = f"{i:02d}" if i < 100 else str(i)
+            c_str = f"{i:03d}"
             if c_str in db:
                 codes.append(c_str)
         return codes
 
-    # 쉼표 구분: 00,01,05
+    # 쉼표 구분: 00,01,05 또는 000,001 등
     if "," in expr:
         codes = []
         for token in expr.split(","):
             token = token.strip()
             if not token:
                 continue
-            c_str = f"{int(token):02d}" if int(token) < 100 else str(token)
+            c_str = f"{int(token):03d}"
             if c_str in db:
                 codes.append(c_str)
         return codes
 
-    # 단일 코드
-    single_code = f"{int(expr):02d}" if int(expr) < 100 else str(expr)
+    # 단일 코드: 00 또는 000 등
+    single_code = f"{int(expr):03d}"
     if single_code in db:
         return [single_code]
 
@@ -237,24 +237,24 @@ def run_self_test() -> int:
 
     # 4. FLUX 프롬프트 조립 및 탈의 로직 검사
     if flux_db and char:
-        prompt_clothed, nude_flag = assemble_flux_prompt(char, flux_db["00"])
+        prompt_clothed, nude_flag = assemble_flux_prompt(char, flux_db["000"])
         if nude_flag or char.appearance.outfit not in prompt_clothed:
-            errors.append("FLUX 평상 포즈(00)에서 의상 포함 누락 또는 잘못된 탈의 판정")
+            errors.append("FLUX 평상 포즈(000)에서 의상 포함 누락 또는 잘못된 탈의 판정")
 
-        prompt_nude, nude_flag = assemble_flux_prompt(char, flux_db["40"])
+        prompt_nude, nude_flag = assemble_flux_prompt(char, flux_db["040"])
         if not nude_flag or char.appearance.outfit in prompt_nude:
-            errors.append("FLUX H-씬(40)에서 의상 탈의 자동 스트리핑 실패")
+            errors.append("FLUX H-씬(040)에서 의상 탈의 자동 스트리핑 실패")
         print("✔ FLUX 의상 착의/탈의 분기 조립 로직 검사 통과")
 
     # 5. SDXL 프롬프트 조립 및 탈의 로직 검사
     if sdxl_db and char:
-        pos_clothed, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["00"])
+        pos_clothed, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["000"])
         if nude_flag:
-            errors.append("SDXL 평상 포즈(00)에서 잘못된 탈의 판정")
+            errors.append("SDXL 평상 포즈(000)에서 잘못된 탈의 판정")
 
-        pos_nude, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["40"])
+        pos_nude, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["040"])
         if not nude_flag or "nude" not in pos_nude:
-            errors.append("SDXL H-씬(40)에서 nude 태그 주입 실패")
+            errors.append("SDXL H-씬(040)에서 nude 태그 주입 실패")
         print("✔ SDXL 의상 착의/탈의 분기 조립 로직 검사 통과")
 
     # 6. 워크플로우 템플릿 생성 검사 (FLUX & SDXL)
