@@ -7,11 +7,11 @@
   "emotions": {
     "00": {
       "label": "평상",
-      "prompt": "A medium cowboy shot of the character standing with a relaxed and composed posture, looking directly into the lens with a gentle, neutral expression. Clean minimalistic background, soft balanced studio lighting."
+      "prompt": "A medium cowboy shot of the character standing in a relaxed 3/4 stance, looking directly at the viewer with a serene, calm, and composed expression. Clean minimalist indoor background with soft depth of field, gentle diffused daylight, subtle rim lighting highlighting hair contours."
     },
     "01": {
       "label": "미소",
-      "prompt": "A cowboy shot of the character standing naturally, looking at the viewer with a warm, genuine smile and relaxed friendly eyes. Clean soft background, bright natural lighting."
+      "prompt": "A medium cowboy shot of the character standing gracefully, looking at the viewer with a warm, tender smile and affectionate eyes. Clean minimalist softly blurred background, bright natural lighting, soft atmospheric glow."
     },
     "02": {
       "label": "활짝웃음",
