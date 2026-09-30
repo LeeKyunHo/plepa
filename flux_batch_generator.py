@@ -180,6 +180,29 @@ def generate_mock_image(output_path: Path) -> None:
             f.write(tiny_webp)
 
 
+def find_reference_image(prefix: str, roster: str = DEFAULT_ROSTER, custom_path: Optional[str] = None) -> Optional[Path]:
+    """캐릭터의 참조 이미지를 탐색합니다 (지정 경로 -> references/{prefix}.{ext} 순)."""
+    if custom_path:
+        p = Path(custom_path)
+        if p.is_file():
+            return p
+        cand = PROJECTS_DIR / roster / "references" / custom_path
+        if cand.is_file():
+            return cand
+        raise FileNotFoundError(f"지정한 레퍼런스 이미지를 찾을 수 없습니다: {custom_path}")
+
+    ref_dir = PROJECTS_DIR / roster / "references"
+    if not ref_dir.is_dir():
+        return None
+
+    for ext in (".webp", ".png", ".jpg", ".jpeg"):
+        cand = ref_dir / f"{prefix}{ext}"
+        if cand.is_file():
+            return cand
+
+    return None
+
+
 def load_background_preset(roster: str, key: str = "default") -> str:
     """projects/{roster}/background.json 로드."""
     bg_file = PROJECTS_DIR / roster / "background.json"
@@ -318,7 +341,11 @@ def run_self_test() -> int:
         wf_sdxl = build_sdxl_workflow("test pos", "test neg", "test_prefix", use_face_detailer=False)
         if "1" not in wf_sdxl or "5" not in wf_sdxl or "20" not in wf_sdxl:
             errors.append("SDXL 기본 워크플로우 노드 생성 불완전")
-        print("✔ FLUX 및 SDXL 워크플로우 템플릿 생성 검사 통과")
+
+        wf_ip = build_sdxl_workflow("test pos", "test neg", "test_prefix", ref_image_name="test_ref.webp")
+        if "30" not in wf_ip or "32" not in wf_ip or "33" not in wf_ip:
+            errors.append("SDXL IP-Adapter 워크플로우 노드 생성 불완전")
+        print("✔ FLUX 및 SDXL + IP-Adapter 워크플로우 템플릿 생성 검사 통과")
     except Exception as e:
         errors.append(f"워크플로우 생성 실패: {e}")
 
@@ -379,6 +406,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--bg", default=None, help="즉석 배경 프롬프트 직접 주입 (지정 시 --bg-preset 보다 우선 적용)")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
+    parser.add_argument("--ref_image", default=None, help="IP-Adapter 참조 이미지 파일 경로 (생략 시 references/{prefix}.webp 자동 탐색)")
+    parser.add_argument("--ref_weight", type=float, default=None, help="IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 0.85)")
+    parser.add_argument("--no_ref", action="store_true", help="레퍼런스 이미지(IP-Adapter)를 비활성화하고 순수 프롬프트로만 생성")
     parser.add_argument("--mock", action="store_true", help="ComfyUI 호출 없이 초고속(0.001초) 더미 WebP 이미지 생성으로 파이프라인 무결성 검증")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
     parser.add_argument("--overwrite", "-f", "--force", action="store_true", help="기존 파일이 있어도 강제로 덮어쓰기 (교체/리롤용)")
@@ -479,6 +509,26 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         elif bg_prompt:
             print(f"  배경 프리셋: '{args.bg_preset}' 적용")
 
+        # IP-Adapter 참조 이미지 탐색 및 업로드
+        ref_file_name = None
+        ref_weight = args.ref_weight if args.ref_weight is not None else getattr(char, "ref_weight", 0.85)
+        if args.engine == "sdxl" and not args.no_ref:
+            ref_path = find_reference_image(char.prefix, actual_roster, custom_path=args.ref_image)
+            if ref_path:
+                if not args.dry_run and not args.mock:
+                    try:
+                        ref_file_name = client.upload_image(ref_path)
+                    except Exception as ue:
+                        print(f"  [경고] 레퍼런스 업로드 실패 ({ue}) - 순수 프롬프트로 진행")
+                        ref_file_name = None
+                else:
+                    ref_file_name = ref_path.name
+                print(f"  IP-Adapter: '{ref_path.name}' 적용 (가중치: {ref_weight:.2f})")
+            else:
+                print("  IP-Adapter: 레퍼런스 이미지 없음 (순수 프롬프트 생성)")
+        elif args.no_ref:
+            print("  IP-Adapter: 비활성화 (--no_ref)")
+
         results: List[GenerationResult] = []
         total_start = time.time()
 
@@ -505,6 +555,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     ckpt_name=args.ckpt,
                     use_face_detailer=args.face_detailer,
                     use_upscale=args.upscale,
+                    ref_image_name=ref_file_name,
+                    ref_weight=ref_weight,
                 )
             else:
                 prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)

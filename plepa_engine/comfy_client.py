@@ -54,6 +54,47 @@ class ComfyClient:
         except Exception:
             return False
 
+    def upload_image(self, file_path: Path, overwrite: bool = True) -> str:
+        """
+        로컬 이미지 파일을 ComfyUI input 디렉토리로 업로드합니다.
+        반환값: ComfyUI 내부에서 참조할 파일명
+        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"업로드할 레퍼런스 이미지를 찾을 수 없습니다: {file_path}")
+
+        boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+        filename = file_path.name
+        content_type = "image/png" if file_path.suffix.lower() == ".png" else "image/webp"
+
+        body = bytearray()
+        # image 파트
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(f'Content-Disposition: form-data; name="image"; filename="{filename}"\r\n'.encode("utf-8"))
+        body.extend(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
+        body.extend(file_path.read_bytes())
+        body.extend(b"\r\n")
+
+        # overwrite 파트
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(b'Content-Disposition: form-data; name="overwrite"\r\n\r\n')
+        body.extend(b"true\r\n")
+
+        # 닫는 바운더리
+        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+
+        req = urllib.request.Request(
+            f"{self.base_url}/upload/image",
+            data=bytes(body),
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30.0) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                return result.get("name", filename)
+        except Exception as e:
+            raise ComfyClientError(f"ComfyUI 이미지 업로드 실패: {e}") from e
+
     def generate_image(
         self,
         workflow: Dict[str, Any],

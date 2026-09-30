@@ -114,6 +114,16 @@
   # SDXL 모드에서 원하는 제외 요소/태그를 터미널에서 즉시 결합:
   python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --custom_neg "glasses, hat, jewelry"
 
+  ── IP-Adapter 참조 이미지 제어 (--ref_image / --ref_weight / --no_ref) ───
+  # 기본 동작: projects/[로스터]/references/[캐릭터].webp 자동 탐색 및 주입 (가중치 0.85/JSON설정)
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl
+  # 가중치 세밀 조절 (0.0~1.0):
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --ref_weight 0.75
+  # 수동 이미지 파일 지정:
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --ref_image my_ref.png
+  # IP-Adapter 끄고 순수 텍스트 프롬프트로만 생성:
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --no_ref
+
   ── 가상 생성 시뮬레이션 (--mock) ─────────────────────────────────────────
   # ComfyUI 가동 없이 0.001초 만에 더미 WebP 파일을 생성하여 파일명/경로 무결성 즉시 시뮬레이션:
   python -u flux_batch_generator.py -r don -c all -p 000,001 --mock

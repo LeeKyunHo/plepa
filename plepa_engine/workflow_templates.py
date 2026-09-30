@@ -234,9 +234,14 @@ def build_sdxl_workflow(
     ckpt_name: str = DEFAULT_SDXL_CKPT,
     use_face_detailer: bool = False,
     use_upscale: bool = False,
+    ref_image_name: Optional[str] = None,
+    ref_weight: float = 0.85,
+    ipadapter_model: str = "ip-adapter-plus_sdxl_vit-h.safetensors",
+    clip_vision_model: str = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
 ) -> Dict[str, Any]:
     """
     ComfyUI 로컬 API 전송용 SDXL(Unholy Desire Mix v9.0 등) 단독 체크포인트 워크플로우 템플릿.
+    - ref_image_name 지정 시 IP-Adapter-Plus(SDXL) 노드 그래프를 자동 결합합니다.
     """
     if seed < 0:
         seed = random.randint(1, 999999999999999)
@@ -250,6 +255,39 @@ def build_sdxl_workflow(
             "ckpt_name": ckpt_name
         }
     }
+
+    current_model = ["1", 0]
+
+    # IP-Adapter 결합 (Node 30, 32, 33)
+    if ref_image_name:
+        workflow["30"] = {
+            "class_type": "IPAdapterUnifiedLoader",
+            "inputs": {
+                "model": current_model,
+                "preset": "PLUS (high strength)"
+            }
+        }
+        workflow["32"] = {
+            "class_type": "LoadImage",
+            "inputs": {
+                "image": ref_image_name
+            }
+        }
+        workflow["33"] = {
+            "class_type": "IPAdapterAdvanced",
+            "inputs": {
+                "model": ["30", 0],
+                "ipadapter": ["30", 1],
+                "image": ["32", 0],
+                "weight": ref_weight,
+                "weight_type": "linear",
+                "combine_embeds": "concat",
+                "start_at": 0.0,
+                "end_at": 1.0,
+                "embeds_scaling": "V only",
+            }
+        }
+        current_model = ["33", 0]
 
     # 2. 긍정 프롬프트 인코딩 (Node 2)
     workflow["2"] = {
@@ -283,7 +321,7 @@ def build_sdxl_workflow(
     workflow["5"] = {
         "class_type": "KSampler",
         "inputs": {
-            "model": ["1", 0],
+            "model": current_model,
             "positive": ["2", 0],
             "negative": ["3", 0],
             "latent_image": ["4", 0],
@@ -319,7 +357,7 @@ def build_sdxl_workflow(
             "class_type": "FaceDetailer",
             "inputs": {
                 "image": current_image_output,
-                "model": ["1", 0],
+                "model": current_model,
                 "clip": ["1", 1],
                 "vae": ["1", 2],
                 "guide_size": 512,

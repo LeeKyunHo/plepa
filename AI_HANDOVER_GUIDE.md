@@ -52,6 +52,11 @@
    - Kiro의 159번 오토코노코 씬까지 고려하여 모든 에셋 파일명을 `prefix_000.webp` 형식으로 규격화함.
    - CLI 입력(`-p 00,01`, `-p 0..5` 등)은 1~2자리 입력도 3자리(`000`, `001`)로 자동 매핑 지원.
 
+7. **Kiro 핵심 기능 및 IP-Adapter 파이프라인 직결**
+   - **IP-Adapter**: ComfyUI에 `ComfyUI_IPAdapter_plus` 노드 및 `CLIP-ViT-H-14` / `ip-adapter-plus_sdxl_vit-h` 모델을 배치하고 `IPAdapterUnifiedLoader` + `IPAdapterAdvanced` 노드를 연결.
+   - CLI에서 `--ref_image`, `--ref_weight` (기본 0.85/JSON설정), `--no_ref` 지원 및 `references/{prefix}.webp` 자동 탐색 구현.
+   - **편의 기능 5종 탑재**: `--list` (캐릭터 목록 표 출력), `--bg` (즉석 배경 문장 주입), `--custom_neg` (추가 네거티브 태그 결합), `--mock` (초고속 0.001초 가상 생성 시뮬레이션), `--profile` (다중 의상/헤어 스위칭).
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
