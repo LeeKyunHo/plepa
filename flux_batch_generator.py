@@ -17,11 +17,20 @@ from plepa_engine.config import (
     COMFY_HOST,
     DEFAULT_HEIGHT,
     DEFAULT_ROSTER,
+    DEFAULT_SDXL_CFG,
+    DEFAULT_SDXL_CKPT,
+    DEFAULT_SDXL_HEIGHT,
+    DEFAULT_SDXL_SAMPLER,
+    DEFAULT_SDXL_SCHEDULER,
+    DEFAULT_SDXL_STEPS,
+    DEFAULT_SDXL_WIDTH,
     DEFAULT_STEPS,
     DEFAULT_UNET_GGUF,
     DEFAULT_WIDTH,
+    FLUX_POSE_DB_PATH,
     POSE_DB_PATH,
     PROJECTS_DIR,
+    SDXL_POSE_DB_PATH,
     configure_stdio,
 )
 
@@ -32,18 +41,21 @@ from plepa_engine.models import (
     GenerationTarget,
     PoseEntry,
 )
-from plepa_engine.prompt_builder import assemble_flux_prompt
+from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
 from plepa_engine.reporter import (
     asset_filename,
     build_genit_block,
     open_in_explorer,
     print_batch_summary,
 )
-from plepa_engine.workflow_templates import build_flux_workflow
+from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
 
 
-def load_pose_db(path: Path = POSE_DB_PATH) -> Dict[str, PoseEntry]:
-    """flux_pose_database.json 로드 및 PoseEntry 딕셔너리로 변환."""
+def load_pose_db(engine: str = "flux", path: Optional[Path] = None) -> Dict[str, PoseEntry]:
+    """엔진(flux / sdxl)에 맞는 포즈 데이터베이스 로드 및 PoseEntry 딕셔너리로 변환."""
+    if path is None:
+        path = SDXL_POSE_DB_PATH if engine.lower() == "sdxl" else POSE_DB_PATH
+
     if not path.exists():
         raise FileNotFoundError(f"포즈 데이터베이스를 찾을 수 없습니다: {path}")
 
@@ -176,32 +188,43 @@ def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry]) -> List[str]:
 
 
 def run_self_test() -> int:
-    """파이프라인 무결성 자체 진단 테스트 (52+ 항목 점검)."""
+    """파이프라인 무결성 자체 진단 테스트 (FLUX + SDXL 듀얼 엔진 점검)."""
     print("=" * 60)
-    print("  [플에파] 시스템 무결성 자체 진단 테스트 (Self-Test)")
+    print("  [플에파] 시스템 무결성 자체 진단 테스트 (Dual-Engine Self-Test)")
     print("=" * 60)
     errors: List[str] = []
 
-    # 1. 포즈 DB 로드 검사
+    # 1. FLUX 포즈 DB 로드 및 태그 순수성 검사
     try:
-        db = load_pose_db()
-        print(f"✔ 포즈 데이터베이스 로드 성공 (총 {len(db)}개 항목)")
-        if len(db) != 80:
-            errors.append(f"포즈 DB 항목 수가 80개가 아닙니다 (현재: {len(db)}개)")
-    except Exception as e:
-        errors.append(f"포즈 DB 로드 실패: {e}")
-        db = {}
-
-    # 2. Danbooru 태그 및 BREAK 문법 잔류 검사
-    if db:
-        for code, entry in db.items():
+        flux_db = load_pose_db(engine="flux")
+        print(f"✔ FLUX 포즈 DB 로드 성공 (총 {len(flux_db)}개 항목)")
+        if len(flux_db) != 80:
+            errors.append(f"FLUX 포즈 DB 항목 수가 80개가 아닙니다 (현재: {len(flux_db)}개)")
+        for code, entry in flux_db.items():
             if "BREAK" in entry.prompt:
-                errors.append(f"코드 [{code}] 프롬프트에 금지된 BREAK 문법 잔류")
+                errors.append(f"FLUX 코드 [{code}] 프롬프트에 금지된 BREAK 문법 잔류")
             if "((" in entry.prompt or ":1." in entry.prompt:
-                errors.append(f"코드 [{code}] 프롬프트에 SDXL 괄호 가중치 태그 잔류")
+                errors.append(f"FLUX 코드 [{code}] 프롬프트에 SDXL 괄호 가중치 잔류")
             if not entry.label:
-                errors.append(f"코드 [{code}] 라벨 누락")
-        print("✔ 80종 플럭스 자연어 프롬프트 순수성 검사 완료")
+                errors.append(f"FLUX 코드 [{code}] 라벨 누락")
+        print("✔ FLUX 80종 서술형 프롬프트 순수성 검사 완료")
+    except Exception as e:
+        errors.append(f"FLUX 포즈 DB 검사 실패: {e}")
+        flux_db = {}
+
+    # 2. SDXL 포즈 DB 로드 검사
+    try:
+        sdxl_db = load_pose_db(engine="sdxl")
+        print(f"✔ SDXL 포즈 DB 로드 성공 (총 {len(sdxl_db)}개 항목)")
+        if len(sdxl_db) != 80:
+            errors.append(f"SDXL 포즈 DB 항목 수가 80개가 아닙니다 (현재: {len(sdxl_db)}개)")
+        for code, entry in sdxl_db.items():
+            if not entry.label:
+                errors.append(f"SDXL 코드 [{code}] 라벨 누락")
+        print("✔ SDXL 80종 Danbooru 태그 포즈 검사 완료")
+    except Exception as e:
+        errors.append(f"SDXL 포즈 DB 검사 실패: {e}")
+        sdxl_db = {}
 
     # 3. 샘플 캐릭터 로드 검사
     try:
@@ -213,26 +236,38 @@ def run_self_test() -> int:
         errors.append(f"샘플 캐릭터 로드 실패: {e}")
         char = None
 
-    # 4. 프롬프트 조립 및 탈의 로직 검사
-    if db and char:
-        prompt_clothed, nude_flag = assemble_flux_prompt(char, db["00"])
+    # 4. FLUX 프롬프트 조립 및 탈의 로직 검사
+    if flux_db and char:
+        prompt_clothed, nude_flag = assemble_flux_prompt(char, flux_db["00"])
         if nude_flag or char.appearance.outfit not in prompt_clothed:
-            errors.append("평상 포즈(00)에서 의상 포함 누락 또는 잘못된 탈의 판정")
+            errors.append("FLUX 평상 포즈(00)에서 의상 포함 누락 또는 잘못된 탈의 판정")
 
-        prompt_nude, nude_flag = assemble_flux_prompt(char, db["40"])
+        prompt_nude, nude_flag = assemble_flux_prompt(char, flux_db["40"])
         if not nude_flag or char.appearance.outfit in prompt_nude:
-            errors.append("H-씬(40)에서 의상 탈의 자동 스트리핑 실패")
-        print("✔ 의상 착의/탈의 분기 조립 로직 검사 통과")
+            errors.append("FLUX H-씬(40)에서 의상 탈의 자동 스트리핑 실패")
+        print("✔ FLUX 의상 착의/탈의 분기 조립 로직 검사 통과")
 
-    # 5. 워크플로우 템플릿 생성 검사
+    # 5. SDXL 프롬프트 조립 및 탈의 로직 검사
+    if sdxl_db and char:
+        pos_clothed, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["00"])
+        if nude_flag:
+            errors.append("SDXL 평상 포즈(00)에서 잘못된 탈의 판정")
+
+        pos_nude, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["40"])
+        if not nude_flag or "nude" not in pos_nude:
+            errors.append("SDXL H-씬(40)에서 nude 태그 주입 실패")
+        print("✔ SDXL 의상 착의/탈의 분기 조립 로직 검사 통과")
+
+    # 6. 워크플로우 템플릿 생성 검사 (FLUX & SDXL)
     try:
-        wf_normal = build_flux_workflow("test prompt", "test_prefix", use_face_detailer=False)
-        if "1" not in wf_normal or "20" not in wf_normal:
-            errors.append("기본 워크플로우 노드 생성 불완전")
-        wf_detailer = build_flux_workflow("test prompt", "test_prefix", use_face_detailer=True)
-        if "10" not in wf_detailer:
-            errors.append("Face Detailer 워크플로우 노드 생성 불완전")
-        print("✔ ComfyUI 워크플로우 템플릿 생성 검사 통과")
+        wf_flux = build_flux_workflow("test prompt", "test_prefix", use_face_detailer=False)
+        if "1" not in wf_flux or "20" not in wf_flux:
+            errors.append("FLUX 기본 워크플로우 노드 생성 불완전")
+
+        wf_sdxl = build_sdxl_workflow("test pos", "test neg", "test_prefix", use_face_detailer=False)
+        if "1" not in wf_sdxl or "5" not in wf_sdxl or "20" not in wf_sdxl:
+            errors.append("SDXL 기본 워크플로우 노드 생성 불완전")
+        print("✔ FLUX 및 SDXL 워크플로우 템플릿 생성 검사 통과")
     except Exception as e:
         errors.append(f"워크플로우 생성 실패: {e}")
 
@@ -243,27 +278,34 @@ def run_self_test() -> int:
             print(f"  ❌ {err}")
         return 1
     else:
-        print("[PASS] 모든 진단 검사 항목을 통과했습니다. 시스템 무결성 100% 보장.")
+        print("[PASS] 모든 진단 검사 항목을 통과했습니다. FLUX / SDXL 듀얼 엔진 무결성 100% 보장.")
         return 0
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="flux_batch_generator",
-        description="플럭스(FLUX.1 [dev]) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
+        description="플럭스(FLUX.1 [dev]) 및 SDXL(Unholy Desire Mix) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
     )
-    parser.add_argument("-c", "--character", help="생성할 캐릭터 이름 (예: sample_character)")
-    parser.add_argument("-p", "--pose", default="all", help="생성할 포즈 코드/범위 (all, emotions, 00..19, 01 등)")
+    parser.add_argument("-c", "--character", help="생성할 캐릭터 이름 (예: bjh, sample_character, all)")
+    parser.add_argument("-p", "--pose", default="all", help="생성할 포즈 코드/범위 (all, emotions, 00..19, 00,01 등)")
     parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
+    parser.add_argument("--engine", choices=["flux", "sdxl"], default="flux", help="이미지 생성 엔진 (flux: FLUX.1 [dev] GGUF, sdxl: SDXL Unholy 9.0 등 고속 2D 애니)")
+    parser.add_argument("--ckpt", default=DEFAULT_SDXL_CKPT, help=f"SDXL 모드에서 사용할 체크포인트 파일명 (기본: {DEFAULT_SDXL_CKPT})")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
     parser.add_argument("--skip-existing", action="store_true", help="이미 존재하는 WebP 파일은 생략하고 건너뜀")
     parser.add_argument("--face-detailer", action="store_true", help="Face Detailer 얼굴 보정 활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
-    parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help=f"샘플링 스텝 수 (기본: {DEFAULT_STEPS})")
-    parser.add_argument("--unet", default=DEFAULT_UNET_GGUF, help=f"사용할 GGUF UNet 모델 파일명 (기본: {DEFAULT_UNET_GGUF})")
-    parser.add_argument("--width", type=int, default=DEFAULT_WIDTH, help=f"이미지 가로 폭 (기본: {DEFAULT_WIDTH})")
-    parser.add_argument("--height", type=int, default=DEFAULT_HEIGHT, help=f"이미지 세로 높이 (기본: {DEFAULT_HEIGHT})")
+    parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
+    parser.add_argument("--cfg", type=float, default=None, help="CFG 스케일 (기본: flux=3.5, sdxl=6.5)")
+    parser.add_argument("--sampler", default=None, help="샘플러 알고리즘 (기본: flux=euler, sdxl=euler_ancestral)")
+    parser.add_argument("--scheduler", default=None, help="스케줄러 (기본: flux=simple, sdxl=normal)")
+    parser.add_argument("--unet", default=DEFAULT_UNET_GGUF, help=f"FLUX 모드 GGUF UNet 모델 파일명 (기본: {DEFAULT_UNET_GGUF})")
+    parser.add_argument("--lora", default="modern-anime-lora.safetensors", help="FLUX 모드 LoRA 파일명 (기본: modern-anime-lora.safetensors, 해제: none)")
+    parser.add_argument("--lora-weight", type=float, default=0.9, help="LoRA 적용 강도 (기본: 0.9)")
+    parser.add_argument("--width", type=int, default=None, help="이미지 가로 폭 (기본: flux=896, sdxl=832)")
+    parser.add_argument("--height", type=int, default=None, help="이미지 세로 높이 (기본: flux=1152, sdxl=1216)")
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
 
     args = parser.parse_args(argv)
@@ -276,8 +318,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다.")
         return 1
 
+    # 엔진별 기본값 산출
+    if args.engine == "sdxl":
+        width = args.width if args.width is not None else DEFAULT_SDXL_WIDTH
+        height = args.height if args.height is not None else DEFAULT_SDXL_HEIGHT
+        steps = args.steps if args.steps is not None else DEFAULT_SDXL_STEPS
+        cfg = args.cfg if args.cfg is not None else DEFAULT_SDXL_CFG
+        sampler = args.sampler if args.sampler is not None else DEFAULT_SDXL_SAMPLER
+        scheduler = args.scheduler if args.scheduler is not None else DEFAULT_SDXL_SCHEDULER
+    else:
+        width = args.width if args.width is not None else DEFAULT_WIDTH
+        height = args.height if args.height is not None else DEFAULT_HEIGHT
+        steps = args.steps if args.steps is not None else DEFAULT_STEPS
+        cfg = args.cfg if args.cfg is not None else 3.5
+        sampler = args.sampler if args.sampler is not None else "euler"
+        scheduler = args.scheduler if args.scheduler is not None else "simple"
+
     try:
-        db = load_pose_db()
+        db = load_pose_db(engine=args.engine)
         target_chars = resolve_characters(args.character, roster=args.roster)
         codes = resolve_pose_codes(args.pose, db)
     except Exception as e:
@@ -293,10 +351,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 1
 
     print("=" * 60)
-    print(f"  [플에파] FLUX.1 [dev] 에셋 배치 생성 파이프라인 가동")
+    engine_title = f"SDXL ({args.ckpt})" if args.engine == "sdxl" else f"FLUX.1 [dev] (GGUF: {args.unet})"
+    print(f"  [플에파] 듀얼 엔진 가동 모드: {engine_title}")
     print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
     print(f"  캐릭터당 포즈: 총 {len(codes)}개 ({', '.join(codes)}) | 총 {len(target_chars) * len(codes)}개 에셋")
-    print(f"  옵션: Face Detailer={'활성' if args.face_detailer else '비활성'}, Upscale={'활성' if args.upscale else '비활성'}")
+    print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
+    if args.engine == "flux":
+        print(f"  LoRA: {args.lora} (강도: {args.lora_weight})")
+    print(f"  보정 옵션: Face Detailer={'활성' if args.face_detailer else '비활성'}, Upscale={'활성' if args.upscale else '비활성'}")
     print("=" * 60)
 
     last_output_dir = None
@@ -316,15 +378,52 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
         for idx, code in enumerate(codes, 1):
             pose = db[code]
-            prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
             out_name = asset_filename(char.prefix, code)
             out_path = output_dir / out_name
+
+            if args.engine == "sdxl":
+                pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(char, pose, bg_prompt=bg_prompt)
+                display_prompt = pos_prompt
+                workflow = build_sdxl_workflow(
+                    positive_prompt=pos_prompt,
+                    negative_prompt=neg_prompt,
+                    output_prefix=f"{char.prefix}_{code}",
+                    width=width,
+                    height=height,
+                    steps=steps,
+                    cfg=cfg,
+                    sampler=sampler,
+                    scheduler=scheduler,
+                    ckpt_name=args.ckpt,
+                    use_face_detailer=args.face_detailer,
+                    use_upscale=args.upscale,
+                )
+            else:
+                prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
+                display_prompt = prompt
+                final_prompt = prompt
+                if args.lora and args.lora.lower() != "none" and "modern-anime" in args.lora.lower():
+                    if "modern anime style" not in final_prompt.lower():
+                        final_prompt = f"modern anime style, {final_prompt}"
+
+                workflow = build_flux_workflow(
+                    prompt=final_prompt,
+                    output_prefix=f"{char.prefix}_{code}",
+                    width=width,
+                    height=height,
+                    steps=steps,
+                    use_face_detailer=args.face_detailer,
+                    use_upscale=args.upscale,
+                    unet_name=args.unet,
+                    lora_name=args.lora if (args.lora and args.lora.lower() != "none") else None,
+                    lora_weight=args.lora_weight,
+                )
 
             target = GenerationTarget(
                 code=code,
                 section=pose.section,
                 label=pose.label,
-                assembled_prompt=prompt,
+                assembled_prompt=display_prompt,
                 is_nude=is_nude,
                 output_filename=out_name,
             )
@@ -342,17 +441,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 continue
 
             item_start = time.time()
-            workflow = build_flux_workflow(
-                prompt=prompt,
-                output_prefix=f"{char.prefix}_{code}",
-                width=args.width,
-                height=args.height,
-                steps=args.steps,
-                use_face_detailer=args.face_detailer,
-                use_upscale=args.upscale,
-                unet_name=args.unet,
-            )
-
             try:
                 client.generate_image(workflow=workflow, output_path=out_path)
                 duration = time.time() - item_start
@@ -384,3 +472,4 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

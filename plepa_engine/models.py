@@ -39,6 +39,9 @@ class CharacterConfig:
     appearance: CharacterAppearance
     lora: LoraConfig = field(default_factory=LoraConfig)
     style_keywords: str = "masterpiece quality, ultra-detailed anime digital art, 8k resolution"
+    sdxl_positive: Optional[str] = None
+    sdxl_negative: Optional[str] = None
+    ref_weight: float = 0.7
     file_path: Optional[Path] = None
 
     @classmethod
@@ -54,6 +57,10 @@ class CharacterConfig:
             name=lora_raw.get("name"),
             weight=float(lora_raw.get("weight", 0.8))
         )
+        sdxl_pos = data.get("sdxl_positive") or data.get("positive")
+        sdxl_neg = data.get("sdxl_negative") or data.get("negative")
+        ref_weight = float(data.get("ref_weight", 0.7))
+
         return cls(
             prefix=data.get("prefix", "unknown"),
             name=data.get("name", "Unknown"),
@@ -61,6 +68,9 @@ class CharacterConfig:
             appearance=appearance,
             lora=lora,
             style_keywords=data.get("style_keywords", "masterpiece quality, 8k resolution"),
+            sdxl_positive=sdxl_pos,
+            sdxl_negative=sdxl_neg,
+            ref_weight=ref_weight,
             file_path=file_path
         )
 

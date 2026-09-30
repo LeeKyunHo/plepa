@@ -59,7 +59,7 @@ class ComfyClient:
         workflow: Dict[str, Any],
         output_path: Path,
         progress_cb: Optional[Callable[[int, int, str], None]] = None,
-        timeout_sec: float = 300.0,
+        timeout_sec: float = 600.0,
     ) -> Path:
         """
         워크플로우를 전송하고 생성이 완료될 때까지 WebSocket으로 대기한 후 WebP 파일로 저장합니다.

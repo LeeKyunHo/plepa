@@ -39,6 +39,17 @@ DEFAULT_HEIGHT = 1152
 WEBP_QUALITY = 95
 WEBP_METHOD = 6
 
+# ── SDXL (Unholy Desire Mix 등) 기본 식별자 및 파라미터 ──
+DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "unholyDesireMixSinister_v90.safetensors")
+DEFAULT_SDXL_STEPS = 25
+DEFAULT_SDXL_CFG = 6.5
+DEFAULT_SDXL_SAMPLER = "euler_ancestral"
+DEFAULT_SDXL_SCHEDULER = "normal"
+DEFAULT_SDXL_WIDTH = 832
+DEFAULT_SDXL_HEIGHT = 1216
+SDXL_POSE_DB_PATH = ROOT_DIR / "sdxl_pose_database.json"
+FLUX_POSE_DB_PATH = ROOT_DIR / "flux_pose_database.json"
+
 
 def configure_stdio() -> None:
     """윈도우 콘솔 환경에서 유니코드 출력(cp949 에러) 방지."""
