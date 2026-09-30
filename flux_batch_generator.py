@@ -18,6 +18,7 @@ from plepa_engine.config import (
     DEFAULT_HEIGHT,
     DEFAULT_ROSTER,
     DEFAULT_STEPS,
+    DEFAULT_UNET_GGUF,
     DEFAULT_WIDTH,
     POSE_DB_PATH,
     PROJECTS_DIR,
@@ -207,6 +208,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--no-face-detailer", action="store_true", help="Face Detailer 얼굴 보정 생략")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help=f"샘플링 스텝 수 (기본: {DEFAULT_STEPS})")
+    parser.add_argument("--unet", default=DEFAULT_UNET_GGUF, help=f"사용할 GGUF UNet 모델 파일명 (기본: {DEFAULT_UNET_GGUF})")
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH, help=f"이미지 가로 폭 (기본: {DEFAULT_WIDTH})")
     parser.add_argument("--height", type=int, default=DEFAULT_HEIGHT, help=f"이미지 세로 높이 (기본: {DEFAULT_HEIGHT})")
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
@@ -280,6 +282,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             steps=args.steps,
             use_face_detailer=not args.no_face_detailer,
             use_upscale=args.upscale,
+            unet_name=args.unet,
         )
 
         try:
