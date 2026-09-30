@@ -257,7 +257,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
-    parser.add_argument("--no-face-detailer", action="store_true", help="Face Detailer 얼굴 보정 생략")
+    parser.add_argument("--skip-existing", action="store_true", help="이미 존재하는 WebP 파일은 생략하고 건너뜀")
+    parser.add_argument("--face-detailer", action="store_true", help="Face Detailer 얼굴 보정 활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help=f"샘플링 스텝 수 (기본: {DEFAULT_STEPS})")
     parser.add_argument("--unet", default=DEFAULT_UNET_GGUF, help=f"사용할 GGUF UNet 모델 파일명 (기본: {DEFAULT_UNET_GGUF})")
@@ -295,7 +296,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"  [플에파] FLUX.1 [dev] 에셋 배치 생성 파이프라인 가동")
     print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
     print(f"  캐릭터당 포즈: 총 {len(codes)}개 ({', '.join(codes)}) | 총 {len(target_chars) * len(codes)}개 에셋")
-    print(f"  옵션: Face Detailer={'비활성' if args.no_face_detailer else '활성'}, Upscale={'활성' if args.upscale else '비활성'}")
+    print(f"  옵션: Face Detailer={'활성' if args.face_detailer else '비활성'}, Upscale={'활성' if args.upscale else '비활성'}")
     print("=" * 60)
 
     last_output_dir = None
@@ -335,6 +336,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
                 continue
 
+            if args.skip_existing and out_path.exists() and out_path.stat().st_size > 0:
+                print(" [기존 파일 존재: 건너뜀]")
+                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
+                continue
+
             item_start = time.time()
             workflow = build_flux_workflow(
                 prompt=prompt,
@@ -342,7 +348,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 width=args.width,
                 height=args.height,
                 steps=args.steps,
-                use_face_detailer=not args.no_face_detailer,
+                use_face_detailer=args.face_detailer,
                 use_upscale=args.upscale,
                 unet_name=args.unet,
             )
