@@ -1,0 +1,335 @@
+{
+  "_schema": {
+    "purpose": "플에파(FLUX.1 [dev]) 최적화 영문 서술형 자연어 포즈 및 시나리오 데이터베이스",
+    "model_target": "FLUX.1 [dev] (T5-XXL 인코더 특화)",
+    "number_ranges": "00-19: emotions(감정 20종), 20-39: poses(솔로포즈+밀착 20종), 40-59: h_scenes(여성 결합 20종), 140-159: scenes_otokonoko(오토코노코 결합 20종)"
+  },
+  "emotions": {
+    "00": {
+      "label": "평상",
+      "prompt": "A medium cowboy shot of the character standing with a relaxed and composed posture, looking directly into the lens with a gentle, neutral expression. Clean minimalistic background, soft balanced studio lighting."
+    },
+    "01": {
+      "label": "미소",
+      "prompt": "A cowboy shot of the character standing naturally, looking at the viewer with a warm, genuine smile and relaxed friendly eyes. Clean soft background, bright natural lighting."
+    },
+    "02": {
+      "label": "활짝웃음",
+      "prompt": "A delightful cowboy shot of the character laughing wholeheartedly with eyes gently closed in pure joy, mouth open in cheerful laughter, radiating vibrant happiness. Clean background, soft lighting."
+    },
+    "03": {
+      "label": "홍조",
+      "prompt": "A charming cowboy shot of the character with intensely flushed red cheeks, looking slightly aside with bashful eyes, fidgeting shyly with an embarrassed and flustered expression. Clean background, warm soft lighting."
+    },
+    "04": {
+      "label": "뾰로통",
+      "prompt": "A cowboy shot of the character pouting with adorably puffed cheeks, arms crossed defensively over chest, giving an irritated yet cute sidelong glare. Clean background, soft lighting."
+    },
+    "05": {
+      "label": "분노",
+      "prompt": "A dramatic cowboy shot of the character with furrowed brows and sharp piercing eyes, teeth lightly clenched in clear anger and frustration, exuding fierce tension. Clean background, dramatic contrast lighting."
+    },
+    "06": {
+      "label": "경멸",
+      "prompt": "A haughty cowboy shot of the character looking down with half-closed eyelids and a subtle contemptuous smirk, exuding cold aloofness and disdain. Clean background, cool tone lighting."
+    },
+    "07": {
+      "label": "슬픔",
+      "prompt": "A poignant cowboy shot of the character with downcast sorrowful eyes glistening with unshed tears, corners of mouth drooping in quiet melancholy and sadness. Clean background, subdued soft lighting."
+    },
+    "08": {
+      "label": "울음",
+      "prompt": "An emotional cowboy shot of the character weeping openly, tears streaming down flushed cheeks, lips trembling in a sob, eyes moist and overwhelmed with sorrow. Clean background, soft lighting."
+    },
+    "09": {
+      "label": "놀람",
+      "prompt": "A dynamic cowboy shot of the character caught in astonishment, eyes wide open in surprise, lips parted in a slight gasp, posture recoiling gently in shock. Clean background, crisp lighting."
+    },
+    "10": {
+      "label": "자신감",
+      "prompt": "A spirited cowboy shot of the character standing tall with one hand resting on the hip, displaying a proud, confident smirk and bright self-assured eyes. Clean background, bright lighting."
+    },
+    "11": {
+      "label": "의문",
+      "prompt": "A curious cowboy shot of the character tilting head slightly to the side with an inquisitive glance, one eyebrow subtly raised in thought and wonder. Clean background, soft lighting."
+    },
+    "12": {
+      "label": "장난",
+      "prompt": "A lively cowboy shot of the character playfully winking with one eye, sticking out tongue tip in cheeky mischief while flashing a cute peace sign. Clean background, vibrant lighting."
+    },
+    "13": {
+      "label": "하트눈",
+      "prompt": "An affectionate cowboy shot of the character with deep rosy blush across cheeks and nose, pupils displaying distinctive heart shapes, gazing with ecstatic adoration and breathless delight. Clean background, dreamy soft lighting."
+    },
+    "14": {
+      "label": "유혹",
+      "prompt": "An alluring cowboy shot of the character gazing with seductive bedroom eyes and softly parted lips, an enigmatic sultry smile hinting at intimate desire, cheeks flushed with warmth. Clean background, warm moody lighting."
+    },
+    "15": {
+      "label": "나른",
+      "prompt": "A cozy cowboy shot of the character sitting casually with chin resting on palm, heavy-lidded drowsy eyes looking forward with comfortable lethargy and mild boredom. Clean background, mellow warm lighting."
+    },
+    "16": {
+      "label": "진지",
+      "prompt": "A resolute cowboy shot of the character standing with straight upright posture, gaze intense, focused and unwavering with a calm and deeply serious expression. Clean background, neutral studio lighting."
+    },
+    "17": {
+      "label": "공포",
+      "prompt": "A tense cowboy shot of the character cowering slightly with pale complexion, wide frightened eyes dilated in fear, lips parted in rapid anxious breathing. Clean background, stark shadows."
+    },
+    "18": {
+      "label": "얀데레",
+      "prompt": "An intense, close upper body shot leaning forward towards the viewer with one hand reaching outwards, wide obsessive eyes dilated with eerie affection, a manic sweet smile on flushed cheeks, unhinged devotion. Minimal background, moody cinematic lighting."
+    },
+    "19": {
+      "label": "키스",
+      "prompt": "An intimate close upper body portrait leaning forward with head tilted gently, eyes softly shut, lips puckered forward in sweet anticipation of a tender kiss, deeply flushed rosy cheeks. Minimal clean background, romantic soft glow."
+    }
+  },
+  "poses": {
+    "20": {
+      "label": "윙크",
+      "prompt": "A playful cowboy shot of the character standing and winking with one eye, giving a cute cheerful peace sign with hand near cheek, smiling warmly. Soft ambient studio lighting."
+    },
+    "21": {
+      "label": "양손하트",
+      "prompt": "A sweet cowboy shot of the character forming a delicate heart shape with both hands held in front of the chest, smiling with genuine affection and glowing rosy cheeks. Warm inviting lighting."
+    },
+    "22": {
+      "label": "손흔들기",
+      "prompt": "A welcoming cowboy shot of the character with one hand raised waving politely, looking toward the viewer with a gentle, lovely smile and shy blush on cheeks. Bright clean lighting."
+    },
+    "23": {
+      "label": "팔짱",
+      "prompt": "A confident and alluring cowboy shot of the character with arms crossed neatly under the bust, casting a teasing sidelong glance with a playful smirk and sultry eyes. Subtle rim lighting."
+    },
+    "24": {
+      "label": "뒤태",
+      "prompt": "A captivating back view cowboy shot of the character turned away, looking back over shoulder with an arched lower back, casting a seductive and lingering glance with heavy-lidded bedroom eyes and parted lips. Cinematic lighting."
+    },
+    "25": {
+      "label": "앉아유혹",
+      "prompt": "A provocative cowboy shot of the character sitting relaxed on a plush sofa, leaning slightly back with thighs parted gracefully, hands resting on the cushions, gazing with sultry temptation and flushed cheeks. Soft interior lounge lighting."
+    },
+    "26": {
+      "label": "체벌",
+      "prompt": "A dramatic cowboy shot of the character lying on back on a bed with wrists held gently above head, back arched vulnerably, looking up with tearful pleading eyes and flushed face, biting lower lip with breathless panting. Dim moody lighting."
+    },
+    "27": {
+      "label": "배후옷속침범",
+      "prompt": "An intimate front-angle cowboy shot as unseen male hands reach from behind beneath her clothing, intimately cupping and fondling her breasts. Her back is arched, head tilted back, lips parted in a breathless gasp, cheeks deeply flushed with overwhelming sensation. Soft sensual lighting."
+    },
+    "28": {
+      "label": "마주안아엉덩이주무름",
+      "prompt": "A sensual view from behind showing the character closely embracing a partner chest to chest, as male hands firmly grasp and knead her shapely buttocks. She looks back over shoulder at the viewer with heavily flushed cheeks and sultry moaning lips. Warm intimate lighting."
+    },
+    "29": {
+      "label": "도기유혹",
+      "prompt": "An alluring view from behind on a bed with the character on all fours, back arched sensually with hips raised, looking back over shoulder with a teasing, sultry smile, flushed cheeks, and inviting bedroom eyes. Soft bedroom lighting."
+    },
+    "30": {
+      "label": "전신나체",
+      "prompt": "A bashful cowboy shot of the character completely nude with bare skin, standing and attempting to shyly shield breasts and lower body with hands, body flushed crimson with overwhelming embarrassment, looking away with tearful shy eyes. Soft natural lighting."
+    },
+    "31": {
+      "label": "배후성추행",
+      "prompt": "A tense cowboy shot as male hands wrap from behind around her waist to cup her breasts, the character turning head with flustered teary eyes and parted lips in vocal protest, deeply flushed face, arched back. Moody room lighting."
+    },
+    "32": {
+      "label": "벽치기",
+      "prompt": "An immersive point-of-view upper body shot of the character pinned against a wall (kabedon) by a partner's arm, looking upwards with wide, moist, flustered eyes, rapid shallow breathing, heavily flushed cheeks and trembling lips. Soft dramatic shadows."
+    },
+    "33": {
+      "label": "정면포옹",
+      "prompt": "A deeply emotional upper body shot showing an intimate front hug, her arms wrapped tightly around her partner, face buried into partner's chest with eyes closed in sheer bliss and comforted ecstasy, cheeks glowing with warm flush. Warm ambient light."
+    },
+    "34": {
+      "label": "가슴에얼굴묻기",
+      "prompt": "An affectionate upper body embrace as the partner buries his face into her cleavage, while she lovingly rests her hands on partner's head and shoulders, gazing down with a tender, deeply devoted smile and soft loving blush. Gentle warm glow."
+    },
+    "35": {
+      "label": "침대덮치기",
+      "prompt": "A dynamic cowboy shot of the character pinned down on bedsheets, partner hovering above gently pinning her wrists overhead, character looking up with wide tearful eyes, heart pupils, deeply flushed cheeks and breathless helpless excitement. Soft bedroom lighting."
+    },
+    "36": {
+      "label": "공주님안기",
+      "prompt": "A full body shot of the character being carried in arms bridal-style (princess carry) by her partner, arms wrapped securely around partner's neck, blushing intensely with bashful yet delighted eyes looking up. Soft romantic lighting."
+    },
+    "37": {
+      "label": "딥키스",
+      "prompt": "An intimate close upper body shot of a passionate deep french kiss with partner, lips pressed and tangled intimately, cheeks burning with rosy flush, eyes gently closed in breathless pleasure. Cinematic soft focus and warm lighting."
+    },
+    "38": {
+      "label": "샤워뒤태",
+      "prompt": "A stunning view from behind of the character completely nude inside a clear glass shower cabin, wet strands of hair clinging to skin, water droplets glistening on arched back and smooth skin, glancing seductively back over shoulder with parted lips. Misty bathroom lighting."
+    },
+    "39": {
+      "label": "유리밀착유혹",
+      "prompt": "An intimate upper body shot of the character completely nude pressed against the foggy glass of a shower stall, hands flat on the wet glass, looking through water condensation with breathless seductive eyes and a flushed, biting-lip expression. Steamy diffuse lighting."
+    }
+  },
+  "h_scenes": {
+    "40": {
+      "label": "선교체위",
+      "prompt": "A side-angle cowboy shot showing the character completely nude lying on a bed with thighs spread wide in an intimate missionary position with partner, body flushed with intense heat, head tilted back, lips parted in a breathless moan, eyes glistening with deep pleasure. Soft dim bedroom lighting."
+    },
+    "41": {
+      "label": "정면절정(선교/대면)",
+      "prompt": "An intense cowboy shot of the character experiencing an overwhelming climax while lying on bed in missionary position, body drenched in thick fluids pooling on sheets, eyes rolled upward in ecstasy, tongue resting out with saliva, trembling throughout with deep body flush. Moody intimate lighting."
+    },
+    "42": {
+      "label": "도기체위",
+      "prompt": "A side-angle cowboy shot on a bed with the character completely nude on all fours, back deeply arched in doggystyle position, looking back over shoulder with heavily flushed cheeks, biting lower lip while gasping in breathless pleasure, trembling with arousal. Warm dim lighting."
+    },
+    "43": {
+      "label": "후방절정(후배위/스푸닝/벽)",
+      "prompt": "A powerful climax cowboy shot on all fours, back arched deeply as fluids drip along thighs and bedsheets, head turned back with an ecstatic ahegao expression, rolling eyes and panting mouth, limbs quivering in euphoric exhaustion. Dramatic soft lighting."
+    },
+    "44": {
+      "label": "기승위",
+      "prompt": "A commanding cowboy shot of the character completely nude straddling atop her partner on the bed in cowgirl position, hands resting on partner's chest, looking down with heavy-lidded seductive eyes and flushed decolletage, hips swaying in pleasure. Warm atmospheric lighting."
+    },
+    "45": {
+      "label": "상위절정(기승위/역기승)",
+      "prompt": "An ecstatic cowboy shot atop her partner during a peak cowgirl climax, head thrown back, spine arched gracefully, fluids covering lower abdomen and thighs, tears of intense pleasure streaming from rolled-back eyes, mouth agape in a silent cry of bliss. Soft moody glow."
+    },
+    "46": {
+      "label": "역기승위",
+      "prompt": "A view from behind cowboy shot of the character straddling partner backwards in reverse cowgirl position, glancing back over shoulder with seductive heavy eyelids, biting lip to stifle breathless moans, flushed back and buttocks trembling with heat. Soft bedroom lights."
+    },
+    "47": {
+      "label": "대면좌위",
+      "prompt": "A close upper body embrace sitting on partner's lap, chest pressed to chest, arms locked tightly around partner's neck, head buried beside partner's ear whispering breathless moans, tears of pure emotional and physical pleasure on flushed cheeks. Warm intimate glow."
+    },
+    "48": {
+      "label": "밀착절정(매팅프레스)",
+      "prompt": "A deep intimate cowboy shot of the character completely nude on back with knees folded tightly towards chest in mating press climax, body flushed crimson, fluids pooling on rumpled sheets, looking upward with eyes lost in euphoric daze, trembling uncontrollably. Dim ambient lighting."
+    },
+    "49": {
+      "label": "스푸닝",
+      "prompt": "A gentle cowboy shot lying on side spooning together on bed, partner's arm wrapped gently around waist, character's head tilted back against pillow, eyes fluttering half-closed in sweet blissful arousal, lips parted in quiet rhythmic sighs. Soft morning bedroom light."
+    },
+    "50": {
+      "label": "가슴밀착(파이즈리)",
+      "prompt": "An upper body perspective sitting upright on bed, tightly pressing both bare breasts together around partner, looking down with breathless flushed face, heavy-lidded intoxicated gaze and parted lips shivering with pleasure. Warm soft lighting."
+    },
+    "51": {
+      "label": "가슴절정(파이즈리)",
+      "prompt": "An intimate upper body close-up following a chest climax, thick white fluids coating cleavage and breasts, character kneeling and gazing down at partner with a deeply devoted, loving smile and sweet affectionate blush across cheeks. Soft romantic lighting."
+    },
+    "52": {
+      "label": "구강상호작용(펠라)",
+      "prompt": "An intimate close upper body shot kneeling between partner's legs, looking up submissively with moist, dilated, intoxicated eyes, lips parted wide taking partner intimately, drool and saliva tracing chin, cheeks burning with intense arousal. Low moody lighting."
+    },
+    "53": {
+      "label": "구강절정(페이셜)",
+      "prompt": "A close-up portrait kneeling between partner's legs, face and cheeks splattered with thick fluids dripping down chin and neck, looking upward with an extraordinarily fond, devoted gaze and gentle loving smile, flushed with contented bliss. Warm soft focus lighting."
+    },
+    "54": {
+      "label": "이라마치오(딥스로트)",
+      "prompt": "An intense close-up shot kneeling with partner's hand guiding her head, taking partner deeply into throat, tears of overwhelming intensity in eyes, throat visibly filled, saliva tracing lips, flushed face showing profound intoxicating submission. Dramatic low-key lighting."
+    },
+    "55": {
+      "label": "구강사후여운(입가정액)",
+      "prompt": "A solo upper body portrait kneeling on bed, looking up with a dazed and blissfully exhausted expression, fluids dripping from lips down chin onto bare collarbone, messy hair, unfocused heavy-lidded eyes, cheeks still flushed from deep oral pleasure. Soft bedroom lighting."
+    },
+    "56": {
+      "label": "입위벽밀착",
+      "prompt": "A passionate standing cowboy shot pinned against a bedroom wall with one leg raised and hands bracing against the wall surface, looking back at partner with wide teary eyes and open mouth gasping in intense standing union, thighs trembling with heat. Soft wall sconce lighting."
+    },
+    "57": {
+      "label": "샤워씬",
+      "prompt": "An intimate standing cowboy shot inside a glass shower enclosure, back pinned gently against steam-covered glass, water droplets running down flushed bare skin, one leg wrapped around partner, head tilted back in sensual moaning bliss under falling water. Misty translucent lighting."
+    },
+    "58": {
+      "label": "침대사후여운(누움)",
+      "prompt": "A peaceful solo cowboy shot lying exhausted on messy white bedsheets in aftersex afterglow, bare skin glistening with light sweat, fluid traces between thighs, hair spread across pillow, lips curled into a dazed happy smile, eyes heavy in relaxed bliss. Soft dawn light filtering in."
+    },
+    "59": {
+      "label": "엎드린사후여운(엎드림)",
+      "prompt": "A solo back-view cowboy shot lying prone and spent on the bed, hips slightly raised, looking back over shoulder with unfocused sleepy eyes, saliva cornering lips, legs lazily parted with fluid traces on sheets, body completely melted in satisfying afterglow. Gentle ambient bedroom lighting."
+    }
+  },
+  "scenes_otokonoko": {
+    "140": {
+      "label": "선교체위",
+      "prompt": "A side-angle cowboy shot showing the slender male character completely nude lying on bed with thighs spread wide in an intimate missionary position with partner, delicate physique flushed with heat, head tilted back, lips parted in a breathless moan, moist eyes glistening. Soft bedroom lighting."
+    },
+    "141": {
+      "label": "정면절정(선교/대면)",
+      "prompt": "An intense cowboy shot of the slender male character climaxing deeply while lying on bed in missionary position, body drenched in thick fluids, eyes rolled back in ecstasy, tongue resting out with saliva, slender frame trembling throughout with deep flush. Moody intimate lighting."
+    },
+    "142": {
+      "label": "후배위",
+      "prompt": "A side-angle cowboy shot on bed with the slender male character on all fours, back arched deeply in doggystyle position, looking back over shoulder with heavily flushed cheeks, biting lip while gasping in breathless pleasure, trembling with arousal. Warm dim lighting."
+    },
+    "143": {
+      "label": "후방절정(후배위/스푸닝/벽)",
+      "prompt": "A powerful climax cowboy shot on all fours, slender back arched deeply as fluids drip along thighs and bedsheets, head turned back with an ecstatic ahegao expression, rolling eyes and panting mouth, limbs quivering in euphoric exhaustion. Dramatic soft lighting."
+    },
+    "144": {
+      "label": "기승위",
+      "prompt": "A delicate cowboy shot of the slender male character completely nude straddling atop his partner on the bed in cowgirl position, hands resting on partner's chest, looking down with heavy-lidded seductive eyes and flushed slender torso, hips moving in pleasure. Warm atmospheric lighting."
+    },
+    "145": {
+      "label": "상위절정(기승위/역기승)",
+      "prompt": "An ecstatic cowboy shot atop partner during a peak cowgirl climax, head thrown back, slender spine arched gracefully, fluids covering lower abdomen and thighs, tears of intense pleasure streaming from rolled-back eyes, mouth agape in bliss. Soft moody glow."
+    },
+    "146": {
+      "label": "역기승위",
+      "prompt": "A view from behind cowboy shot of the slender male character straddling partner backwards in reverse cowgirl position, glancing back over shoulder with seductive heavy eyelids, biting lip to stifle breathless moans, flushed back trembling with heat. Soft bedroom lights."
+    },
+    "147": {
+      "label": "대면좌위",
+      "prompt": "A close upper body embrace sitting on partner's lap, chest pressed to chest, slender arms locked tightly around partner's neck, head buried beside partner's ear whispering breathless moans, tears of pure pleasure on flushed cheeks. Warm intimate glow."
+    },
+    "148": {
+      "label": "밀착절정(매팅프레스)",
+      "prompt": "A deep intimate cowboy shot of the slender male character completely nude on back with knees folded tightly towards chest in mating press climax, body flushed crimson, fluids pooling on rumpled sheets, looking upward with eyes lost in euphoric daze. Dim ambient lighting."
+    },
+    "149": {
+      "label": "스푸닝",
+      "prompt": "A gentle cowboy shot lying on side spooning together on bed, partner's arm wrapped gently around slender waist, character's head tilted back against pillow, eyes fluttering half-closed in sweet blissful arousal, lips parted in quiet rhythmic sighs. Soft morning bedroom light."
+    },
+    "150": {
+      "label": "상호자극(핸드잡)",
+      "prompt": "A cowboy shot of the slender male character sitting on bed leaning back on hands, thighs parted as partner kneels between legs stroking intimately, character looking down at partner's hand with heavily flushed face, breathless panting, and teary overwhelmed eyes. Warm soft lighting."
+    },
+    "151": {
+      "label": "상호절정(핸드잡)",
+      "prompt": "A dramatic cowboy shot lying back on bed with spine deeply arched, hands gripping bedsheets tightly during an intense handjob climax, fluids spraying across stomach and sheets, head thrown back with eyes rolled in ecstasy and mouth agape, trembling violently. Soft dramatic lighting."
+    },
+    "152": {
+      "label": "구강상호작용(펠라)",
+      "prompt": "An intimate close upper body shot kneeling between partner's legs, looking up submissively with moist, dilated, intoxicated eyes, lips parted wide taking partner intimately, drool and saliva tracing chin, flushed face burning with intense arousal. Low moody lighting."
+    },
+    "153": {
+      "label": "구강절정(페이셜)",
+      "prompt": "A close-up portrait kneeling between partner's legs, face and cheeks splattered with thick fluids dripping down chin and neck, looking upward with an extraordinarily fond, devoted gaze and gentle loving smile, flushed with contented bliss. Warm soft focus lighting."
+    },
+    "154": {
+      "label": "이라마치오(딥스로트)",
+      "prompt": "An intense close-up shot kneeling with partner's hand guiding his head, taking partner deeply into throat, tears of overwhelming intensity in eyes, throat visibly filled, saliva tracing lips, flushed face showing profound intoxicating submission. Dramatic low-key lighting."
+    },
+    "155": {
+      "label": "구강사후여운(입가정액)",
+      "prompt": "A solo upper body portrait kneeling on bed, looking up with a dazed and blissfully exhausted expression, fluids dripping from lips down chin onto bare collarbone, messy hair, unfocused heavy-lidded eyes, cheeks still flushed from deep oral pleasure. Soft bedroom lighting."
+    },
+    "156": {
+      "label": "입위벽밀착",
+      "prompt": "A passionate standing cowboy shot pinned against a bedroom wall with one leg raised and hands bracing against the wall surface, looking back at partner with wide teary eyes and open mouth gasping in intense standing union, slender thighs trembling. Soft wall sconce lighting."
+    },
+    "157": {
+      "label": "샤워씬",
+      "prompt": "An intimate standing cowboy shot inside a glass shower enclosure, back pinned gently against steam-covered glass, water droplets running down flushed bare skin, one leg wrapped around partner, head tilted back in sensual moaning bliss under falling water. Misty translucent lighting."
+    },
+    "158": {
+      "label": "침대사후여운(누움)",
+      "prompt": "A peaceful solo cowboy shot lying exhausted on messy white bedsheets in aftersex afterglow, bare skin glistening with light sweat, fluid traces between thighs, hair spread across pillow, lips curled into a dazed happy smile, eyes heavy in relaxed bliss. Soft dawn light filtering in."
+    },
+    "159": {
+      "label": "엎드린사후여운(엎드림)",
+      "prompt": "A solo back-view cowboy shot lying prone and spent on the bed, hips slightly raised, looking back over shoulder with unfocused sleepy eyes, saliva cornering lips, legs lazily parted with fluid traces on sheets, slender body completely melted in satisfying afterglow. Gentle ambient bedroom lighting."
+    }
+  }
+}
