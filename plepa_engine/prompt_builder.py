@@ -133,6 +133,18 @@ def strip_sdxl_outfit_tags(prompt_text: str) -> str:
     return " BREAK ".join(chunks)
 
 
+def clamp_sdxl_weights(prompt_text: str, max_weight: float = 1.15) -> str:
+    """
+    ComfyUI 순정 CLIP 인코더에서 가중치 과다 곱셈으로 인한 색상 폭주(Color Burn / 네온 형광 현상)를
+    방지하기 위해 1.15를 초과하는 과도한 가중치를 안전 한계치로 자동 클램핑합니다.
+    """
+    def _clamp_match(m: re.Match) -> str:
+        w = float(m.group(1))
+        return f":{min(w, max_weight):.2f}"
+
+    return re.sub(r":([0-9]+\.[0-9]+)", _clamp_match, prompt_text)
+
+
 def assemble_sdxl_prompt(
     char: CharacterConfig,
     pose: PoseEntry,
@@ -181,9 +193,14 @@ def assemble_sdxl_prompt(
     # 3. 부정 프롬프트 조립
     negative_prompt = char.sdxl_negative.strip() if char.sdxl_negative else DEFAULT_SDXL_NEGATIVE
 
+    # 4. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
+    positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)
+    negative_prompt = clamp_sdxl_weights(negative_prompt, max_weight=1.15)
+
     # 연속 콤마 및 공백 정리
     positive_prompt = re.sub(r"\s*,\s*", ", ", positive_prompt).strip()
     negative_prompt = re.sub(r"\s*,\s*", ", ", negative_prompt).strip()
 
     return positive_prompt, negative_prompt, nude
+
 
