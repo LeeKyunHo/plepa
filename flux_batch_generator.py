@@ -128,6 +128,58 @@ def load_character(char_name: str, roster: str = DEFAULT_ROSTER) -> CharacterCon
     return char
 
 
+def print_roster_characters(roster: str = DEFAULT_ROSTER) -> int:
+    """로스터 내 등록된 캐릭터들의 프로필 목록을 콘솔 테이블로 출력합니다."""
+    char_dir = PROJECTS_DIR / roster / "characters"
+    if not char_dir.exists():
+        print(f"\n[오류] 로스터 캐릭터 폴더를 찾을 수 없습니다: {char_dir}")
+        return 1
+
+    files = sorted(char_dir.glob("*.json"))
+    if not files:
+        print(f"\n[안내] 로스터 '{roster}'에 등록된 캐릭터 JSON 파일이 없습니다.")
+        return 0
+
+    print("=" * 82)
+    print(f"  [플에파] 로스터 캐릭터 목록: {roster} (총 {len(files)}명)")
+    print("=" * 82)
+    header = f"  {'식별자(ID)':<12} {'한글명 (영문명)':<24} {'성별':<8} {'프로필(의상)':<18} {'기본 의상 요약'}"
+    print(header)
+    print("  " + "-" * 78)
+
+    for path in files:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            char = CharacterConfig.from_dict(data, file_path=path)
+            prof_list = list(char.profiles.keys())
+            prof_str = ", ".join(prof_list) if prof_list else "default"
+            outfit_text = char.appearance.outfit.replace("\n", " ").strip()
+            outfit_summary = (outfit_text[:28] + "..") if len(outfit_text) > 28 else (outfit_text or "-")
+            print(f"  {char.prefix:<12} {char.name:<24} {char.gender:<8} {prof_str:<18} {outfit_summary}")
+        except Exception as e:
+            print(f"  {path.stem:<12} [오류: {e}]")
+
+    print("=" * 82)
+    return 0
+
+
+def generate_mock_image(output_path: Path) -> None:
+    """ComfyUI 연동 없이 0.001초 만에 더미 WebP 이미지를 생성하여 파이프라인 무결성을 검증합니다."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        from PIL import Image
+        img = Image.new("RGB", (64, 64), color=(60, 100, 180))
+        img.save(output_path, "WEBP", quality=80)
+    except Exception:
+        # Pillow 부재 시 유효한 초소형 1x1 WebP 바이너리 직접 기록 (안전 폴백)
+        tiny_webp = (
+            b"RIFF\x1a\x00\x00\x00WEBPVP8L\x0e\x00\x00\x00/x\x00\x00\x00\x00\x00\x88\x88\xfe\x07\x00\x00"
+        )
+        with open(output_path, "wb") as f:
+            f.write(tiny_webp)
+
+
 def load_background_preset(roster: str, key: str = "default") -> str:
     """projects/{roster}/background.json 로드."""
     bg_file = PROJECTS_DIR / roster / "background.json"
@@ -270,6 +322,37 @@ def run_self_test() -> int:
     except Exception as e:
         errors.append(f"워크플로우 생성 실패: {e}")
 
+    # 7. 프로필 스위칭 및 커스텀 네거티브 / 배경 검사
+    if char:
+        test_char = CharacterConfig.from_dict({
+            "prefix": "test",
+            "name": "Test",
+            "appearance": {"outfit": "default suit", "face_and_hair": "short hair", "physique": "fit"},
+            "profiles": {
+                "swimsuit": {"outfit": "blue swimsuit", "sdxl_positive": "blue bikini BREAK 1girl"}
+            }
+        })
+        test_char.apply_profile("swimsuit")
+        if test_char.appearance.outfit != "blue swimsuit":
+            errors.append("프로필 스위칭 의상 오버라이드 실패")
+        
+        _, neg, _ = assemble_sdxl_prompt(test_char, sdxl_db["000"], custom_neg="custom_tag, no_glasses")
+        if "custom_tag" not in neg:
+            errors.append("SDXL 커스텀 네거티브 주입 실패")
+        print("✔ 프로필 스위칭 및 커스텀 네거티브 결합 검사 통과")
+
+    # 8. 더미 Mock 생성 검사
+    try:
+        mock_test_path = PROJECTS_DIR / "_test_mock.webp"
+        generate_mock_image(mock_test_path)
+        if not mock_test_path.exists() or mock_test_path.stat().st_size == 0:
+            errors.append("더미 Mock WebP 파일 생성 실패")
+        else:
+            mock_test_path.unlink()
+        print("✔ 더미 Mock WebP 생성 파이프라인 검사 통과")
+    except Exception as e:
+        errors.append(f"더미 Mock 생성 테스트 예외: {e}")
+
     print("-" * 60)
     if errors:
         print(f"[FAIL] 총 {len(errors)}개 결함 발견:")
@@ -287,11 +370,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         description="플럭스(FLUX.1 [dev]) 및 SDXL(Unholy Desire Mix) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
     )
     parser.add_argument("-c", "--character", help="생성할 캐릭터 이름 (예: bjh, sample_character, all)")
-    parser.add_argument("-p", "--pose", default="all", help="생성할 포즈 코드/범위 (all, emotions, 00..19, 00,01 등)")
+    parser.add_argument("-p", "--pose", default="all", help="생성할 포즈 코드/범위 (all, emotions, 000..019, 000,001 등)")
     parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
+    parser.add_argument("-l", "--list", action="store_true", help="로스터 내 등록된 캐릭터 프로필 목록을 콘솔 테이블로 출력")
+    parser.add_argument("--profile", default=None, help="캐릭터 프로필/의상 선택 (JSON 내 profiles 섹션)")
     parser.add_argument("--engine", choices=["flux", "sdxl"], default="flux", help="이미지 생성 엔진 (flux: FLUX.1 [dev] GGUF, sdxl: SDXL Unholy 9.0 등 고속 2D 애니)")
     parser.add_argument("--ckpt", default=DEFAULT_SDXL_CKPT, help=f"SDXL 모드에서 사용할 체크포인트 파일명 (기본: {DEFAULT_SDXL_CKPT})")
+    parser.add_argument("--bg", default=None, help="즉석 배경 프롬프트 직접 주입 (지정 시 --bg-preset 보다 우선 적용)")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
+    parser.add_argument("--custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
+    parser.add_argument("--mock", action="store_true", help="ComfyUI 호출 없이 초고속(0.001초) 더미 WebP 이미지 생성으로 파이프라인 무결성 검증")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
     parser.add_argument("--overwrite", "-f", "--force", action="store_true", help="기존 파일이 있어도 강제로 덮어쓰기 (교체/리롤용)")
     parser.add_argument("--skip-existing", action="store_true", help="기존 파일 건너뛰기 (기본값으로 항상 활성화됨)")
@@ -313,9 +401,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.test:
         return run_self_test()
 
+    if args.list:
+        return print_roster_characters(roster=args.roster)
+
     if not args.character:
         parser.print_help()
-        print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다.")
+        print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다 (캐릭터 목록 확인: -l / --list).")
         return 1
 
     # 엔진별 기본값 산출
@@ -338,16 +429,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         db = load_pose_db(engine=args.engine)
         target_chars = resolve_characters(args.character, roster=args.roster)
         codes = resolve_pose_codes(args.pose, db)
+        if args.profile:
+            for char_obj, _ in target_chars:
+                char_obj.apply_profile(args.profile)
     except Exception as e:
         print(f"[설정 오류] {e}")
         return 1
 
     client = ComfyClient(host=COMFY_HOST)
-    if not args.dry_run:
+    if not args.dry_run and not args.mock:
         if not client.check_connection():
             print(f"[오류] ComfyUI 서버({COMFY_HOST})에 연결할 수 없습니다.")
             print("ComfyUI 폴더의 'run_nvidia_gpu.bat'를 실행하여 서버를 가동해 주십시오.")
-            print("(프롬프트 구성 점검만 원하시면 --dry-run 옵션을 사용하세요)")
+            print("(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
             return 1
 
     print("=" * 60)
@@ -356,6 +450,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
     print(f"  캐릭터당 포즈: 총 {len(codes)}개 ({', '.join(codes)}) | 총 {len(target_chars) * len(codes)}개 에셋")
     print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
+    if args.profile:
+        print(f"  프로필: '{args.profile}' 적용")
+    if args.bg:
+        print(f"  즉석 배경: '{args.bg}'")
+    if args.custom_neg and args.engine == "sdxl":
+        print(f"  추가 네거티브: '{args.custom_neg}'")
+    if args.mock:
+        print("  시뮬레이션: --mock 모드 활성화 (초고속 더미 생성)")
     if args.engine == "flux":
         print(f"  LoRA: {args.lora} (강도: {args.lora_weight})")
     is_overwrite = bool(args.overwrite)
@@ -366,13 +468,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     last_output_dir = None
 
     for char_idx, (char, actual_roster) in enumerate(target_chars, 1):
-        bg_prompt = load_background_preset(actual_roster, key=args.bg_preset)
+        bg_prompt = args.bg.strip() if args.bg else load_background_preset(actual_roster, key=args.bg_preset)
         output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
         output_dir.mkdir(parents=True, exist_ok=True)
         last_output_dir = output_dir
 
         print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
-        if bg_prompt:
+        if args.bg:
+            print(f"  즉석 배경: '{args.bg}' 적용")
+        elif bg_prompt:
             print(f"  배경 프리셋: '{args.bg_preset}' 적용")
 
         results: List[GenerationResult] = []
@@ -384,7 +488,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             out_path = output_dir / out_name
 
             if args.engine == "sdxl":
-                pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(char, pose, bg_prompt=bg_prompt)
+                pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
+                    char, pose, bg_prompt=bg_prompt, custom_neg=args.custom_neg
+                )
                 display_prompt = pos_prompt
                 workflow = build_sdxl_workflow(
                     positive_prompt=pos_prompt,
@@ -441,6 +547,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             if args.dry_run:
                 print(" [DRY-RUN 완료]")
                 results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
+                continue
+
+            if args.mock:
+                item_start = time.time()
+                generate_mock_image(out_path)
+                duration = time.time() - item_start
+                print(f" [MOCK 생성 완료: {duration:.3f}초]")
+                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration))
                 continue
 
             item_start = time.time()

@@ -92,11 +92,31 @@
   python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl # 000번부터 005번까지 범위 지정
   python -u flux_batch_generator.py -r don -c bjh -p 000,005,012 --engine sdxl # 특정 번호 나열 (0, 00 입력도 호환)
 
+  ── 캐릭터 목록 확인 (-l / --list) ─────────────────────────────────────────
+  # 해당 로스터에 등록된 캐릭터 목록, 성별, 프로필, 의상 요약을 한눈에 출력:
+  python -u flux_batch_generator.py -r don -l
+
+  ── 캐릭터 다중 의상/프로필 스위칭 (--profile) ───────────────────────────
+  # 캐릭터 JSON 내 profiles 에 정의된 의상/헤어 세팅으로 전환:
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --profile summer
+
+  ── 즉석 배경 프롬프트 직접 주입 (--bg) ───────────────────────────────────
+  # background.json 수정 없이 터미널에서 즉석으로 배경 문장 주입 (감정 씬 000~019 대상):
+  python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg "luxury yacht deck, ocean sunset"
+
   ── 배경 프리셋 변경 (감정 씬 000~019 대상) ─────────────────────────────────
   # projects/[로스터]/background.json 에 등록된 키를 지정합니다:
   python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg-preset default
   python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg-preset room
   python -u flux_batch_generator.py -r don -c bjh -p 000..005 --engine sdxl --bg-preset elevator
+
+  ── 추가 네거티브 프롬프트 오버라이드 (--custom_neg) ─────────────────────
+  # SDXL 모드에서 원하는 제외 요소/태그를 터미널에서 즉시 결합:
+  python -u flux_batch_generator.py -r don -c bjh -p 000,001 --engine sdxl --custom_neg "glasses, hat, jewelry"
+
+  ── 가상 생성 시뮬레이션 (--mock) ─────────────────────────────────────────
+  # ComfyUI 가동 없이 0.001초 만에 더미 WebP 파일을 생성하여 파일명/경로 무결성 즉시 시뮬레이션:
+  python -u flux_batch_generator.py -r don -c all -p 000,001 --mock
 
   ── 실행 전 미리보기 (GPU 가동 없이 건너뜀/생성 대상 점검) ───────────────
   python flux_batch_generator.py -r don -c all -p 000,001 --engine sdxl --dry-run

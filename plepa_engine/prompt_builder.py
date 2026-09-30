@@ -6,7 +6,7 @@ plepa_engine.prompt_builder
 from __future__ import annotations
 
 import re
-from typing import Tuple
+from typing import Optional, Tuple
 from plepa_engine.models import CharacterConfig, PoseEntry
 
 
@@ -152,6 +152,7 @@ def assemble_sdxl_prompt(
     char: CharacterConfig,
     pose: PoseEntry,
     bg_prompt: str = "",
+    custom_neg: Optional[str] = None,
 ) -> Tuple[str, str, bool]:
     """
     SDXL(Unholy Nova AI / Danbooru 포맷) 전용 긍정/부정 프롬프트를 조립합니다.
@@ -195,6 +196,8 @@ def assemble_sdxl_prompt(
 
     # 3. 부정 프롬프트 조립
     negative_prompt = char.sdxl_negative.strip() if char.sdxl_negative else DEFAULT_SDXL_NEGATIVE
+    if custom_neg and custom_neg.strip():
+        negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
 
     # 4. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
     positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)

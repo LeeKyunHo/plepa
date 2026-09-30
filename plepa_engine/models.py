@@ -42,7 +42,48 @@ class CharacterConfig:
     sdxl_positive: Optional[str] = None
     sdxl_negative: Optional[str] = None
     ref_weight: float = 0.7
+    profiles: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    active_profile: Optional[str] = None
     file_path: Optional[Path] = None
+
+    def apply_profile(self, profile_name: Optional[str]) -> None:
+        """지정된 프로필명에 맞추어 외형, 의상, 긍정/부정 태그 등을 동적으로 오버라이드합니다."""
+        if not profile_name or profile_name.strip() in ("", "default"):
+            return
+        
+        target = profile_name.strip()
+        if target not in self.profiles:
+            avail = list(self.profiles.keys())
+            avail_msg = f" (사용 가능: {', '.join(avail)})" if avail else " (등록된 프로필 없음)"
+            raise ValueError(f"캐릭터 '{self.prefix}'({self.name})에 '{target}' 프로필이 존재하지 않습니다.{avail_msg}")
+        
+        prof = self.profiles[target]
+        # 1. 의상 및 외형 오버라이드
+        if "outfit" in prof:
+            self.appearance.outfit = str(prof["outfit"]).strip()
+        if "face_and_hair" in prof:
+            self.appearance.face_and_hair = str(prof["face_and_hair"]).strip()
+        if "physique" in prof:
+            self.appearance.physique = str(prof["physique"]).strip()
+        
+        # 2. SDXL 프롬프트 오버라이드
+        pos_override = prof.get("sdxl_positive") or prof.get("positive")
+        if pos_override:
+            self.sdxl_positive = str(pos_override).strip()
+        neg_override = prof.get("sdxl_negative") or prof.get("negative")
+        if neg_override:
+            self.sdxl_negative = str(neg_override).strip()
+            
+        # 3. LoRA / 가중치 오버라이드
+        if "ref_weight" in prof:
+            self.ref_weight = float(prof["ref_weight"])
+        if "lora" in prof and isinstance(prof["lora"], dict):
+            if "name" in prof["lora"]:
+                self.lora.name = prof["lora"]["name"]
+            if "weight" in prof["lora"]:
+                self.lora.weight = float(prof["lora"]["weight"])
+
+        self.active_profile = target
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any], file_path: Optional[Path] = None) -> CharacterConfig:
@@ -60,6 +101,7 @@ class CharacterConfig:
         sdxl_pos = data.get("sdxl_positive") or data.get("positive")
         sdxl_neg = data.get("sdxl_negative") or data.get("negative")
         ref_weight = float(data.get("ref_weight", 0.7))
+        profiles_raw = data.get("profiles") or data.get("_profiles") or {}
 
         return cls(
             prefix=data.get("prefix", "unknown"),
@@ -71,6 +113,7 @@ class CharacterConfig:
             sdxl_positive=sdxl_pos,
             sdxl_negative=sdxl_neg,
             ref_weight=ref_weight,
+            profiles=dict(profiles_raw) if isinstance(profiles_raw, dict) else {},
             file_path=file_path
         )
 
