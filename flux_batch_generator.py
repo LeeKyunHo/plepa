@@ -44,7 +44,6 @@ from plepa_engine.models import (
 from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
 from plepa_engine.reporter import (
     asset_filename,
-    build_genit_block,
     open_in_explorer,
     print_batch_summary,
 )
@@ -459,14 +458,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
         # 결과 요약 콘솔 출력
         print_batch_summary(char.prefix, results, output_dir, total_duration)
-
-        # 젠잇 마크다운 블록 조립 및 저장
-        genit_block = build_genit_block(char.prefix, results, db)
-        if genit_block:
-            genit_file = output_dir / f"{char.prefix}_genit_guide.md"
-            with open(genit_file, "w", encoding="utf-8") as gf:
-                gf.write(genit_block)
-            print(f"✔ 젠잇 마크다운 가이드 파일 저장: {genit_file}")
 
     if not args.dry_run and last_output_dir and last_output_dir.parent.exists():
         open_in_explorer(last_output_dir.parent)
