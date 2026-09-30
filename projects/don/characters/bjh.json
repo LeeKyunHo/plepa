@@ -1,0 +1,15 @@
+{
+  "prefix": "bjh",
+  "name": "지현 (Ji-hyun)",
+  "gender": "female",
+  "appearance": {
+    "face_and_hair": "A striking young woman in her late 20s with shimmering platinum silver hair tied into a sleek high ponytail secured with a black scrunchie, long elegant side bangs framing her face, sharp glowing orange-amber eyes, delicate silver chain necklace with a small crystal pendant, pale porcelain skin",
+    "physique": "tall athletic hourglass silhouette, slender toned waist, sculpted curves, graceful confident posture",
+    "outfit": "a sophisticated pitch-black ribbed knit long-sleeved turtleneck bodycon mini dress featuring a daring underbust cutout accentuating her figure, hugging her curves seamlessly"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "cinematic anime digital illustration, moody upscale apartment ambient lighting, exquisite knit fabric textures, subtle depth of field, masterpiece quality, 8k resolution"
+}

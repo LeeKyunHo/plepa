@@ -1,0 +1,15 @@
+{
+  "prefix": "ksn",
+  "name": "수나 (Su-na)",
+  "gender": "female",
+  "appearance": {
+    "face_and_hair": "A trendy captivating young woman in her early 20s with sleek layered platinum silver-grey medium hair falling to her collarbones, airy see-through fringe bangs, clear sapphire blue eyes, a black leather choker necklace around her slender neck, a delicate silver pendant, clean fair skin",
+    "physique": "slender toned hourglass silhouette, narrow waist, sculpted flat midriff, youthful perky curves, feminine posture",
+    "outfit": "a skin-tight white ribbed knit spaghetti-strap cropped camisole top exposing her toned midriff, paired with a matching high-waisted white ribbed mini skirt and an oversized dark grey cable knit cardigan draped casually off her bare shoulders"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "cinematic anime digital illustration, modern luxury apartment interior daylight, detailed ribbed knit and cable knit textures, subtle depth of field, masterpiece quality, 8k resolution"
+}

@@ -33,8 +33,11 @@ pip install -r requirements.txt
 # 기본 캐릭터 전체(80종) 생성
 python flux_batch_generator.py -c sample_character -p all
 
-# 특정 번호 대역만 생성 (예: 감정 씬 0~19번)
-python flux_batch_generator.py -c sample_character -p emotions
+# 특정 로스터 및 번호 대역 생성 (예: don 프로젝트의 감정 씬 00~19번)
+python flux_batch_generator.py -r don -c don -p emotions
+
+# 배경 프리셋 지정 생성 (예: 펜트하우스 거실 배경 적용)
+python flux_batch_generator.py -r don -c don -p 00..05 --bg-preset penthouse_living
 ```
 
 ---
@@ -48,13 +51,19 @@ plepa/
 ├── plepa_engine/                # 플에파 전용 핵심 엔진
 │   ├── config.py                # ComfyUI API 주소, 해상도, 스텝 설정
 │   ├── comfy_client.py          # 비동기 ComfyUI 웹소켓/REST 클라이언트
-│   ├── prompt_builder.py        # 서술형 영문 자연어 프롬프트 조합기
+│   ├── prompt_builder.py        # 서술형 영문 자연어 프롬프트 조합기 (배경 연동 지원)
 │   ├── workflow_templates.py    # GGUF + Face Detailer 워크플로우 템플릿
 │   └── reporter.py              # Gen-IT 연동 마크다운 조립 및 결과 리포트
-├── projects/                    # 로스터 및 캐릭터 저장소
-│   └── default/
-│       ├── characters/          # 캐릭터 정의 JSON
-│       └── assets_flux/         # 생성된 WebP 이미지 결과물
+├── projects/                    # 멀티 프로젝트(로스터) 관리 폴더
+│   ├── default/
+│   │   ├── characters/          # 기본 샘플 캐릭터
+│   │   └── assets/              # 기본 에셋
+│   └── don/                     # don 프로젝트
+│       ├── background.json      # don 전용 배경 프리셋 (펜트하우스, 아파트 등)
+│       ├── characters/          # 캐릭터 정의 JSON (don, ksn, shn 등 8종)
+│       ├── references/          # 원본 캐릭터 레퍼런스 이미지 (.webp)
+│       └── assets/              # 생성된 WebP 이미지 및 젠잇 가이드
+│           └── {prefix}/
 ├── GEMINI.md                    # 에이전트 지침
 └── AI_HANDOVER_GUIDE.md         # 개발 히스토리 및 AI 인계서
 ```

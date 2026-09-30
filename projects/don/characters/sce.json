@@ -1,0 +1,15 @@
+{
+  "prefix": "sce",
+  "name": "채은 (Chae-eun)",
+  "gender": "female",
+  "appearance": {
+    "face_and_hair": "A breathtaking seductive exotic beauty in her early 30s with glowing sun-kissed warm bronze tanned skin, cascading voluminous bright amber-orange wavy long hair spilling over her shoulders, soft center-parted wavy bangs, mesmerizing emerald-green eyes with long dark lashes, a beauty mark under her left eye, large polished golden hoop earrings",
+    "physique": "voluptuous hourglass silhouette, generous full curves, narrow sculpted waist, confident sultry posture",
+    "outfit": "a skin-tight pristine white halter-neck backless bodycon mini dress featuring a deep plunging neckline and dramatic open back, contrasting gorgeously against her warm bronze skin"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "cinematic anime digital illustration, golden hour luxury apartment ambient lighting, beautiful skin specular highlights, subtle depth of field, masterpiece quality, 8k resolution"
+}

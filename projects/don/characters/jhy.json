@@ -1,0 +1,15 @@
+{
+  "prefix": "jhy",
+  "name": "하영 (Ha-young)",
+  "gender": "female",
+  "appearance": {
+    "face_and_hair": "A glamorous mature woman in her mid 30s with a sharp sleek deep dark purple chin-length bob cut, neat center-parted bangs, alluring deep purple eyes, seductive bold red lipstick, elegant white pearl stud earrings, spotless fair skin",
+    "physique": "tall statuesque hourglass figure, graceful long neck, generous curves, commanding alluring posture",
+    "outfit": "a skin-tight glossy black strapless tube top leather bodycon mini dress with a daring high side slit, draped loosely with an open-front luxurious white silk long robe cardigan over her shoulders"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "cinematic anime digital illustration, luxury penthouse evening ambiance, rich leather and silk reflections, subtle depth of field, masterpiece quality, 8k resolution"
+}

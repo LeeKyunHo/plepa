@@ -20,10 +20,15 @@ def is_nude_pose(entry: PoseEntry) -> bool:
     return False
 
 
-def assemble_flux_prompt(char: CharacterConfig, pose: PoseEntry) -> Tuple[str, bool]:
+def assemble_flux_prompt(
+    char: CharacterConfig,
+    pose: PoseEntry,
+    bg_prompt: str = "",
+) -> Tuple[str, bool]:
     """
     캐릭터 설정과 포즈 DB의 항목을 결합하여 고품질 플럭스 자연어 프롬프트를 조립합니다.
     - 탈의/H-씬의 경우 캐릭터 평상시 의상 묘사를 원천 배제합니다.
+    - emotions 씬의 경우 프로젝트 배경(bg_prompt)이 주어지면 기본 배경을 치환합니다.
     - 반환값: (최종 조립 프롬프트, 탈의여부 boolean)
     """
     nude = is_nude_pose(pose)
@@ -31,6 +36,15 @@ def assemble_flux_prompt(char: CharacterConfig, pose: PoseEntry) -> Tuple[str, b
 
     # 1. 포즈/구도 및 상황 서술 (선두 배치하여 구도 우선권 부여)
     pose_text = pose.prompt.strip()
+    if bg_prompt and pose.section == "emotions":
+        bg_clean = bg_prompt.strip().rstrip(".")
+        pose_text = re.sub(
+            r"Clean\s+(minimalist|minimalistic|soft)?\s*(indoor\s+)?background[,\.\s]*",
+            f"Set in {bg_clean}, ",
+            pose_text,
+            flags=re.IGNORECASE,
+        )
+
     if pose_text:
         if not pose_text.endswith("."):
             pose_text += "."

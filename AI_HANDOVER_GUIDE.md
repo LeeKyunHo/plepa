@@ -31,9 +31,9 @@
    - Forge는 단순 txt2img 생성에 그치지만, ComfyUI는 파이프라인 내부에 **자동 얼굴 정밀 보정(`Face Detailer`)**과 **AI 업스케일(`4x-UltraSharp`)**을 단일 비동기 워크플로우로 묶어 전신 샷에서도 압도적인 디테일을 보장할 수 있음.
    - 복잡한 노드 다이어그램은 Antigravity 에이전트가 코드로 자동화하므로 사용자는 CLI 명령어 한 줄(`python flux_batch_generator.py`)로 최상의 결과물을 얻음.
 
-2. **모델 양자화 규격: GGUF Q5_K_M 포맷 채택**
-   - **이유**: RTX 4060 Ti의 8GB VRAM 한계를 극복하면서도 순정 모델 수준의 화질을 유지하기 위함.
-   - 사용자의 시스템 RAM이 **48GB**로 매우 방대하므로, T5-XXL FP8 텍스트 인코더와 모델 오프로딩 버퍼를 RAM에 상주시키고 GPU로 스왑하는 구조에 가장 최적화된 포맷임.
+2. **모델 양자화 규격: GGUF Q6_K 포맷 채택**
+   - **이유**: RTX 4060 Ti의 8GB VRAM 한계를 극복하면서도 순정 FP16 대비 화질 열화가 거의 없는 최상급 양자화 모델.
+   - 사용자의 시스템 RAM이 **48GB**로 매우 방대하여 60장 연속 배치 생성 시에도 Q8_0 대비 생성 속도를 15~20% 단축(장당 약 79~88초)하면서도 뛰어난 인체 묘사력과 디테일을 보장.
 
 3. **캐릭터 일관성(얼굴/외형) 전략**
    - 불필요한 LoRA 추가 학습을 강제하지 않고, 플럭스의 뛰어난 언어 이해도를 살려 **정밀한 영문 서술형 외형 묘사(Descriptive Appearance)**로 일관성을 확보.
@@ -56,14 +56,17 @@ plepa/
 │   ├── __init__.py
 │   ├── config.py                # ComfyUI API 호스트(8188), 해상도, 스텝 등 기본 설정
 │   ├── comfy_client.py          # ComfyUI WebSocket + REST API 비동기 클라이언트
-│   ├── prompt_builder.py        # 서술형 자연어 프롬프트 조합기 (캐릭터 + 포즈 + 스타일)
+│   ├── prompt_builder.py        # 서술형 자연어 프롬프트 조합기 (캐릭터 + 포즈 + 스타일 + 배경)
 │   ├── workflow_templates.py    # GGUF + Face Detailer + Upscale 통합 워크플로우 JSON 생성기
 │   ├── models.py                # 캐릭터/포즈 데이터 모델 정의
 │   └── reporter.py              # Gen-IT 연동 마크다운 자동 조립 및 콘솔 리포터
 └── projects/
-    └── default/
-        ├── characters/          # 캐릭터 정의 JSON
-        └── assets_flux/         # 생성된 80종 WebP 에셋 저장소
+    └── {roster}/ (예: don, default)
+        ├── background.json      # 프로젝트 전용 공통 배경 프리셋
+        ├── characters/          # 캐릭터 정의 JSON (don, ksn, shn 등)
+        ├── references/          # 캐릭터 레퍼런스 이미지 (.webp)
+        └── assets/              # 생성된 80종 WebP 에셋 및 젠잇 가이드 저장소
+            └── {prefix}/
 ```
 
 ### 3.2 4대 시스템 불변식

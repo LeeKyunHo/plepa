@@ -64,19 +64,44 @@ def load_pose_db(path: Path = POSE_DB_PATH) -> Dict[str, PoseEntry]:
     return entries
 
 
+def find_character(char_name: str, roster: str = DEFAULT_ROSTER) -> tuple[CharacterConfig, str]:
+    """캐릭터 JSON 설정 로드 및 로스터 자동 탐색."""
+    clean_name = char_name[:-5] if char_name.endswith(".json") else char_name
+
+    # 1. 사용자가 지정한 로스터에서 우선 탐색
+    char_file = PROJECTS_DIR / roster / "characters" / f"{clean_name}.json"
+    if char_file.exists():
+        with open(char_file, "r", encoding="utf-8") as f:
+            return CharacterConfig.from_dict(json.load(f), file_path=char_file), roster
+
+    # 2. projects/* 전체에서 탐색 (지정 로스터에 없거나 default인 경우)
+    for proj in sorted(PROJECTS_DIR.iterdir()):
+        if proj.is_dir() and proj.name != roster:
+            candidate = proj / "characters" / f"{clean_name}.json"
+            if candidate.exists():
+                with open(candidate, "r", encoding="utf-8") as f:
+                    return CharacterConfig.from_dict(json.load(f), file_path=candidate), proj.name
+
+    raise FileNotFoundError(f"캐릭터 설정 파일을 찾을 수 없습니다: {char_name} (로스터: {roster})")
+
+
 def load_character(char_name: str, roster: str = DEFAULT_ROSTER) -> CharacterConfig:
-    """캐릭터 JSON 설정 로드."""
-    char_file = PROJECTS_DIR / roster / "characters" / f"{char_name}.json"
-    if not char_file.exists():
-        # .json 확장자 포함 전달 지원
-        char_file = PROJECTS_DIR / roster / "characters" / char_name
-        if not char_file.exists():
-            raise FileNotFoundError(f"캐릭터 설정 파일을 찾을 수 없습니다: {char_file}")
+    """하위 호환용 래퍼 함수."""
+    char, _ = find_character(char_name, roster=roster)
+    return char
 
-    with open(char_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
 
-    return CharacterConfig.from_dict(data, file_path=char_file)
+def load_background_preset(roster: str, key: str = "default") -> str:
+    """projects/{roster}/background.json 로드."""
+    bg_file = PROJECTS_DIR / roster / "background.json"
+    if not bg_file.exists():
+        return ""
+    try:
+        with open(bg_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get(key, data.get("default", ""))
+    except Exception:
+        return ""
 
 
 def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry]) -> List[str]:
@@ -203,7 +228,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument("-c", "--character", help="생성할 캐릭터 이름 (예: sample_character)")
     parser.add_argument("-p", "--pose", default="all", help="생성할 포즈 코드/범위 (all, emotions, 00..19, 01 등)")
-    parser.add_argument("--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
+    parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
+    parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
     parser.add_argument("--no-face-detailer", action="store_true", help="Face Detailer 얼굴 보정 생략")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
@@ -225,13 +251,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         db = load_pose_db()
-        char = load_character(args.character, roster=args.roster)
+        char, actual_roster = find_character(args.character, roster=args.roster)
         codes = resolve_pose_codes(args.pose, db)
+        bg_prompt = load_background_preset(actual_roster, key=args.bg_preset)
     except Exception as e:
         print(f"[설정 오류] {e}")
         return 1
 
-    output_dir = PROJECTS_DIR / args.roster / "assets_flux" / char.prefix
+    output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
     output_dir.mkdir(parents=True, exist_ok=True)
 
     client = ComfyClient(host=COMFY_HOST)
@@ -243,8 +270,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 1
 
     print("=" * 60)
-    print(f"  [플에파] FLUX.1 [dev] 에셋 배치 생성 시작: {char.name} ({char.prefix})")
+    print(f"  [플에파] FLUX.1 [dev] 에셋 배치 생성 시작: {char.name} ({char.prefix}) [로스터: {actual_roster}]")
     print(f"  대상 항목: 총 {len(codes)}개 에셋 | 저장 폴더: {output_dir}")
+    if bg_prompt:
+        print(f"  배경 프리셋: '{args.bg_preset}' 적용 완료")
     print(f"  옵션: Face Detailer={'비활성' if args.no_face_detailer else '활성'}, Upscale={'활성' if args.upscale else '비활성'}")
     print("=" * 60)
 
@@ -253,7 +282,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     for idx, code in enumerate(codes, 1):
         pose = db[code]
-        prompt, is_nude = assemble_flux_prompt(char, pose)
+        prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
         out_name = asset_filename(char.prefix, code)
         out_path = output_dir / out_name
 

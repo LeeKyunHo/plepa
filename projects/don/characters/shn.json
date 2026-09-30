@@ -1,0 +1,15 @@
+{
+  "prefix": "shn",
+  "name": "시온 (Si-on)",
+  "gender": "otokonoko",
+  "appearance": {
+    "face_and_hair": "A remarkably handsome and delicately beautiful androgynous young adult with a slender refined jawline, pretty feminine facial features, silky jet-black hair tied into a low ponytail at the nape of the neck with loose wispy strands framing the cheeks, sharp deep sapphire-blue eyes with an aloof composed gaze, immaculate pale porcelain skin",
+    "physique": "slender graceful androgynous figure, narrow waist, subtle delicate chest curves, slender long legs, sleek professional posture",
+    "outfit": "a tailored form-fitting charcoal grey business suit jacket over a crisp buttoned white silk dress shirt and a slim dark necktie, paired with matching tailored charcoal grey suit trousers"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "cinematic anime digital illustration, modern glass skyscraper executive office lighting, exquisite suit fabric texture, clean sharp lines, subtle depth of field, masterpiece quality, 8k resolution"
+}

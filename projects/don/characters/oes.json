@@ -1,0 +1,15 @@
+{
+  "prefix": "oes",
+  "name": "은서 (Eun-seo)",
+  "gender": "female",
+  "appearance": {
+    "face_and_hair": "A gentle voluptuous woman in her late 20s with lustrous pure jet-black hair styled into a neat low chignon bun at the nape of her neck, delicate wispy bangs and sidelocks softly framing her face, gentle dark brown eyes, a distinctive beauty mark under her left eye near her cheek, smooth pale skin",
+    "physique": "soft voluptuous hourglass figure, full bust, narrow waist, wide feminine hips, graceful tender posture",
+    "outfit": "a skin-tight dusty rose pink ribbed knit short-sleeved bodycon mini dress with a deep scoop neckline, clinging smoothly to her curves and silhouette"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "cinematic anime digital illustration, warm intimate ambient apartment lighting, soft delicate fabric folds, subtle depth of field, masterpiece quality, 8k resolution"
+}
