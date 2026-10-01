@@ -148,36 +148,19 @@ def clamp_sdxl_weights(prompt_text: str, max_weight: float = 1.15) -> str:
     return re.sub(r":([0-9]+\.[0-9]+)", _clamp_match, prompt_text)
 
 
-from plepa_engine.profile_resolver import (
-    apply_profile_to_prompt,
-    load_global_profiles,
-    resolve_character_profile,
-)
-
-
 def assemble_sdxl_prompt(
     char: CharacterConfig,
     pose: PoseEntry,
     bg_prompt: str = "",
     custom_neg: Optional[str] = None,
-    pose_db: Optional[dict] = None,
 ) -> Tuple[str, str, bool]:
     """
     SDXL(Unholy Nova AI / Danbooru 포맷) 전용 긍정/부정 프롬프트를 조립합니다.
-    - profile_resolver.resolve_character_profile()를 호출하여 프로필을 해석합니다.
-    - 프로필의 base_positive를 긍정 프롬프트 앞에 결합합니다.
-    - 프로필의 base_negative를 부정 프롬프트에 결합합니다.
     - 반환값: (positive_prompt, negative_prompt, is_nude)
     """
     nude = is_nude_pose(pose)
 
-    # 1. 프로필 해석
-    global_profiles = load_global_profiles(pose_db) if pose_db else None
-    profile = resolve_character_profile(char, char.gender, global_profiles)
-    prof_positive = profile.get("base_positive", "").strip()
-    prof_negative = profile.get("base_negative", "").strip()
-
-    # 2. 포즈 태그 정리
+    # 1. 포즈 태그 정리
     pose_tag = pose.prompt.strip()
     if bg_prompt and pose.section == "emotions":
         if "clean background" in pose_tag.lower():
@@ -185,7 +168,7 @@ def assemble_sdxl_prompt(
         else:
             pose_tag = f"{pose_tag}, {bg_prompt.strip()}"
 
-    # 3. 긍정 프롬프트 조립
+    # 2. 긍정 프롬프트 조립
     if char.sdxl_positive:
         base_pos = char.sdxl_positive.strip()
         if nude:
@@ -211,35 +194,12 @@ def assemble_sdxl_prompt(
         first_chunk = f"{quality_tags}, {pose_tag}" if pose_tag else quality_tags.strip()
         positive_prompt = f"{first_chunk} BREAK {gender_tag}, solo, {char_desc}"
 
-    # profile의 base_positive를 프롬프트 앞에 결합
-    if prof_positive:
-        positive_prompt = apply_profile_to_prompt(positive_prompt, profile)
-
-    # 4. 부정 프롬프트 조립 (profile의 base_negative 결합)
-    neg_parts = []
-    if prof_negative:
-        neg_parts.append(prof_negative)
-
-    if char.sdxl_negative:
-        neg_parts.append(char.sdxl_negative.strip())
-    else:
-        neg_parts.append(DEFAULT_SDXL_NEGATIVE)
-
+    # 3. 부정 프롬프트 조립
+    negative_prompt = char.sdxl_negative.strip() if char.sdxl_negative else DEFAULT_SDXL_NEGATIVE
     if custom_neg and custom_neg.strip():
-        neg_parts.append(custom_neg.strip())
+        negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
 
-    combined_neg = ", ".join(p for p in neg_parts if p)
-    # 중복 태그 정규화
-    seen_neg = set()
-    deduped_neg = []
-    for tag in combined_neg.split(","):
-        t = tag.strip()
-        if t and t.lower() not in seen_neg:
-            seen_neg.add(t.lower())
-            deduped_neg.append(t)
-    negative_prompt = ", ".join(deduped_neg)
-
-    # 5. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
+    # 4. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
     positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)
     negative_prompt = clamp_sdxl_weights(negative_prompt, max_weight=1.15)
 
@@ -248,6 +208,5 @@ def assemble_sdxl_prompt(
     negative_prompt = re.sub(r"\s*,\s*", ", ", negative_prompt).strip()
 
     return positive_prompt, negative_prompt, nude
-
 
 
