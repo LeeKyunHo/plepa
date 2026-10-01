@@ -620,6 +620,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 duration = time.time() - item_start
                 print(f" [실패: {ce}]")
                 results.append(GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ce)))
+            except Exception as ge:
+                duration = time.time() - item_start
+                print(f" [예외 발생: {ge}]")
+                results.append(GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ge)))
 
         total_duration = time.time() - total_start
 

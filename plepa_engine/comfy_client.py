@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import json
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -131,6 +132,24 @@ class ComfyClient:
             with urllib.request.urlopen(req, timeout=10.0) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 prompt_id = result.get("prompt_id")
+        except urllib.error.HTTPError as he:
+            ws.close()
+            err_detail = ""
+            try:
+                err_data = json.loads(he.read().decode("utf-8"))
+                node_errors = err_data.get("node_errors", {})
+                if node_errors:
+                    err_lines = []
+                    for nid, nval in node_errors.items():
+                        c_type = nval.get("class_type", nid)
+                        msgs = [err.get("message", "") + ": " + err.get("details", "") for err in nval.get("errors", [])]
+                        err_lines.append(f"[{c_type}#{nid}] {'; '.join(msgs)}")
+                    err_detail = " -> " + " | ".join(err_lines)
+                elif "error" in err_data:
+                    err_detail = f" -> {err_data['error'].get('message', '')}"
+            except Exception:
+                pass
+            raise ComfyClientError(f"작업 큐 등록 실패 (HTTP {he.code}: {he.reason}){err_detail}") from he
         except Exception as e:
             ws.close()
             raise ComfyClientError(f"작업 큐 등록 실패: {e}") from e
@@ -185,12 +204,42 @@ class ComfyClient:
         query = urllib.parse.urlencode({"filename": filename, "subfolder": subfolder, "type": img_type})
         view_url = f"{self.base_url}/view?{query}"
 
-        with urllib.request.urlopen(view_url, timeout=30.0) as img_resp:
-            img_bytes = img_resp.read()
+        try:
+            with urllib.request.urlopen(view_url, timeout=60.0) as img_resp:
+                img_bytes = img_resp.read()
 
-        # PIL 이미지로 변환 후 WebP로 최적화 저장
-        image = Image.open(io.BytesIO(img_bytes))
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        image.save(output_path, "WEBP", quality=WEBP_QUALITY, method=WEBP_METHOD)
+            image = Image.open(io.BytesIO(img_bytes))
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Windows 파일 락 및 충돌 방지를 위한 원자적 임시 저장 및 교체 (Atomic Save)
+            temp_path = output_path.with_name(f"{output_path.stem}_{uuid.uuid4().hex[:6]}.tmp.webp")
+            image.save(temp_path, "WEBP", quality=WEBP_QUALITY, method=WEBP_METHOD)
+
+            # 재시도 루프를 통한 안전한 파일 교체
+            last_err = None
+            for _ in range(5):
+                try:
+                    if output_path.exists():
+                        try:
+                            output_path.unlink()
+                        except Exception:
+                            pass
+                    temp_path.replace(output_path)
+                    last_err = None
+                    break
+                except OSError as oe:
+                    last_err = oe
+                    time.sleep(0.3)
+
+            if last_err is not None:
+                if temp_path.exists():
+                    try:
+                        temp_path.unlink()
+                    except Exception:
+                        pass
+                raise last_err
+
+        except Exception as se:
+            raise ComfyClientError(f"이미지 저장 실패 ({output_path.name}): {se}") from se
 
         return output_path
