@@ -4,3 +4,17 @@ plepa_engine
 """
 
 __version__ = "1.0.0"
+
+from plepa_engine.profile_resolver import (
+    BUILTIN_PROFILES,
+    apply_profile_to_prompt,
+    load_global_profiles,
+    resolve_character_profile,
+)
+
+__all__ = [
+    "BUILTIN_PROFILES",
+    "load_global_profiles",
+    "resolve_character_profile",
+    "apply_profile_to_prompt",
+]

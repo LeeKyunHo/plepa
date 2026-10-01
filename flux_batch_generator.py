@@ -41,6 +41,11 @@ from plepa_engine.models import (
     GenerationTarget,
     PoseEntry,
 )
+from plepa_engine.profile_resolver import (
+    apply_profile_to_prompt,
+    load_global_profiles,
+    resolve_character_profile,
+)
 from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
 from plepa_engine.reporter import (
     asset_filename,
@@ -379,6 +384,83 @@ def run_self_test() -> int:
         print("✔ 더미 Mock WebP 생성 파이프라인 검사 통과")
     except Exception as e:
         errors.append(f"더미 Mock 생성 테스트 예외: {e}")
+
+    # T50: _profiles 로드 검사
+    try:
+        # 1) _profiles 없는 DB -> BUILTIN_PROFILES 폴백 검증
+        default_profiles = load_global_profiles({})
+        if not default_profiles or "female" not in default_profiles or "male" not in default_profiles or "male_otokonoko" not in default_profiles:
+            errors.append("T50: _profiles 누락 시 기본 프로필(BUILTIN_PROFILES) 폴백 로드 실패")
+
+        # 2) _profiles 명시된 DB 로드 검증
+        sample_db = {
+            "_profiles": {
+                "custom_girl": {
+                    "base_positive": "masterpiece, 1girl, solo",
+                    "base_negative": "low quality, 1boy"
+                }
+            }
+        }
+        loaded_custom = load_global_profiles(sample_db)
+        if "custom_girl" not in loaded_custom or loaded_custom["custom_girl"]["base_positive"] != "masterpiece, 1girl, solo":
+            errors.append("T50: 커스텀 _profiles 섹션 파싱 실패")
+        print("✔ [T50] _profiles 로드 검사 통과 (기본 폴백 및 커스텀 로드)")
+
+    except Exception as e:
+        errors.append(f"T50: _profiles 로드 검사 예외: {e}")
+
+    # T51: 성별별 프로필 매칭 검사
+    try:
+        dummy_char = CharacterConfig.from_dict({
+            "prefix": "dummy",
+            "name": "Dummy",
+            "appearance": {"outfit": "", "face_and_hair": "", "physique": ""}
+        })
+        prof_f = resolve_character_profile(dummy_char, "female")
+        prof_m = resolve_character_profile(dummy_char, "male")
+        prof_oto = resolve_character_profile(dummy_char, "otokonoko")
+
+        if prof_f["name"] != "female" or "1girl" not in prof_f["base_positive"]:
+            errors.append("T51: female 프로필 매칭 실패")
+        if prof_m["name"] != "male" or "1boy" not in prof_m["base_positive"]:
+            errors.append("T51: male 프로필 매칭 실패")
+        if prof_oto["name"] != "male_otokonoko" or "androgynous" not in prof_oto["base_positive"]:
+            errors.append("T51: male_otokonoko 프로필 매칭 실패")
+        print("✔ [T51] 성별별 프로필 매칭 검사 통과 (female, male, male_otokonoko)")
+
+    except Exception as e:
+        errors.append(f"T51: 성별별 프로필 매칭 검사 예외: {e}")
+
+    # T52: 프롬프트 적용 검사
+    try:
+        sample_prof = {
+            "name": "female",
+            "base_positive": "masterpiece, 1girl, solo",
+            "base_negative": "worst quality, 1boy"
+        }
+        # 1) 기본 결합 검증
+        applied = apply_profile_to_prompt("smile, looking at viewer", sample_prof)
+        if "masterpiece" not in applied or "1girl" not in applied or "smile" not in applied:
+            errors.append(f"T52: 프롬프트 결합 누락: {applied}")
+
+        # 2) 중복 태그 정규화 검증
+        applied_dup = apply_profile_to_prompt("1girl, happy", sample_prof)
+        if applied_dup.lower().count("1girl") != 1:
+            errors.append(f"T52: 중복 태그 정규화 실패 (1girl 중복 검출됨): {applied_dup}")
+
+        # 3) BREAK 문법 분리 적용 검증
+        break_prof = {
+            "name": "break_test",
+            "base_positive": "masterpiece BREAK 1girl, solo",
+            "base_negative": ""
+        }
+        applied_break = apply_profile_to_prompt("smile, cowboy shot", break_prof)
+        if " BREAK " not in applied_break:
+            errors.append(f"T52: BREAK 문법 분리 적용 실패: {applied_break}")
+        print("✔ [T52] 프롬프트 적용 검사 통과 (태그 결합, 중복 정규화, BREAK 분할)")
+
+    except Exception as e:
+        errors.append(f"T52: 프롬프트 적용 검사 예외: {e}")
 
     print("-" * 60)
     if errors:
