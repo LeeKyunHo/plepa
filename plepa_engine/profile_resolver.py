@@ -139,6 +139,20 @@ def resolve_character_profile(
     return result
 
 
+def _join_and_dedup_tags(*parts: str) -> str:
+    """쉼표로 구분된 태그들을 결합하고 순서를 유지하며 대소문자 중복을 제거합니다."""
+    combined = ", ".join(p.strip() for p in parts if p and p.strip())
+    tags = [t.strip() for t in combined.split(",") if t.strip()]
+    seen = set()
+    deduped = []
+    for tag in tags:
+        lower_tag = tag.lower()
+        if lower_tag not in seen:
+            seen.add(lower_tag)
+            deduped.append(tag)
+    return ", ".join(deduped)
+
+
 def apply_profile_to_prompt(prompt: str, profile: Dict[str, str]) -> str:
     """
     기존 프롬프트 문자열에 프로필의 base_positive 태그를 적절히 결합합니다.
@@ -161,23 +175,18 @@ def apply_profile_to_prompt(prompt: str, profile: Dict[str, str]) -> str:
     if not p_clean:
         return base_pos
 
-    # BREAK 문법 지원
+    # 1. 기존 prompt 에 BREAK 가 있는 경우: [base_pos, first_chunk] BREAK [second_chunk]
+    if " BREAK " in p_clean:
+        first_chunk, second_chunk = p_clean.split(" BREAK ", 1)
+        joined_first = _join_and_dedup_tags(base_pos, first_chunk)
+        return f"{joined_first} BREAK {second_chunk.strip()}"
+
+    # 2. base_pos 에 BREAK 가 있는 경우: [quality_part, p_clean] BREAK [char_part]
     if " BREAK " in base_pos:
         quality_part, char_part = base_pos.split(" BREAK ", 1)
-        first_chunk = ", ".join(t.strip() for t in [quality_part, p_clean] if t.strip())
-        return f"{first_chunk} BREAK {char_part.strip()}"
+        joined_first = _join_and_dedup_tags(quality_part, p_clean)
+        return f"{joined_first} BREAK {char_part.strip()}"
 
-    # 단순 쉼표 태그 결합 및 공백/중복 정리
-    combined = f"{base_pos}, {p_clean}"
-    tags = [t.strip() for t in combined.split(",") if t.strip()]
+    # 3. 단순 쉼표 태그 결합 및 공백/중복 정리
+    return _join_and_dedup_tags(base_pos, p_clean)
 
-    # 순서를 유지하며 중복 태그 정규화 제거
-    seen = set()
-    deduped = []
-    for tag in tags:
-        lower_tag = tag.lower()
-        if lower_tag not in seen:
-            seen.add(lower_tag)
-            deduped.append(tag)
-
-    return ", ".join(deduped)

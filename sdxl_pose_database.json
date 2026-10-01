@@ -4,6 +4,20 @@
     "structure": "최상위 키 = 섹션명, 값 = { 코드: 프롬프트 }",
     "number_ranges": "000-019: emotions, 020-039: poses, 040-059: h_scenes, 140-159: scenes_otokonoko"
   },
+  "_profiles": {
+    "female": {
+      "base_positive": "masterpiece, best quality, highly detailed, clean background, soft lighting, character portrait, cowboy shot, 1girl, solo",
+      "base_negative": "worst quality, low quality, blurry, bad anatomy, bad hands, extra fingers, extra limbs, deformed, disfigured, watermark, signature, text, jpeg artifacts, cropped, 1boy, male, masculine, beard, mustache, facial hair, muscular, animal ears, cat ears, beast ears, fox ears, dog ears, animal tail"
+    },
+    "male": {
+      "base_positive": "masterpiece, best quality, highly detailed, clean background, soft lighting, character portrait, cowboy shot, 1boy, solo, masculine",
+      "base_negative": "worst quality, low quality, blurry, bad anatomy, bad hands, extra fingers, extra limbs, deformed, disfigured, watermark, signature, text, jpeg artifacts, cropped, 1girl, female, breasts, feminine"
+    },
+    "male_otokonoko": {
+      "base_positive": "masterpiece, best quality, highly detailed, clean background, soft lighting, character portrait, cowboy shot, 1boy, solo, androgynous, feminine face, slender build, flat chest, delicate features",
+      "base_negative": "worst quality, low quality, blurry, bad anatomy, bad hands, animal ears, cat ears, beast ears, fox ears, dog ears, animal tail, extra fingers, extra limbs, deformed, disfigured, watermark, signature, text, jpeg artifacts, cropped, 2boys, multiple characters, clone, duplicate, 1girl, female, breasts, large breasts, heavy cleavage, female genitalia, female anatomy, muscular, manly, beard, mustache, facial hair, uncensored, no censor, thin censorship, visible penis, large penis, erection, testicles, freckles, skin spots, blemishes, complex background"
+    }
+  },
   "emotions": {
     "000": {
       "label": "평상",

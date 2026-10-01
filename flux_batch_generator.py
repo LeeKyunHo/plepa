@@ -462,6 +462,83 @@ def run_self_test() -> int:
     except Exception as e:
         errors.append(f"T52: 프롬프트 적용 검사 예외: {e}")
 
+    # T53: 프로필 base_positive 결합 검사
+    try:
+        test_pose = PoseEntry(code="000", section="emotions", label="평상", prompt="standing, looking at viewer")
+
+        # 1) 여성 캐릭터 검사
+        char_f = CharacterConfig.from_dict({
+            "prefix": "test_f",
+            "name": "Test Female",
+            "gender": "female",
+            "appearance": {"face_and_hair": "black hair", "physique": "slim", "outfit": "serafuku"}
+        })
+        pos_f, _, _ = assemble_sdxl_prompt(char_f, test_pose)
+        if "1girl" not in pos_f or "cowboy shot" not in pos_f or "masterpiece" not in pos_f:
+            errors.append(f"T53: 여성 프로필 base_positive 결합 실패: {pos_f}")
+
+        # 2) 남성 캐릭터 검사
+        char_m = CharacterConfig.from_dict({
+            "prefix": "test_m",
+            "name": "Test Male",
+            "gender": "male",
+            "appearance": {"face_and_hair": "short hair", "physique": "muscular", "outfit": "black suit"}
+        })
+        pos_m, _, _ = assemble_sdxl_prompt(char_m, test_pose)
+        if "1boy" not in pos_m or "masculine" not in pos_m:
+            errors.append(f"T53: 남성 프로필 base_positive 결합 실패: {pos_m}")
+
+        # 3) 커스텀 pose_db 전달 시 base_positive 결합 검사
+        custom_pose_db = {
+            "_profiles": {
+                "female": {
+                    "base_positive": "custom_lead_tag, 1girl, solo",
+                    "base_negative": "custom_neg_tag"
+                }
+            }
+        }
+        pos_custom, _, _ = assemble_sdxl_prompt(char_f, test_pose, pose_db=custom_pose_db)
+        if "custom_lead_tag" not in pos_custom:
+            errors.append(f"T53: 커스텀 pose_db의 base_positive 결합 실패: {pos_custom}")
+
+        print("✔ [T53] 프로필 base_positive 결합 검사 통과 (여성/남성/커스텀 DB)")
+    except Exception as e:
+        errors.append(f"T53: 프로필 base_positive 결합 검사 예외: {e}")
+
+    # T54: 프로필 base_negative 결합 검사
+    try:
+        test_pose = PoseEntry(code="000", section="emotions", label="평상", prompt="standing, looking at viewer")
+
+        # 1) 여성 캐릭터의 네거티브에 남성 배제 태그 결합 검사
+        _, neg_f, _ = assemble_sdxl_prompt(char_f, test_pose)
+        if "1boy" not in neg_f or "male" not in neg_f or "beard" not in neg_f:
+            errors.append(f"T54: 여성 프로필 base_negative 결합 실패 (1boy/male/beard 누락): {neg_f}")
+
+        # 2) 남성 캐릭터의 네거티브에 여성 배제 태그 결합 검사
+        _, neg_m, _ = assemble_sdxl_prompt(char_m, test_pose)
+        if "1girl" not in neg_m or "female" not in neg_m or "breasts" not in neg_m:
+            errors.append(f"T54: 남성 프로필 base_negative 결합 실패 (1girl/female/breasts 누락): {neg_m}")
+
+        # 3) 오토코노코 캐릭터의 네거티브에 양방향 배제 태그 결합 검사
+        char_oto = CharacterConfig.from_dict({
+            "prefix": "test_oto",
+            "name": "Test Otokonoko",
+            "gender": "male_otokonoko",
+            "appearance": {"face_and_hair": "long twintails", "physique": "slender", "outfit": "maid"}
+        })
+        _, neg_oto, _ = assemble_sdxl_prompt(char_oto, test_pose)
+        if "large breasts" not in neg_oto or "facial hair" not in neg_oto:
+            errors.append(f"T54: 오토코노코 프로필 base_negative 결합 실패: {neg_oto}")
+
+        # 4) custom_neg 결합 시 동시 반영 검사
+        _, neg_custom, _ = assemble_sdxl_prompt(char_f, test_pose, custom_neg="custom_extra_neg")
+        if "custom_extra_neg" not in neg_custom or "1boy" not in neg_custom:
+            errors.append(f"T54: custom_neg 와 프로필 base_negative 동시 결합 실패: {neg_custom}")
+
+        print("✔ [T54] 프로필 base_negative 결합 검사 통과 (여성/남성/오토코노코/커스텀 네거티브)")
+    except Exception as e:
+        errors.append(f"T54: 프로필 base_negative 결합 검사 예외: {e}")
+
     print("-" * 60)
     if errors:
         print(f"[FAIL] 총 {len(errors)}개 결함 발견:")
@@ -539,6 +616,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         db = load_pose_db(engine=args.engine)
+        raw_pose_db = None
+        if args.engine == "sdxl":
+            try:
+                with open(SDXL_POSE_DB_PATH, "r", encoding="utf-8") as f:
+                    raw_pose_db = json.load(f)
+            except Exception:
+                raw_pose_db = None
+
         target_chars = resolve_characters(args.character, roster=args.roster)
         codes = resolve_pose_codes(args.pose, db)
         if args.profile:
@@ -547,6 +632,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     except Exception as e:
         print(f"[설정 오류] {e}")
         return 1
+
 
     client = ComfyClient(host=COMFY_HOST)
     if not args.dry_run and not args.mock:
@@ -621,7 +707,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
             if args.engine == "sdxl":
                 pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
-                    char, pose, bg_prompt=bg_prompt, custom_neg=args.custom_neg
+                    char, pose, bg_prompt=bg_prompt, custom_neg=args.custom_neg, pose_db=raw_pose_db
                 )
                 display_prompt = pos_prompt
                 workflow = build_sdxl_workflow(
