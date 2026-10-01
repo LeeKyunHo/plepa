@@ -42,11 +42,12 @@ WEBP_METHOD = 6
 # ── SDXL (Unholy Desire Mix 등) 기본 식별자 및 파라미터 ──
 DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "unholyDesireMixSinister_v90.safetensors")
 DEFAULT_SDXL_STEPS = 25
-DEFAULT_SDXL_CFG = 6.5
+DEFAULT_SDXL_CFG = 5.0
 DEFAULT_SDXL_SAMPLER = "euler_ancestral"
 DEFAULT_SDXL_SCHEDULER = "normal"
 DEFAULT_SDXL_WIDTH = 832
 DEFAULT_SDXL_HEIGHT = 1216
+DEFAULT_REF_WEIGHT = 0.5
 SDXL_POSE_DB_PATH = ROOT_DIR / "sdxl_pose_database.json"
 FLUX_POSE_DB_PATH = ROOT_DIR / "flux_pose_database.json"
 

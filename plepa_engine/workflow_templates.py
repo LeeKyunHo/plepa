@@ -21,6 +21,7 @@ from plepa_engine.config import (
     DEFAULT_SDXL_SCHEDULER,
     DEFAULT_SDXL_STEPS,
     DEFAULT_SDXL_WIDTH,
+    DEFAULT_REF_WEIGHT,
     DEFAULT_STEPS,
     DEFAULT_UNET_GGUF,
     DEFAULT_UPSCALER,
@@ -235,7 +236,7 @@ def build_sdxl_workflow(
     use_face_detailer: bool = False,
     use_upscale: bool = False,
     ref_image_name: Optional[str] = None,
-    ref_weight: float = 0.85,
+    ref_weight: float = DEFAULT_REF_WEIGHT,
     ipadapter_model: str = "ip-adapter-plus_sdxl_vit-h.safetensors",
     clip_vision_model: str = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
 ) -> Dict[str, Any]:
@@ -283,8 +284,8 @@ def build_sdxl_workflow(
                 "weight_type": "linear",
                 "combine_embeds": "concat",
                 "start_at": 0.0,
-                "end_at": 1.0,
-                "embeds_scaling": "V only",
+                "end_at": 0.8,
+                "embeds_scaling": "K+V",
             }
         }
         current_model = ["33", 0]

@@ -16,6 +16,7 @@ from plepa_engine.comfy_client import ComfyClient, ComfyClientError
 from plepa_engine.config import (
     COMFY_HOST,
     DEFAULT_HEIGHT,
+    DEFAULT_REF_WEIGHT,
     DEFAULT_ROSTER,
     DEFAULT_SDXL_CFG,
     DEFAULT_SDXL_CKPT,
@@ -407,7 +408,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
     parser.add_argument("--ref_image", default=None, help="IP-Adapter 참조 이미지 파일 경로 (생략 시 references/{prefix}.webp 자동 탐색)")
-    parser.add_argument("--ref_weight", type=float, default=None, help="IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 0.85)")
+    parser.add_argument("--ref_weight", type=float, default=None, help=f"IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 {DEFAULT_REF_WEIGHT})")
     parser.add_argument("--no_ref", action="store_true", help="레퍼런스 이미지(IP-Adapter)를 비활성화하고 순수 프롬프트로만 생성")
     parser.add_argument("--mock", action="store_true", help="ComfyUI 호출 없이 초고속(0.001초) 더미 WebP 이미지 생성으로 파이프라인 무결성 검증")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
@@ -416,7 +417,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--face-detailer", action="store_true", help="Face Detailer 얼굴 보정 활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
-    parser.add_argument("--cfg", type=float, default=None, help="CFG 스케일 (기본: flux=3.5, sdxl=6.5)")
+    parser.add_argument("--cfg", type=float, default=None, help=f"CFG 스케일 (기본: flux=3.5, sdxl={DEFAULT_SDXL_CFG})")
     parser.add_argument("--sampler", default=None, help="샘플러 알고리즘 (기본: flux=euler, sdxl=euler_ancestral)")
     parser.add_argument("--scheduler", default=None, help="스케줄러 (기본: flux=simple, sdxl=normal)")
     parser.add_argument("--unet", default=DEFAULT_UNET_GGUF, help=f"FLUX 모드 GGUF UNet 모델 파일명 (기본: {DEFAULT_UNET_GGUF})")
@@ -511,7 +512,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
         # IP-Adapter 참조 이미지 탐색 및 업로드
         ref_file_name = None
-        ref_weight = args.ref_weight if args.ref_weight is not None else getattr(char, "ref_weight", 0.85)
+        ref_weight = args.ref_weight if args.ref_weight is not None else getattr(char, "ref_weight", DEFAULT_REF_WEIGHT)
         if args.engine == "sdxl" and not args.no_ref:
             ref_path = find_reference_image(char.prefix, actual_roster, custom_path=args.ref_image)
             if ref_path:
