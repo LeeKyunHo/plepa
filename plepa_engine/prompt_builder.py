@@ -101,10 +101,13 @@ _HAIR_KEYWORDS = (
     "twintails", "braid", "updo", "ahoge", "curls"
 )
 
+DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, very aesthetic, absurdres, newest"
+
+# Illustrious-XL / Meichi 공식 베스트 프랙티스 네거티브 (2D 선화 및 음영 보호)
 DEFAULT_SDXL_NEGATIVE = (
-    "worst quality, low quality, bad anatomy, bad proportions, bad hands, extra fingers, missing fingers, "
-    "mutated hands, extra limbs, deformed, jpeg artifacts, watermark, signature, text, 1boy, male, "
-    "photorealistic, realistic, 3d, render, flat color, thick lineart, comic, panel layout, border, monochrome, greyscale"
+    "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, "
+    "missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, "
+    "username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2)"
 )
 
 
@@ -138,14 +141,19 @@ def strip_sdxl_outfit_tags(prompt_text: str) -> str:
 
 def clamp_sdxl_weights(prompt_text: str, max_weight: float = 1.15) -> str:
     """
-    ComfyUI 순정 CLIP 인코더에서 가중치 과다 곱셈으로 인한 색상 폭주(Color Burn / 네온 형광 현상)를
-    방지하기 위해 1.15를 초과하는 과도한 가중치를 안전 한계치로 자동 클램핑합니다.
+    Illustrious-XL / SDXL CLIP 인코더 최적화:
+    1. 1.15를 초과하는 과도한 가중치를 안전 한계치(1.15)로 클램핑하여 색상 과포화 방지.
+    2. 다중 괄호((...)) 누적으로 인한 비정상 가중치 증폭을 단일화.
     """
     def _clamp_match(m: re.Match) -> str:
         w = float(m.group(1))
         return f":{min(w, max_weight):.2f}"
 
-    return re.sub(r":([0-9]+\.[0-9]+)", _clamp_match, prompt_text)
+    text = re.sub(r":([0-9]+\.[0-9]+)", _clamp_match, prompt_text)
+    # 2중 이상 연속 괄호 정규화
+    text = re.sub(r"\({2,}", "(", text)
+    text = re.sub(r"\){2,}", ")", text)
+    return text
 
 
 def assemble_sdxl_prompt(
