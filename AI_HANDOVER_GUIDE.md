@@ -39,9 +39,10 @@
 3. **캐릭터 일관성(얼굴/외형) 전략**
    - 불필요한 LoRA 추가 학습을 강제하지 않고, 플럭스의 뛰어난 언어 이해도를 살려 **정밀한 영문 서술형 외형 묘사(Descriptive Appearance)**로 일관성을 확보.
 
-4. **FLUX + SDXL (Unholy 9.0) 듀얼 엔진 전환 체계 구축**
+4. **FLUX + SDXL (Illustrious Meichi / Unholy / HexMix) 듀얼 엔진 전환 체계 구축**
    - **이유**: FLUX(12B)는 압도적 묘사력과 인체 해부학적 정확도를 제공하지만 8GB VRAM 환경에서 LoRA 적용 시 장당 약 199초가 소요됨.
-   - 반면 SDXL 언홀리 9.0은 장당 **14초**의 경이로운 속도로 60장 배치를 14분 만에 끝내며 2D 애니 셀화 작화 재현력이 탁월함.
+   - 반면 SDXL(Illustrious Meichi / Unholy)은 장당 **14~35초**의 경이로운 속도로 2D 애니 셀화 및 미소녀 일러스트 작화 재현력이 탁월함.
+   - 2026-10-03 기준 SDXL 기본 체크포인트를 피부 질감과 이목구비 묘사가 가장 뛰어난 **`meichiILIghtMIXV1_meichiILUstMIXV1.safetensors` (Meichi IL-ust MIX V1)**로 정식 채택함.
    - 따라서 CLI의 `--engine {flux, sdxl}` 매개변수 하나로 두 엔진을 자유롭게 스위칭할 수 있도록 듀얼 워크플로우 템플릿과 듀얼 포즈 DB(`flux_pose_database.json`, `sdxl_pose_database.json`)를 완벽히 격리·통합함.
 
 5. **기본 빈칸 채우기(Smart Skip) 및 교체(`--overwrite` / `-f`) 정책**
