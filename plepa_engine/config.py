@@ -39,8 +39,8 @@ DEFAULT_HEIGHT = 1152
 WEBP_QUALITY = 95
 WEBP_METHOD = 6
 
-# ── SDXL (Unholy Desire Mix 등) 기본 식별자 및 파라미터 ──
-DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "unholyDesireMixSinister_v90.safetensors")
+# ── SDXL (Illustrious Meichi / Unholy 등) 기본 식별자 및 파라미터 ──
+DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "meichiILIghtMIXV1_meichiILUstMIXV1.safetensors")
 DEFAULT_SDXL_STEPS = 25
 DEFAULT_SDXL_CFG = 5.0
 DEFAULT_SDXL_SAMPLER = "euler_ancestral"

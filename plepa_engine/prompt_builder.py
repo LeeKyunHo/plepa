@@ -152,6 +152,7 @@ def assemble_sdxl_prompt(
     char: CharacterConfig,
     pose: PoseEntry,
     bg_prompt: str = "",
+    custom_pos: Optional[str] = None,
     custom_neg: Optional[str] = None,
 ) -> Tuple[str, str, bool]:
     """
@@ -177,10 +178,12 @@ def assemble_sdxl_prompt(
 
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
-            first_chunk = f"{quality_part.strip()}, {pose_tag}" if pose_tag else quality_part.strip()
+            prefix_tags = f"{custom_pos.strip()}, {quality_part.strip()}" if custom_pos and custom_pos.strip() else quality_part.strip()
+            first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
             positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
         else:
-            positive_prompt = f"{base_pos}, {pose_tag}" if pose_tag else base_pos.strip()
+            prefix_tags = f"{custom_pos.strip()}, {base_pos}" if custom_pos and custom_pos.strip() else base_pos
+            positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
     else:
         # 폴백: 캐릭터 외형 기반
         gender_tag = "1boy, male" if char.gender.lower() == "male" else "1girl"
@@ -191,6 +194,8 @@ def assemble_sdxl_prompt(
             char_desc += ", nude, completely nude"
 
         quality_tags = "masterpiece, best quality, newest, absurdres, aesthetic illustration"
+        if custom_pos and custom_pos.strip():
+            quality_tags = f"{custom_pos.strip()}, {quality_tags}"
         first_chunk = f"{quality_tags}, {pose_tag}" if pose_tag else quality_tags.strip()
         positive_prompt = f"{first_chunk} BREAK {gender_tag}, solo, {char_desc}"
 
