@@ -239,14 +239,25 @@ def assemble_sdxl_prompt(
     if is_interactive:
         # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
         positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
-        # 모브 남성 파트너에게 특색(헤어, 의상)이 부여되지 않도록 완전한 무특색(스킨헤드/맨몸/얼굴없음) 실루엣으로 통일
-        positive_prompt = f"{positive_prompt}, (bald male:1.2), (faceless male:1.2), (shirtless male:1.15), (bare shoulders:1.1)"
         # 부정 프롬프트에서 남성 차단 태그(1boy, male) 제거하여 여성 얼굴 복제 방지
         negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
-        # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 불필요한 남성 하체 침범, 손 색상 오염/장갑 원천 차단
-        negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, male lower body, male legs, male crotch, lower body, gloves, (colored skin:1.2), orange skin"
-        # 모브 남성의 의상 착의 및 헤어스타일을 원천 차단하여 순수한 무특색 스킨헤드 모브로 고정
-        negative_prompt = f"{negative_prompt}, male clothes, male shirt, male t-shirt, male jacket, male suit, male hair, male bangs, male haircut"
+        # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 손 색상 오염/장갑 원천 차단
+        negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, (colored skin:1.2), orange skin"
+
+        # 모브 남성 파트너: BREAK를 통한 여주인공과 모브의 Attention 완전 격리 (이염 원천 차단)
+        # 포즈의 착의/탈의 여부에 따른 하의(단색 블랙 팬츠 vs 완전 탈의) 정밀 분기
+        if nude:
+            # 탈의/성인 씬: 완전 탈의 모브
+            mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (naked male:1.2), (shirtless male:1.15), (bottomless male:1.2), muscular build, featureless silhouette"
+            mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
+        else:
+            # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정 (하의 무작위성 방지)
+            mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (shirtless male:1.15), (bare shoulders:1.1), (solid black pants:1.2), muscular build, featureless silhouette"
+            mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
+
+        positive_prompt = f"{positive_prompt} {mob_positive}"
+        negative_prompt = f"{negative_prompt}, {mob_negative}"
+
         # 파트너를 응시해야 하는 상호작용 포즈인 경우 정면/카메라 응시 차단
         if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):
             negative_prompt = f"{negative_prompt}, looking at viewer, looking straight at camera"
@@ -260,6 +271,7 @@ def assemble_sdxl_prompt(
 
     # 연속 콤마 및 공백 정리
     positive_prompt = re.sub(r"\s*,\s*", ", ", positive_prompt).strip()
+    positive_prompt = re.sub(r",?\s*BREAK\s*,?", " BREAK ", positive_prompt).strip()
     negative_prompt = re.sub(r"\s*,\s*", ", ", negative_prompt).strip()
 
     return positive_prompt, negative_prompt, nude
