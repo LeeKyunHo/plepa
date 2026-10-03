@@ -102,8 +102,8 @@
     },
     "019": {
       "label": "키스조름",
-      "description": "상체를 살짝 앞으로 내밀고 가슴 앞에 두 손을 모아 쥔 채, 촉촉하고 애타는 눈망울로 올려다보며 키스를 조르는 표정.",
-      "prompt": "solo focus, (looking up at viewer:1.25), (pleading eyes:1.2), (longing gaze:1.2), (asking for kiss:1.2), (anticipation:1.15), (heavy blush:1.25), (intensely flushed cheeks:1.2), (slightly parted lips:1.2), (glossy lips:1.15), (leaning forward:1.15), (head tilted:1.1), (hands clasped in front of chest:1.2), sweet romantic mood, clean background, soft lighting, bust shot, upper body portrait"
+      "description": "파트너 없이 단독으로 카메라를 똑바로 응시하며, 상체를 살짝 앞으로 내밀고 가슴 앞에 두 손을 모아 쥔 채 촉촉하고 애타는 눈망울로 키스를 조르고 기대하는 표정.",
+      "prompt": "standing, solo, looking at viewer, (direct eye contact:1.25), (pleading eyes:1.2), (longing gaze:1.2), (anticipation:1.15), (heavy blush:1.25), (intensely flushed cheeks:1.2), (slightly parted lips:1.2), (glossy lips:1.15), (leaning forward:1.15), (head tilted:1.1), (hands clasped in front of chest:1.2), sweet romantic mood, clean background, soft lighting, bust shot, upper body portrait"
     }
   },
   "poses": {
