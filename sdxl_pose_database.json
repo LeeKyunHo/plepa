@@ -83,7 +83,7 @@
     },
     "019": {
       "label": "키스",
-      "prompt": "solo focus, (kiss face:1.25), (kissing expression:1.2), (softly closed eyes:1.2), (head tilted:1.15), (parted lips:1.25), soft lips, breathless anticipation, (deep blush:1.2), (intensely flushed cheeks:1.2), sweet romantic mood, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "solo focus, (looking up at viewer:1.25), (pleading eyes:1.2), (longing gaze:1.2), (asking for kiss:1.2), (anticipation:1.15), (heavy blush:1.25), (intensely flushed cheeks:1.2), (slightly parted lips:1.2), (glossy lips:1.15), (leaning forward:1.15), (head tilted:1.1), (hands clasped in front of chest:1.2), sweet romantic mood, clean background, soft lighting, bust shot, upper body portrait"
     }
   },
   "poses": {
