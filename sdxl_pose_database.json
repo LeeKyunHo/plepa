@@ -141,7 +141,7 @@
     },
     "033": {
       "label": "턱들어올리기",
-      "prompt": "pov, (chin lift:1.15), (partner fingers gently lifting character chin:1.15), hand on cheek, forced eye contact, looking at viewer, looking into viewer eyes, wide moist eyes, heavy blush, intensely flushed face, parted lips trembling, flustered romance, intimate close-up upper body"
+      "prompt": "pov, (chin lift:1.25), (only partner single hand visible lifting chin:1.25), (partner off-screen:1.25), (hands on chest:1.2), (hands resting over heart:1.15), forced eye contact, looking at viewer, looking into viewer eyes, wide moist eyes, heavy blush, intensely flushed face, parted lips trembling, flustered romance, close-up upper body portrait"
     },
     "034": {
       "label": "가슴에얼굴묻기",
