@@ -93,8 +93,10 @@ _OUTFIT_KEYWORDS = frozenset({
     "bracelet", "gloves", "socks", "stockings", "pantyhose", "shoes", "boots", "heels",
     "bra", "panties", "underwear", "swimwear", "bikini", "swimsuit", "leotard", "one-piece",
     "apron", "shorts", "robe", "kimono", "hoodie", "top", "camisole",
-    "underboob", "underbust", "corset", "bodice", "bustier", "straps", "suspender", "garter",
-    "neckline", "scoop", "plunging", "v-neck", "halter-neck", "halterneck", "off-shoulder", "strapless", "backless"
+    "underboob", "underbust", "corset", "bodice", "bustier", "strap", "straps", "suspender", "garter",
+    "belt", "buckle", "sash", "shawl", "fabric", "slit", "wrap", "wristwatch", "watch",
+    "neckline", "scoop", "plunging", "v-neck", "halter-neck", "halterneck", "off-shoulder", "strapless", "backless",
+    "slipping", "clinging", "contouring", "leather", "denim", "lace", "silk", "satin", "velvet", "cashmere"
 })
 
 _HAIR_KEYWORDS = (
@@ -117,7 +119,7 @@ DEFAULT_SDXL_NEGATIVE = (
 def strip_sdxl_outfit_tags(prompt_text: str) -> str:
     """
     SDXL 캐릭터 프롬프트에서 헤어/체형/얼굴 태그는 보존하고 의상 및 착용 액세서리 태그를 제거.
-    완전 탈의(H-씬)에서 의상 파편이 잔류하는 현상을 방지.
+    완전 탈의(H-씬)에서 의상 파편(벨트, 스트랩, 숄, 치마 슬릿 등)이 잔류하는 현상을 방지.
     """
     if not prompt_text:
         return ""
@@ -132,7 +134,13 @@ def strip_sdxl_outfit_tags(prompt_text: str) -> str:
             is_hair = any(h in clean for h in _HAIR_KEYWORDS)
             words = clean.split()
             is_outfit = not is_hair and any(w in _OUTFIT_KEYWORDS for w in words)
-            if not is_outfit and any(kw in clean for kw in ("through dress", "contouring dress", "through clothes", "underboob", "underbust")):
+            if not is_outfit and any(kw in clean for kw in (
+                "through dress", "contouring dress", "through clothes", "underboob", "underbust",
+                "side slit", "thigh slit", "off shoulder", "off-shoulder", "over shoulder",
+                "slipping off", "snug fabric", "clinging tightly", "waist fit", "snug fit",
+                "cashmere shawl", "leather belt", "black strap", "white strap", "silk strap",
+                "metallic strap", "thin strap", "open back", "bare shoulders", "no jewelry"
+            )):
                 is_outfit = True
 
             if not is_outfit:
