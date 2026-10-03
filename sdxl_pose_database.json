@@ -7,83 +7,83 @@
   "emotions": {
     "000": {
       "label": "평상",
-      "prompt": "standing, looking at viewer, neutral expression, relaxed, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, neutral expression, relaxed, clean background, soft lighting, bust shot, upper body portrait"
     },
     "001": {
       "label": "미소",
-      "prompt": "standing, looking at viewer, smile, happy, relaxed, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, smile, happy, relaxed, clean background, soft lighting, bust shot, upper body portrait"
     },
     "002": {
       "label": "활짝웃음",
-      "prompt": "standing, looking at viewer, laughing, open mouth, closed eyes, ^_^, happy, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, laughing, open mouth, closed eyes, ^_^, happy, clean background, soft lighting, bust shot, upper body portrait"
     },
     "003": {
       "label": "홍조",
-      "prompt": "standing, looking at viewer, shy glance, heavy blush, intensely flushed cheeks, sweet embarrassed smile, looking at viewer, cowboy shot"
+      "prompt": "standing, looking at viewer, shy glance, heavy blush, intensely flushed cheeks, sweet embarrassed smile, looking at viewer, bust shot, upper body portrait"
     },
     "004": {
       "label": "뾰로통",
-      "prompt": "standing, looking at viewer, pout, puffed cheeks, crossed arms, annoyed, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, pout, puffed cheeks, crossed arms, annoyed, clean background, soft lighting, bust shot, upper body portrait"
     },
     "005": {
       "label": "분노",
-      "prompt": "standing, looking at viewer, angry, furrowed brow, clenched teeth, sharp eyes, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, angry, furrowed brow, clenched teeth, sharp eyes, clean background, soft lighting, bust shot, upper body portrait"
     },
     "006": {
       "label": "경멸",
-      "prompt": "standing, looking down at viewer, scornful gaze, half-closed eyes, cold expression, disgust, arrogant, looking at viewer, cowboy shot"
+      "prompt": "standing, looking down at viewer, scornful gaze, half-closed eyes, cold expression, disgust, arrogant, looking at viewer, bust shot, upper body portrait"
     },
     "007": {
       "label": "슬픔",
-      "prompt": "standing, looking at viewer, teary eyes, sad gaze, quivering lips, heartbroken expression, tears rolling down cheeks, looking at viewer, cowboy shot"
+      "prompt": "standing, looking at viewer, teary eyes, sad gaze, quivering lips, heartbroken expression, tears rolling down cheeks, looking at viewer, bust shot, upper body portrait"
     },
     "008": {
       "label": "울음",
-      "prompt": "standing, looking at viewer, crying, tears, streaming tears, sobbing, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, crying, tears, streaming tears, sobbing, clean background, soft lighting, bust shot, upper body portrait"
     },
     "009": {
       "label": "놀람",
-      "prompt": "standing, looking at viewer, surprised, wide eyes, open mouth, shocked, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, surprised, wide eyes, open mouth, shocked, clean background, soft lighting, bust shot, upper body portrait"
     },
     "010": {
       "label": "자신감",
-      "prompt": "standing, looking at viewer, confident, smug, hand on hip, grin, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, confident, smug, hand on hip, grin, clean background, soft lighting, bust shot, upper body portrait"
     },
     "011": {
       "label": "의문",
-      "prompt": "standing, looking at viewer, thinking, head tilt, curious, question mark, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, thinking, head tilt, curious, question mark, clean background, soft lighting, bust shot, upper body portrait"
     },
     "012": {
       "label": "장난",
-      "prompt": "standing, looking at viewer, playful, tongue out, one eye closed, wink, peace sign, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, playful, tongue out, one eye closed, wink, peace sign, clean background, soft lighting, bust shot, upper body portrait"
     },
     "013": {
       "label": "하트눈",
-      "prompt": "standing, looking at viewer, heart-shaped pupils, blush, happy, excited, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, heart-shaped pupils, blush, happy, excited, clean background, soft lighting, bust shot, upper body portrait"
     },
     "014": {
       "label": "유혹",
-      "prompt": "standing, looking at viewer, seductive smile, bedroom eyes, parted lips, blush, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, seductive smile, bedroom eyes, parted lips, blush, clean background, soft lighting, bust shot, upper body portrait"
     },
     "015": {
       "label": "나른",
-      "prompt": "sitting, looking at viewer, bored, half-closed eyes, chin rest, tired, clean background, soft lighting, cowboy shot"
+      "prompt": "sitting, looking at viewer, bored, half-closed eyes, chin rest, tired, clean background, soft lighting, bust shot, upper body portrait"
     },
     "016": {
       "label": "진지",
-      "prompt": "standing, looking at viewer, serious, expressionless, straight posture, focused, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, serious, expressionless, straight posture, focused, clean background, soft lighting, bust shot, upper body portrait"
     },
     "017": {
       "label": "공포",
-      "prompt": "standing, looking at viewer, scared, trembling, wide eyes, pale face, cowering, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, scared, trembling, wide eyes, pale face, cowering, clean background, soft lighting, bust shot, upper body portrait"
     },
     "018": {
       "label": "얀데레",
-      "prompt": "solo focus, (leaning forward:1.15), (leaning towards viewer:1.15), bending forward, close to viewer, slight high angle, (reaching towards viewer:1.15), one hand reaching forward, yandere, (yandere smile:1.15), crazy smile, wide eyes, obsessive gaze, intense stare, parted lips, sweet psychotic expression, blush, flushed cheeks, clean background, soft lighting, upper body"
+      "prompt": "solo focus, (leaning forward:1.15), (leaning towards viewer:1.15), bending forward, close to viewer, slight high angle, (reaching towards viewer:1.15), one hand reaching forward, yandere, (yandere smile:1.15), crazy smile, wide eyes, obsessive gaze, intense stare, parted lips, sweet psychotic expression, blush, flushed cheeks, clean background, soft lighting, bust shot, close-up upper body portrait"
     },
     "019": {
       "label": "키스",
-      "prompt": "solo focus, (puckered lips:1.15), (puckering lips:1.15), closed eyes, head tilted, (leaning forward:1.15), (leaning towards viewer:1.15), pleading, sweet anticipation, flushed cheeks, heavy blush, soft gentle expression, clean background, soft lighting, upper body portrait"
+      "prompt": "solo focus, (puckered lips:1.15), (puckering lips:1.15), closed eyes, head tilted, (leaning forward:1.15), (leaning towards viewer:1.15), pleading, sweet anticipation, flushed cheeks, heavy blush, soft gentle expression, clean background, soft lighting, bust shot, close-up upper body portrait"
     }
   },
   "poses": {

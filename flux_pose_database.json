@@ -7,83 +7,83 @@
   "emotions": {
     "000": {
       "label": "평상",
-      "prompt": "A medium cowboy shot of the character standing in a relaxed 3/4 stance, looking directly at the viewer with a serene, calm, and composed expression. Clean minimalist indoor background with soft depth of field, gentle diffused daylight, subtle rim lighting highlighting hair contours."
+      "prompt": "An intimate bust shot upper body portrait of the character standing in a relaxed stance, looking directly at the viewer with a serene, calm, and composed expression. Clean minimalist indoor background with soft depth of field, gentle diffused daylight, subtle rim lighting highlighting hair contours."
     },
     "001": {
       "label": "미소",
-      "prompt": "A medium cowboy shot of the character standing gracefully, looking at the viewer with a warm, tender smile and affectionate eyes. Clean minimalist softly blurred background, bright natural lighting, soft atmospheric glow."
+      "prompt": "An intimate bust shot upper body portrait of the character standing gracefully, looking at the viewer with a warm, tender smile and affectionate eyes. Clean minimalist softly blurred background, bright natural lighting, soft atmospheric glow."
     },
     "002": {
       "label": "활짝웃음",
-      "prompt": "A delightful cowboy shot of the character laughing wholeheartedly with eyes gently closed in pure joy, mouth open in cheerful laughter, radiating vibrant happiness. Clean background, soft lighting."
+      "prompt": "A delightful bust shot upper body portrait of the character laughing wholeheartedly with eyes gently closed in pure joy, mouth open in cheerful laughter, radiating vibrant happiness. Clean background, soft lighting."
     },
     "003": {
       "label": "홍조",
-      "prompt": "A portrait cowboy shot of the character with intensely flushed cheeks and a bashful expression, looking directly at the viewer with shy affectionate eyes and a hesitant sweet smile. Clean minimalist background."
+      "prompt": "A close bust shot upper body portrait of the character with intensely flushed cheeks and a bashful expression, looking directly at the viewer with shy affectionate eyes and a hesitant sweet smile. Clean minimalist background."
     },
     "004": {
       "label": "뾰로통",
-      "prompt": "A cowboy shot of the character pouting with adorably puffed cheeks, arms crossed defensively over chest, giving an irritated yet cute sidelong glare. Clean background, soft lighting."
+      "prompt": "A close bust shot upper body portrait of the character pouting with adorably puffed cheeks, arms crossed defensively over chest, giving an irritated yet cute sidelong glare. Clean background, soft lighting."
     },
     "005": {
       "label": "분노",
-      "prompt": "A dramatic cowboy shot of the character with furrowed brows and sharp piercing eyes, teeth lightly clenched in clear anger and frustration, exuding fierce tension. Clean background, dramatic contrast lighting."
+      "prompt": "A dramatic bust shot upper body portrait of the character with furrowed brows and sharp piercing eyes, teeth lightly clenched in clear anger and frustration, exuding fierce tension. Clean background, dramatic contrast lighting."
     },
     "006": {
       "label": "경멸",
-      "prompt": "A dramatic low-angle cowboy shot of the character looking down at the viewer with a cold, haughty expression, scornful half-closed eyes, and slight contempt. Clean indoor background."
+      "prompt": "A dramatic low-angle bust shot upper body portrait of the character looking down at the viewer with a cold, haughty expression, scornful half-closed eyes, and slight contempt. Clean indoor background."
     },
     "007": {
       "label": "슬픔",
-      "prompt": "A poignant cowboy shot of the character with downcast sorrowful eyes glistening with unshed tears, corners of mouth drooping in quiet melancholy and sadness. Clean background, subdued soft lighting."
+      "prompt": "A poignant bust shot upper body portrait of the character with downcast sorrowful eyes glistening with unshed tears, corners of mouth drooping in quiet melancholy and sadness. Clean background, subdued soft lighting."
     },
     "008": {
       "label": "울음",
-      "prompt": "An emotional cowboy shot of the character weeping openly, tears streaming down flushed cheeks, lips trembling in a sob, eyes moist and overwhelmed with sorrow. Clean background, soft lighting."
+      "prompt": "An emotional bust shot upper body portrait of the character weeping openly, tears streaming down flushed cheeks, lips trembling in a sob, eyes moist and overwhelmed with sorrow. Clean background, soft lighting."
     },
     "009": {
       "label": "놀람",
-      "prompt": "A dynamic cowboy shot of the character caught in astonishment, eyes wide open in surprise, lips parted in a slight gasp, posture recoiling gently in shock. Clean background, crisp lighting."
+      "prompt": "A dynamic bust shot upper body portrait of the character caught in astonishment, eyes wide open in surprise, lips parted in a slight gasp, posture recoiling gently in shock. Clean background, crisp lighting."
     },
     "010": {
       "label": "자신감",
-      "prompt": "A spirited cowboy shot of the character standing tall with one hand resting on the hip, displaying a proud, confident smirk and bright self-assured eyes. Clean background, bright lighting."
+      "prompt": "A spirited bust shot upper body portrait of the character standing tall with one hand resting on the hip, displaying a proud, confident smirk and bright self-assured eyes. Clean background, bright lighting."
     },
     "011": {
       "label": "의문",
-      "prompt": "A curious cowboy shot of the character tilting head slightly to the side with an inquisitive glance, one eyebrow subtly raised in thought and wonder. Clean background, soft lighting."
+      "prompt": "A curious bust shot upper body portrait of the character tilting head slightly to the side with an inquisitive glance, one eyebrow subtly raised in thought and wonder. Clean background, soft lighting."
     },
     "012": {
       "label": "장난",
-      "prompt": "A lively cowboy shot of the character playfully winking with one eye, sticking out tongue tip in cheeky mischief while flashing a cute peace sign. Clean background, vibrant lighting."
+      "prompt": "A lively bust shot upper body portrait of the character playfully winking with one eye, sticking out tongue tip in cheeky mischief while flashing a cute peace sign. Clean background, vibrant lighting."
     },
     "013": {
       "label": "하트눈",
-      "prompt": "An affectionate cowboy shot of the character with deep rosy blush across cheeks and nose, pupils displaying distinctive heart shapes, gazing with ecstatic adoration and breathless delight. Clean background, dreamy soft lighting."
+      "prompt": "An affectionate bust shot upper body portrait of the character with deep rosy blush across cheeks and nose, pupils displaying distinctive heart shapes, gazing with ecstatic adoration and breathless delight. Clean background, dreamy soft lighting."
     },
     "014": {
       "label": "유혹",
-      "prompt": "An alluring cowboy shot of the character gazing with seductive bedroom eyes and softly parted lips, an enigmatic sultry smile hinting at intimate desire, cheeks flushed with warmth. Clean background, warm moody lighting."
+      "prompt": "An alluring bust shot upper body portrait of the character gazing with seductive bedroom eyes and softly parted lips, an enigmatic sultry smile hinting at intimate desire, cheeks flushed with warmth. Clean background, warm moody lighting."
     },
     "015": {
       "label": "나른",
-      "prompt": "A cozy cowboy shot of the character sitting casually with chin resting on palm, heavy-lidded drowsy eyes looking forward with comfortable lethargy and mild boredom. Clean background, mellow warm lighting."
+      "prompt": "A cozy bust shot upper body portrait of the character sitting casually with chin resting on palm, heavy-lidded drowsy eyes looking forward with comfortable lethargy and mild boredom. Clean background, mellow warm lighting."
     },
     "016": {
       "label": "진지",
-      "prompt": "A resolute cowboy shot of the character standing with straight upright posture, gaze intense, focused and unwavering with a calm and deeply serious expression. Clean background, neutral studio lighting."
+      "prompt": "A resolute bust shot upper body portrait of the character standing with straight upright posture, gaze intense, focused and unwavering with a calm and deeply serious expression. Clean background, neutral studio lighting."
     },
     "017": {
       "label": "공포",
-      "prompt": "A tense cowboy shot of the character cowering slightly with pale complexion, wide frightened eyes dilated in fear, lips parted in rapid anxious breathing. Clean background, stark shadows."
+      "prompt": "A tense bust shot upper body portrait of the character cowering slightly with pale complexion, wide frightened eyes dilated in fear, lips parted in rapid anxious breathing. Clean background, stark shadows."
     },
     "018": {
       "label": "얀데레",
-      "prompt": "An intense, close upper body shot leaning forward towards the viewer with one hand reaching outwards, wide obsessive eyes dilated with eerie affection, a manic sweet smile on flushed cheeks, unhinged devotion. Minimal background, moody cinematic lighting."
+      "prompt": "An intense, close bust shot upper body portrait leaning forward towards the viewer with one hand reaching outwards, wide obsessive eyes dilated with eerie affection, a manic sweet smile on flushed cheeks, unhinged devotion. Minimal background, moody cinematic lighting."
     },
     "019": {
       "label": "키스",
-      "prompt": "An intimate close upper body portrait leaning forward with head tilted gently, eyes softly shut, lips puckered forward in sweet anticipation of a tender kiss, deeply flushed rosy cheeks. Minimal clean background, romantic soft glow."
+      "prompt": "An intimate close bust shot upper body portrait leaning forward with head tilted gently, eyes softly shut, lips puckered forward in sweet anticipation of a tender kiss, deeply flushed rosy cheeks. Minimal clean background, romantic soft glow."
     }
   },
   "poses": {
