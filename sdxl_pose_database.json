@@ -75,7 +75,7 @@
     },
     "017": {
       "label": "겁먹음",
-      "prompt": "standing, looking up at viewer, (cute scared:1.2), (trembling slightly:1.15), (hands held near chest:1.2), wide teary puppy eyes, heavily flushed blushing cheeks, nervous sweet expression, shrinking back adorably, soft lighting, clean background, bust shot, upper body portrait"
+      "prompt": "standing, (head tilted down:1.25), (looking down:1.2), (downcast eyes:1.2), (trembling slightly:1.2), (shivering:1.15), (flushed blushing cheeks:1.2), (scared:1.15), nervous sweet expression, shrinking back adorably, clean background, soft lighting, bust shot, upper body portrait"
     },
     "018": {
       "label": "집착",
@@ -83,7 +83,7 @@
     },
     "019": {
       "label": "키스",
-      "prompt": "solo focus, (closed eyes:1.2), (head tilted:1.15), (leaning forward towards viewer:1.2), (hands on chest:1.2), (hands clasped over heart:1.15), delicate fingers resting on chest, sweet anticipation, parted lips trembling, sweet shy smile, heavily flushed blushing cheeks, romantic atmosphere, clean background, soft lighting, bust shot, close-up upper body portrait"
+      "prompt": "solo focus, (half-closed eyes:1.25), (peeking through half-closed eyes:1.2), (heavy-lidded eyes:1.15), (head tilted:1.15), (leaning forward towards viewer:1.2), sweet anticipation, parted lips trembling, sweet shy smile, heavily flushed blushing cheeks, romantic atmosphere, clean background, soft lighting, bust shot, close-up upper body portrait"
     }
   },
   "poses": {
