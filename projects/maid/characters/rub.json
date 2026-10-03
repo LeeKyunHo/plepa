@@ -1,0 +1,19 @@
+{
+  "prefix": "rub",
+  "name": "루비 (Ruby)",
+  "gender": "female",
+  "default_mode": "female",
+  "appearance": {
+    "face_and_hair": "A stylish gyaru maid with vibrant sun-bleached golden blonde hair tied into a bouncy high side ponytail, wispy bangs framing confident cat-like golden amber eyes with thick dark eyelashes, radiant sun-kissed fair skin, playful smug expression",
+    "physique": "curvaceous and athletic feminine build, prominent large breasts, narrow toned waist, flared hips, dynamic confident posture",
+    "outfit": "a modern trendy black maid mini dress with a plunging sweetheart neckline, exposed collarbones, tight corset bodice cinching the waist, daring short ruffled skirt, sheer black lace stockings, spiked black choker necklace, frilled mini apron"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, athletic curvy body, busty, large breasts, prominent cleavage, narrow waist, curvy hips, (golden blonde hair:1.15), (high side ponytail:1.15), (long wispy bangs:1.15), (cat-like golden amber eyes:1.15), (thin black choker:1.15), black maid mini dress, sweetheart neckline, corset bodice, short pleated miniskirt, white frilled apron, sheer black thighhighs, black lace bra, black lace panties, radiant fair skin",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), small breasts, flat chest, dark hair, black hair, twin tails, long skirt, cat ears, fox ears, dog ears, wolf ears, furry",
+  "ref_weight": 0.5
+}

@@ -1,0 +1,19 @@
+{
+  "prefix": "yua",
+  "name": "유아 (Yua)",
+  "gender": "female",
+  "default_mode": "female",
+  "appearance": {
+    "face_and_hair": "An adorable mischievous petite girl with soft pastel lavender hair styled into two bouncy odango buns on top of her head with loose curly side locks, droopy puppy-like violet eyes full of playful charm, soft flushed round cheeks, sweet mischievous smile",
+    "physique": "petite compact build, small dainty frame, modest small breasts, narrow waist, cute lively posture",
+    "outfit": "a playful pastel-accented maid outfit featuring a cute frilled shoulder capelet with a lavender bow, sleeveless black bodice, puffed ruffled mini skirt, heart-shaped cutout apron, white knee-high socks with pink ribbon laces, frilled cat-ear-shaped maid headdress"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, petite, small build, small breasts, flat chest, narrow waist, (pastel lavender hair:1.15), (double bun hair, odango buns:1.15), (curly side locks:1.15), (droopy violet eyes:1.15), (white frilled headband:1.15), frilled maid dress, shoulder capelet with lavender bow, short flared mini skirt, white ruffled apron, white kneehigh socks, pink ribbon bows, pink bra, pink panties, flushed cheeks",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), mature, tall, large breasts, huge breasts, dark hair, cat ears, fox ears, dog ears, wolf ears, furry",
+  "ref_weight": 0.5
+}

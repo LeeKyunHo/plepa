@@ -1,0 +1,19 @@
+{
+  "prefix": "han",
+  "name": "하나 (Hana)",
+  "gender": "female",
+  "default_mode": "female",
+  "appearance": {
+    "face_and_hair": "A lovely young girl with glossy pitch-black hair styled into long twin tails reaching her chest with soft side bangs, gentle doe-like amethyst purple eyes with a tender affectionate gaze, fair porcelain skin with a natural sweet pink flush on her cheeks",
+    "physique": "slender and petite feminine silhouette, soft delicate curves, modest medium breasts, narrow waist, graceful demure posture",
+    "outfit": "a classic black and white maid dress with crisp white frilled apron, puffy short sleeves, modest white ruffled neckline, black ribbon tie, knee-length black skirt, white lace petticoat, black thigh-high stockings with white frilled top, white lace maid headband"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, petite, slender body, soft curves, medium breasts, narrow waist, (jet-black hair:1.15), (long twintails, chest-length twin tails:1.15), (soft side bangs:1.15), (gentle amethyst purple eyes:1.15), (white frilled maid headband:1.15), classic black and white maid dress, white ruffled apron, puffy short sleeves, modest neckline, black ribbon bowtie, knee-length flared skirt, black thighhighs, white bra, white panties, fair skin, sweet blush",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), huge breasts, gigantomastia, dark skin, blonde hair, short hair, cat ears, fox ears, dog ears, wolf ears, furry",
+  "ref_weight": 0.5
+}

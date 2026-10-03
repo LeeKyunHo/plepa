@@ -1,0 +1,19 @@
+{
+  "prefix": "aoi",
+  "name": "아오이 (Aoi)",
+  "gender": "otokonoko",
+  "default_mode": "otokonoko",
+  "appearance": {
+    "face_and_hair": "A handsome and charming androgynous boy with sleek jet-black hair tied into a low ponytail at the nape of the neck with loose wispy bangs falling between eyes, sharp deep sapphire-blue eyes with a cool slightly flustered gaze, immaculate fair skin, subtle pink blush on cheeks",
+    "physique": "slender and toned androgynous silhouette, flat chest, narrow waist, graceful long legs, slightly shy but poised posture",
+    "outfit": "a boyish butler-maid hybrid ensemble featuring a crisp white dress shirt with rolled-up cuffs, a fitted black vest with silver buttons, black silk ribbon tie, frilled black pumpkin shorts with a small white half-apron, sheer black thigh-high socks with garter straps"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.15), delicate handsome feminine face, slender build, flat chest, narrow waist, (jet-black hair:1.15), (low ponytail at nape:1.15), (wispy bangs:1.15), (sharp sapphire blue eyes:1.15), (black ribbon tie:1.15), white collared shirt, fitted black vest, silver buttons, frilled black shorts, white half-apron, sheer black thighhighs, garter straps, black panties, fair skin, subtle blush",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1girl, female, (comic:1.2), (multiple views:1.2), (panel layout:1.2), large breasts, huge breasts, cleavage, muscular, bulky, manly, beard, mustache, long dress, cat ears, fox ears, dog ears, wolf ears, furry",
+  "ref_weight": 0.5
+}

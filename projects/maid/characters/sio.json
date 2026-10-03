@@ -1,0 +1,19 @@
+{
+  "prefix": "sio",
+  "name": "시온 (Sion)",
+  "gender": "female",
+  "default_mode": "female",
+  "appearance": {
+    "face_and_hair": "A cool intellectual young woman with sleek chin-length platinum silver bob haircut, straight asymmetrical fringe brushing her brow, sharp composed ice-blue eyes with an aloof serene gaze, pale alabaster skin, subtle rosy ear tips",
+    "physique": "tall slender and elegant silhouette, refined posture, modest firm medium breasts, narrow waist, graceful barista poise",
+    "outfit": "a dignified Victorian antique black maid gown, modest high-collar white ruffled neck, long elegant sleeves with lace cuffs, fitted dark corset vest, flowing floor-length black skirt, pristine long white starched apron, dark grey ribbon necktie"
+  },
+  "lora": {
+    "name": null,
+    "weight": 0.8
+  },
+  "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, tall slender build, elegant posture, medium breasts, narrow waist, (platinum silver hair:1.15), (chin-length sleek bob cut:1.15), (straight fringe bangs:1.15), (cool ice-blue eyes:1.15), (high ruffled collar:1.15), antique Victorian black maid dress, long sleeves, lace cuffs, corset vest, long flowing black maxi skirt, white starched apron, grey ribbon tie, white silk bra, white silk panties, pale skin",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), huge breasts, miniskirt, exposed cleavage, blonde hair, twin tails, long hair, cat ears, fox ears, dog ears, wolf ears, furry",
+  "ref_weight": 0.5
+}
