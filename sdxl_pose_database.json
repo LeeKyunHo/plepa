@@ -74,12 +74,12 @@
       "prompt": "standing, looking at viewer, serious, expressionless, straight posture, focused, clean background, soft lighting, bust shot, upper body portrait"
     },
     "017": {
-      "label": "공포",
-      "prompt": "standing, looking at viewer, scared, trembling, wide eyes, pale face, cowering, clean background, soft lighting, bust shot, upper body portrait"
+      "label": "겁먹음",
+      "prompt": "standing, looking up at viewer, (cute scared:1.2), (trembling slightly:1.15), (hands held near chest:1.2), wide teary puppy eyes, heavily flushed blushing cheeks, nervous sweet expression, shrinking back adorably, soft lighting, clean background, bust shot, upper body portrait"
     },
     "018": {
-      "label": "얀데레",
-      "prompt": "solo focus, (leaning forward:1.15), (leaning towards viewer:1.15), bending forward, close to viewer, slight high angle, (reaching towards viewer:1.15), one hand reaching forward, yandere, (yandere smile:1.15), crazy smile, wide eyes, obsessive gaze, intense stare, parted lips, sweet psychotic expression, blush, flushed cheeks, clean background, soft lighting, bust shot, close-up upper body portrait"
+      "label": "집착",
+      "prompt": "solo focus, (leaning close towards viewer:1.2), (possessive sweet smile:1.2), (deep heavy blush:1.25), intensely flushed cheeks, (loving intense gaze:1.15), wide affectionate eyes, (hands reaching towards viewer affectionately:1.15), sweet clingy expression, parted lips, romantic lighting, clean background, bust shot, close-up upper body portrait"
     },
     "019": {
       "label": "키스",
