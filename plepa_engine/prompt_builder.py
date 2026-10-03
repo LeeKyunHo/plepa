@@ -230,7 +230,21 @@ def assemble_sdxl_prompt(
     if custom_neg and custom_neg.strip():
         negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
 
-    # 4. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
+    # 4. 2인 상호작용/파트너 씬 판별 및 충돌 방지
+    is_interactive = any(kw in pose_tag.lower() for kw in (
+        "partner", "faceless male", "hug", "kiss", "carry", "missionary",
+        "doggystyle", "cowgirl", "straddling", "penetration", "paizuri",
+        "fellatio", "titfuck", "groping", "kabedon", "behind"
+    ))
+    if is_interactive:
+        # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
+        positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
+        # 부정 프롬프트에서 남성 차단 태그(1boy, male) 제거하여 여성 얼굴 복제 방지
+        negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
+        # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되는 시차 결함 원천 차단
+        negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3)"
+
+    # 5. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
     positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)
     negative_prompt = clamp_sdxl_weights(negative_prompt, max_weight=1.15)
 

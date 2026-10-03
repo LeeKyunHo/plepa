@@ -19,7 +19,7 @@
     },
     "003": {
       "label": "홍조",
-      "prompt": "standing, looking at viewer, blush, embarrassed, looking away, fidgeting, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, shy glance, heavy blush, intensely flushed cheeks, sweet embarrassed smile, looking at viewer, cowboy shot"
     },
     "004": {
       "label": "뾰로통",
@@ -31,11 +31,11 @@
     },
     "006": {
       "label": "경멸",
-      "prompt": "standing, looking at viewer, contempt, smirk, half-closed eyes, looking down, cold expression, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking down at viewer, scornful gaze, half-closed eyes, cold expression, disgust, arrogant, looking at viewer, cowboy shot"
     },
     "007": {
       "label": "슬픔",
-      "prompt": "standing, looking at viewer, sad, teary eyes, downcast eyes, frown, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, teary eyes, sad gaze, quivering lips, heartbroken expression, tears rolling down cheeks, looking at viewer, cowboy shot"
     },
     "008": {
       "label": "울음",
@@ -109,15 +109,15 @@
     },
     "025": {
       "label": "앉아유혹",
-      "prompt": "sitting on sofa, leaning back, parted legs, parting thighs, provocative pose, hands resting on sofa, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, sultry look, cowboy shot"
+      "prompt": "sitting on sofa, leaning back, parted legs, parting thighs, provocative pose, hands resting on sofa, looking at viewer, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, sultry look, cowboy shot"
     },
     "026": {
       "label": "체벌",
       "prompt": "lying on bed, lying on back, arms above head, bound wrists, hands tied, arched back, looking at viewer, heavily flushed face, blushing, teary eyes, biting lip, breathless panting, helpless expression, cowboy shot"
     },
     "027": {
-      "label": "배후옷속침범",
-      "prompt": "(hands under clothes cupping breasts:1.15), (groping breasts under clothes:1.15), (hands inside clothes grabbing breasts:1.15), (hands on breasts under clothes:1.15), breast grab, breast fondling, partner behind, faceless male, front view, arched back, head tilted back, (one eye closed, one eye open:1.15), (seductive heavy-lidded intoxicated gaze:1.15), looking at viewer, intensely flushed face, heavy blush, parted lips soft moaning, breathless panting, trembling with pleasure, deeply aroused expression, lost in sensation, cowboy shot"
+      "label": "백허그",
+      "prompt": "fully clothed, back hug, partner behind, faceless male, male arms wrapped around waist from behind, (looking back over shoulder at viewer:1.15), looking at viewer, head resting on partner shoulder, heavy blush, sweet shy smile, affectionate gaze, parted lips, romantic lighting, cowboy shot"
     },
     "028": {
       "label": "마주안아엉덩이주무름",
@@ -129,7 +129,7 @@
     },
     "030": {
       "label": "전신나체",
-      "prompt": "standing, looking at viewer, completely nude, nude, covering breasts, covering crotch, intense body blush, flushed face, extremely embarrassed, teary eyes, looking away shyly, trembling with arousal, biting lip, cowboy shot"
+      "prompt": "standing, looking at viewer with bashful gaze, completely nude, nude, covering breasts, covering crotch, intense body blush, flushed face, extremely embarrassed, teary eyes, looking at viewer, trembling with arousal, biting lip, cowboy shot"
     },
     "031": {
       "label": "배후성추행",
@@ -140,8 +140,8 @@
       "prompt": "kabedon, pov, pov kabedon, partner arm on wall, hand on wall next to head, against wall, back against wall, cornered, trapped, looking at viewer, upturned gaze, rapid breathing, heavy blush, intensely flushed face, wide moist eyes, breathless panting, trembling lips, flustered and aroused, upper body"
     },
     "033": {
-      "label": "정면포옹",
-      "prompt": "hug, embrace, face in chest, arms around partner, faceless male, intoxicated expression, closed eyes in pleasure, flushed cheeks, sweet panting, deeply emotional, nuzzling chest, upper body"
+      "label": "턱들어올리기",
+      "prompt": "pov, (chin lift:1.15), (partner fingers gently lifting character chin:1.15), hand on cheek, forced eye contact, looking at viewer, looking into viewer eyes, wide moist eyes, heavy blush, intensely flushed face, parted lips trembling, flustered romance, intimate close-up upper body"
     },
     "034": {
       "label": "가슴에얼굴묻기",
@@ -161,7 +161,7 @@
     },
     "038": {
       "label": "샤워뒤태",
-      "prompt": "completely nude, full nudity, bare skin, back focus, from behind, standing in shower, clear glass shower stall, water droplets on skin, looking back over shoulder, wet hair, arched back, buttocks focus, seductive glance, parted lips, clean background, cowboy shot"
+      "prompt": "completely nude, full nudity, bare skin, back focus, from behind, standing in shower, clear glass shower stall, water droplets on skin, (looking back over shoulder at viewer:1.15), looking at viewer, wet hair, arched back, buttocks focus, seductive glance, parted lips, clean background, cowboy shot"
     },
     "039": {
       "label": "유리밀착유혹",
@@ -199,7 +199,7 @@
     },
     "047": {
       "label": "대면좌위",
-      "prompt": "completely nude, full nudity, bare skin, sitting on lap, straddling, facing partner, hugging tightly, intimate embrace, arms around neck, chest to chest, heavy body blush, flushed cheeks, parted lips moaning into ear, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting, upper body"
+      "prompt": "completely nude, full nudity, bare skin, sitting on lap, straddling, facing partner, hugging tightly, intimate embrace, arms around neck, chest to chest, gazing into partner eyes, looking at partner, heavy body blush, flushed cheeks, parted lips moaning into ear, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting, upper body"
     },
     "048": {
       "label": "밀착절정(매팅프레스)",
@@ -231,7 +231,7 @@
     },
     "055": {
       "label": "구강사후여운(입가정액)",
-      "prompt": "solo, completely nude, full nudity, bare skin, oral aftermath, kneeling on bed, hands on mattress, head tilted up, looking up at viewer, (excessive cum:1.15), (thick cum overflowing from mouth, dripping from chin down chest:1.15), cum on breasts, cum on collarbone, completely dazed expression, heavy-lidded unfocused eyes, open mouth, tongue out, saliva and cum dripping, tears of ecstasy, heavy body blush, messy hair, exhausted from overwhelming pleasure, upper body portrait"
+      "prompt": "solo, completely nude, full nudity, bare skin, oral aftermath, kneeling on bed, hands on mattress, head tilted up, looking up at viewer, (excessive cum:1.15), (thick cum overflowing from mouth, dripping from chin down chest:1.15), cum on breasts, cum on collarbone, completely dazed expression, heavy-lidded gazing at viewer with pleasure, open mouth, tongue out, saliva and cum dripping, tears of ecstasy, heavy body blush, messy hair, exhausted from overwhelming pleasure, upper body portrait"
     },
     "056": {
       "label": "입위벽밀착",
@@ -243,11 +243,11 @@
     },
     "058": {
       "label": "침대사후여운(누움)",
-      "prompt": "solo, completely nude, full nudity, bare skin, aftersex aftermath, lying on bed, messy white sheets, (excessive cum:1.15), cum pool on bedsheets, cum dripping on inner thighs, messy hair, heavy-lidded intoxicated eyes, parted lips, drool at mouth corner, flushed skin, trembling afterglow, dazed pleasure smile, completely melted by orgasm, relaxed, cowboy shot"
+      "prompt": "solo, completely nude, full nudity, bare skin, aftersex aftermath, lying on bed, messy white sheets, looking at viewer, (excessive cum:1.15), cum pool on bedsheets, cum dripping on inner thighs, messy hair, heavy-lidded intoxicated eyes, parted lips, drool at mouth corner, flushed skin, trembling afterglow, dazed pleasure smile, completely melted by orgasm, relaxed, cowboy shot"
     },
     "059": {
       "label": "엎드린사후여운(엎드림)",
-      "prompt": "solo, completely nude, full nudity, bare skin, (from behind:1.15), (back view:1.15), (lying prone on bed:1.15), buttocks focus, looking back over shoulder, looking at viewer, ass slightly raised, exhausted aftersex aftermath, legs spread, (excessive cum:1.15), (thick cum dripping between thighs:1.15), cum pool on bedsheets, cum dripping down inner thighs, trembling legs, heavily flushed back, heavy-lidded dazed expression, unfocused eyes, open mouth drooling on pillow, completely broken and melted by pleasure, cowboy shot"
+      "prompt": "solo, completely nude, full nudity, bare skin, (from behind:1.15), (back view:1.15), (lying prone on bed:1.15), buttocks focus, (looking back over shoulder at viewer:1.15), looking at viewer, ass slightly raised, exhausted aftersex aftermath, legs spread, (excessive cum:1.15), (thick cum dripping between thighs:1.15), cum pool on bedsheets, cum dripping down inner thighs, trembling legs, heavily flushed back, heavy-lidded dazed expression, parted lips moaning, completely broken and melted by pleasure, cowboy shot"
     }
   },
   "scenes_otokonoko": {
@@ -281,7 +281,7 @@
     },
     "147": {
       "label": "대면좌위",
-      "prompt": "completely nude, full nudity, bare skin, sitting on lap, straddling, facing partner, hugging tightly, intimate embrace, arms around neck, chest to chest, heavy body blush, flushed cheeks, parted lips moaning into ear, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting, upper body"
+      "prompt": "completely nude, full nudity, bare skin, sitting on lap, straddling, facing partner, hugging tightly, intimate embrace, arms around neck, chest to chest, gazing into partner eyes, looking at partner, heavy body blush, flushed cheeks, parted lips moaning into ear, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting, upper body"
     },
     "148": {
       "label": "밀착절정(매팅프레스)",
@@ -313,7 +313,7 @@
     },
     "155": {
       "label": "구강사후여운(입가정액)",
-      "prompt": "solo, completely nude, full nudity, bare skin, oral aftermath, kneeling on bed, hands on mattress, head tilted up, looking up at viewer, (excessive cum:1.15), (thick cum overflowing from mouth, dripping from chin down chest:1.15), cum on chest, cum on collarbone, completely dazed expression, heavy-lidded unfocused eyes, open mouth, tongue out, saliva and cum dripping, tears of ecstasy, heavy body blush, messy hair, exhausted from overwhelming pleasure, upper body portrait"
+      "prompt": "solo, completely nude, full nudity, bare skin, oral aftermath, kneeling on bed, hands on mattress, head tilted up, looking up at viewer, (excessive cum:1.15), (thick cum overflowing from mouth, dripping from chin down chest:1.15), cum on breasts, cum on collarbone, completely dazed expression, heavy-lidded gazing at viewer with pleasure, open mouth, tongue out, saliva and cum dripping, tears of ecstasy, heavy body blush, messy hair, exhausted from overwhelming pleasure, upper body portrait"
     },
     "156": {
       "label": "입위벽밀착",
@@ -325,11 +325,11 @@
     },
     "158": {
       "label": "침대사후여운(누움)",
-      "prompt": "solo, completely nude, full nudity, bare skin, aftersex aftermath, lying on bed, messy white sheets, (excessive cum:1.15), cum pool on bedsheets, cum dripping on inner thighs, messy hair, heavy-lidded intoxicated eyes, parted lips, drool at mouth corner, flushed skin, trembling afterglow, dazed pleasure smile, completely melted by orgasm, relaxed, cowboy shot"
+      "prompt": "solo, completely nude, full nudity, bare skin, aftersex aftermath, lying on bed, messy white sheets, looking at viewer, (excessive cum:1.15), cum pool on bedsheets, cum dripping on inner thighs, messy hair, heavy-lidded intoxicated eyes, parted lips, drool at mouth corner, flushed skin, trembling afterglow, dazed pleasure smile, completely melted by orgasm, relaxed, cowboy shot"
     },
     "159": {
       "label": "엎드린사후여운(엎드림)",
-      "prompt": "solo, completely nude, full nudity, bare skin, (from behind:1.15), (back view:1.15), (lying prone on bed:1.15), buttocks focus, looking back over shoulder, looking at viewer, ass slightly raised, exhausted aftersex aftermath, legs spread, (excessive cum:1.15), (thick cum dripping between thighs:1.15), cum pool on bedsheets, cum dripping down inner thighs, trembling legs, heavily flushed back, heavy-lidded dazed expression, unfocused eyes, open mouth drooling on pillow, completely broken and melted by pleasure, cowboy shot"
+      "prompt": "solo, completely nude, full nudity, bare skin, (from behind:1.15), (back view:1.15), (lying prone on bed:1.15), buttocks focus, (looking back over shoulder at viewer:1.15), looking at viewer, ass slightly raised, exhausted aftersex aftermath, legs spread, (excessive cum:1.15), (thick cum dripping between thighs:1.15), cum pool on bedsheets, cum dripping down inner thighs, trembling legs, heavily flushed back, heavy-lidded dazed expression, parted lips moaning, completely broken and melted by pleasure, cowboy shot"
     }
   }
 }
