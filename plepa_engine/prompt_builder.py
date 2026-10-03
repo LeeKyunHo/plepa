@@ -239,12 +239,19 @@ def assemble_sdxl_prompt(
     if is_interactive:
         # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
         positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
+        # 모브 남성 파트너에게 특색(헤어, 의상)이 부여되지 않도록 완전한 무특색(스킨헤드/맨몸/얼굴없음) 실루엣으로 통일
+        positive_prompt = f"{positive_prompt}, (bald male:1.2), (faceless male:1.2), (shirtless male:1.15), (bare shoulders:1.1)"
         # 부정 프롬프트에서 남성 차단 태그(1boy, male) 제거하여 여성 얼굴 복제 방지
         negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
         # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 불필요한 남성 하체 침범, 손 색상 오염/장갑 원천 차단
         negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, male lower body, male legs, male crotch, lower body, gloves, (colored skin:1.2), orange skin"
+        # 모브 남성의 의상 착의 및 헤어스타일을 원천 차단하여 순수한 무특색 스킨헤드 모브로 고정
+        negative_prompt = f"{negative_prompt}, male clothes, male shirt, male t-shirt, male jacket, male suit, male hair, male bangs, male haircut"
         # 파트너를 응시해야 하는 상호작용 포즈인 경우 정면/카메라 응시 차단
         if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):
+            negative_prompt = f"{negative_prompt}, looking at viewer, looking straight at camera"
+        # 고개를 숙이거나 아래를 바라보아야 하는 포즈인 경우 정면/카메라 응시 차단
+        if any(kw in pose_tag.lower() for kw in ("looking down", "head tilted down", "downcast eyes", "head down")):
             negative_prompt = f"{negative_prompt}, looking at viewer, looking straight at camera"
 
     # 5. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
