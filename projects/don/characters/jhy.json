@@ -4,7 +4,7 @@
   "gender": "female",
   "appearance": {
     "face_and_hair": "A glamorous mature woman in her mid 30s with a sharp sleek deep dark purple chin-length bob cut, neat center-parted bangs, alluring deep purple eyes, seductive bold red lipstick, elegant white pearl stud earrings, spotless fair skin",
-    "physique": "tall statuesque hourglass figure, graceful long neck, generous curves, commanding alluring posture",
+    "physique": "tall statuesquefigure, graceful long neck, generous curves, commanding alluring posture",
     "outfit": "a skin-tight glossy black strapless tube top leather bodycon mini dress with a daring high side slit, draped loosely with an open-front luxurious white silk long robe cardigan over her shoulders"
   },
   "lora": {
@@ -12,7 +12,7 @@
     "weight": 0.8
   },
   "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
-  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, mature female, 34yo, tall elegant hourglass figure, full large breasts, narrow waist, sleek curvy hips, long legs, (deep dark purple sleek bob cut, sharp chin-length blunt bob:1.15), (neat front bangs with subtle center split:1.15), (dark purple eyes:1.15), (bold red lipstick:1.15), (white pearl stud earrings:1.15), (skin-tight glossy black strapless tube top leather bodycon dress:1.15), (high thigh side slit:1.15), (open-front white silk long robe jacket draped over shoulders:1.15), clean smooth pale skin, completely dry skin, spotless skin, pristine spotless dress",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, mature female, 34yo, tall elegantfigure, full large breasts, narrow waist, sleek curvy hips, long legs, (deep dark purple sleek bob cut, sharp chin-length blunt bob:1.15), (neat front bangs with subtle center split:1.15), (dark purple eyes:1.15), (bold red lipstick:1.15), (white pearl stud earrings:1.15), (skin-tight glossy black strapless tube top leather bodycon dress:1.15), (high thigh side slit:1.15), (open-front white silk long robe jacket draped over shoulders:1.15), clean smooth pale skin, completely dry skin, spotless skin, pristine spotless dress",
   "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), (white clothes, light-colored outfit:1.15), long hair, ponytail, twin tails, red hair, blonde hair, pants, jeans, shorts",
   "ref_weight": 0.5
 }

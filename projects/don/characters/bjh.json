@@ -4,7 +4,7 @@
   "gender": "female",
   "appearance": {
     "face_and_hair": "A striking young woman in her late 20s with shimmering platinum silver hair tied into a sleek high ponytail secured with a black scrunchie, long elegant side bangs framing her face, sharp glowing orange-amber eyes, delicate silver chain necklace with a small crystal pendant, pale porcelain skin",
-    "physique": "tall athletic hourglass silhouette, slender toned waist, sculpted curves, graceful confident posture",
+    "physique": "tall athleticsilhouette, slender toned waist, sculpted curves, graceful confident posture",
     "outfit": "a sophisticated pitch-black ribbed knit long-sleeved turtleneck bodycon mini dress featuring a daring underbust cutout accentuating her figure, hugging her curves seamlessly"
   },
   "lora": {
@@ -12,7 +12,7 @@
     "weight": 0.8
   },
   "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, flat vibrant cel-shading, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, no semi-realism, masterpiece quality, 8k resolution",
-  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, mature female, 27yo, tall slender toned body, perky large breasts, very narrow waist, firm curvy hips, thick toned thighs, athletic hourglass figure, (platinum silver hair tied into high ponytail with black scrunchie:1.15), (long side bangs and loose strands framing face:1.15), (sharp orange-amber eyes:1.15), (delicate silver chain necklace with small pendant:1.15), (pitch-black ribbed knit high-neck long-sleeved bodycon mini dress:1.15), (wide large underboob cutout window:1.15), (daring underboob exposure, bare underbust curve:1.15), (prominent visible underboob:1.15), (solid black dress:1.15), snug knit contouring curves, navel indentation through dress, clean pale skin",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, mature female, 27yo, tall slender toned body, perky large breasts, very narrow waist, firm curvy hips, thick toned thighs, athleticfigure, (platinum silver hair tied into high ponytail with black scrunchie:1.15), (long side bangs and loose strands framing face:1.15), (sharp orange-amber eyes:1.15), (delicate silver chain necklace with small pendant:1.15), (pitch-black ribbed knit high-neck long-sleeved bodycon mini dress:1.15), (wide large underboob cutout window:1.15), (daring underboob exposure, bare underbust curve:1.15), (prominent visible underboob:1.15), (solid black dress:1.15), snug knit contouring curves, navel indentation through dress, fair skin, natural skin tone",
   "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), (white dress, light-colored dress:1.15), hair down, short hair, bob cut, dark hair, brunette, covered underboob, pants, jeans",
   "ref_weight": 0.5
 }

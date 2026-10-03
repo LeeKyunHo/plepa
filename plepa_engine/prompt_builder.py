@@ -93,7 +93,8 @@ _OUTFIT_KEYWORDS = frozenset({
     "bracelet", "gloves", "socks", "stockings", "pantyhose", "shoes", "boots", "heels",
     "bra", "panties", "underwear", "swimwear", "bikini", "swimsuit", "leotard", "one-piece",
     "apron", "shorts", "robe", "kimono", "hoodie", "top", "camisole",
-    "underboob", "underbust", "corset", "bodice", "bustier", "straps", "suspender", "garter"
+    "underboob", "underbust", "corset", "bodice", "bustier", "straps", "suspender", "garter",
+    "neckline", "scoop", "plunging", "v-neck", "halter-neck", "halterneck", "off-shoulder", "strapless", "backless"
 })
 
 _HAIR_KEYWORDS = (
@@ -101,13 +102,15 @@ _HAIR_KEYWORDS = (
     "twintails", "braid", "updo", "ahoge", "curls"
 )
 
-DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, very aesthetic, absurdres, newest"
+DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, very aesthetic, absurdres, newest, cartoon, matching eyes, volumetric lighting, gradient color, dynamic light"
 
-# Illustrious-XL / Meichi 공식 베스트 프랙티스 네거티브 (2D 선화 및 음영 보호)
+# Illustrious-XL / Meichi 공식 베스트 프랙티스 네거티브 (2D 선화 및 음영 보호, 다중 점/초커/모래시계/다크서클/동물귀 번짐 방지)
 DEFAULT_SDXL_NEGATIVE = (
     "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, "
     "missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, "
-    "username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2)"
+    "username, artist name, blurry, ugly face, weird eyes, 1boy, male, choker, necklace, "
+    "multiple moles, freckles, dark circles, dark eyelids, heavy shadow on face, overexposed, "
+    "(hourglass:1.3), (cat ears, animal ears, wolf ears, fox ears, kemonomimi:1.3), (comic:1.2), (multiple views:1.2), (panel layout:1.2)"
 )
 
 
@@ -180,13 +183,20 @@ def assemble_sdxl_prompt(
     # 2. 긍정 프롬프트 조립
     if char.sdxl_positive:
         base_pos = char.sdxl_positive.strip()
+        # 모래시계 오브젝트 누수 방지: hourglass shape, hourglass 태그 강제 제거
+        base_pos = re.sub(r",?\s*\(?hourglass\s*(shape)?(:[0-9\.]+)?\)?", "", base_pos, flags=re.IGNORECASE)
         if nude:
             base_pos = strip_sdxl_outfit_tags(base_pos)
             base_pos = f"{base_pos}, nude, completely nude"
 
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
-            prefix_tags = f"{custom_pos.strip()}, {quality_part.strip()}" if custom_pos and custom_pos.strip() else quality_part.strip()
+            # 기존 과노출 태그(HDR, high contrast) 제거 및 황금 태그 주입
+            quality_clean = re.sub(r",?\s*(HDR|high contrast)", "", quality_part, flags=re.IGNORECASE)
+            for kw in ("cartoon", "matching eyes", "volumetric lighting", "gradient color", "dynamic light"):
+                if kw.lower() not in quality_clean.lower():
+                    quality_clean = f"{quality_clean}, {kw}"
+            prefix_tags = f"{custom_pos.strip()}, {quality_clean.strip()}" if custom_pos and custom_pos.strip() else quality_clean.strip()
             first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
             positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
         else:

@@ -2,6 +2,6 @@
   "prefix": "kma",
   "default_mode": "female",
   "ref_weight": 0.5,
-  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, voluptuous hourglass figure, large breasts, tiny waist, wide hips, (platinum ash blonde hair:1.15), (voluminous long glam curls:1.15), (center part bangs:1.15), (blue-grey eyes:1.15), (glossy lips:1.15), sparkling diamond drop earrings, (thin metallic strap:0.95), champagne gold glitter bodycon mini dress, strapless sequin dress, shimmering fabric",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, voluptuousfigure, large breasts, tiny waist, wide hips, (platinum ash blonde hair:1.15), (voluminous long glam curls:1.15), (center part bangs:1.15), (blue-grey eyes:1.15), (glossy lips:1.15), sparkling diamond drop earrings, (thin metallic strap:0.95), champagne gold glitter bodycon mini dress, strapless sequin dress, shimmering fabric",
   "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), dark hair, black hair, casual clothes, t-shirt, jeans, sneakers, flat chest, cat ears, animal ears"
 }
