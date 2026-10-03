@@ -243,6 +243,9 @@ def assemble_sdxl_prompt(
         negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
         # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 불필요한 남성 하체 침범, 손 색상 오염/장갑 원천 차단
         negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, male lower body, male legs, male crotch, lower body, gloves, (colored skin:1.2), orange skin"
+        # 파트너를 응시해야 하는 상호작용 포즈인 경우 정면/카메라 응시 차단
+        if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):
+            negative_prompt = f"{negative_prompt}, looking at viewer, looking straight at camera"
 
     # 5. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
     positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)
