@@ -38,8 +38,8 @@
       "prompt": "standing, looking at viewer, teary eyes, sad gaze, quivering lips, heartbroken expression, tears rolling down cheeks, looking at viewer, bust shot, upper body portrait"
     },
     "008": {
-      "label": "울음",
-      "prompt": "standing, looking at viewer, crying, tears, streaming tears, sobbing, clean background, soft lighting, bust shot, upper body portrait"
+      "label": "수줍은곁눈질",
+      "prompt": "standing, (turning head slightly away:1.2), (sidelong glance:1.25), (looking at viewer from side:1.2), (shy peeking:1.15), (intensely flushed cheeks:1.2), heavy blush, bashful hesitation, biting lower lip, flustered nervousness, clean background, soft lighting, bust shot, upper body portrait"
     },
     "009": {
       "label": "놀람",
