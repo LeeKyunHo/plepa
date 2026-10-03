@@ -16,6 +16,7 @@ class PoseEntry:
     section: str
     label: str
     prompt: str
+    description: str = ""
 
 
 @dataclass

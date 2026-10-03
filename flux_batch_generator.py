@@ -71,7 +71,8 @@ def load_pose_db(engine: str = "flux", path: Optional[Path] = None) -> Dict[str,
                 code=code_str,
                 section=section,
                 label=item.get("label", "미상"),
-                prompt=item.get("prompt", "")
+                prompt=item.get("prompt", ""),
+                description=item.get("description", "")
             )
     return entries
 
