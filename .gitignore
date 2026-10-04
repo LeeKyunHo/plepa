@@ -41,6 +41,8 @@ desktop.ini
 # Generated Assets & Large Models (Do not commit to git)
 projects/*/assets/
 projects/*/assets_flux/
+projects/*/assets_facedetailer/
+.kiro/
 *.gguf
 *.safetensors
 *.pth
