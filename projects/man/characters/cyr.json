@@ -3,5 +3,5 @@
   "default_mode": "female",
   "ref_weight": 0.5,
   "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, petite, soft curvy body, busty, huge breasts, narrow waist, round hips, (light beige brown hair:1.15), (shoulder-length hair:1.15), (soft wavy bob:1.15), (doe-like warm brown eyes:1.15), small floral hair clip, (thin white strap:0.95), off-shoulder cream knit sweater, oversized loose sweater, bare shoulders, draped beige pleated maxi skirt",
-  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), dark skin, short haircut, black hair, pants, leather, formal suit, cat ears, animal ears"
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, wine, champagne, drink, cup, holding glass, holding cup, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), dark skin, short haircut, black hair, pants, leather, formal suit, cat ears, animal ears"
 }

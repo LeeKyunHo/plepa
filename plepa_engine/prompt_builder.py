@@ -93,10 +93,11 @@ _OUTFIT_KEYWORDS = frozenset({
     "bracelet", "gloves", "socks", "stockings", "pantyhose", "shoes", "boots", "heels",
     "bra", "panties", "underwear", "swimwear", "bikini", "swimsuit", "leotard", "one-piece",
     "apron", "shorts", "robe", "kimono", "hoodie", "top", "camisole",
-    "underboob", "underbust", "corset", "bodice", "bustier", "strap", "straps", "suspender", "garter",
+    "underboob", "underbust", "corset", "bodice", "bustier", "strap", "straps", "suspender", "garter", "garters",
     "belt", "buckle", "sash", "shawl", "fabric", "slit", "wrap", "wristwatch", "watch",
     "neckline", "scoop", "plunging", "v-neck", "halter-neck", "halterneck", "off-shoulder", "strapless", "backless",
-    "slipping", "clinging", "contouring", "leather", "denim", "lace", "silk", "satin", "velvet", "cashmere"
+    "slipping", "clinging", "contouring", "leather", "denim", "lace", "silk", "satin", "velvet", "cashmere",
+    "headband", "headdress", "maid", "pinafore", "capelet", "cape", "petticoat", "brooch", "cross"
 })
 
 _HAIR_KEYWORDS = (
@@ -139,7 +140,10 @@ def strip_sdxl_outfit_tags(prompt_text: str) -> str:
                 "side slit", "thigh slit", "off shoulder", "off-shoulder", "over shoulder",
                 "slipping off", "snug fabric", "clinging tightly", "waist fit", "snug fit",
                 "cashmere shawl", "leather belt", "black strap", "white strap", "silk strap",
-                "metallic strap", "thin strap", "open back", "bare shoulders", "no jewelry"
+                "metallic strap", "thin strap", "open back", "bare shoulders", "no jewelry",
+                "maid headband", "maid cap", "maid dress", "ruffled apron", "frilled apron",
+                "lace choker", "ribbon choker", "cross pendant", "lace cuffs", "puffy sleeves",
+                "sweetheart neckline", "scoop neckline", "high-neck", "corset bodice"
             )):
                 is_outfit = True
 
@@ -212,7 +216,8 @@ def assemble_sdxl_prompt(
             positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
     else:
         # 폴백: 캐릭터 외형 기반
-        gender_tag = "1boy, male" if char.gender.lower() == "male" else "1girl"
+        char_gender_val = (char.gender or getattr(char, "default_mode", "") or "female").lower()
+        gender_tag = "1boy, male" if char_gender_val in ("male", "otokonoko") else "1girl"
         char_desc = f"{char.appearance.face_and_hair}, {char.appearance.physique}".strip(", ")
         if not nude and char.appearance.outfit:
             char_desc += f", {char.appearance.outfit}"
@@ -230,33 +235,69 @@ def assemble_sdxl_prompt(
     if custom_neg and custom_neg.strip():
         negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
 
+    # [패치 A] 탈의(nude) 상태 시 의상/에이프런/소품 잔류 원천 차단
+    if nude:
+        negative_prompt = f"{negative_prompt}, (clothes:1.35), (dress:1.35), (maid dress:1.35), (apron:1.35), (frilled apron:1.35), (white apron:1.35), (headband:1.35), (headdress:1.35), (collar:1.3), (choker:1.3), (vest:1.3), (capelet:1.3), (petticoat:1.3), (gloves:1.3), (socks:1.3), (stockings:1.3), (thighhighs:1.3), (bra:1.3), (panties:1.3), (underwear:1.3)"
+
+    # [패치 A-2] 침대 및 탈의 씬에서 불필요한 와인/음료/유리잔/병 오브젝트 생성 차단
+    if nude or "on bed" in pose_tag.lower():
+        negative_prompt = f"{negative_prompt}, (wine, wine glass, champagne, glass, bottle, cup, drink, beverage:1.3)"
+
+    # [패치 B] 턱올리기(033) 파트너 손 중복 및 꼬임 차단
+    if "chin lift" in pose_tag.lower():
+        negative_prompt = f"{negative_prompt}, (extra hands:1.35), (two hands on chin:1.35), (multiple hands:1.35), (extra arms:1.35), (four hands:1.35), (three hands:1.35)"
+
+    # [패치 C] 오토코노코 캐릭터 나체/H씬 여성기 렌더링 방지 및 남성기 보장
+    char_gender_str = (char.gender or getattr(char, "default_mode", "") or "female").lower()
+    is_otokonoko = char_gender_str == "otokonoko" or (char.sdxl_positive and "otokonoko" in char.sdxl_positive.lower())
+    if is_otokonoko and nude:
+        negative_prompt = f"{negative_prompt}, (pussy:1.35), (vagina:1.35), (female genitalia:1.35), (cameltoe:1.35), (cleavage:1.2), (large breasts:1.3), (breasts:1.2)"
+        if "penis" not in positive_prompt.lower():
+            positive_prompt = f"{positive_prompt}, (penis:1.2), (small erect penis:1.15), (testicles:1.15), male genitalia"
+
     # 4. 2인 상호작용/파트너 씬 판별 및 충돌 방지
-    is_interactive = any(kw in pose_tag.lower() for kw in (
-        "partner", "faceless male", "hug", "kiss", "carry", "missionary",
-        "doggystyle", "cowgirl", "straddling", "penetration", "paizuri",
-        "fellatio", "titfuck", "groping", "kabedon", "behind"
-    ))
+    is_offscreen_partner = any(kw in pose_tag.lower() for kw in ("off-screen", "offscreen", "completely off-screen"))
+    is_aftermath = any(kw in pose_tag.lower() for kw in ("aftermath", "aftersex"))
+    is_solo_scene = (
+        "solo focus" in pose_tag.lower()
+        or "solo, " in pose_tag.lower()
+        or ", solo" in pose_tag.lower()
+        or ("spreading own legs" in pose_tag.lower() and "partner" not in pose_tag.lower())
+    )
+    is_interactive = (
+        any(kw in pose_tag.lower() for kw in (
+            "partner", "faceless male", "hug", "kiss", "carry", "missionary",
+            "doggystyle", "cowgirl", "straddling", "penetration", "paizuri",
+            "fellatio", "titfuck", "groping", "behind"
+        )) or pose.section in ("h_scenes", "scenes_otokonoko")
+    ) and not is_aftermath and not is_solo_scene
+
     if is_interactive:
-        # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
-        positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
         # 부정 프롬프트에서 남성 차단 태그(1boy, male) 제거하여 여성 얼굴 복제 방지
         negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
         # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 손 색상 오염/장갑 원천 차단
-        negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, (colored skin:1.2), orange skin"
+        negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), (2boys:1.35), (multiple males:1.35), (extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, (colored skin:1.2), orange skin"
 
-        # 모브 남성 파트너: BREAK를 통한 여주인공과 모브의 Attention 완전 격리 (이염 원천 차단)
-        # 포즈의 착의/탈의 여부에 따른 하의(단색 블랙 팬츠 vs 완전 탈의) 정밀 분기
-        if nude:
-            # 탈의/성인 씬: 완전 탈의 모브
-            mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (naked male:1.2), (shirtless male:1.15), (bottomless male:1.2), muscular build, featureless silhouette"
-            mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
+        # 화면 밖(off-screen) 파트너 씬의 경우 남성 하반신/의상 화면 침범 원천 차단
+        if is_offscreen_partner:
+            negative_prompt = f"{negative_prompt}, ((male body, male torso, male lower body, male legs, pants, trousers, black pants, jeans, lap, sitting between legs, legs of partner, 1boy:1.35))"
         else:
-            # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정 (하의 무작위성 방지)
-            mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (shirtless male:1.15), (bare shoulders:1.1), (solid black pants:1.2), muscular build, featureless silhouette"
-            mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
+            # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
+            positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
 
-        positive_prompt = f"{positive_prompt} {mob_positive}"
-        negative_prompt = f"{negative_prompt}, {mob_negative}"
+            # 모브 남성 파트너: BREAK를 통한 여주인공과 모브의 Attention 완전 격리 (이염 원천 차단)
+            # 포즈의 착의/탈의 여부에 따른 하의(단색 블랙 팬츠 vs 완전 탈의) 정밀 분기
+            if nude:
+                # 탈의/성인 씬: 완전 탈의 모브
+                mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (naked male:1.2), (shirtless male:1.15), (bottomless male:1.2), muscular build, featureless silhouette"
+                mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
+            else:
+                # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정 (하의 무작위성 방지)
+                mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (shirtless male:1.15), (bare shoulders:1.1), (solid black pants:1.2), muscular build, featureless silhouette"
+                mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
+
+            positive_prompt = f"{positive_prompt} {mob_positive}"
+            negative_prompt = f"{negative_prompt}, {mob_negative}"
 
         # 파트너를 응시해야 하는 상호작용 포즈인 경우 정면/카메라 응시 차단
         if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):
@@ -264,6 +305,10 @@ def assemble_sdxl_prompt(
         # 고개를 숙이거나 아래를 바라보아야 하는 포즈인 경우 정면/카메라 응시 차단
         if any(kw in pose_tag.lower() for kw in ("looking down", "head tilted down", "downcast eyes", "head down")):
             negative_prompt = f"{negative_prompt}, looking at viewer, looking straight at camera"
+
+    # 사후여운 및 솔로 유혹 씬인 경우 모브/남성 파트너 신체 생성 원천 차단
+    if is_aftermath or is_solo_scene:
+        negative_prompt = f"{negative_prompt}, ((1boy, 2boys, male, masculine, partner, faceless male, multiple characters, extra face:1.35))"
 
     # 5. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
     positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)
