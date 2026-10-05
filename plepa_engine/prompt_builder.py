@@ -105,14 +105,15 @@ _HAIR_KEYWORDS = (
     "twintails", "braid", "updo", "ahoge", "curls"
 )
 
-DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, very aesthetic, absurdres, newest, cartoon, matching eyes, volumetric lighting, gradient color, dynamic light"
+DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, very aesthetic, absurdres, newest, glossy skin, delicate anime coloring"
 
-# Illustrious-XL / Meichi 공식 베스트 프랙티스 네거티브 (2D 선화 및 음영 보호, 다중 점/초커/모래시계/다크서클/동물귀 번짐 방지)
+# 언홀리(Unholy) 전용 베스트 프랙티스 네거티브 (2D 미소녀 작화 극대화, 실사/3D 및 다중 인물/마네킹 차단)
 DEFAULT_SDXL_NEGATIVE = (
     "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, "
     "missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, "
-    "username, artist name, blurry, ugly face, weird eyes, 1boy, male, choker, necklace, "
-    "multiple moles, freckles, dark circles, dark eyelids, heavy shadow on face, overexposed, "
+    "username, artist name, blurry, ugly face, weird eyes, (photorealistic, realistic, 3d, render, cgi:1.25), "
+    "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
+    "1boy, male, choker, necklace, multiple moles, freckles, dark circles, dark eyelids, heavy shadow on face, "
     "(hourglass:1.3), (cat ears, animal ears, wolf ears, fox ears, kemonomimi:1.3), (comic:1.2), (multiple views:1.2), (panel layout:1.2)"
 )
 
@@ -195,17 +196,19 @@ def assemble_sdxl_prompt(
     # 2. 긍정 프롬프트 조립
     if char.sdxl_positive:
         base_pos = char.sdxl_positive.strip()
-        # 모래시계 오브젝트 누수 방지: hourglass shape, hourglass 태그 강제 제거
+        # 모래시계 오브젝트 및 실사화 오염 태그 강제 제거
         base_pos = re.sub(r",?\s*\(?hourglass\s*(shape)?(:[0-9\.]+)?\)?", "", base_pos, flags=re.IGNORECASE)
+        base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
         if nude:
             base_pos = strip_sdxl_outfit_tags(base_pos)
             base_pos = f"{base_pos}, nude, completely nude"
 
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
-            # 기존 과노출 태그(HDR, high contrast) 제거 및 황금 태그 주입
-            quality_clean = re.sub(r",?\s*(HDR|high contrast)", "", quality_part, flags=re.IGNORECASE)
-            for kw in ("cartoon", "matching eyes", "volumetric lighting", "gradient color", "dynamic light"):
+            # 기존 실사/과노출 태그 정제
+            quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
+            # 2D 만화체 전용 은은한 광택 태그 주입
+            for kw in ("glossy skin", "delicate anime coloring"):
                 if kw.lower() not in quality_clean.lower():
                     quality_clean = f"{quality_clean}, {kw}"
             prefix_tags = f"{custom_pos.strip()}, {quality_clean.strip()}" if custom_pos and custom_pos.strip() else quality_clean.strip()
@@ -224,7 +227,7 @@ def assemble_sdxl_prompt(
         elif nude:
             char_desc += ", nude, completely nude"
 
-        quality_tags = "masterpiece, best quality, newest, absurdres, aesthetic illustration"
+        quality_tags = DEFAULT_SDXL_QUALITY_TAGS
         if custom_pos and custom_pos.strip():
             quality_tags = f"{custom_pos.strip()}, {quality_tags}"
         first_chunk = f"{quality_tags}, {pose_tag}" if pose_tag else quality_tags.strip()
@@ -234,6 +237,10 @@ def assemble_sdxl_prompt(
     negative_prompt = char.sdxl_negative.strip() if char.sdxl_negative else DEFAULT_SDXL_NEGATIVE
     if custom_neg and custom_neg.strip():
         negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
+
+    # 실사/3D 및 다중 인물/마네킹 차단 방어선 최전방 보장
+    if "(photorealistic, realistic, 3d" not in negative_prompt:
+        negative_prompt = f"(photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), {negative_prompt}"
 
     # [패치 A] 탈의(nude) 상태 시 의상/에이프런/소품 잔류 원천 차단
     if nude:
@@ -258,18 +265,28 @@ def assemble_sdxl_prompt(
     # 4. 2인 상호작용/파트너 씬 판별 및 충돌 방지
     is_offscreen_partner = any(kw in pose_tag.lower() for kw in ("off-screen", "offscreen", "completely off-screen"))
     is_aftermath = any(kw in pose_tag.lower() for kw in ("aftermath", "aftersex"))
-    is_solo_scene = (
+    
+    # 명백한 2인 결합/상호작용 키워드 식별 (샤워섹스, 스탠딩섹스, 삽입, 파트너 등)
+    has_interactive_keywords = any(kw in pose_tag.lower() for kw in (
+        "partner", "faceless male", "hug", "kiss", "carry", "missionary",
+        "doggystyle", "cowgirl", "straddling", "penetration", "paizuri",
+        "fellatio", "titfuck", "groping", "grabbed from behind", "hugging from behind",
+        "shower sex", "standing sex", "anal sex", "vaginal penetration", "anal penetration"
+    ))
+
+    # 순수 1인 솔로 씬 (046/146 개각유혹, 038/039 단독 샤워 등)
+    # 단, 결합/상호작용 키워드가 있으면 절대로 솔로로 오분류되지 않음
+    is_solo_scene = not has_interactive_keywords and (
         "solo focus" in pose_tag.lower()
         or "solo, " in pose_tag.lower()
         or ", solo" in pose_tag.lower()
-        or ("spreading own legs" in pose_tag.lower() and "partner" not in pose_tag.lower())
+        or "standing in shower" in pose_tag.lower()
+        or "shower stall" in pose_tag.lower()
+        or "spreading own legs" in pose_tag.lower()
     )
+
     is_interactive = (
-        any(kw in pose_tag.lower() for kw in (
-            "partner", "faceless male", "hug", "kiss", "carry", "missionary",
-            "doggystyle", "cowgirl", "straddling", "penetration", "paizuri",
-            "fellatio", "titfuck", "groping", "behind"
-        )) or pose.section in ("h_scenes", "scenes_otokonoko")
+        has_interactive_keywords or pose.section in ("h_scenes", "scenes_otokonoko")
     ) and not is_aftermath and not is_solo_scene
 
     if is_interactive:
