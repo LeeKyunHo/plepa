@@ -22,6 +22,7 @@ from plepa_gui.pages.gallery import render_gallery_page
 from plepa_gui.pages.generate import render_generate_page
 from plepa_gui.pages.pose_sets import render_pose_sets_page
 from plepa_gui.pages.poses import render_poses_page
+from plepa_gui.pages.settings import render_settings_page
 
 
 def setup_routes():
@@ -60,6 +61,11 @@ def setup_routes():
     def page_gallery():
         ui.dark_mode().enable()
         render_gallery_page()
+
+    @ui.page("/settings")
+    def page_settings():
+        ui.dark_mode().enable()
+        render_settings_page()
 
 
 setup_routes()

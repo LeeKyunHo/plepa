@@ -14,6 +14,7 @@ from plepa_engine.models import GenerationResult
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.generation_service import GenerationParams, default_generation_service
+from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_gui.components.header import render_header
 
@@ -209,12 +210,16 @@ def render_generate_page() -> None:
                 ).props("outlined dark dense").classes("w-full text-sm")
 
     def request_cancel():
-        if state["is_running"]:
-            state["cancel_requested"] = True
+        if global_job_manager.is_running:
+            global_job_manager.cancel_job()
             status_label.set_text("취소 요청됨... (현재 항목 완료 후 중단)")
             ui.notify("생성 중단 요청이 전달되었습니다.", type="warning")
 
-    async def start_generation():
+    def start_generation():
+        if global_job_manager.is_running:
+            ui.notify("이미 다른 배치 작업이 진행 중입니다.", type="warning")
+            return
+
         if not state["selected_chars"]:
             ui.notify("최소 1명 이상의 캐릭터를 선택해 주십시오.", type="warning")
             return
@@ -251,48 +256,51 @@ def render_generate_page() -> None:
             mock=state["mock"],
         )
 
-        state["is_running"] = True
-        state["cancel_requested"] = False
-        start_btn.disable()
-        cancel_btn.enable()
-        progress_bar.value = 0.0
         log_box.clear()
-        status_label.set_text("배치 생성 진행 중...")
+        nonlocal rendered_log_count
+        rendered_log_count = 0
 
-        def progress_callback(cur: int, total: int, res: GenerationResult):
-            pct = cur / total if total > 0 else 0.0
-            progress_bar.value = pct
-            progress_text.set_text(f"{cur} / {total} ({int(pct * 100)}%)")
-            with log_box:
-                icon_str = "✔" if res.success else "✖"
-                msg = f"{icon_str} #{res.target.code} {res.target.label} ➔ {res.target.output_filename} ({res.duration_sec:.1f}s)"
-                ui.label(msg).classes("text-emerald-400" if res.success else "text-rose-400")
+        started = global_job_manager.start_job(params)
+        if started:
+            ui.notify("백그라운드 배치 작업 시작! 다른 페이지로 이동해도 멈추지 않고 계속 생성됩니다.", type="positive")
+            sync_job_status()
+        else:
+            ui.notify("작업 시작 실패 (이미 실행 중)", type="warning")
 
-        def check_cancelled():
-            return state["cancel_requested"]
+    # 전역 백그라운드 작업 상태 실시간 동기화
+    rendered_log_count = 0
 
-        try:
-            # 백그라운드 작업으로 실행
-            results = await run.io_bound(
-                default_generation_service.run_batch,
-                params,
-                progress_callback,
-                check_cancelled,
-                True  # quiet
-            )
-            success_count = sum(1 for r in results if r.success)
-            status_label.set_text(f"완료! (성공: {success_count}개 / 총 {len(results)}개)")
-            ui.notify(f"배치 생성이 완료되었습니다! (성공 {success_count}개)", type="positive")
-        except Exception as e:
-            status_label.set_text(f"오류 발생: {e}")
-            ui.notify(f"생성 중 오류: {e}", type="negative")
-            with log_box:
-                ui.label(f"오류: {e}").classes("text-rose-500 font-bold")
-        finally:
-            state["is_running"] = False
+    def sync_job_status():
+        nonlocal rendered_log_count
+        status = global_job_manager.get_status()
+        is_running = status["is_running"]
+
+        if is_running:
+            start_btn.disable()
+            cancel_btn.enable()
+            progress_bar.value = status["percentage"]
+            progress_text.set_text(f"{status['current']} / {status['total']} ({int(status['percentage'] * 100)}%)")
+            status_label.set_text(status["current_msg"])
+        else:
             start_btn.enable()
             cancel_btn.disable()
+            status_label.set_text(status["current_msg"])
+            if status["total"] > 0:
+                progress_bar.value = status["percentage"]
+                progress_text.set_text(f"{status['current']} / {status['total']} ({int(status['percentage'] * 100)}%)")
+
+        logs = status["logs"]
+        if len(logs) > rendered_log_count:
+            with log_box:
+                for entry in logs[rendered_log_count:]:
+                    ui.label(f"[{entry['timestamp']}] {entry['text']}").classes(
+                        "text-emerald-400" if entry["success"] else "text-rose-400"
+                    )
+            rendered_log_count = len(logs)
+
+    ui.timer(0.8, sync_job_status)
 
     # 초기화
     refresh_char_checkboxes()
     on_pose_mode_changed("포즈 세트 사용")
+    sync_job_status()
