@@ -123,6 +123,24 @@
    - **침대 및 H씬 와인잔 소품 전역 차단**: 침대 위에서 뜬금없이 생성되던 와인잔/술병을 막기 위해 네거티브에 `(wine, wine glass, champagne, glass, bottle, cup, drink, beverage:1.4)` 전역 주입.
    - **헤어 색상 이염 방지**: 유색 의상/눈동자 색소 누출로 인한 머리카락 변색 방지를 위해 포지티브 3중 컬러 앵커링 + 네거티브 오염 예상 색상 강력 차단 + `ref_weight: 0.50~0.55` 조절 3중 방어 메커니즘 정립.
 
+18. **NiceGUI 기반 로컬 웹 스튜디오 구축 및 서비스 레이어 단일화 (ADR 2026-10-06)**
+   - **배경**: CLI(`flux_batch_generator.py`)의 뛰어난 자동화 성능을 유지하면서, 캐릭터 외형 수정·복제, 80종 포즈 편집, 배경 프리셋 관리, 배치 생성 및 체형별 비교 갤러리를 화면에서 직관적으로 다룰 수 있는 GUI 환경 필요.
+   - **아키텍처 원칙 (Single Source of Truth)**:
+     - GUI가 독자적인 프롬프트 조립이나 파일 입출력을 수행하지 않고, CLI와 GUI가 완전히 동일한 `plepa_engine/services/`(`character_service`, `pose_service`, `background_service`, `asset_service`, `generation_service`)를 공유.
+     - `flux_batch_generator.py`는 서비스 레이어를 호출하는 얇은 래퍼로 축소되어 기존 CLI 인수 및 기능 하위 호환성 100% 보장.
+   - **안전한 데이터 보존 (Atomic Save & 회전 백업)**:
+     - 모든 JSON 저장은 임시 파일 기록 후 `os.replace`로 교체하여 프로세스 강제 종료 시에도 0바이트 손상 원천 방지.
+     - 저장 직전 `.plepa_backup/`에 타임스탬프 스냅샷 백업(최근 20개 자동 순환 보관).
+     - 삭제는 영구 삭제 대신 `_trash/` 이동으로 안전성 확보.
+   - **포즈 명시적 메타데이터 도입**:
+     - 기존 키워드 추측 휴리스틱(057번 샤워벽치기에서 파트너 남성이 누락되던 버그의 근본 원인)을 종식하기 위해 `flags`(`nude`, `scene_type`, `wet`, `disabled`) 도입.
+     - 라벨 변경 시 연관된 에셋 파일명 변경 계획(Dry-run) 및 동시 리네임 트랜잭션 제공.
+   - **프롬프트 4,800개 회귀 방지 스냅샷 구축**:
+     - 리팩터링 전후 전체 로스터 x 캐릭터 x 80개 포즈 x SDXL/FLUX 조합의 프롬프트 전수 일치를 검증하는 `tests/snapshot_prompts.py` 체계 상시 가동.
+   - **실행 방법**:
+     - 더블클릭: `run_gui.bat`
+     - CLI 실행: `.\.venv\Scripts\python.exe plepa_gui/app.py` ➔ 브라우저에서 `http://127.0.0.1:8080` 접속.
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
