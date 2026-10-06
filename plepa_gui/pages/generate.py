@@ -23,6 +23,22 @@ def render_generate_page() -> None:
     """배치 생성 페이지 렌더링."""
     render_header("/generate")
 
+    def get_bg_options(r: str, eng: str) -> dict:
+        bgs = default_background_service.get_backgrounds(r, engine=eng)
+        opts = {}
+        for k in bgs.keys():
+            if k == "none":
+                opts[k] = "none (배경 없음 - 순백색 스튜디오) ⭐"
+            elif k == "white_studio":
+                opts[k] = "white_studio (화이트 스튜디오)"
+            elif k == "grey_studio":
+                opts[k] = "grey_studio (그레이 스튜디오)"
+            elif k == "default":
+                opts[k] = "default (프로젝트 기본 배경)"
+            else:
+                opts[k] = k
+        return opts
+
     # 반응형 폼 상태
     state = {
         "roster": DEFAULT_ROSTER,
@@ -31,7 +47,7 @@ def render_generate_page() -> None:
         "selected_pose_set": "shower_trio",
         "custom_pose_expr": "000..019",
         "engine": DEFAULT_ENGINE,
-        "bg_preset": "default",
+        "bg_preset": "none",
         "face_detailer": False,
         "upscale": False,
         "censor": False,
@@ -47,7 +63,7 @@ def render_generate_page() -> None:
 
     all_chars = default_character_service.list_characters(roster=state["roster"])
     pose_sets = default_pose_service.load_pose_sets()
-    bgs = default_background_service.get_backgrounds(state["roster"])
+    bg_options = get_bg_options(state["roster"], state["engine"])
 
     with ui.row().classes("w-full max-w-7xl mx-auto p-6 gap-6 items-start"):
         # 좌측: 생성 파라미터 제어판
@@ -99,11 +115,11 @@ def render_generate_page() -> None:
                     options=["sdxl", "flux"],
                     value=state["engine"],
                     label="생성 엔진",
-                    on_change=lambda e: state.update({"engine": e.value})
+                    on_change=lambda e: on_engine_changed(e.value)
                 ).props("dense outlined dark options-dense").classes("w-32")
 
                 bg_sel = ui.select(
-                    options=list(bgs.keys()) or ["default"],
+                    options=bg_options,
                     value=state["bg_preset"],
                     label="배경 프리셋",
                     on_change=lambda e: state.update({"bg_preset": e.value})
@@ -160,9 +176,19 @@ def render_generate_page() -> None:
         state["roster"] = new_r
         refresh_char_checkboxes()
         # 배경 목록 갱신
-        new_bgs = default_background_service.get_backgrounds(new_r)
-        bg_sel.options = list(new_bgs.keys()) or ["default"]
-        bg_sel.value = "default"
+        new_opts = get_bg_options(new_r, state["engine"])
+        bg_sel.options = new_opts
+        if state["bg_preset"] not in new_opts:
+            state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
+            bg_sel.value = state["bg_preset"]
+
+    def on_engine_changed(new_eng: str):
+        state["engine"] = new_eng
+        new_opts = get_bg_options(state["roster"], new_eng)
+        bg_sel.options = new_opts
+        if state["bg_preset"] not in new_opts:
+            state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
+            bg_sel.value = state["bg_preset"]
 
     def refresh_char_checkboxes(keep_selection: bool = False):
         chars_box.clear()

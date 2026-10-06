@@ -23,6 +23,20 @@ def is_nude_pose(entry: PoseEntry) -> bool:
     return False
 
 
+def _is_no_background(bg_prompt: str) -> bool:
+    """해당 배경 프롬프트가 단색/무배경 스튜디오인지 판별."""
+    if not bg_prompt:
+        return False
+    p = bg_prompt.strip().lower()
+    if p in ("none", "no_bg", "nobg", "white_bg", "empty", "solid_white"):
+        return True
+    if "white background" in p and "simple background" in p:
+        return True
+    if "completely solid pure white background" in p or "clean minimalist studio backdrop" in p:
+        return True
+    return False
+
+
 def assemble_flux_prompt(
     char: CharacterConfig,
     pose: PoseEntry,
@@ -32,21 +46,35 @@ def assemble_flux_prompt(
     캐릭터 설정과 포즈 DB의 항목을 결합하여 고품질 플럭스 자연어 프롬프트를 조립합니다.
     - 탈의/H-씬의 경우 캐릭터 평상시 의상 묘사를 원천 배제합니다.
     - emotions 씬의 경우 프로젝트 배경(bg_prompt)이 주어지면 기본 배경을 치환합니다.
+    - 무배경(none) 프리셋의 경우 배경 소품 및 환경을 원천 배제합니다.
     - 반환값: (최종 조립 프롬프트, 탈의여부 boolean)
     """
     nude = is_nude_pose(pose)
     sentences = []
+    is_no_bg = _is_no_background(bg_prompt)
 
     # 1. 포즈/구도 및 상황 서술 (선두 배치하여 구도 우선권 부여)
     pose_text = pose.prompt.strip()
-    if bg_prompt and pose.section == "emotions":
+    if bg_prompt:
         bg_clean = bg_prompt.strip().rstrip(".")
-        pose_text = re.sub(
-            r"Clean\s+(minimalist|minimalistic|soft)?\s*(indoor\s+)?background[,\.\s]*",
-            f"Set in {bg_clean}, ",
-            pose_text,
-            flags=re.IGNORECASE,
-        )
+        if pose.section == "emotions":
+            if is_no_bg:
+                pose_text = re.sub(
+                    r"Clean\s+(minimalist|minimalistic|soft)?\s*(indoor\s+)?background[,\.\s]*",
+                    f"{bg_clean}, ",
+                    pose_text,
+                    flags=re.IGNORECASE,
+                )
+            else:
+                pose_text = re.sub(
+                    r"Clean\s+(minimalist|minimalistic|soft)?\s*(indoor\s+)?background[,\.\s]*",
+                    f"Set in {bg_clean}, ",
+                    pose_text,
+                    flags=re.IGNORECASE,
+                )
+        elif is_no_bg:
+            if "white background" not in pose_text.lower():
+                pose_text = f"{pose_text.rstrip('.')} against a completely solid pure white minimalist background with no furniture and no scenery."
 
     if pose_text:
         if not pose_text.endswith("."):
@@ -184,14 +212,19 @@ def assemble_sdxl_prompt(
     - 반환값: (positive_prompt, negative_prompt, is_nude)
     """
     nude = is_nude_pose(pose)
+    is_no_bg = _is_no_background(bg_prompt)
 
     # 1. 포즈 태그 정리
     pose_tag = pose.prompt.strip()
-    if bg_prompt and pose.section == "emotions":
-        if "clean background" in pose_tag.lower():
-            pose_tag = re.sub(r"clean\s+background", bg_prompt.strip(), pose_tag, flags=re.IGNORECASE)
-        else:
-            pose_tag = f"{pose_tag}, {bg_prompt.strip()}"
+    if bg_prompt:
+        if pose.section == "emotions":
+            if "clean background" in pose_tag.lower():
+                pose_tag = re.sub(r"clean\s+background", bg_prompt.strip(), pose_tag, flags=re.IGNORECASE)
+            else:
+                pose_tag = f"{pose_tag}, {bg_prompt.strip()}"
+        elif is_no_bg:
+            if "simple background" not in pose_tag.lower():
+                pose_tag = f"{pose_tag}, simple background, white background, solid background"
 
     # 2. 긍정 프롬프트 조립
     if char.sdxl_positive:
@@ -241,6 +274,13 @@ def assemble_sdxl_prompt(
     # 실사/3D 및 다중 인물/마네킹 차단 방어선 최전방 보장
     if "(photorealistic, realistic, 3d" not in negative_prompt:
         negative_prompt = f"(photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), {negative_prompt}"
+
+    # [패치 0] 무배경(none) 프리셋 선택 시 복잡한 배경 및 불필요 가구 원천 차단
+    if is_no_bg:
+        negative_prompt = f"{negative_prompt}, (detailed background, complex background, outdoors, indoors, scenery, room, window, wallpaper:1.35)"
+        furnitures = [f for f in ("furniture", "chair", "sofa", "bed", "table", "desk", "counter") if f not in pose_tag.lower()]
+        if furnitures:
+            negative_prompt = f"{negative_prompt}, ({', '.join(furnitures)}:1.3)"
 
     # [패치 A] 탈의(nude) 상태 시 의상/에이프런/소품 잔류 원천 차단
     if nude:

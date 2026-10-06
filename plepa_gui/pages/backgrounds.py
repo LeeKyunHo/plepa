@@ -57,23 +57,31 @@ def render_backgrounds_page() -> None:
         refresh_presets()
         render_detail()
 
+    common_presets = default_background_service.get_common_presets()
+
     def refresh_presets():
         presets_container.clear()
         bgs = default_background_service.get_backgrounds(state["selected_roster"])
 
         with presets_container:
-            for k in sorted(bgs.keys()):
+            for k in bgs.keys():
                 is_selected = (k == state["selected_key"])
-                classes = "w-full p-2.5 rounded-lg cursor-pointer transition-all border "
+                classes = "w-full p-2.5 rounded-lg cursor-pointer transition-all border justify-between items-center "
                 if is_selected:
                     classes += "bg-amber-500/20 text-amber-300 border-amber-500/60 font-bold"
                 else:
                     classes += "bg-slate-800/60 text-slate-200 border-transparent hover:bg-slate-800"
 
                 with ui.row().classes(classes).on("click", lambda key=k: select_key(key)):
-                    ui.label(k).classes("text-sm")
-                    if k == "default":
-                        ui.badge("기본값", color="amber-600").props("dense text-xs")
+                    with ui.row().classes("items-center gap-2"):
+                        ui.label(k).classes("text-sm")
+                    with ui.row().classes("items-center gap-1"):
+                        if k in common_presets:
+                            ui.badge("🌐 공용", color="emerald-700").props("dense text-xs")
+                        if k == "none":
+                            ui.badge("배경 없음", color="amber-600").props("dense text-xs")
+                        elif k == "default":
+                            ui.badge("기본값", color="blue-600").props("dense text-xs")
 
     def select_key(key: str):
         state["selected_key"] = key
@@ -88,21 +96,29 @@ def render_backgrounds_page() -> None:
         state["current_prompt"] = prompt
 
         with detail_card:
-            with ui.row().classes("w-full justify-between items-center mb-6 pb-4 border-b border-slate-800"):
+            with ui.row().classes("w-full justify-between items-center mb-4 pb-4 border-b border-slate-800"):
                 with ui.row().classes("items-center gap-3"):
                     ui.icon("wallpaper", size="28px").classes("text-amber-400")
                     with ui.column().classes("gap-0"):
-                        ui.label(f"배경 프리셋: '{key}'").classes("text-xl font-bold text-slate-100")
+                        with ui.row().classes("items-center gap-2"):
+                            ui.label(f"배경 프리셋: '{key}'").classes("text-xl font-bold text-slate-100")
+                            if key in common_presets:
+                                ui.badge("🌐 전체 프로젝트 공용", color="emerald-700").props("dense text-xs")
                         ui.label(f"로스터: {state['selected_roster']}").classes("text-xs text-slate-400")
 
                 with ui.row().classes("items-center gap-2"):
-                    if key != "default":
+                    if key not in ("default", "none", "white_studio", "grey_studio"):
                         ui.button("삭제", icon="delete", on_click=lambda: delete_preset(key)).props(
                             "outline color=negative dense size=sm"
                         )
                     ui.button("저장", icon="save", on_click=lambda: save_preset(key, prompt_input.value)).props(
                         "unelevated color=amber-500 text-color=slate-950 font-bold px-4"
                     )
+
+            if key in common_presets:
+                with ui.row().classes("w-full p-2.5 bg-emerald-950/40 border border-emerald-600/40 rounded-lg items-center gap-2 mb-3"):
+                    ui.icon("info", size="18px").classes("text-emerald-400")
+                    ui.label(f"공용 프리셋 안내: {common_presets[key].get('description', '')} (모든 로스터 공용)").classes("text-xs text-emerald-200")
 
             prompt_input = ui.textarea("배경 프롬프트 내용", value=prompt).props("outlined dark autogrow rows=5").classes("w-full font-mono text-sm mb-4")
 

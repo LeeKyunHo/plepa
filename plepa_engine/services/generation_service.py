@@ -194,7 +194,7 @@ class GenerationService:
                     print("\n[알림] 사용자에 의해 배치가 취소되었습니다.")
                 break
 
-            bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset)
+            bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine=params.engine)
             output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
             output_dir.mkdir(parents=True, exist_ok=True)
 
