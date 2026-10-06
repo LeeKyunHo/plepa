@@ -47,3 +47,7 @@ projects/*/assets_facedetailer/
 *.safetensors
 *.pth
 *.ckpt
+
+# Plepa GUI Backups & State
+.plepa_backup/
+.plepa_state/

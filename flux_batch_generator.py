@@ -1,6 +1,7 @@
 """
 flux_batch_generator.py
-플럭스(FLUX.1 [dev]) 기반 캐릭터 에셋 배치 생성기 (플에파 / PLEPA) - CLI 진입점.
+플럭스(FLUX.1 [dev]) 및 SDXL 기반 캐릭터 에셋 배치 생성기 (플에파 / PLEPA) - CLI 진입점.
+CLI 인터페이스 및 하위 호환성을 100% 유지하며, 실제 처리는 서비스 레이어(plepa_engine.services)에 위임합니다.
 """
 
 from __future__ import annotations
@@ -8,30 +9,16 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
-from plepa_engine.comfy_client import ComfyClient, ComfyClientError
 from plepa_engine.config import (
     COMFY_HOST,
-    DEFAULT_HEIGHT,
-    DEFAULT_REF_WEIGHT,
+    DEFAULT_ENGINE,
     DEFAULT_ROSTER,
-    DEFAULT_SDXL_CFG,
     DEFAULT_SDXL_CKPT,
-    DEFAULT_SDXL_HEIGHT,
-    DEFAULT_SDXL_SAMPLER,
-    DEFAULT_SDXL_SCHEDULER,
-    DEFAULT_SDXL_STEPS,
-    DEFAULT_SDXL_WIDTH,
-    DEFAULT_STEPS,
     DEFAULT_UNET_GGUF,
-    DEFAULT_WIDTH,
-    FLUX_POSE_DB_PATH,
-    POSE_DB_PATH,
     PROJECTS_DIR,
-    SDXL_POSE_DB_PATH,
     configure_stdio,
 )
 
@@ -43,91 +30,57 @@ from plepa_engine.models import (
     PoseEntry,
 )
 from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
-from plepa_engine.reporter import (
-    asset_filename,
-    open_in_explorer,
-    print_batch_summary,
+from plepa_engine.reporter import asset_filename, open_in_explorer
+from plepa_engine.services.asset_service import default_asset_service
+from plepa_engine.services.background_service import default_background_service
+from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.generation_service import (
+    GenerationParams,
+    default_generation_service,
+    generate_mock_image,
 )
+from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
 
 
+# ==========================================
+# 기존 모듈 하위 호환성 유지 래퍼 함수들
+# ==========================================
+
 def load_pose_db(engine: str = "flux", path: Optional[Path] = None) -> Dict[str, PoseEntry]:
     """엔진(flux / sdxl)에 맞는 포즈 데이터베이스 로드 및 PoseEntry 딕셔너리로 변환."""
-    if path is None:
-        path = SDXL_POSE_DB_PATH if engine.lower() == "sdxl" else POSE_DB_PATH
-
-    if not path.exists():
-        raise FileNotFoundError(f"포즈 데이터베이스를 찾을 수 없습니다: {path}")
-
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    entries: Dict[str, PoseEntry] = {}
-    for section in ("emotions", "poses", "h_scenes", "scenes_otokonoko"):
-        sec_dict = data.get(section, {})
-        for code, item in sec_dict.items():
-            code_str = f"{int(code):03d}"
-            entries[code_str] = PoseEntry(
-                code=code_str,
-                section=section,
-                label=item.get("label", "미상"),
-                prompt=item.get("prompt", ""),
-                description=item.get("description", "")
-            )
-    return entries
+    return default_pose_service.load_pose_db(engine=engine, path=path)
 
 
 def find_character(char_name: str, roster: str = DEFAULT_ROSTER) -> tuple[CharacterConfig, str]:
     """캐릭터 JSON 설정 로드 및 로스터 자동 탐색."""
-    clean_name = char_name[:-5] if char_name.endswith(".json") else char_name
-
-    # 1. 사용자가 지정한 로스터에서 우선 탐색
-    char_file = PROJECTS_DIR / roster / "characters" / f"{clean_name}.json"
-    if char_file.exists():
-        with open(char_file, "r", encoding="utf-8") as f:
-            return CharacterConfig.from_dict(json.load(f), file_path=char_file), roster
-
-    # 2. projects/* 전체에서 탐색 (지정 로스터에 없거나 default인 경우)
-    for proj in sorted(PROJECTS_DIR.iterdir()):
-        if proj.is_dir() and proj.name != roster:
-            candidate = proj / "characters" / f"{clean_name}.json"
-            if candidate.exists():
-                with open(candidate, "r", encoding="utf-8") as f:
-                    return CharacterConfig.from_dict(json.load(f), file_path=candidate), proj.name
-
-    raise FileNotFoundError(f"캐릭터 설정 파일을 찾을 수 없습니다: {char_name} (로스터: {roster})")
+    return default_character_service.find_character(char_name=char_name, roster=roster)
 
 
 def resolve_characters(char_expr: str, roster: str = DEFAULT_ROSTER) -> List[tuple[CharacterConfig, str]]:
     """'all', 쉼표 구분, 또는 단일 캐릭터 표현식을 해석하여 캐릭터 목록 반환."""
-    expr = char_expr.strip().lower()
-    if expr == "all":
-        char_dir = PROJECTS_DIR / roster / "characters"
-        if not char_dir.exists():
-            raise FileNotFoundError(f"로스터 캐릭터 폴더를 찾을 수 없습니다: {char_dir}")
-        results = []
-        for file in sorted(char_dir.glob("*.json")):
-            with open(file, "r", encoding="utf-8") as f:
-                results.append((CharacterConfig.from_dict(json.load(f), file_path=file), roster))
-        if not results:
-            raise FileNotFoundError(f"로스터에 등록된 캐릭터 JSON 파일이 없습니다: {roster}")
-        return results
-
-    if "," in char_expr:
-        results = []
-        for token in char_expr.split(","):
-            token = token.strip()
-            if token:
-                results.append(find_character(token, roster=roster))
-        return results
-
-    return [find_character(char_expr, roster=roster)]
+    return default_character_service.resolve_characters(char_expr=char_expr, roster=roster)
 
 
 def load_character(char_name: str, roster: str = DEFAULT_ROSTER) -> CharacterConfig:
-    """하위 호환용 래퍼 함수."""
-    char, _ = find_character(char_name, roster=roster)
+    """단일 캐릭터 로드 래퍼 함수."""
+    char, _ = default_character_service.find_character(char_name, roster=roster)
     return char
+
+
+def find_reference_image(prefix: str, roster: str = DEFAULT_ROSTER, custom_path: Optional[str] = None) -> Optional[Path]:
+    """캐릭터의 참조 이미지를 탐색합니다."""
+    return default_asset_service.find_reference_image(prefix=prefix, roster=roster, custom_path=custom_path)
+
+
+def load_background_preset(roster: str, key: str = "default") -> str:
+    """projects/{roster}/background.json 로드."""
+    return default_background_service.get_preset(roster=roster, key=key)
+
+
+def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry]) -> List[str]:
+    """사용자가 지정한 포즈 표현식(all, emotions, 00..19, 01,02 등)을 코드 목록으로 해석."""
+    return default_pose_service.resolve_pose_codes(expr=expr, db=db)
 
 
 def print_roster_characters(roster: str = DEFAULT_ROSTER) -> int:
@@ -164,103 +117,6 @@ def print_roster_characters(roster: str = DEFAULT_ROSTER) -> int:
 
     print("=" * 82)
     return 0
-
-
-def generate_mock_image(output_path: Path) -> None:
-    """ComfyUI 연동 없이 0.001초 만에 더미 WebP 이미지를 생성하여 파이프라인 무결성을 검증합니다."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        from PIL import Image
-        img = Image.new("RGB", (64, 64), color=(60, 100, 180))
-        img.save(output_path, "WEBP", quality=80)
-    except Exception:
-        # Pillow 부재 시 유효한 초소형 1x1 WebP 바이너리 직접 기록 (안전 폴백)
-        tiny_webp = (
-            b"RIFF\x1a\x00\x00\x00WEBPVP8L\x0e\x00\x00\x00/x\x00\x00\x00\x00\x00\x88\x88\xfe\x07\x00\x00"
-        )
-        with open(output_path, "wb") as f:
-            f.write(tiny_webp)
-
-
-def find_reference_image(prefix: str, roster: str = DEFAULT_ROSTER, custom_path: Optional[str] = None) -> Optional[Path]:
-    """캐릭터의 참조 이미지를 탐색합니다 (지정 경로 -> references/{prefix}.{ext} 순)."""
-    if custom_path:
-        p = Path(custom_path)
-        if p.is_file():
-            return p
-        cand = PROJECTS_DIR / roster / "references" / custom_path
-        if cand.is_file():
-            return cand
-        raise FileNotFoundError(f"지정한 레퍼런스 이미지를 찾을 수 없습니다: {custom_path}")
-
-    ref_dir = PROJECTS_DIR / roster / "references"
-    if not ref_dir.is_dir():
-        return None
-
-    for ext in (".webp", ".png", ".jpg", ".jpeg"):
-        cand = ref_dir / f"{prefix}{ext}"
-        if cand.is_file():
-            return cand
-
-    return None
-
-
-def load_background_preset(roster: str, key: str = "default") -> str:
-    """projects/{roster}/background.json 로드."""
-    bg_file = PROJECTS_DIR / roster / "background.json"
-    if not bg_file.exists():
-        return ""
-    try:
-        with open(bg_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data.get(key, data.get("default", ""))
-    except Exception:
-        return ""
-
-
-def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry]) -> List[str]:
-    """사용자가 지정한 포즈 표현식(all, emotions, 00..19, 01,02 등)을 코드 목록으로 해석."""
-    expr = expr.strip().lower()
-    if expr == "all":
-        return sorted(db.keys(), key=lambda x: int(x))
-    if expr in ("emotions", "emotion"):
-        return [c for c, e in db.items() if e.section == "emotions"]
-    if expr in ("poses", "pose"):
-        return [c for c, e in db.items() if e.section == "poses"]
-    if expr in ("h_scenes", "h", "scenes"):
-        return [c for c, e in db.items() if e.section == "h_scenes"]
-    if expr in ("otokonoko", "scenes_otokonoko", "oto"):
-        return [c for c, e in db.items() if e.section == "scenes_otokonoko"]
-
-    # 범위 연산자 지원: 00..19, 000..019 등
-    if ".." in expr:
-        start_s, end_s = expr.split("..", 1)
-        start, end = int(start_s), int(end_s)
-        codes = []
-        for i in range(start, end + 1):
-            c_str = f"{i:03d}"
-            if c_str in db:
-                codes.append(c_str)
-        return codes
-
-    # 쉼표 구분: 00,01,05 또는 000,001 등
-    if "," in expr:
-        codes = []
-        for token in expr.split(","):
-            token = token.strip()
-            if not token:
-                continue
-            c_str = f"{int(token):03d}"
-            if c_str in db:
-                codes.append(c_str)
-        return codes
-
-    # 단일 코드: 00 또는 000 등
-    single_code = f"{int(expr):03d}"
-    if single_code in db:
-        return [single_code]
-
-    raise ValueError(f"유효하지 않은 포즈 코드/표현식입니다: {expr}")
 
 
 def run_self_test() -> int:
@@ -398,19 +254,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         prog="flux_batch_generator",
         description="플럭스(FLUX.1 [dev]) 및 SDXL(Unholy Desire Mix) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
     )
-    parser.add_argument("-c", "--character", help="생성할 캐릭터 이름 (예: bjh, sample_character, all)")
-    parser.add_argument("-p", "--pose", default="all", help="생성할 포즈 코드/범위 (all, emotions, 000..019, 000,001 등)")
+    parser.add_argument("-c", "--character", "--char", help="생성할 캐릭터 이름 (예: bjh, sample_character, all)")
+    parser.add_argument("-p", "--pose", "--codes", default="all", help="생성할 포즈 코드/범위 (all, emotions, 000..019, 000,001 등)")
+    parser.add_argument("--all-chars", action="store_true", help="로스터 내 등록된 모든 캐릭터 일괄 순차 생성 (Kiro 호환 문법)")
     parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
     parser.add_argument("-l", "--list", action="store_true", help="로스터 내 등록된 캐릭터 프로필 목록을 콘솔 테이블로 출력")
     parser.add_argument("--profile", default=None, help="캐릭터 프로필/의상 선택 (JSON 내 profiles 섹션)")
-    parser.add_argument("--engine", choices=["flux", "sdxl"], default="flux", help="이미지 생성 엔진 (flux: FLUX.1 [dev] GGUF, sdxl: SDXL Unholy 9.0 등 고속 2D 애니)")
+    parser.add_argument("--engine", choices=["sdxl", "flux"], default=DEFAULT_ENGINE, help=f"이미지 생성 엔진 (기본: {DEFAULT_ENGINE} [고속 2D 애니 체크포인트], flux: FLUX.1 [dev] GGUF)")
     parser.add_argument("--ckpt", default=DEFAULT_SDXL_CKPT, help=f"SDXL 모드에서 사용할 체크포인트 파일명 (기본: {DEFAULT_SDXL_CKPT})")
     parser.add_argument("--bg", default=None, help="즉석 배경 프롬프트 직접 주입 (지정 시 --bg-preset 보다 우선 적용)")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--custom_pos", "--style", default=None, help="추가 긍정 프롬프트 또는 특정 작가 화풍 태그 주입 (예: 'art by ratatatat74')")
     parser.add_argument("--custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
     parser.add_argument("--ref_image", default=None, help="IP-Adapter 참조 이미지 파일 경로 (생략 시 references/{prefix}.webp 자동 탐색)")
-    parser.add_argument("--ref_weight", type=float, default=None, help=f"IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 {DEFAULT_REF_WEIGHT})")
+    parser.add_argument("--ref_weight", type=float, default=None, help="IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 0.7)")
     parser.add_argument("--no_ref", action="store_true", help="레퍼런스 이미지(IP-Adapter)를 비활성화하고 순수 프롬프트로만 생성")
     parser.add_argument("--mock", action="store_true", help="ComfyUI 호출 없이 초고속(0.001초) 더미 WebP 이미지 생성으로 파이프라인 무결성 검증")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
@@ -419,7 +276,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--face-detailer", action="store_true", help="Face Detailer 얼굴 보정 활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
-    parser.add_argument("--cfg", type=float, default=None, help=f"CFG 스케일 (기본: flux=3.5, sdxl={DEFAULT_SDXL_CFG})")
+    parser.add_argument("--cfg", type=float, default=None, help="CFG 스케일 (기본: flux=3.5, sdxl=6.0)")
     parser.add_argument("--sampler", default=None, help="샘플러 알고리즘 (기본: flux=euler, sdxl=euler_ancestral)")
     parser.add_argument("--scheduler", default=None, help="스케줄러 (기본: flux=simple, sdxl=normal)")
     parser.add_argument("--unet", default=DEFAULT_UNET_GGUF, help=f"FLUX 모드 GGUF UNet 모델 파일명 (기본: {DEFAULT_UNET_GGUF})")
@@ -427,6 +284,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--lora-weight", type=float, default=0.9, help="LoRA 적용 강도 (기본: 0.9)")
     parser.add_argument("--width", type=int, default=None, help="이미지 가로 폭 (기본: flux=896, sdxl=832)")
     parser.add_argument("--height", type=int, default=None, help="이미지 세로 높이 (기본: flux=1152, sdxl=1216)")
+    parser.add_argument(
+        "--naming",
+        choices=["hybrid", "code", "label"],
+        default="hybrid",
+        help="에셋 파일명 형식 (hybrid: prefix_000_라벨.webp [기본값], code: prefix_000.webp, label: prefix_라벨.webp)"
+    )
+    parser.add_argument("--censor", action="store_true", help="2D 애니 성기 자동 검열 활성화 (무검열 원본과 함께 _censored.webp 추가 생성)")
+    parser.add_argument(
+        "--censor-style",
+        choices=["bar", "wide_bar", "slim_bar", "shadow", "mosaic"],
+        default="bar",
+        help="검열 시각 스타일 (bar/wide_bar: 와이드 솔리드 바, slim_bar: 미니멀 슬림 바, shadow: 그림자 실루엣, mosaic: 격자 모자이크)"
+    )
+    parser.add_argument(
+        "--censor-targets",
+        default="penis",
+        help="검열 대상 부위 (penis: 남성기만, all: 전체, 쉼표 구분)"
+    )
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
 
     args = parser.parse_args(argv)
@@ -437,207 +312,67 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.list:
         return print_roster_characters(roster=args.roster)
 
+    if args.all_chars:
+        args.character = "all"
+
     if not args.character:
         parser.print_help()
         print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다 (캐릭터 목록 확인: -l / --list).")
         return 1
 
-    # 엔진별 기본값 산출
-    if args.engine == "sdxl":
-        width = args.width if args.width is not None else DEFAULT_SDXL_WIDTH
-        height = args.height if args.height is not None else DEFAULT_SDXL_HEIGHT
-        steps = args.steps if args.steps is not None else DEFAULT_SDXL_STEPS
-        cfg = args.cfg if args.cfg is not None else DEFAULT_SDXL_CFG
-        sampler = args.sampler if args.sampler is not None else DEFAULT_SDXL_SAMPLER
-        scheduler = args.scheduler if args.scheduler is not None else DEFAULT_SDXL_SCHEDULER
-    else:
-        width = args.width if args.width is not None else DEFAULT_WIDTH
-        height = args.height if args.height is not None else DEFAULT_HEIGHT
-        steps = args.steps if args.steps is not None else DEFAULT_STEPS
-        cfg = args.cfg if args.cfg is not None else 3.5
-        sampler = args.sampler if args.sampler is not None else "euler"
-        scheduler = args.scheduler if args.scheduler is not None else "simple"
+    params = GenerationParams(
+        character_expr=args.character,
+        pose_expr=args.pose,
+        roster=args.roster,
+        profile=args.profile,
+        engine=args.engine,
+        ckpt=args.ckpt,
+        bg=args.bg,
+        bg_preset=args.bg_preset,
+        custom_pos=args.custom_pos,
+        custom_neg=args.custom_neg,
+        ref_image=args.ref_image,
+        ref_weight=args.ref_weight,
+        no_ref=args.no_ref,
+        mock=args.mock,
+        dry_run=args.dry_run,
+        overwrite=args.overwrite,
+        face_detailer=args.face_detailer,
+        upscale=args.upscale,
+        steps=args.steps,
+        cfg=args.cfg,
+        sampler=args.sampler,
+        scheduler=args.scheduler,
+        unet=args.unet,
+        lora=args.lora,
+        lora_weight=args.lora_weight,
+        width=args.width,
+        height=args.height,
+        naming=args.naming,
+        censor=args.censor,
+        censor_style=args.censor_style,
+        censor_targets=args.censor_targets,
+    )
 
     try:
-        db = load_pose_db(engine=args.engine)
-        target_chars = resolve_characters(args.character, roster=args.roster)
-        codes = resolve_pose_codes(args.pose, db)
-        if args.profile:
-            for char_obj, _ in target_chars:
-                char_obj.apply_profile(args.profile)
+        results = default_generation_service.run_batch(params)
+    except ConnectionError as ce:
+        print(f"\n[오류] {ce}")
+        print("(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
+        return 1
     except Exception as e:
-        print(f"[설정 오류] {e}")
+        print(f"\n[실행 오류] {e}")
         return 1
 
-    client = ComfyClient(host=COMFY_HOST)
-    if not args.dry_run and not args.mock:
-        if not client.check_connection():
-            print(f"[오류] ComfyUI 서버({COMFY_HOST})에 연결할 수 없습니다.")
-            print("ComfyUI 폴더의 'run_nvidia_gpu.bat'를 실행하여 서버를 가동해 주십시오.")
-            print("(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
-            return 1
-
-    print("=" * 60)
-    engine_title = f"SDXL ({args.ckpt})" if args.engine == "sdxl" else f"FLUX.1 [dev] (GGUF: {args.unet})"
-    print(f"  [플에파] 듀얼 엔진 가동 모드: {engine_title}")
-    print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
-    print(f"  캐릭터당 포즈: 총 {len(codes)}개 ({', '.join(codes)}) | 총 {len(target_chars) * len(codes)}개 에셋")
-    print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
-    if args.profile:
-        print(f"  프로필: '{args.profile}' 적용")
-    if args.bg:
-        print(f"  즉석 배경: '{args.bg}'")
-    if args.custom_neg and args.engine == "sdxl":
-        print(f"  추가 네거티브: '{args.custom_neg}'")
-    if args.mock:
-        print("  시뮬레이션: --mock 모드 활성화 (초고속 더미 생성)")
-    if args.engine == "flux":
-        print(f"  LoRA: {args.lora} (강도: {args.lora_weight})")
-    is_overwrite = bool(args.overwrite)
-    print(f"  작업 모드: {'강제 덮어쓰기 (--overwrite / -f)' if is_overwrite else '빈칸 채우기 (기본: 기존 파일 보존)'}")
-    print(f"  보정 옵션: Face Detailer={'활성' if args.face_detailer else '비활성'}, Upscale={'활성' if args.upscale else '비활성'}")
-    print("=" * 60)
-
-    last_output_dir = None
-
-    for char_idx, (char, actual_roster) in enumerate(target_chars, 1):
-        bg_prompt = args.bg.strip() if args.bg else load_background_preset(actual_roster, key=args.bg_preset)
-        output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
-        output_dir.mkdir(parents=True, exist_ok=True)
-        last_output_dir = output_dir
-
-        print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
-        if args.bg:
-            print(f"  즉석 배경: '{args.bg}' 적용")
-        elif bg_prompt:
-            print(f"  배경 프리셋: '{args.bg_preset}' 적용")
-
-        # IP-Adapter 참조 이미지 탐색 및 업로드
-        ref_file_name = None
-        ref_weight = args.ref_weight if args.ref_weight is not None else getattr(char, "ref_weight", DEFAULT_REF_WEIGHT)
-        if args.engine == "sdxl" and not args.no_ref:
-            ref_path = find_reference_image(char.prefix, actual_roster, custom_path=args.ref_image)
-            if ref_path:
-                if not args.dry_run and not args.mock:
-                    try:
-                        ref_file_name = client.upload_image(ref_path)
-                    except Exception as ue:
-                        print(f"  [경고] 레퍼런스 업로드 실패 ({ue}) - 순수 프롬프트로 진행")
-                        ref_file_name = None
-                else:
-                    ref_file_name = ref_path.name
-                print(f"  IP-Adapter: '{ref_path.name}' 적용 (가중치: {ref_weight:.2f})")
-            else:
-                print("  IP-Adapter: 레퍼런스 이미지 없음 (순수 프롬프트 생성)")
-        elif args.no_ref:
-            print("  IP-Adapter: 비활성화 (--no_ref)")
-
-        results: List[GenerationResult] = []
-        total_start = time.time()
-
-        for idx, code in enumerate(codes, 1):
-            pose = db[code]
-            out_name = asset_filename(char.prefix, code)
-            out_path = output_dir / out_name
-
-            if args.engine == "sdxl":
-                pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
-                    char, pose, bg_prompt=bg_prompt, custom_pos=args.custom_pos, custom_neg=args.custom_neg
-                )
-                display_prompt = pos_prompt
-                workflow = build_sdxl_workflow(
-                    positive_prompt=pos_prompt,
-                    negative_prompt=neg_prompt,
-                    output_prefix=f"{char.prefix}_{code}",
-                    width=width,
-                    height=height,
-                    steps=steps,
-                    cfg=cfg,
-                    sampler=sampler,
-                    scheduler=scheduler,
-                    ckpt_name=args.ckpt,
-                    use_face_detailer=args.face_detailer,
-                    use_upscale=args.upscale,
-                    ref_image_name=ref_file_name,
-                    ref_weight=ref_weight,
-                )
-            else:
-                prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
-                display_prompt = prompt
-                final_prompt = prompt
-                if args.lora and args.lora.lower() != "none" and "modern-anime" in args.lora.lower():
-                    if "modern anime style" not in final_prompt.lower():
-                        final_prompt = f"modern anime style, {final_prompt}"
-
-                workflow = build_flux_workflow(
-                    prompt=final_prompt,
-                    output_prefix=f"{char.prefix}_{code}",
-                    width=width,
-                    height=height,
-                    steps=steps,
-                    use_face_detailer=args.face_detailer,
-                    use_upscale=args.upscale,
-                    unet_name=args.unet,
-                    lora_name=args.lora if (args.lora and args.lora.lower() != "none") else None,
-                    lora_weight=args.lora_weight,
-                )
-
-            target = GenerationTarget(
-                code=code,
-                section=pose.section,
-                label=pose.label,
-                assembled_prompt=display_prompt,
-                is_nude=is_nude,
-                output_filename=out_name,
-            )
-
-            print(f"  [{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) ➔ {out_name}", end="", flush=True)
-
-            # 기본 동작: 빈칸 채우기 (기존 파일이 있고 --overwrite/-f가 아니면 자동 건너뜀)
-            if not is_overwrite and out_path.exists() and out_path.stat().st_size > 0:
-                print(" [기존 파일 보존: 건너뜀]")
-                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
-                continue
-
-            if args.dry_run:
-                print(" [DRY-RUN 완료]")
-                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0))
-                continue
-
-            if args.mock:
-                item_start = time.time()
-                generate_mock_image(out_path)
-                duration = time.time() - item_start
-                print(f" [MOCK 생성 완료: {duration:.3f}초]")
-                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration))
-                continue
-
-            item_start = time.time()
-            try:
-                client.generate_image(workflow=workflow, output_path=out_path)
-                duration = time.time() - item_start
-                print(f" [완료: {duration:.1f}초]")
-                results.append(GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration))
-            except ComfyClientError as ce:
-                duration = time.time() - item_start
-                print(f" [실패: {ce}]")
-                results.append(GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ce)))
-            except Exception as ge:
-                duration = time.time() - item_start
-                print(f" [예외 발생: {ge}]")
-                results.append(GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ge)))
-
-        total_duration = time.time() - total_start
-
-        # 결과 요약 콘솔 출력
-        print_batch_summary(char.prefix, results, output_dir, total_duration)
-
-    if not args.dry_run and last_output_dir and last_output_dir.parent.exists():
-        open_in_explorer(last_output_dir.parent)
+    # 마지막 에셋 폴더 탐색기 열기
+    if not args.dry_run and results:
+        for r in reversed(results):
+            if r.image_path and r.image_path.parent.exists():
+                open_in_explorer(r.image_path.parent.parent)
+                break
 
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
