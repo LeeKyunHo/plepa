@@ -54,7 +54,12 @@ def render_generate_page() -> None:
             ui.label("⚡ 배치 생성 설정").classes("text-xl font-bold text-slate-100 mb-4")
 
             # 1. 로스터 및 캐릭터 선택
-            ui.label("1. 대상 캐릭터 선택").classes("text-xs font-bold text-amber-400 mb-2")
+            with ui.row().classes("w-full items-center justify-between mb-1"):
+                ui.label("1. 대상 캐릭터 선택").classes("text-xs font-bold text-amber-400")
+                with ui.row().classes("gap-1"):
+                    ui.button("전체 선택", icon="done_all", on_click=lambda: select_all_chars(True)).props("flat dense size=xs color=amber-400").tooltip("현재 로스터의 모든 캐릭터 선택")
+                    ui.button("선택 해제", icon="remove_done", on_click=lambda: select_all_chars(False)).props("flat dense size=xs color=slate-400").tooltip("선택 해제")
+
             with ui.row().classes("w-full items-center justify-between mb-2"):
                 ui.label("로스터:").classes("text-xs text-slate-400")
                 roster_sel = ui.select(
@@ -66,7 +71,12 @@ def render_generate_page() -> None:
             chars_box = ui.column().classes("w-full max-h-36 overflow-y-auto bg-slate-800/40 p-2 rounded border border-slate-700/50 mb-4")
 
             # 2. 포즈 선택 (세트 또는 표현식)
-            ui.label("2. 포즈 선택").classes("text-xs font-bold text-amber-400 mb-2")
+            with ui.row().classes("w-full items-center justify-between mb-1"):
+                ui.label("2. 포즈 선택").classes("text-xs font-bold text-amber-400")
+                ui.button("⭐ 전체 80종 포즈", icon="star", on_click=lambda: select_all_80_poses()).props(
+                    "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
+                ).tooltip("000부터 159까지 전체 80종 포즈 일괄 선택")
+
             with ui.row().classes("w-full gap-4 mb-2"):
                 mode_set_btn = ui.radio(
                     ["포즈 세트 사용", "코드 직접 입력"],
@@ -74,7 +84,12 @@ def render_generate_page() -> None:
                     on_change=lambda e: on_pose_mode_changed(e.value)
                 ).props("dark inline dense")
 
-            pose_mode_container = ui.column().classes("w-full mb-4")
+            pose_mode_container = ui.column().classes("w-full mb-3")
+
+            # 스마트 스킵 안내 배너
+            with ui.row().classes("w-full p-2.5 bg-emerald-950/40 border border-emerald-600/40 rounded-lg items-center gap-2 mb-4"):
+                ui.icon("check_circle", size="18px").classes("text-emerald-400")
+                ui.label("기본 동작: 이미 있는 이미지는 자동 건너뛰고 누락된 포즈만 채웁니다.").classes("text-[11px] text-emerald-200")
 
             # 3. 엔진 및 옵션
             ui.label("3. 엔진 및 보정 옵션").classes("text-xs font-bold text-amber-400 mb-2")
@@ -97,7 +112,7 @@ def render_generate_page() -> None:
                 ui.checkbox("Face Detailer", value=state["face_detailer"], on_change=lambda e: state.update({"face_detailer": e.value})).props("dark dense")
                 ui.checkbox("4x Upscale", value=state["upscale"], on_change=lambda e: state.update({"upscale": e.value})).props("dark dense")
                 ui.checkbox("자동 검열", value=state["censor"], on_change=lambda e: state.update({"censor": e.value})).props("dark dense")
-                ui.checkbox("강제 덮어쓰기", value=state["overwrite"], on_change=lambda e: state.update({"overwrite": e.value})).props("dark dense")
+                ui.checkbox("강제 덮어쓰기 (리롤)", value=state["overwrite"], on_change=lambda e: state.update({"overwrite": e.value})).props("dark dense").tooltip("기존 이미지를 무시하고 새로 생성하여 덮어씁니다.")
                 ui.checkbox("Mock 시뮬레이션", value=state["mock"], on_change=lambda e: state.update({"mock": e.value})).props("dark dense").tooltip("ComfyUI 없이 0.001초 가상 생성")
 
             # 생성 시작 및 취소 버튼
@@ -123,6 +138,23 @@ def render_generate_page() -> None:
             ui.label("생성 로그:").classes("text-xs font-semibold text-slate-400 mb-1")
             log_box = ui.column().classes("w-full h-96 overflow-y-auto bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 gap-1")
 
+    def select_all_chars(select: bool):
+        chars = default_character_service.list_characters(roster=state["roster"])
+        if select:
+            state["selected_chars"] = [c.prefix for _, c, _ in chars]
+            ui.notify(f"로스터 '{state['roster']}' 캐릭터 {len(chars)}명 전체 선택 완료", type="info")
+        else:
+            state["selected_chars"] = []
+            ui.notify("선택 해제 완료", type="info")
+        refresh_char_checkboxes(keep_selection=True)
+
+    def select_all_80_poses():
+        state["pose_selection_mode"] = "set"
+        state["selected_pose_set"] = "all_80"
+        mode_set_btn.value = "포즈 세트 사용"
+        on_pose_mode_changed("포즈 세트 사용")
+        ui.notify("⭐ 전체 80종 포즈 (000~159) 선택 완료!", type="positive")
+
     def on_roster_changed(new_r: str):
         state["roster"] = new_r
         refresh_char_checkboxes()
@@ -131,10 +163,11 @@ def render_generate_page() -> None:
         bg_sel.options = list(new_bgs.keys()) or ["default"]
         bg_sel.value = "default"
 
-    def refresh_char_checkboxes():
+    def refresh_char_checkboxes(keep_selection: bool = False):
         chars_box.clear()
         chars = default_character_service.list_characters(roster=state["roster"])
-        state["selected_chars"] = [chars[0][1].prefix] if chars else []
+        if not keep_selection:
+            state["selected_chars"] = [chars[0][1].prefix] if chars else []
 
         with chars_box:
             for _, c, _ in chars:
@@ -155,7 +188,9 @@ def render_generate_page() -> None:
     def on_pose_mode_changed(mode_str: str):
         pose_mode_container.clear()
         sets = default_pose_service.load_pose_sets()
-        set_options = {s.id: f"{s.name} ({len(s.codes)}종)" for s in sets}
+        set_options = {"all_80": "⭐ 전체 80종 포즈 (000~159)"}
+        for s in sets:
+            set_options[s.id] = f"{s.name} ({len(s.codes)}종)"
 
         with pose_mode_container:
             if "포즈 세트" in mode_str:
@@ -186,12 +221,15 @@ def render_generate_page() -> None:
 
         # 포즈 표현식 산출
         if state["pose_selection_mode"] == "set":
-            sets = default_pose_service.load_pose_sets()
-            target_set = next((s for s in sets if s.id == state["selected_pose_set"]), None)
-            if not target_set or not target_set.codes:
-                ui.notify("선택된 포즈 세트에 포즈가 없습니다.", type="warning")
-                return
-            pose_expr = ",".join(target_set.codes)
+            if state["selected_pose_set"] == "all_80":
+                pose_expr = "all"
+            else:
+                sets = default_pose_service.load_pose_sets()
+                target_set = next((s for s in sets if s.id == state["selected_pose_set"]), None)
+                if not target_set or not target_set.codes:
+                    ui.notify("선택된 포즈 세트에 포즈가 없습니다.", type="warning")
+                    return
+                pose_expr = ",".join(target_set.codes)
         else:
             pose_expr = state["custom_pose_expr"].strip()
             if not pose_expr:
