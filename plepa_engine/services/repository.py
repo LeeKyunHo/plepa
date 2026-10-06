@@ -32,7 +32,7 @@ class Repository:
         p = Path(file_path).resolve()
         if not p.is_file():
             raise FileNotFoundError(f"파일을 찾을 수 없습니다: {p}")
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, "r", encoding="utf-8-sig") as f:
             return json.load(f)
 
     def write_json(
