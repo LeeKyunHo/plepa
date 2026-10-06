@@ -130,12 +130,17 @@ def render_gallery_page() -> None:
                 with ui.row().classes("items-center gap-2 flex-wrap"):
                     ui.label("빠른 캐릭터 프리셋:").classes("text-xs font-semibold text-slate-400 mr-1")
 
-                    # 유키노 체형 묶음이 있는 로스터인 경우 퀵 버튼 표시
+                    # 유키노 체형 및 의상 묶음 퀵 버튼
                     ykn_keys = [k for k in char_asset_counts.keys() if k.startswith("ykn")]
-                    if ykn_keys:
+                    if any(k in char_asset_counts for k in ["ykn_sle", "ykn_std", "ykn_mat"]):
                         ui.button("👑 유키노 체형 6종 세트", icon="group", on_click=lambda: select_ykn_preset()).props(
                             "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
                         ).tooltip("ykn_sle, ykn_std, ykn_mat, ykn_crv, ykn_gla, ykn_gla_up 일괄 선택")
+
+                    if any(k in char_asset_counts for k in ["ykn_bun", "ykn_nur", "ykn_mai"]):
+                        ui.button("👗 유키노 의상 6종 세트", icon="checkroom", on_click=lambda: select_ykn_outfit_preset()).props(
+                            "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
+                        ).tooltip("ykn_bun, ykn_nur, ykn_mai, ykn_swm, ykn_qip, ykn_gya 일괄 선택")
 
                     ui.button("📷 이미지 있는 캐릭터만 선택", icon="filter_alt", on_click=lambda: select_has_assets()).props(
                         "flat dense size=xs color=emerald-400"
@@ -217,6 +222,16 @@ def render_gallery_page() -> None:
         update_control_bars()
         render_content()
         ui.notify("유키노 성인 5대 체형 및 업스케일 6종 선택 완료!", type="positive")
+
+    def select_ykn_outfit_preset():
+        ykn_outfits = ["ykn_bun", "ykn_nur", "ykn_mai", "ykn_swm", "ykn_qip", "ykn_gya"]
+        counts = get_character_asset_counts(state["roster"])
+        state["selected_chars"] = [p for p in ykn_outfits if p in counts]
+        state["pose_set"] = "adult_testing"
+        state["selected_codes"] = [f"{i:03d}" for i in range(24, 60)]
+        update_control_bars()
+        render_content()
+        ui.notify("유키노 신규 테마 의상 6종 선택 완료!", type="positive")
 
     def select_has_assets():
         counts = get_character_asset_counts(state["roster"])
