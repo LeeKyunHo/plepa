@@ -89,7 +89,7 @@ class GlobalJobManager:
                     self.fail_count += 1
 
                 icon_str = "✔" if res.success else "✖"
-                msg = f"{icon_str} #{res.target.code} {res.target.label} ➔ {res.target.output_filename} ({res.duration_sec:.1f}s)"
+                msg = f"{icon_str} #{res.target.code} {res.target.label} -> {res.target.output_filename} ({res.duration_sec:.1f}s)"
                 self.current_msg = f"진행 중: {cur}/{tot} ({int(self.percentage * 100)}%) - #{res.target.code} {res.target.label}"
 
                 self.logs.append({
@@ -109,7 +109,7 @@ class GlobalJobManager:
                 params=params,
                 on_progress=progress_callback,
                 is_cancelled=check_cancelled,
-                quiet=False
+                quiet=True
             )
             with self._lock:
                 succ = sum(1 for r in results if r.success)

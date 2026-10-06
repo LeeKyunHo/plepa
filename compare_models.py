@@ -148,7 +148,7 @@ def main():
                 ref_weight=ref_weight,
             )
 
-            print(f"  [{current_idx:02d}/{total_count:02d}] {m_prefix}_{p_code} #{p_code} {pose.label:<12} (시드: {seed}) ➔ {out_filename}", end="", flush=True)
+            print(f"  [{current_idx:02d}/{total_count:02d}] {m_prefix}_{p_code} #{p_code} {pose.label:<12} (시드: {seed}) -> {out_filename}", end="", flush=True)
 
             t0 = time.time()
             try:

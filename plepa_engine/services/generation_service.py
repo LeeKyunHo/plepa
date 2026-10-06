@@ -295,7 +295,7 @@ class GenerationService:
                 )
 
                 if not quiet:
-                    print(f"  [{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) ➔ {out_name}", end="", flush=True)
+                    print(f"  [{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) -> {out_name}", end="", flush=True)
 
                 # 1. 기존 파일 스킵
                 if not params.overwrite and out_path.exists() and out_path.stat().st_size > 0:
@@ -340,7 +340,7 @@ class GenerationService:
                         continue
                     except Exception as cpe:
                         if not quiet:
-                            print(f" [사본 복제 실패({cpe}) ➔ 신규 생성 진행]", end="")
+                            print(f" [사본 복제 실패({cpe}) -> 신규 생성 진행]", end="")
 
                 # 3. DRY-RUN
                 if params.dry_run:

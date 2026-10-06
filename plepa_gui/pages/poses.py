@@ -218,12 +218,12 @@ def render_poses_page() -> None:
     def open_rename_confirm_dialog(code: str, fields: dict, flags: dict, old_label: str, new_label: str, plan: list):
         with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg p-6 bg-slate-900 border border-slate-700"):
             ui.label("⚠️ 에셋 파일명 동기화 알림").classes("text-lg font-bold text-amber-400 mb-2")
-            ui.label(f"라벨이 '{old_label}' ➔ '{new_label}'(으)로 변경됩니다.").classes("text-sm text-slate-200")
+            ui.label(f"라벨이 '{old_label}' -> '{new_label}'(으)로 변경됩니다.").classes("text-sm text-slate-200")
             ui.label(f"연관된 기존 생성 파일 {len(plan)}개의 파일명을 함께 변경하시겠습니까?").classes("text-xs text-slate-400 mt-2 mb-4")
 
             with ui.column().classes("w-full max-h-48 overflow-y-auto bg-slate-950 p-2 rounded text-xs font-mono text-slate-400 mb-4"):
                 for src, dst in plan:
-                    ui.label(f"• {src.name} ➔ {dst.name}")
+                    ui.label(f"• {src.name} -> {dst.name}")
 
             def execute_save_and_rename(apply_rename: bool):
                 try:

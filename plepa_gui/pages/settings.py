@@ -73,10 +73,10 @@ def render_settings_page() -> None:
                 ).props("outlined dark dense").classes("w-full")
 
                 with ui.row().classes("w-full gap-4"):
-                    ui.number("기본 가로 해상도 (width)", value=form.get("sdxl_width", 832), on_change=lambda e: form.update({"sdxl_width": int(e.value)})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("기본 세로 해상도 (height)", value=form.get("sdxl_height", 1216), on_change=lambda e: form.update({"sdxl_height": int(e.value)})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("샘플링 스텝 수 (steps)", value=form.get("sdxl_steps", 28), on_change=lambda e: form.update({"sdxl_steps": int(e.value)})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("CFG 스케일 (cfg)", value=form.get("sdxl_cfg", 6.5), step=0.1, on_change=lambda e: form.update({"sdxl_cfg": float(e.value)})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("기본 가로 해상도 (width)", value=form.get("sdxl_width", 832), on_change=lambda e: form.update({"sdxl_width": int(e.value) if e.value is not None else 832})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("기본 세로 해상도 (height)", value=form.get("sdxl_height", 1216), on_change=lambda e: form.update({"sdxl_height": int(e.value) if e.value is not None else 1216})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("샘플링 스텝 수 (steps)", value=form.get("sdxl_steps", 28), on_change=lambda e: form.update({"sdxl_steps": int(e.value) if e.value is not None else 28})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("CFG 스케일 (cfg)", value=form.get("sdxl_cfg", 6.5), step=0.1, on_change=lambda e: form.update({"sdxl_cfg": float(e.value) if e.value is not None else 6.5})).props("outlined dark dense").classes("w-1/4")
 
                 with ui.row().classes("w-full gap-4"):
                     ui.input("샘플러 (sampler)", value=form.get("sdxl_sampler", "dpmpp_sde"), on_change=lambda e: form.update({"sdxl_sampler": e.value})).props("outlined dark dense").classes("w-1/2")
@@ -92,14 +92,14 @@ def render_settings_page() -> None:
                 ).props("outlined dark dense").classes("w-full")
 
                 with ui.row().classes("w-full gap-4"):
-                    ui.number("FLUX 가로 해상도", value=form.get("flux_width", 896), on_change=lambda e: form.update({"flux_width": int(e.value)})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("FLUX 세로 해상도", value=form.get("flux_height", 1152), on_change=lambda e: form.update({"flux_height": int(e.value)})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("FLUX 스텝 수", value=form.get("flux_steps", 20), on_change=lambda e: form.update({"flux_steps": int(e.value)})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("Guidance 스케일", value=form.get("flux_guidance", 3.5), step=0.1, on_change=lambda e: form.update({"flux_guidance": float(e.value)})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("FLUX 가로 해상도", value=form.get("flux_width", 896), on_change=lambda e: form.update({"flux_width": int(e.value) if e.value is not None else 896})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("FLUX 세로 해상도", value=form.get("flux_height", 1152), on_change=lambda e: form.update({"flux_height": int(e.value) if e.value is not None else 1152})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("FLUX 스텝 수", value=form.get("flux_steps", 20), on_change=lambda e: form.update({"flux_steps": int(e.value) if e.value is not None else 20})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("Guidance 스케일", value=form.get("flux_guidance", 3.5), step=0.1, on_change=lambda e: form.update({"flux_guidance": float(e.value) if e.value is not None else 3.5})).props("outlined dark dense").classes("w-1/4")
 
                 with ui.row().classes("w-full gap-4"):
                     ui.input("FLUX LoRA 파일명", value=form.get("flux_lora", "modern-anime-lora.safetensors"), on_change=lambda e: form.update({"flux_lora": e.value})).props("outlined dark dense").classes("flex-1")
-                    ui.number("LoRA 가중치", value=form.get("flux_lora_weight", 0.9), step=0.05, on_change=lambda e: form.update({"flux_lora_weight": float(e.value)})).props("outlined dark dense").classes("w-40")
+                    ui.number("LoRA 가중치", value=form.get("flux_lora_weight", 0.9), step=0.05, on_change=lambda e: form.update({"flux_lora_weight": float(e.value) if e.value is not None else 0.9})).props("outlined dark dense").classes("w-40")
 
             # 4. 보정 및 업스케일러
             ui.label("✨ AI 보정 및 업스케일러").classes("text-sm font-bold text-indigo-400 mt-4 mb-2")
