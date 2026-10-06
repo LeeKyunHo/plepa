@@ -67,7 +67,7 @@ def render_poses_page() -> None:
         refresh_items_list()
         load_and_render_detail()
 
-    section_tabs.on_change(lambda e: switch_section(e.value))
+    section_tabs.on_value_change(lambda e: switch_section(e.value))
 
     def refresh_items_list():
         items_container.clear()
