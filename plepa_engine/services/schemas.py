@@ -82,7 +82,7 @@ class CharacterSchema(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     prefix: str = Field(min_length=2, max_length=32, description="고유 식별자 영문 약칭 (예: ykn, bjh)")
-    name: str = Field(min_length=1, description="캐릭터 표시 이름 (한글 또는 영문)")
+    name: str = Field(default="", description="캐릭터 표시 이름 (한글 또는 영문)")
     gender: str = Field(default="female", description="성별 (female, male, otokonoko 등)")
     appearance: CharacterAppearanceSchema = Field(default_factory=CharacterAppearanceSchema)
     lora: LoraSchema = Field(default_factory=LoraSchema)
@@ -118,6 +118,9 @@ class CharacterSchema(BaseModel):
         # _profiles 별칭 정규화
         if "_profiles" in d and "profiles" not in d:
             d["profiles"] = d.get("_profiles")
+        # name 누락 시 prefix로 자동 폴백
+        if not d.get("name"):
+            d["name"] = d.get("prefix", "unknown")
         return d
 
 
