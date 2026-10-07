@@ -267,6 +267,21 @@
       - 네거티브에 `(pink tint:1.25), (pink clothes:1.25), (pink sweater:1.25), (magenta cast:1.25), (oversaturated:1.2)` 주입.
       - 레퍼런스 없이 순수 프롬프트로 생성한 청순하고 따뜻한 `#001 미소` 컷을 새 공식 레퍼런스로 확정하고 000~010 감정 에셋 11종 전수 일괄 덮어쓰기 완료.
 
+31. **설하율 왕가슴 & 조여진 블라우스 리뉴얼 및 4자매 영문 파일명(Prefix) 3글자 통일 (ADR 2026-10-07)**
+    - **배경 및 사용자 피드백**:
+      1. 파일명 및 시스템 식별자로 사용되는 영문 접두사(Prefix)를 전원 3글자로 통일 요청 (`serin` ➔ `ser`, `hayul` ➔ `hay`).
+      2. 설하율(4녀)의 체형을 슬렌더에서 **풍만한 대흉(왕가슴)**으로 변경하고, 단추가 팽팽하게 당겨진 **타이트 조여진 화이트 블라우스** 느낌으로 연출 요청.
+    - **해결 조치**:
+      - **Prefix 3글자 일괄 규격화**:
+        - 1녀: `yua` (3글자 유지)
+        - 2녀: `serin` ➔ `ser` (`ser.json`, `ser.webp`, `assets/ser/ser_*.webp`)
+        - 3녀: `sia` (3글자 유지)
+        - 4녀: `hayul` ➔ `hay` (`hay.json`, `hay.webp`, `assets/hay/hay_*.webp`)
+      - **하율 체형 및 의상 개편**:
+        - `hay.json`에 `(voluptuous:1.2), (huge breasts:1.25), (massive bust:1.2)`, `(tight white collared blouse:1.2), (strained shirt:1.2), (buttons straining:1.2)` 주입.
+        - 언더붑/크롭티/청바지/작은가슴 네거티브 차단.
+        - 신규 레퍼런스 `hay.webp` 안착 및 000~010 감정 에셋 11종 전수 재생성 완료.
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
