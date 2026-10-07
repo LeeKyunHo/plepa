@@ -9,6 +9,7 @@ import asyncio
 from typing import List, Optional
 
 from nicegui import run, ui
+from plepa_engine.comfy_client import ComfyClient
 from plepa_engine.config import DEFAULT_ENGINE, DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.models import GenerationResult
 from plepa_engine.services.background_service import default_background_service
@@ -23,6 +24,19 @@ from plepa_gui.components.header import render_header
 def render_generate_page() -> None:
     """배치 생성 페이지 렌더링."""
     render_header("/generate")
+
+    conf = default_config_service.get_config()
+    comfy_client = ComfyClient(host=conf.get("comfy_host", "127.0.0.1:8188"))
+    discovered_models = comfy_client.get_available_models()
+
+    def get_select_options(discovered: list, current_val: str) -> list:
+        opts = list(discovered)
+        if current_val and current_val not in opts:
+            opts.insert(0, current_val)
+        return opts
+
+    ckpt_options = get_select_options(discovered_models.get("checkpoints", []), conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"))
+    unet_options = get_select_options(discovered_models.get("unets", []), conf.get("flux_unet", "flux1-dev-Q6_K.gguf"))
 
     def get_bg_options(r: str, eng: str) -> dict:
         bgs = default_background_service.get_backgrounds(r, engine=eng)
@@ -48,6 +62,8 @@ def render_generate_page() -> None:
         "selected_pose_set": "shower_trio",
         "custom_pose_expr": "000..019",
         "engine": DEFAULT_ENGINE,
+        "sdxl_ckpt": conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
+        "flux_unet": conf.get("flux_unet", "flux1-dev-Q6_K.gguf"),
         "bg_preset": "none",
         "face_detailer": False,
         "upscale": False,
@@ -114,7 +130,7 @@ def render_generate_page() -> None:
                 ui.label("3. 엔진 및 보정 옵션").classes("text-xs font-bold text-amber-400")
                 config_badge = ui.label("").classes("text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30")
 
-            with ui.row().classes("w-full gap-4 mb-3"):
+            with ui.row().classes("w-full gap-4 mb-2"):
                 ui.select(
                     options=["sdxl", "flux"],
                     value=state["engine"],
@@ -128,6 +144,8 @@ def render_generate_page() -> None:
                     label="배경 프리셋",
                     on_change=lambda e: state.update({"bg_preset": e.value})
                 ).props("dense outlined dark options-dense").classes("flex-1")
+
+            model_select_container = ui.column().classes("w-full mb-3")
 
             with ui.row().classes("w-full items-center gap-4 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 mb-6"):
                 ui.checkbox("Face Detailer", value=state["face_detailer"], on_change=lambda e: state.update({"face_detailer": e.value})).props("dark dense")
@@ -201,6 +219,26 @@ def render_generate_page() -> None:
             h_v = conf.get("flux_height", 1152)
             config_badge.set_text(f"⚙️ FLUX 설정: Guidance {guidance_v} | {steps_v}스텝 | {w_v}x{h_v}")
 
+    def render_model_selector():
+        model_select_container.clear()
+        with model_select_container:
+            if state["engine"] == "sdxl":
+                label_text = f"SDXL 체크포인트 ({len(discovered_models.get('checkpoints', []))}종 감지됨)" if discovered_models.get("checkpoints") else "SDXL 체크포인트 모델명"
+                ui.select(
+                    options=ckpt_options,
+                    value=state["sdxl_ckpt"],
+                    label=label_text,
+                    on_change=lambda e: state.update({"sdxl_ckpt": e.value})
+                ).props("dense outlined dark options-dense use-input new-value-mode=add-unique").classes("w-full text-xs").tooltip("ComfyUI models/checkpoints 폴더 내 모델을 선택하거나 직접 입력합니다.")
+            else:
+                label_text = f"FLUX GGUF UNet ({len(discovered_models.get('unets', []))}종 감지됨)" if discovered_models.get("unets") else "FLUX GGUF UNet 모델명"
+                ui.select(
+                    options=unet_options,
+                    value=state["flux_unet"],
+                    label=label_text,
+                    on_change=lambda e: state.update({"flux_unet": e.value})
+                ).props("dense outlined dark options-dense use-input new-value-mode=add-unique").classes("w-full text-xs").tooltip("ComfyUI models/unet 폴더 내 모델을 선택하거나 직접 입력합니다.")
+
     def on_engine_changed(new_eng: str):
         state["engine"] = new_eng
         new_opts = get_bg_options(state["roster"], new_eng)
@@ -208,6 +246,7 @@ def render_generate_page() -> None:
         if state["bg_preset"] not in new_opts:
             state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
             bg_sel.value = state["bg_preset"]
+        render_model_selector()
         update_config_badge()
 
     def refresh_char_checkboxes(keep_selection: bool = False):
@@ -294,6 +333,8 @@ def render_generate_page() -> None:
             pose_expr=pose_expr,
             roster=state["roster"],
             engine=state["engine"],
+            ckpt=state["sdxl_ckpt"] if state["engine"] == "sdxl" else None,
+            unet=state["flux_unet"] if state["engine"] == "flux" else None,
             bg_preset=state["bg_preset"],
             face_detailer=state["face_detailer"],
             upscale=state["upscale"],
@@ -349,5 +390,6 @@ def render_generate_page() -> None:
     # 초기화
     refresh_char_checkboxes()
     on_pose_mode_changed("포즈 세트 사용")
+    render_model_selector()
     update_config_badge()
     sync_job_status()

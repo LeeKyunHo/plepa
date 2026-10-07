@@ -298,6 +298,22 @@
       - `projects/man/characters/` 5개 파일에 정규 한국어/영문 이름(`채유림`, `한수현`, `강민아`, `서지안`, `윤채아`) 부여 및 동기화.
       - `plepa_engine/services/schemas.py`의 `CharacterSchema`에서 `name: str = Field(default="")` 및 `normalize_character_fields` 검증기에서 `name` 누락 시 `prefix`로 자동 폴백하는 2중 안전장치 추가. 향후 어떤 레거시/미완성 캐릭터 JSON이 유입되어도 서버 크래시 0% 보장.
 
+34. **ComfyUI `object_info` 실시간 모델 자동 감지 및 체크포인트/UNet 동적 드롭다운 선택 구현 (ADR 2026-10-07)**
+    - **배경 및 사용자 피드백**:
+      1. ComfyUI `models/checkpoints/` 폴더 내에 위치한 모델 파일들을 GUI에서 일일이 타이핑하지 않고 드롭다운으로 편리하게 선택할 수 있도록 개선 요청.
+      2. 체크포인트 변경 시 실제 생성 파이프라인 및 ComfyUI 워크플로우에 정상 적용되고 있는지 점검 및 무결성 보장 요청.
+    - **해결 조치**:
+      - **ComfyUI 실시간 모델 인트로스펙션 (`ComfyClient.get_available_models()`)**:
+        - ComfyUI의 `/object_info/CheckpointLoaderSimple`, `/object_info/UnetLoaderGGUF`, `/object_info/UpscaleModelLoader`, `/object_info/VAELoader` 엔드포인트를 질의하여 설치된 모델 목록을 실시간 자동 파싱.
+        - 서버 미가동 시에도 기본값으로 안전 폴백 처리되어 UI 크래시 0% 보장.
+      - **GUI 설정 및 생성 페이지 동적 드롭다운 전면 연계**:
+        - 환경 설정(`/settings`) 및 배치 생성(`/generate`) 페이지에 감지된 체크포인트/UNet/업스케일러 드롭다운 컴포넌트 탑재.
+        - 드롭다운 선택뿐만 아니라 직접 파일명 입력도 지원하는 하이브리드 UI 모드(`use-input new-value-mode=add-unique`) 적용.
+        - 배치 생성 페이지에서 엔진 전환(`sdxl` / `flux`) 시 대상 모델 선택기가 실시간 동적 전환되도록 구축.
+      - **파이프라인 매핑 무결성 확립**:
+        - `GenerationParams`의 `ckpt`, `unet` 기본값을 `None`으로 정비하여 `사용자 명시 선택값 ➔ 전역 설정값 ➔ 기본 상수` 순의 엄격한 우선순위 폴백 체계 확립.
+        - `workflow_templates.py`의 Node 1 `CheckpointLoaderSimple` (`ckpt_name`)에 100% 직결 주입됨을 실측 검증.
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)

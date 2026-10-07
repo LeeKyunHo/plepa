@@ -55,6 +55,40 @@ class ComfyClient:
         except Exception:
             return False
 
+    def get_available_models(self) -> Dict[str, List[str]]:
+        """
+        ComfyUI에 로드 가능한 모델 목록(체크포인트, GGUF UNet, 업스케일러, VAE 등)을 조회합니다.
+        서버 미가동 시 빈 딕셔너리를 반환합니다.
+        """
+        result: Dict[str, List[str]] = {
+            "checkpoints": [],
+            "unets": [],
+            "upscalers": [],
+            "vaes": [],
+        }
+        if not self.check_connection():
+            return result
+
+        def fetch_node_options(node_class: str, field_name: str) -> List[str]:
+            try:
+                url = f"{self.base_url}/object_info/{node_class}"
+                with urllib.request.urlopen(url, timeout=3.0) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    raw = data.get(node_class, {}).get("input", {}).get("required", {}).get(field_name, [[]])
+                    if isinstance(raw, list) and raw and isinstance(raw[0], list):
+                        return sorted(raw[0])
+                    elif isinstance(raw, list) and len(raw) > 1 and isinstance(raw[1], dict) and "options" in raw[1]:
+                        return sorted(raw[1]["options"])
+            except Exception:
+                pass
+            return []
+
+        result["checkpoints"] = fetch_node_options("CheckpointLoaderSimple", "ckpt_name")
+        result["unets"] = fetch_node_options("UnetLoaderGGUF", "unet_name")
+        result["vaes"] = fetch_node_options("VAELoader", "vae_name")
+        result["upscalers"] = fetch_node_options("UpscaleModelLoader", "model_name")
+        return result
+
     def upload_image(self, file_path: Path, overwrite: bool = True) -> str:
         """
         로컬 이미지 파일을 ComfyUI input 디렉토리로 업로드합니다.

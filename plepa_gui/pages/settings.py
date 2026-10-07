@@ -6,6 +6,7 @@ plepa_gui.pages.settings
 from __future__ import annotations
 
 from nicegui import ui
+from plepa_engine.comfy_client import ComfyClient
 from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.services.config_service import DEFAULT_CONFIG, default_config_service
 from plepa_gui.components.header import render_header
@@ -21,8 +22,22 @@ def render_settings_page() -> None:
     if not available_rosters:
         available_rosters = ["don", "default"]
 
+    # ComfyUI 실시간 모델 목록 조회 (체크포인트, GGUF UNet, 업스케일러 등)
+    comfy_client = ComfyClient(host=config.get("comfy_host", "127.0.0.1:8188"))
+    discovered_models = comfy_client.get_available_models()
+
+    def get_select_options(discovered: list, current_val: str) -> list:
+        opts = list(discovered)
+        if current_val and current_val not in opts:
+            opts.insert(0, current_val)
+        return opts
+
     # 폼 상태 바인딩
     form = dict(config)
+
+    ckpt_options = get_select_options(discovered_models.get("checkpoints", []), form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"))
+    unet_options = get_select_options(discovered_models.get("unets", []), form.get("flux_unet", "flux1-dev-Q6_K.gguf"))
+    upscaler_options = get_select_options(discovered_models.get("upscalers", []), form.get("upscaler", "4x-UltraSharp.pth"))
 
     with ui.column().classes("w-full max-w-5xl mx-auto p-6 gap-6"):
         with ui.card().classes("w-full bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg"):
@@ -64,13 +79,27 @@ def render_settings_page() -> None:
                 ).props("outlined dark dense options-dense").classes("w-40")
 
             # 2. SDXL 엔진 파라미터 (Unholy Mix 등)
-            ui.label("🏷️ SDXL 엔진 파라미터").classes("text-sm font-bold text-emerald-400 mt-4 mb-2")
+            with ui.row().classes("w-full items-center justify-between mt-4 mb-2"):
+                ui.label("🏷️ SDXL 엔진 파라미터").classes("text-sm font-bold text-emerald-400")
+                if discovered_models.get("checkpoints"):
+                    ui.label(f"✓ ComfyUI 체크포인트 {len(discovered_models['checkpoints'])}종 감지됨").classes("text-xs text-emerald-400/80")
+                else:
+                    ui.label("⚠️ ComfyUI 미가동 (직접 입력 가능)").classes("text-xs text-amber-400/80")
+
             with ui.column().classes("w-full gap-3 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 mb-4"):
-                ui.input(
-                    "SDXL 체크포인트 모델명 (확장자 포함)",
-                    value=form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
-                    on_change=lambda e: form.update({"sdxl_ckpt": e.value})
-                ).props("outlined dark dense").classes("w-full")
+                if ckpt_options:
+                    ui.select(
+                        options=ckpt_options,
+                        value=form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
+                        label="SDXL 체크포인트 모델 선택 (models/checkpoints)",
+                        on_change=lambda e: form.update({"sdxl_ckpt": e.value})
+                    ).props("outlined dark dense options-dense use-input new-value-mode=add-unique").classes("w-full").tooltip("드롭다운에서 선택하거나 직접 입력할 수 있습니다.")
+                else:
+                    ui.input(
+                        "SDXL 체크포인트 모델명 (확장자 포함)",
+                        value=form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
+                        on_change=lambda e: form.update({"sdxl_ckpt": e.value})
+                    ).props("outlined dark dense").classes("w-full")
 
                 with ui.row().classes("w-full gap-4"):
                     ui.number("기본 가로 해상도 (width)", value=form.get("sdxl_width", 832), on_change=lambda e: form.update({"sdxl_width": int(e.value) if e.value is not None else 832})).props("outlined dark dense").classes("w-1/4")
@@ -83,13 +112,25 @@ def render_settings_page() -> None:
                     ui.input("스케줄러 (scheduler)", value=form.get("sdxl_scheduler", "karras"), on_change=lambda e: form.update({"sdxl_scheduler": e.value})).props("outlined dark dense").classes("w-1/2")
 
             # 3. FLUX 엔진 파라미터 (GGUF Q6_K 등)
-            ui.label("📝 FLUX.1 [dev] GGUF 파라미터").classes("text-sm font-bold text-amber-400 mt-4 mb-2")
+            with ui.row().classes("w-full items-center justify-between mt-4 mb-2"):
+                ui.label("📝 FLUX.1 [dev] GGUF 파라미터").classes("text-sm font-bold text-amber-400")
+                if discovered_models.get("unets"):
+                    ui.label(f"✓ GGUF UNet {len(discovered_models['unets'])}종 감지됨").classes("text-xs text-amber-400/80")
+
             with ui.column().classes("w-full gap-3 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 mb-4"):
-                ui.input(
-                    "FLUX GGUF UNet 파일명",
-                    value=form.get("flux_unet", "flux1-dev-Q6_K.gguf"),
-                    on_change=lambda e: form.update({"flux_unet": e.value})
-                ).props("outlined dark dense").classes("w-full")
+                if unet_options:
+                    ui.select(
+                        options=unet_options,
+                        value=form.get("flux_unet", "flux1-dev-Q6_K.gguf"),
+                        label="FLUX GGUF UNet 파일 선택 (models/unet)",
+                        on_change=lambda e: form.update({"flux_unet": e.value})
+                    ).props("outlined dark dense options-dense use-input new-value-mode=add-unique").classes("w-full").tooltip("드롭다운에서 선택하거나 직접 입력할 수 있습니다.")
+                else:
+                    ui.input(
+                        "FLUX GGUF UNet 파일명",
+                        value=form.get("flux_unet", "flux1-dev-Q6_K.gguf"),
+                        on_change=lambda e: form.update({"flux_unet": e.value})
+                    ).props("outlined dark dense").classes("w-full")
 
                 with ui.row().classes("w-full gap-4"):
                     ui.number("FLUX 가로 해상도", value=form.get("flux_width", 896), on_change=lambda e: form.update({"flux_width": int(e.value) if e.value is not None else 896})).props("outlined dark dense").classes("w-1/4")
@@ -104,11 +145,19 @@ def render_settings_page() -> None:
             # 4. 보정 및 업스케일러
             ui.label("✨ AI 보정 및 업스케일러").classes("text-sm font-bold text-indigo-400 mt-4 mb-2")
             with ui.row().classes("w-full gap-4 mb-4"):
-                ui.input(
-                    "4x 업스케일러 모델명 (ComfyUI models/upscale_models)",
-                    value=form.get("upscaler", "4x-UltraSharp.pth"),
-                    on_change=lambda e: form.update({"upscaler": e.value})
-                ).props("outlined dark dense").classes("w-full")
+                if upscaler_options:
+                    ui.select(
+                        options=upscaler_options,
+                        value=form.get("upscaler", "4x-UltraSharp.pth"),
+                        label="4x 업스케일러 모델 선택 (models/upscale_models)",
+                        on_change=lambda e: form.update({"upscaler": e.value})
+                    ).props("outlined dark dense options-dense use-input new-value-mode=add-unique").classes("w-full")
+                else:
+                    ui.input(
+                        "4x 업스케일러 모델명 (ComfyUI models/upscale_models)",
+                        value=form.get("upscaler", "4x-UltraSharp.pth"),
+                        on_change=lambda e: form.update({"upscaler": e.value})
+                    ).props("outlined dark dense").classes("w-full")
 
     def save_settings():
         try:

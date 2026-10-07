@@ -72,7 +72,7 @@ class GenerationParams:
     roster: str = DEFAULT_ROSTER
     profile: Optional[str] = None
     engine: str = DEFAULT_ENGINE
-    ckpt: str = DEFAULT_SDXL_CKPT
+    ckpt: Optional[str] = None
     bg: Optional[str] = None
     bg_preset: str = "default"
     custom_pos: Optional[str] = None
@@ -89,7 +89,7 @@ class GenerationParams:
     cfg: Optional[float] = None
     sampler: Optional[str] = None
     scheduler: Optional[str] = None
-    unet: str = DEFAULT_UNET_GGUF
+    unet: Optional[str] = None
     lora: str = "modern-anime-lora.safetensors"
     lora_weight: float = 0.9
     width: Optional[int] = None
@@ -136,7 +136,7 @@ class GenerationService:
             cfg = params.cfg if params.cfg is not None else float(conf.get("sdxl_cfg", DEFAULT_SDXL_CFG))
             sampler = params.sampler if params.sampler is not None else conf.get("sdxl_sampler", DEFAULT_SDXL_SAMPLER)
             scheduler = params.scheduler if params.scheduler is not None else conf.get("sdxl_scheduler", DEFAULT_SDXL_SCHEDULER)
-            ckpt_name = params.ckpt if params.ckpt != DEFAULT_SDXL_CKPT else conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
+            ckpt_name = params.ckpt or conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
         else:
             width = params.width if params.width is not None else int(conf.get("flux_width", DEFAULT_WIDTH))
             height = params.height if params.height is not None else int(conf.get("flux_height", DEFAULT_HEIGHT))
@@ -144,7 +144,7 @@ class GenerationService:
             cfg = params.cfg if params.cfg is not None else float(conf.get("flux_guidance", 3.5))
             sampler = params.sampler if params.sampler is not None else conf.get("flux_sampler", "euler")
             scheduler = params.scheduler if params.scheduler is not None else conf.get("flux_scheduler", "simple")
-            unet_name = params.unet if params.unet != DEFAULT_UNET_GGUF else conf.get("flux_unet", DEFAULT_UNET_GGUF)
+            unet_name = params.unet or conf.get("flux_unet", DEFAULT_UNET_GGUF)
 
         # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
         db = self.pose_svc.load_pose_db(engine=params.engine)
