@@ -1,10 +1,10 @@
 {
   "prefix": "sia",
-  "name": "설시아 (3녀 - 생머리에 리본 & 츤데레 & 요염한 슬렌더)",
+  "name": "설시아 (3녀 - 하이 포니테일 & 츤데레 & 요염한 슬렌더)",
   "gender": "female",
   "default_mode": "female",
   "appearance": {
-    "face_and_hair": "A remarkably beautiful elite noble girl with silky waist-length jet-black straight hair adorned with small delicate red ribbons on each side, straight bangs, sidelocks, sharp navy blue eyes, cute proud look, flawless pale porcelain skin (tsundere third quadruplet sister)",
+    "face_and_hair": "A remarkably beautiful elite noble girl with long silky jet-black hair tied into a stylish high ponytail swinging behind her head, straight bangs, sleek sidelocks framing her face, sharp intelligent navy blue eyes, cute proud tsundere look, flawless pale porcelain skin (tsundere third quadruplet sister, high ponytail)",
     "physique": "alluring balanced slender figure, tight slender waist, modest petite breasts, sensually toned body, delicate alluring curves, slender long legs, refined posture",
     "outfit": "stylish date outfit with a tailored beige trench jacket over a crisp white collared blouse and a plaid pleated skirt highlighting her slim slender waistline"
   },
@@ -13,7 +13,7 @@
     "weight": 0.8
   },
   "style_keywords": "Authentic Japanese 2D anime illustration, clean crisp defined lineart, (soft shaded skin:1.15), (smooth skin:1.1), delicate anime coloring, vivid expressive anime eyes, 2D anime visual novel aesthetic, beautiful anime color palette, no 3D rendering, masterpiece quality",
-  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, (yukinoshita_yukino:1.15), (solid black hair:1.15), (waist-length straight hair:1.15), (long straight hair:1.15), (small red hair ribbons on sides:1.15), straight bangs, sidelocks, (deep navy blue eyes:1.15), (sharp eyes:1.1), tsundere, proud demeanor, (alluring slender figure:1.15), (slim waist, slender body:1.15), (small breasts:1.15), beige trench jacket, collared white blouse, plaid pleated skirt, delicate posture",
-  "sdxl_negative": "(short hair:1.25), (bob cut:1.25), (collarbone-length hair:1.25), (shoulder-length hair:1.25), (pixie cut:1.25), (blue hair:1.2), (cyan hair:1.15), (teal hair:1.15), (school uniform, blazer:1.2), (photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters, character sheet, concept art, reference sheet, mannequin:1.25), (worst quality, bad quality:1.2), lowres, bad anatomy, sketch, flat color, simple shading, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, choker, necklace, multiple moles, freckles, dark circles, dark eyelids, heavy shadow on face, overexposed, (hourglass:1.2), (cat ears, animal ears, kemonomimi:1.25), (comic:1.2), (multiple views:1.2), (panel layout:1.2), large breasts, huge breasts, cleavage, muscular, bulky, manly, beard, mustache",
-  "ref_weight": 0.25
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest BREAK 1girl, solo, (yukinoshita_yukino:1.05), (solid black hair:1.15), (high ponytail:1.2), (single high ponytail:1.15), (long ponytail:1.15), ponytail behind head, hair tied high, straight bangs, sidelocks, (deep navy blue eyes:1.15), (sharp eyes:1.1), tsundere, proud demeanor, (alluring slender figure:1.15), (slim waist, slender body:1.15), (small breasts:1.15), beige trench jacket, collared white blouse, plaid pleated skirt, delicate posture",
+  "sdxl_negative": "(side ponytail:1.3), (hair draped over shoulder:1.25), (twintails:1.25), (twin tails:1.25), (pigtails:1.25), (hair down:1.25), (untied hair:1.25), (loose hair:1.25), (short hair:1.25), (bob cut:1.25), (pixie cut:1.25), (blue hair:1.2), (cyan hair:1.15), (teal hair:1.15), (school uniform, blazer:1.2), (photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters, character sheet, concept art, reference sheet, mannequin:1.25), (worst quality, bad quality:1.2), lowres, bad anatomy, sketch, flat color, simple shading, bad proportions, bad hands, missing fingers, extra digits, deformed, jpeg artifacts, signature, watermark, username, artist name, blurry, 1boy, male, choker, necklace, multiple moles, freckles, dark circles, dark eyelids, heavy shadow on face, overexposed, (hourglass:1.2), (cat ears, animal ears, kemonomimi:1.25), (comic:1.2), (multiple views:1.2), (panel layout:1.2), large breasts, huge breasts, cleavage, muscular, bulky, manly, beard, mustache",
+  "ref_weight": 0.15
 }
