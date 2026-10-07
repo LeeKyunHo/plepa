@@ -1,9 +1,19 @@
 @echo off
 chcp 65001 > nul
+cd /d "%~dp0"
 echo ======================================================
-echo   [플에파 / PLEPA] 로컬 스튜디오 GUI 가동 중...
-echo   접속 주소: http://127.0.0.1:8080
+echo   [PLEPA] Asset Studio GUI
+echo   URL: http://127.0.0.1:8080
 echo ======================================================
+
+netstat -ano | findstr "127.0.0.1:8080" | findstr "LISTENING" > nul
+if %errorlevel%==0 (
+    echo [INFO] Port 8080 is already in use - GUI server is already running.
+    echo [INFO] Opening browser only.
+    start "" http://127.0.0.1:8080
+    pause
+    exit /b 0
+)
 
 if exist ".venv\Scripts\python.exe" (
     ".venv\Scripts\python.exe" plepa_gui\app.py
