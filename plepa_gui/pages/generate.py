@@ -214,7 +214,7 @@ def render_generate_page() -> None:
         chars_box.clear()
         chars = default_character_service.list_characters(roster=state["roster"])
         if not keep_selection:
-            state["selected_chars"] = [chars[0][1].prefix] if chars else []
+            state["selected_chars"] = []
 
         with chars_box:
             for _, c, _ in chars:

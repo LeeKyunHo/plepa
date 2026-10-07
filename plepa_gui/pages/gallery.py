@@ -54,7 +54,7 @@ def render_gallery_page() -> None:
     state = {
         "view_mode": "matrix",  # 'matrix', 'single', 'misc'
         "roster": default_roster,
-        "single_char": "ykn_gla",
+        "single_char": "",
         "selected_chars": [],
         "selected_codes": [f"{i:03d}" for i in range(24, 60)],  # 체형 테스트 24~59 기본
         "pose_set": "adult_testing",
@@ -114,6 +114,8 @@ def render_gallery_page() -> None:
 
     def on_roster_changed(new_r: str):
         state["roster"] = new_r
+        state["selected_chars"] = []
+        state["single_char"] = ""
         update_control_bars()
         render_content()
 
@@ -144,7 +146,7 @@ def render_gallery_page() -> None:
                     ui.label("빠른 캐릭터 프리셋:").classes("text-xs font-semibold text-slate-400 mr-1")
 
                     # 네쌍둥이 4인 세트 퀵 버튼
-                    if any(k in char_asset_counts for k in ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]):
+                    if any(k in char_asset_counts for k in ["yua", "serin", "sia", "hayul", "ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]):
                         ui.button("🌸 네쌍둥이 4인 (000, 001)", icon="auto_awesome", on_click=lambda: select_quadruplets_preset()).props(
                             "unelevated dense size=xs color=rose-500/20 text-color=rose-300 border border-rose-500/40"
                         ).tooltip("설유아, 설세린, 설시아, 설하율 4인의 000, 001 표정 비교")
@@ -213,12 +215,9 @@ def render_gallery_page() -> None:
                     if not char_opts:
                         char_opts = {p: f"{p} (0장)" for p in char_asset_counts.keys()}
 
-                    if state["single_char"] not in char_opts and char_opts:
-                        state["single_char"] = list(char_opts.keys())[0]
-
                     ui.select(
                         options=char_opts,
-                        value=state["single_char"],
+                        value=state["single_char"] if state["single_char"] in char_opts else None,
                         on_change=lambda e: (state.update({"single_char": e.value}), render_content())
                     ).props("dense outlined dark options-dense").classes("w-60 text-sm")
 
@@ -275,8 +274,8 @@ def render_gallery_page() -> None:
         render_content()
 
     def select_quadruplets_preset():
-        quad_prefixes = ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]
         counts = get_character_asset_counts(state["roster"])
+        quad_prefixes = ["yua", "serin", "sia", "hayul"] if any(k in counts for k in ["yua", "serin"]) else ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]
         state["selected_chars"] = [p for p in quad_prefixes if p in counts]
         state["pose_set"] = "all_80"
         state["selected_codes"] = ["000", "001"]
@@ -348,6 +347,13 @@ def render_gallery_page() -> None:
     def render_single_char_view():
         """단일 캐릭터 전체 갤러리 카드 뷰."""
         prefix = state["single_char"]
+        if not prefix:
+            with content_container:
+                with ui.column().classes("w-full py-16 items-center justify-center text-slate-500"):
+                    ui.icon("person_search", size="48px").classes("text-slate-600 mb-2")
+                    ui.label("상단에서 열람할 캐릭터를 선택해 주십시오.").classes("text-sm font-semibold")
+            return
+
         assets = default_asset_service.list_character_assets(prefix, state["roster"])
 
         with content_container:
@@ -385,7 +391,9 @@ def render_gallery_page() -> None:
 
     def render_matrix_view():
         """캐릭터 x 포즈 2차원 매트릭스 비교 테이블."""
-        prefixes = state["selected_chars"]
+        char_counts = get_character_asset_counts(state["roster"])
+        # 현재 로스터에 실제로 존재하는 캐릭터만 엄격하게 필터링 (타 프로젝트 캐릭터 침범 방지)
+        prefixes = [p for p in state["selected_chars"] if p in char_counts]
         codes = state["selected_codes"]
 
         if not prefixes:
@@ -491,28 +499,24 @@ def render_gallery_page() -> None:
                             ui.label(f"📁 {folder_name}").classes("text-[10px] text-slate-500 font-mono truncate w-full")
 
     def open_lightbox(img_url: str, file_path: Path):
-        with ui.dialog() as dialog, ui.card().classes("max-w-4xl p-4 bg-slate-950 border border-slate-700"):
-            with ui.row().classes("w-full justify-between items-center mb-2"):
-                ui.label(file_path.name).classes("text-sm font-bold text-slate-200 font-mono")
-                ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-400")
+        with ui.dialog() as dialog, ui.card().classes("max-w-6xl w-full md:w-[92vw] max-h-[95vh] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"):
+            with ui.row().classes("w-full justify-between items-center mb-2 px-2 pb-2 border-b border-slate-800"):
+                with ui.row().classes("items-center gap-2"):
+                    ui.icon("zoom_in", size="20px").classes("text-amber-400")
+                    ui.label(file_path.name).classes("text-base font-bold text-slate-100 font-mono")
+                with ui.row().classes("items-center gap-2"):
+                    size_kb = file_path.stat().st_size / 1024
+                    ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400")
+                    ui.button("원본 폴더 열기", icon="folder", on_click=lambda: open_in_explorer(file_path.parent)).props("flat dense size=sm color=amber-400")
+                    ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
 
-            ui.image(img_url).classes("max-h-[75vh] object-contain rounded mx-auto")
-
-            with ui.row().classes("w-full justify-between items-center mt-3 pt-2 border-t border-slate-800"):
-                size_kb = file_path.stat().st_size / 1024
-                ui.label(f"크기: {size_kb:.1f} KB").classes("text-xs text-slate-400")
-                ui.button("원본 폴더 열기", icon="folder", on_click=lambda: open_in_explorer(file_path.parent)).props("flat dense size=sm color=amber-400")
+            ui.image(img_url).classes("max-h-[82vh] w-auto max-w-full object-contain rounded-xl mx-auto shadow-lg")
 
         dialog.open()
 
-    # 초기화: 유키노 체형 6종 기본 선택
-    ykn_prefixes = ["ykn_sle", "ykn_std", "ykn_mat", "ykn_crv", "ykn_gla", "ykn_gla_up"]
-    counts = get_character_asset_counts(state["roster"])
-    matched_ykn = [p for p in ykn_prefixes if p in counts]
-    if matched_ykn:
-        state["selected_chars"] = matched_ykn
-    else:
-        state["selected_chars"] = [p for p, c in counts.items() if c > 0][:5]
+    # 초기화: 진입 시 아무 캐릭터도 미리 올라가지 않은 깨끗한 빈 상태로 시작
+    state["selected_chars"] = []
+    state["single_char"] = ""
 
     update_control_bars()
     render_content()

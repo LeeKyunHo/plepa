@@ -183,10 +183,10 @@ def strip_sdxl_outfit_tags(prompt_text: str) -> str:
     return " BREAK ".join(chunks)
 
 
-def clamp_sdxl_weights(prompt_text: str, max_weight: float = 1.15) -> str:
+def clamp_sdxl_weights(prompt_text: str, max_weight: float = 1.40) -> str:
     """
     Illustrious-XL / SDXL CLIP 인코더 최적화:
-    1. 1.15를 초과하는 과도한 가중치를 안전 한계치(1.15)로 클램핑하여 색상 과포화 방지.
+    1. 지정된 max_weight를 초과하는 과도한 가중치를 안전 한계치로 클램핑하여 색상 과포화 방지.
     2. 다중 괄호((...)) 누적으로 인한 비정상 가중치 증폭을 단일화.
     """
     def _clamp_match(m: re.Match) -> str:
@@ -377,9 +377,9 @@ def assemble_sdxl_prompt(
     if is_aftermath or is_solo_scene:
         negative_prompt = f"{negative_prompt}, ((1boy, 2boys, male, masculine, partner, faceless male, multiple characters, extra face:1.35))"
 
-    # 5. ComfyUI 색상 왜곡 방지용 가중치 안전 클램핑 (1.15 한계치)
+    # 5. ComfyUI 가중치 안전 클램핑 (Unholy Desire Mix 최적: 긍정 1.15, 부정 1.25로 색상 번 방지)
     positive_prompt = clamp_sdxl_weights(positive_prompt, max_weight=1.15)
-    negative_prompt = clamp_sdxl_weights(negative_prompt, max_weight=1.15)
+    negative_prompt = clamp_sdxl_weights(negative_prompt, max_weight=1.25)
 
     # 연속 콤마 및 공백 정리
     positive_prompt = re.sub(r"\s*,\s*", ", ", positive_prompt).strip()
