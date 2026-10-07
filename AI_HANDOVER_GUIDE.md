@@ -6,6 +6,8 @@
 > - ⚙️ 파이프라인 인터페이스 및 CLI 규격 → [`플에파_기능명세.md`](플에파_기능명세.md)  
 > - 🎨 캐릭터 & 포즈 프롬프트 제작 규칙 → [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)  
 > - 📋 전체 80종 포즈 카탈로그 및 2~6글자 명칭 가이드 → [`POSE_CATALOG.md`](POSE_CATALOG.md)  
+> - 📚 문서 작성 요령 및 푸시 프로토콜 → [`DOCUMENTATION_GUIDE.md`](DOCUMENTATION_GUIDE.md)  
+> - 📓 일자별 개발 로그 및 트러블슈팅 → [`개발일지.md`](개발일지.md)  
 > - 🤖 에이전트 행동 지침 → [`GEMINI.md`](GEMINI.md)  
 > - 🚀 빠른 시작 및 설치 가이드 → [`README.md`](README.md)  
 
