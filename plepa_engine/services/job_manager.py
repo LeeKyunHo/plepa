@@ -11,6 +11,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from plepa_engine.models import GenerationResult
+from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.generation_service import GenerationParams, default_generation_service
 
 
@@ -48,7 +49,16 @@ class GlobalJobManager:
             self.current_msg = "배치 작업 시작 중..."
             self.success_count = 0
             self.fail_count = 0
-            self.logs = []
+
+            # 런타임 적용 파라미터 요약 로그 생성
+            conf = default_config_service.get_config()
+            cfg_val = params.cfg if params.cfg is not None else (conf.get("sdxl_cfg", 5.0) if params.engine == "sdxl" else conf.get("flux_guidance", 3.5))
+            steps_val = params.steps if params.steps is not None else (conf.get("sdxl_steps", 28) if params.engine == "sdxl" else conf.get("flux_steps", 20))
+            self.logs = [{
+                "success": True,
+                "text": f"[가동] 파이프라인: {params.engine.upper()} | CFG: {cfg_val} | 스텝: {steps_val} | 배경: {params.bg_preset}",
+                "timestamp": time.strftime("%H:%M:%S")
+            }]
 
             self._thread = threading.Thread(target=self._run_worker, args=(params,), daemon=True)
             self._thread.start()

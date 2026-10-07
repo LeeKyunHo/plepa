@@ -13,6 +13,7 @@ from plepa_engine.config import DEFAULT_ENGINE, DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.models import GenerationResult
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.generation_service import GenerationParams, default_generation_service
 from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_service import default_pose_service
@@ -109,7 +110,10 @@ def render_generate_page() -> None:
                 ui.label("기본 동작: 이미 있는 이미지는 자동 건너뛰고 누락된 포즈만 채웁니다.").classes("text-[11px] text-emerald-200")
 
             # 3. 엔진 및 옵션
-            ui.label("3. 엔진 및 보정 옵션").classes("text-xs font-bold text-amber-400 mb-2")
+            with ui.row().classes("w-full items-center justify-between mb-1"):
+                ui.label("3. 엔진 및 보정 옵션").classes("text-xs font-bold text-amber-400")
+                config_badge = ui.label("").classes("text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30")
+
             with ui.row().classes("w-full gap-4 mb-3"):
                 ui.select(
                     options=["sdxl", "flux"],
@@ -182,6 +186,21 @@ def render_generate_page() -> None:
             state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
             bg_sel.value = state["bg_preset"]
 
+    def update_config_badge():
+        conf = default_config_service.get_config()
+        if state["engine"] == "sdxl":
+            cfg_v = conf.get("sdxl_cfg", 5.0)
+            steps_v = conf.get("sdxl_steps", 30)
+            w_v = conf.get("sdxl_width", 832)
+            h_v = conf.get("sdxl_height", 1216)
+            config_badge.set_text(f"⚙️ SDXL 설정: CFG {cfg_v} | {steps_v}스텝 | {w_v}x{h_v}")
+        else:
+            guidance_v = conf.get("flux_guidance", 3.5)
+            steps_v = conf.get("flux_steps", 20)
+            w_v = conf.get("flux_width", 896)
+            h_v = conf.get("flux_height", 1152)
+            config_badge.set_text(f"⚙️ FLUX 설정: Guidance {guidance_v} | {steps_v}스텝 | {w_v}x{h_v}")
+
     def on_engine_changed(new_eng: str):
         state["engine"] = new_eng
         new_opts = get_bg_options(state["roster"], new_eng)
@@ -189,6 +208,7 @@ def render_generate_page() -> None:
         if state["bg_preset"] not in new_opts:
             state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
             bg_sel.value = state["bg_preset"]
+        update_config_badge()
 
     def refresh_char_checkboxes(keep_selection: bool = False):
         chars_box.clear()
@@ -329,4 +349,5 @@ def render_generate_page() -> None:
     # 초기화
     refresh_char_checkboxes()
     on_pose_mode_changed("포즈 세트 사용")
+    update_config_badge()
     sync_job_status()

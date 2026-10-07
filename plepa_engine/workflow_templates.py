@@ -21,6 +21,7 @@ from plepa_engine.config import (
     DEFAULT_SDXL_SCHEDULER,
     DEFAULT_SDXL_STEPS,
     DEFAULT_SDXL_WIDTH,
+    DEFAULT_CLIP_SKIP,
     DEFAULT_REF_WEIGHT,
     DEFAULT_STEPS,
     DEFAULT_UNET_GGUF,
@@ -242,6 +243,7 @@ def build_sdxl_workflow(
     sampler: str = DEFAULT_SDXL_SAMPLER,
     scheduler: str = DEFAULT_SDXL_SCHEDULER,
     ckpt_name: str = DEFAULT_SDXL_CKPT,
+    clip_skip: int = DEFAULT_CLIP_SKIP,
     use_face_detailer: bool = False,
     use_upscale: bool = False,
     ref_image_name: Optional[str] = None,
@@ -250,8 +252,9 @@ def build_sdxl_workflow(
     clip_vision_model: str = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
 ) -> Dict[str, Any]:
     """
-    ComfyUI 로컬 API 전송용 SDXL(Unholy Desire Mix v9.0 등) 단독 체크포인트 워크플로우 템플릿.
+    ComfyUI 로컬 API 전송용 SDXL(Illustrious-XL / NTR MIX XIII 등) 단독 체크포인트 워크플로우 템플릿.
     - ref_image_name 지정 시 IP-Adapter-Plus(SDXL) 노드 그래프를 자동 결합합니다.
+    - clip_skip=2 기본 적용 (Illustrious 공식 표준: CLIPSetLastLayer -2).
     """
     if seed < 0:
         seed = random.randint(1, 999999999999999)
@@ -267,6 +270,18 @@ def build_sdxl_workflow(
     }
 
     current_model = ["1", 0]
+    clip_ref = ["1", 1]
+
+    # Illustrious 공식 표준: CLIP Skip 2 노드 연결 (Node 14)
+    if clip_skip > 1:
+        workflow["14"] = {
+            "class_type": "CLIPSetLastLayer",
+            "inputs": {
+                "clip": ["1", 1],
+                "stop_at_clip_layer": -clip_skip
+            }
+        }
+        clip_ref = ["14", 0]
 
     # IP-Adapter 결합 (Node 30, 32, 33)
     if ref_image_name:
@@ -303,7 +318,7 @@ def build_sdxl_workflow(
     workflow["2"] = {
         "class_type": "CLIPTextEncode",
         "inputs": {
-            "clip": ["1", 1],
+            "clip": clip_ref,
             "text": positive_prompt
         }
     }
@@ -312,7 +327,7 @@ def build_sdxl_workflow(
     workflow["3"] = {
         "class_type": "CLIPTextEncode",
         "inputs": {
-            "clip": ["1", 1],
+            "clip": clip_ref,
             "text": negative_prompt
         }
     }
@@ -368,14 +383,14 @@ def build_sdxl_workflow(
             "inputs": {
                 "image": current_image_output,
                 "model": current_model,
-                "clip": ["1", 1],
+                "clip": clip_ref,
                 "vae": ["1", 2],
                 "guide_size": 512,
                 "guide_size_for": True,
                 "max_size": 1024,
                 "seed": seed + 1,
                 "steps": steps,
-                "cfg": cfg,
+                "cfg": min(cfg, 4.5),
                 "sampler_name": sampler,
                 "scheduler": scheduler,
                 "positive": ["2", 0],

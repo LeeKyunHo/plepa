@@ -44,9 +44,9 @@ DEFAULT_ENGINE = os.environ.get("PLEPA_DEFAULT_ENGINE", "sdxl")
 
 # ── SDXL (Unholy Desire Mix Sinister v9.0 등) 기본 식별자 및 파라미터 ──
 DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "unholyDesireMixSinister_v90.safetensors")
-DEFAULT_SDXL_STEPS = 28
-DEFAULT_SDXL_CFG = 6.5
-DEFAULT_SDXL_SAMPLER = "dpmpp_sde"
+DEFAULT_SDXL_STEPS = 30
+DEFAULT_SDXL_CFG = 5.0
+DEFAULT_SDXL_SAMPLER = "dpmpp_2m"
 DEFAULT_SDXL_SCHEDULER = "karras"
 DEFAULT_SDXL_WIDTH = 832
 DEFAULT_SDXL_HEIGHT = 1216

@@ -75,11 +75,11 @@ def render_settings_page() -> None:
                 with ui.row().classes("w-full gap-4"):
                     ui.number("기본 가로 해상도 (width)", value=form.get("sdxl_width", 832), on_change=lambda e: form.update({"sdxl_width": int(e.value) if e.value is not None else 832})).props("outlined dark dense").classes("w-1/4")
                     ui.number("기본 세로 해상도 (height)", value=form.get("sdxl_height", 1216), on_change=lambda e: form.update({"sdxl_height": int(e.value) if e.value is not None else 1216})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("샘플링 스텝 수 (steps)", value=form.get("sdxl_steps", 28), on_change=lambda e: form.update({"sdxl_steps": int(e.value) if e.value is not None else 28})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("CFG 스케일 (cfg)", value=form.get("sdxl_cfg", 6.5), step=0.1, on_change=lambda e: form.update({"sdxl_cfg": float(e.value) if e.value is not None else 6.5})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("샘플링 스텝 수 (steps)", value=form.get("sdxl_steps", 30), on_change=lambda e: form.update({"sdxl_steps": int(e.value) if e.value is not None else 30})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("CFG 스케일 (cfg)", value=form.get("sdxl_cfg", 5.0), step=0.1, on_change=lambda e: form.update({"sdxl_cfg": float(e.value) if e.value is not None else 5.0})).props("outlined dark dense").classes("w-1/4")
 
                 with ui.row().classes("w-full gap-4"):
-                    ui.input("샘플러 (sampler)", value=form.get("sdxl_sampler", "dpmpp_sde"), on_change=lambda e: form.update({"sdxl_sampler": e.value})).props("outlined dark dense").classes("w-1/2")
+                    ui.input("샘플러 (sampler)", value=form.get("sdxl_sampler", "dpmpp_2m"), on_change=lambda e: form.update({"sdxl_sampler": e.value})).props("outlined dark dense").classes("w-1/2")
                     ui.input("스케줄러 (scheduler)", value=form.get("sdxl_scheduler", "karras"), on_change=lambda e: form.update({"sdxl_scheduler": e.value})).props("outlined dark dense").classes("w-1/2")
 
             # 3. FLUX 엔진 파라미터 (GGUF Q6_K 등)

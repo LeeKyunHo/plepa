@@ -20,9 +20,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "default_roster": "don",
     # SDXL 설정
     "sdxl_ckpt": "unholyDesireMixSinister_v90.safetensors",
-    "sdxl_steps": 28,
-    "sdxl_cfg": 6.5,
-    "sdxl_sampler": "dpmpp_sde",
+    "sdxl_steps": 30,
+    "sdxl_cfg": 5.0,
+    "sdxl_sampler": "dpmpp_2m",
     "sdxl_scheduler": "karras",
     "sdxl_width": 832,
     "sdxl_height": 1216,

@@ -44,6 +44,7 @@ from plepa_engine.reporter import asset_filename, print_batch_summary
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
 
@@ -126,21 +127,24 @@ class GenerationService:
         진행 중 on_progress(현재_항목_인덱스, 전체_항목_수, 결과)를 호출합니다.
         is_cancelled()가 True를 반환하면 생성을 즉시 중단합니다.
         """
-        # 1. 해상도 및 샘플러 기본값 산출
+        # 1. 전역 설정(Config) 최신값 조회 및 해상도/샘플러 산출
+        conf = default_config_service.get_config()
         if params.engine == "sdxl":
-            width = params.width if params.width is not None else DEFAULT_SDXL_WIDTH
-            height = params.height if params.height is not None else DEFAULT_SDXL_HEIGHT
-            steps = params.steps if params.steps is not None else DEFAULT_SDXL_STEPS
-            cfg = params.cfg if params.cfg is not None else DEFAULT_SDXL_CFG
-            sampler = params.sampler if params.sampler is not None else DEFAULT_SDXL_SAMPLER
-            scheduler = params.scheduler if params.scheduler is not None else DEFAULT_SDXL_SCHEDULER
+            width = params.width if params.width is not None else int(conf.get("sdxl_width", DEFAULT_SDXL_WIDTH))
+            height = params.height if params.height is not None else int(conf.get("sdxl_height", DEFAULT_SDXL_HEIGHT))
+            steps = params.steps if params.steps is not None else int(conf.get("sdxl_steps", DEFAULT_SDXL_STEPS))
+            cfg = params.cfg if params.cfg is not None else float(conf.get("sdxl_cfg", DEFAULT_SDXL_CFG))
+            sampler = params.sampler if params.sampler is not None else conf.get("sdxl_sampler", DEFAULT_SDXL_SAMPLER)
+            scheduler = params.scheduler if params.scheduler is not None else conf.get("sdxl_scheduler", DEFAULT_SDXL_SCHEDULER)
+            ckpt_name = params.ckpt if params.ckpt != DEFAULT_SDXL_CKPT else conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
         else:
-            width = params.width if params.width is not None else DEFAULT_WIDTH
-            height = params.height if params.height is not None else DEFAULT_HEIGHT
-            steps = params.steps if params.steps is not None else DEFAULT_STEPS
-            cfg = params.cfg if params.cfg is not None else 3.5
-            sampler = params.sampler if params.sampler is not None else "euler"
-            scheduler = params.scheduler if params.scheduler is not None else "simple"
+            width = params.width if params.width is not None else int(conf.get("flux_width", DEFAULT_WIDTH))
+            height = params.height if params.height is not None else int(conf.get("flux_height", DEFAULT_HEIGHT))
+            steps = params.steps if params.steps is not None else int(conf.get("flux_steps", DEFAULT_STEPS))
+            cfg = params.cfg if params.cfg is not None else float(conf.get("flux_guidance", 3.5))
+            sampler = params.sampler if params.sampler is not None else conf.get("flux_sampler", "euler")
+            scheduler = params.scheduler if params.scheduler is not None else conf.get("flux_scheduler", "simple")
+            unet_name = params.unet if params.unet != DEFAULT_UNET_GGUF else conf.get("flux_unet", DEFAULT_UNET_GGUF)
 
         # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
         db = self.pose_svc.load_pose_db(engine=params.engine)
@@ -152,11 +156,12 @@ class GenerationService:
                 char_obj.apply_profile(params.profile)
 
         # 3. ComfyUI 연결 검사
-        client = ComfyClient(host=COMFY_HOST)
+        comfy_host = conf.get("comfy_host", COMFY_HOST)
+        client = ComfyClient(host=comfy_host)
         if not params.dry_run and not params.mock:
             if not client.check_connection():
                 raise ConnectionError(
-                    f"ComfyUI 서버({COMFY_HOST})에 연결할 수 없습니다. "
+                    f"ComfyUI 서버({comfy_host})에 연결할 수 없습니다. "
                     "ComfyUI의 run_nvidia_gpu.bat를 가동해 주십시오."
                 )
 
@@ -258,7 +263,7 @@ class GenerationService:
                         cfg=cfg,
                         sampler=sampler,
                         scheduler=scheduler,
-                        ckpt_name=params.ckpt,
+                        ckpt_name=ckpt_name,
                         use_face_detailer=params.face_detailer,
                         use_upscale=params.upscale,
                         ref_image_name=ref_file_name,
@@ -280,7 +285,7 @@ class GenerationService:
                         steps=steps,
                         use_face_detailer=params.face_detailer,
                         use_upscale=params.upscale,
-                        unet_name=params.unet,
+                        unet_name=unet_name,
                         lora_name=params.lora if (params.lora and params.lora.lower() != "none") else None,
                         lora_weight=params.lora_weight,
                     )

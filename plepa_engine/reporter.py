@@ -13,9 +13,26 @@ from plepa_engine.models import GenerationResult, PoseEntry
 SEPARATOR = "═" * 70
 
 
-def asset_filename(prefix: str, code: str | int) -> str:
-    """플에파 에셋 파일명 형식: prefix_000.webp (3자리 제로패딩)"""
-    return f"{prefix}_{int(code):03d}.webp"
+def asset_filename(
+    prefix: str,
+    code: str | int,
+    label: str = "",
+    naming: str = "hybrid",
+) -> str:
+    """
+    플에파 에셋 파일명 형식:
+    - hybrid: prefix_000_평상.webp (기본 권장값: 000~159 순서 정렬 + 한글 직관성 동시 확보)
+    - code: prefix_000.webp (기존 3자리 번호형)
+    - label: prefix_평상.webp (순수 한글형)
+    """
+    code_str = f"{int(code):03d}"
+    clean_label = label.strip().replace(" ", "_").replace("/", "_")
+    if naming == "code" or not clean_label:
+        return f"{prefix}_{code_str}.webp"
+    elif naming == "label":
+        return f"{prefix}_{clean_label}.webp"
+    else:  # hybrid
+        return f"{prefix}_{code_str}_{clean_label}.webp"
 
 
 def open_in_explorer(path: Path) -> None:
