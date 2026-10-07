@@ -37,11 +37,13 @@ def asset_filename(
 
 def open_in_explorer(path: Path) -> None:
     """완료 시 결과 폴더를 윈도우 파일 탐색기로 자동 오픈."""
-    if os.name == "nt" and path.exists():
-        try:
-            os.startfile(path)
-        except OSError:
-            pass
+    if os.name == "nt":
+        target = Path(path).resolve()
+        if target.exists():
+            try:
+                os.startfile(str(target))
+            except Exception:
+                pass
 
 
 def print_batch_summary(

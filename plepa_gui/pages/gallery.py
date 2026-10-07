@@ -499,18 +499,40 @@ def render_gallery_page() -> None:
                             ui.label(f"📁 {folder_name}").classes("text-[10px] text-slate-500 font-mono truncate w-full")
 
     def open_lightbox(img_url: str, file_path: Path):
-        with ui.dialog() as dialog, ui.card().classes("max-w-6xl w-full md:w-[92vw] max-h-[95vh] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"):
-            with ui.row().classes("w-full justify-between items-center mb-2 px-2 pb-2 border-b border-slate-800"):
+        with ui.dialog() as dialog, ui.card().classes(
+            "max-w-6xl w-full md:w-[92vw] min-h-[450px] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"
+        ):
+            with ui.row().classes("w-full justify-between items-center mb-3 px-2 pb-2 border-b border-slate-800 flex-wrap gap-2"):
                 with ui.row().classes("items-center gap-2"):
                     ui.icon("zoom_in", size="20px").classes("text-amber-400")
-                    ui.label(file_path.name).classes("text-base font-bold text-slate-100 font-mono")
+                    ui.label(file_path.name).classes("text-sm md:text-base font-bold text-slate-100 font-mono")
                 with ui.row().classes("items-center gap-2"):
-                    size_kb = file_path.stat().st_size / 1024
-                    ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400")
-                    ui.button("원본 폴더 열기", icon="folder", on_click=lambda: open_in_explorer(file_path.parent)).props("flat dense size=sm color=amber-400")
+                    size_kb = file_path.stat().st_size / 1024 if file_path.exists() else 0
+                    ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400 mr-2")
+                    # 모바일 및 브라우저에서 원본 전체화면으로 보기 (새 탭)
+                    ui.button(
+                        "새 탭에서 원본 보기",
+                        icon="open_in_new",
+                        on_click=lambda: ui.navigate.to(img_url, new_tab=True)
+                    ).props("flat dense size=sm color=amber-400").tooltip("브라우저 새 탭에서 원본 풀사이즈 열기 (모바일 핀치 줌 및 저장 최적화)")
+
+                    # PC 탐색기 열기 (피드백 알림 포함)
+                    def handle_open_folder():
+                        open_in_explorer(file_path.parent)
+                        ui.notify(f"🖥️ PC 파일 탐색기를 열었습니다: {file_path.parent.name}", type="positive")
+
+                    ui.button("PC 폴더 열기", icon="folder", on_click=handle_open_folder).props(
+                        "flat dense size=sm color=slate-300"
+                    ).tooltip("호스트 PC의 파일 탐색기로 원본 폴더 열기")
                     ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
 
-            ui.image(img_url).classes("max-h-[82vh] w-auto max-w-full object-contain rounded-xl mx-auto shadow-lg")
+            # 네이티브 HTML <img> 태그로 브라우저 기본 렌더링 (Quasar q-img 높이 0 축소 버그 원천 해결)
+            with ui.column().classes("w-full flex-1 items-center justify-center py-2"):
+                ui.html(
+                    f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 400px;">'
+                    f'<img src="{img_url}" alt="{file_path.name}" style="max-height: 80vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
+                    f'</div>'
+                )
 
         dialog.open()
 
