@@ -198,9 +198,9 @@
       - **가중치 안전 클램핑선**: `clamp_sdxl_weights`에서 긍정 프롬프트는 과포화 방지를 위해 `max_weight=1.15`, 부정 프롬프트는 왜곡 없는 형태 억제를 위해 `max_weight=1.25`로 분리 제한.
       - **다중 동의어 앵커링 기법**: 높은 단일 가중치 대신 동의어와 형태 묘사를 4~5개 분할 나열하여 색상 왜곡 없이 100% 형태 고정:
         - 설유아 (단일 사이드 테일): `((side ponytail:1.15)), ((single ponytail:1.15)), ((hair tied on one side:1.15)), ((asymmetrical hairstyle:1.15)), ((hair draped over one shoulder:1.15)), single hair ribbon` (양갈래 유발 `sidelocks` 배제, 네거티브 `twintails, ribbons on both sides` 차단).
-        - 설세린 (쇄골 단발 허쉬컷): `((short hair:1.15)), ((collarbone length hair:1.15)), ((layered bob:1.15)), ((medium short hair:1.15)), ((hush cut:1.15)), ((hair ends at collarbone:1.15))` (네거티브 `long hair, hair past shoulders, hair past collarbone` 차단).
+        - 설세린 (정통 히메컷 Hime Cut): `((hime cut:1.2)), ((blunt sidelocks:1.2)), ((jaw-length blunt sidelocks:1.15)), straight bangs` (네거티브 `((red ribbon:1.5)), ((hair ribbon:1.45)), ((ribbon:1.4))` 차단).
         - 설시아 (허리 긴 생머리): `((waist-length straight hair:1.15)), ((long straight hair:1.15)), ((small red hair ribbons on sides:1.15))` (네거티브 `short hair, bob cut, shoulder-length hair` 차단).
-        - 설하율 (어깨 세미롱 & 귀걸이 & 크롭 흰티 & 청바지): `((shoulder-length hair:1.15)), ((medium hair:1.15)), ((hair ends at shoulders:1.15)), hair tucked behind ear, (crystal drop earrings:1.15)` (네거티브 `long hair, hair past shoulders, pixie cut, short crop, (dress:1.25)` 차단).
+        - 설하율 (어깨 세미롱 & 언더붑 크롭티 & 청바지): `((shoulder-length hair:1.15)), ((medium hair:1.15)), ((hair ends at shoulders:1.15)), hair tucked behind ear` (네거티브 `long hair, hair past shoulders, (earrings:1.25), (dress:1.25)` 차단).
 
 25. **웹 GUI 무결점 초기화(Zero-Selection) 원칙 및 매트릭스 뷰 엄격 로스터 격리 (ADR 2026-10-07)**
     - **배경 및 사용자 피드백**: 인터페이스 진입 시 기존/타 캐릭터가 임의로 선택되어 있거나 테이블에 타 로스터 캐릭터가 "미생성"으로 끼어드는 UX 혼선 원천 차단.
@@ -234,6 +234,15 @@
       - 언더붑 크롭티 프롬프트 공식화: `(underboob:1.15), (exposed underboob:1.15), (plain white cropped t-shirt:1.15), short sleeves, underboob cut, exposed midriff, navel, blue denim jeans`.
       - 색감 안정화: 포지티브에 `soft natural lighting, warm indoor lighting`, 네거티브에 `(oversaturated:1.25), (neon:1.25), (blue tint:1.25), (cyan hair:1.2), (teal hair:1.2), (color burn:1.25)` 주입.
       - 세린이와 동일한 따뜻하고 부드러운 자연광 톤의 `#001 미소` 컷을 새 공식 레퍼런스로 확정 갱신.
+
+28. **설세린 정통 히메컷(Hime Cut) 리뉴얼 및 붉은 리본 완전 박멸 (ADR 2026-10-07)**
+    - **배경 및 사용자 피드백**:
+      1. 머리 뒤쪽에서 원치 않는 붉은 리본 끈이 계속 튀어나오는 문제 발생.
+      2. 슬릭컷 적용 시 원작 유키노의 기본 롱헤어와 유사해 보여 4자매 간 시각적 변별력이 약화됨.
+    - **해결 조치**:
+      - 원작 유키노 토큰의 고유 내장 리본을 차단하기 위해 네거티브에 `((red ribbon:1.5)), ((hair ribbon:1.45)), ((ribbon:1.4))` 초강력 주입 및 포지티브에 `(no ribbons:1.25), (no hair accessories:1.25), bare hair` 명시 선언으로 리본 0% 완전 박멸.
+      - 일자 앞머리와 뺨/턱선에 칼단발 직각 단차를 주는 **정통 히메컷(`(hime cut:1.2), (blunt sidelocks:1.2), (jaw-length blunt sidelocks:1.15)`)**을 공식 도입하여 2녀 세린만의 독보적인 쿨뷰티 기품 확립.
+      - 신규 히메컷 `#001 미소` 컷을 `projects/ykn/references/serin.webp` 공식 레퍼런스로 신설 저장 및 11종 전수 덮어쓰기 완료.
 
 ---
 
