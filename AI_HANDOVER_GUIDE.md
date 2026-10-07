@@ -291,6 +291,13 @@
       - `sdxl_pose_database.json`, `flux_pose_database.json` 80종 전수 라벨 일괄 갱신.
       - [`POSE_CATALOG.md`](POSE_CATALOG.md), [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) 동기화 완료.
 
+33. **캐릭터 스키마(`CharacterSchema`) `name` 필수 누락 Pydantic 유효성 에러 해결 및 자동 폴백 방어선 구축 (ADR 2026-10-07)**
+    - **배경 및 원인 규명**:
+      - `projects/man/characters/` 내 5명(`cyr`, `hsh`, `kma`, `sja`, `yca`)의 JSON 파일에 `name` 필드가 누락되어 있어, GUI 서버 및 백엔드 실행 시 Pydantic `Field required [type=missing, name]` 유효성 에러와 함께 캐릭터 로드 실패 경고 발생.
+    - **해결 조치**:
+      - `projects/man/characters/` 5개 파일에 정규 한국어/영문 이름(`채유림`, `한수현`, `강민아`, `서지안`, `윤채아`) 부여 및 동기화.
+      - `plepa_engine/services/schemas.py`의 `CharacterSchema`에서 `name: str = Field(default="")` 및 `normalize_character_fields` 검증기에서 `name` 누락 시 `prefix`로 자동 폴백하는 2중 안전장치 추가. 향후 어떤 레거시/미완성 캐릭터 JSON이 유입되어도 서버 크래시 0% 보장.
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
