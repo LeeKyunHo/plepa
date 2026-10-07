@@ -121,5 +121,71 @@ class AssetService:
         """에셋 파일을 휴지통으로 안전하게 이동합니다."""
         return self.repo.move_to_trash(file_path)
 
+    def list_misc_assets(self, roster: str = DEFAULT_ROSTER) -> List[Dict[str, Any]]:
+        """
+        포즈 번호 규격에 묶이지 않은 비포즈 에셋(레퍼런스, 배경, 샘플, 비규격 이미지)을 모두 검색합니다.
+        반환: List[{ name, category, path, size_bytes, mtime, folder }]
+        """
+        roster_dir = PROJECTS_DIR / roster
+        if not roster_dir.is_dir():
+            return []
+
+        results: List[Dict[str, Any]] = []
+        valid_exts = {".webp", ".png", ".jpg", ".jpeg"}
+
+        # 1. 레퍼런스 폴더 탐색 (하위 창고 폴더 포함)
+        ref_dir = roster_dir / "references"
+        if ref_dir.is_dir():
+            for f in sorted(ref_dir.rglob("*")):
+                if f.is_file() and f.suffix.lower() in valid_exts:
+                    subfolder = f.parent.name
+                    cat_label = "레퍼런스 (창고)" if subfolder != "references" else "레퍼런스"
+                    results.append({
+                        "name": f.name,
+                        "category": cat_label,
+                        "type": "reference",
+                        "path": f,
+                        "size_bytes": f.stat().st_size,
+                        "mtime": f.stat().st_mtime,
+                        "folder": f.parent.relative_to(roster_dir).as_posix(),
+                    })
+
+        # 2. 배경 폴더 탐색 (차후 생성될 backgrounds 및 background.json 연계)
+        bg_dir = roster_dir / "backgrounds"
+        if bg_dir.is_dir():
+            for f in sorted(bg_dir.rglob("*")):
+                if f.is_file() and f.suffix.lower() in valid_exts:
+                    results.append({
+                        "name": f.name,
+                        "category": "배경 (BG)",
+                        "type": "background",
+                        "path": f,
+                        "size_bytes": f.stat().st_size,
+                        "mtime": f.stat().st_mtime,
+                        "folder": f.parent.relative_to(roster_dir).as_posix(),
+                    })
+
+        # 3. 에셋 폴더 내 비정규 포즈 파일 및 샘플 이미지 탐색
+        assets_dir = roster_dir / "assets"
+        pose_pattern = re.compile(r"^.+_\d{3}(?:_.*)?\.(webp|png)$")
+        if assets_dir.is_dir():
+            for f in sorted(assets_dir.rglob("*")):
+                if f.is_file() and f.suffix.lower() in valid_exts:
+                    # 3자리 포즈 번호 규격이 아닌 파일
+                    if not pose_pattern.match(f.name):
+                        results.append({
+                            "name": f.name,
+                            "category": "비규격/샘플",
+                            "type": "sample",
+                            "path": f,
+                            "size_bytes": f.stat().st_size,
+                            "mtime": f.stat().st_mtime,
+                            "folder": f.parent.relative_to(roster_dir).as_posix(),
+                        })
+
+        # 최신 수정 순 정렬
+        results.sort(key=lambda x: x["mtime"], reverse=True)
+        return results
+
 
 default_asset_service = AssetService()

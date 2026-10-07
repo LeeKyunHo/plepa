@@ -52,12 +52,13 @@ def render_gallery_page() -> None:
         available_rosters = [default_roster]
 
     state = {
-        "view_mode": "matrix",  # 'matrix' or 'single'
+        "view_mode": "matrix",  # 'matrix', 'single', 'misc'
         "roster": default_roster,
         "single_char": "ykn_gla",
         "selected_chars": [],
         "selected_codes": [f"{i:03d}" for i in range(24, 60)],  # 체형 테스트 24~59 기본
         "pose_set": "adult_testing",
+        "misc_filter": "all",
     }
 
     with ui.column().classes("w-full max-w-[1550px] mx-auto p-6 gap-6"):
@@ -69,7 +70,11 @@ def render_gallery_page() -> None:
 
                     # 뷰 모드 전환 탭
                     view_toggle = ui.toggle(
-                        {"matrix": "체형 비교 매트릭스 뷰", "single": "단일 캐릭터 전체 갤러리"},
+                        {
+                            "matrix": "체형 비교 매트릭스 뷰",
+                            "single": "단일 캐릭터 전체 갤러리",
+                            "misc": "✨ 비포즈 / 기타 에셋 (배경·레퍼런스·샘플)",
+                        },
                         value=state["view_mode"],
                         on_change=lambda e: switch_view_mode(e.value)
                     ).props("dense dark").classes("text-xs")
@@ -96,6 +101,9 @@ def render_gallery_page() -> None:
             # 단일 캐릭터 뷰 전용 필터 컨트롤
             single_controls = ui.column().classes("w-full gap-3 pt-3 border-t border-slate-800")
 
+            # 기타/비포즈 에셋 전용 필터 컨트롤
+            misc_controls = ui.column().classes("w-full gap-3 pt-3 border-t border-slate-800")
+
         # 메인 콘텐츠 뷰어 컨테이너
         content_container = ui.card().classes("w-full bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg overflow-x-auto min-h-[500px]")
 
@@ -110,13 +118,17 @@ def render_gallery_page() -> None:
         render_content()
 
     def open_current_folder():
-        target = PROJECTS_DIR / state["roster"] / "assets"
+        if state["view_mode"] == "misc":
+            target = PROJECTS_DIR / state["roster"]
+        else:
+            target = PROJECTS_DIR / state["roster"] / "assets"
         target.mkdir(parents=True, exist_ok=True)
         open_in_explorer(target)
 
     def update_control_bars():
         matrix_controls.clear()
         single_controls.clear()
+        misc_controls.clear()
 
         # 현재 로스터의 캐릭터 및 에셋 통계 조회
         char_asset_counts = get_character_asset_counts(state["roster"])
@@ -124,14 +136,26 @@ def render_gallery_page() -> None:
         if state["view_mode"] == "matrix":
             matrix_controls.set_visibility(True)
             single_controls.set_visibility(False)
+            misc_controls.set_visibility(False)
 
             with matrix_controls:
                 # 1. 빠른 프리셋 버튼들
                 with ui.row().classes("items-center gap-2 flex-wrap"):
                     ui.label("빠른 캐릭터 프리셋:").classes("text-xs font-semibold text-slate-400 mr-1")
 
+                    # 네쌍둥이 4인 세트 퀵 버튼
+                    if any(k in char_asset_counts for k in ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]):
+                        ui.button("🌸 네쌍둥이 4인 (000, 001)", icon="auto_awesome", on_click=lambda: select_quadruplets_preset()).props(
+                            "unelevated dense size=xs color=rose-500/20 text-color=rose-300 border border-rose-500/40"
+                        ).tooltip("설유아, 설세린, 설시아, 설하율 4인의 000, 001 표정 비교")
+
+                    # 땋은머리 3종 세트 퀵 버튼
+                    if any(k in char_asset_counts for k in ["ykn_brd_a", "ykn_brd_b", "ykn_brd_c"]):
+                        ui.button("🎀 땋은머리 샘플 3종", icon="face", on_click=lambda: select_ykn_braid_preset()).props(
+                            "unelevated dense size=xs color=purple-500/20 text-color=purple-300 border border-purple-500/40"
+                        ).tooltip("ykn_brd_a, ykn_brd_b, ykn_brd_c (000 평상) 선택")
+
                     # 유키노 체형 및 의상 묶음 퀵 버튼
-                    ykn_keys = [k for k in char_asset_counts.keys() if k.startswith("ykn")]
                     if any(k in char_asset_counts for k in ["ykn_sle", "ykn_std", "ykn_mat"]):
                         ui.button("👑 유키노 체형 6종 세트", icon="group", on_click=lambda: select_ykn_preset()).props(
                             "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
@@ -176,10 +200,11 @@ def render_gallery_page() -> None:
                             on_selection_change=lambda e, p=prefix: (toggle_char(p, e.value))
                         ).props(f"dense text-xs {color_props}")
 
-        else:
+        elif state["view_mode"] == "single":
             # 단일 캐릭터 뷰
             matrix_controls.set_visibility(False)
             single_controls.set_visibility(True)
+            misc_controls.set_visibility(False)
 
             with single_controls:
                 with ui.row().classes("items-center gap-4 flex-wrap"):
@@ -197,6 +222,42 @@ def render_gallery_page() -> None:
                         on_change=lambda e: (state.update({"single_char": e.value}), render_content())
                     ).props("dense outlined dark options-dense").classes("w-60 text-sm")
 
+        else:
+            # 기타 / 비포즈 에셋 뷰 (배경, 레퍼런스, 샘플)
+            matrix_controls.set_visibility(False)
+            single_controls.set_visibility(False)
+            misc_controls.set_visibility(True)
+
+            with misc_controls:
+                with ui.row().classes("items-center justify-between w-full flex-wrap gap-3"):
+                    with ui.row().classes("items-center gap-2 flex-wrap"):
+                        ui.label("카테고리 필터:").classes("text-xs font-semibold text-slate-400 mr-1")
+                        filter_opts = {
+                            "all": "전체 보기",
+                            "reference": "레퍼런스 이미지",
+                            "background": "배경 (BG)",
+                            "sample": "비규격/샘플",
+                        }
+                        for f_key, f_label in filter_opts.items():
+                            is_active = state.get("misc_filter", "all") == f_key
+                            color = "color=purple-600 text-color=white" if is_active else "color=slate-800 text-color=slate-300"
+                            ui.chip(
+                                f_label,
+                                selectable=True,
+                                selected=is_active,
+                                on_selection_change=lambda e, k=f_key: (
+                                    state.update({"misc_filter": k}),
+                                    update_control_bars(),
+                                    render_content()
+                                ) if e.value else None
+                            ).props(f"dense text-xs {color}")
+
+                    with ui.row().classes("items-center gap-2"):
+                        ref_dir = PROJECTS_DIR / state["roster"] / "references"
+                        ui.button("레퍼런스 폴더 열기", icon="folder", on_click=lambda: open_in_explorer(ref_dir)).props(
+                            "flat dense size=xs color=purple-300"
+                        )
+
     def get_character_asset_counts(roster: str) -> Dict[str, int]:
         """로스터 내 캐릭터별 생성된 에셋 개수 맵 반환."""
         chars = default_character_service.list_characters(roster=roster)
@@ -212,6 +273,26 @@ def render_gallery_page() -> None:
         elif not selected and prefix in state["selected_chars"]:
             state["selected_chars"].remove(prefix)
         render_content()
+
+    def select_quadruplets_preset():
+        quad_prefixes = ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]
+        counts = get_character_asset_counts(state["roster"])
+        state["selected_chars"] = [p for p in quad_prefixes if p in counts]
+        state["pose_set"] = "all_80"
+        state["selected_codes"] = ["000", "001"]
+        update_control_bars()
+        render_content()
+        ui.notify("🌸 네쌍둥이 4인 (#000 평상, #001 미소) 선택 완료!", type="positive")
+
+    def select_ykn_braid_preset():
+        braid_prefixes = ["ykn_brd_a", "ykn_brd_b", "ykn_brd_c"]
+        counts = get_character_asset_counts(state["roster"])
+        state["selected_chars"] = [p for p in braid_prefixes if p in counts]
+        state["pose_set"] = "all_80"
+        state["selected_codes"] = ["000"]
+        update_control_bars()
+        render_content()
+        ui.notify("유키노 땋은머리 샘플 3종 (#000 평상) 선택 완료!", type="positive")
 
     def select_ykn_preset():
         ykn_prefixes = ["ykn_sle", "ykn_std", "ykn_mat", "ykn_crv", "ykn_gla", "ykn_gla_up"]
@@ -259,8 +340,10 @@ def render_gallery_page() -> None:
         content_container.clear()
         if state["view_mode"] == "matrix":
             render_matrix_view()
-        else:
+        elif state["view_mode"] == "single":
             render_single_char_view()
+        else:
+            render_misc_view()
 
     def render_single_char_view():
         """단일 캐릭터 전체 갤러리 카드 뷰."""
@@ -360,6 +443,52 @@ def render_gallery_page() -> None:
                                         with ui.column().classes("items-center justify-center w-28 h-40 bg-slate-800/30 rounded border border-dashed border-slate-700/60 text-slate-600"):
                                             ui.icon("image_not_supported", size="24px")
                                             ui.label("미생성").classes("text-[11px] mt-1")
+
+    def render_misc_view():
+        """비포즈 / 기타 에셋 (배경, 레퍼런스, 샘플) 그리드 뷰."""
+        all_misc = default_asset_service.list_misc_assets(state["roster"])
+        m_filter = state.get("misc_filter", "all")
+        if m_filter != "all":
+            assets = [a for a in all_misc if a.get("type") == m_filter]
+        else:
+            assets = all_misc
+
+        with content_container:
+            if not assets:
+                with ui.column().classes("w-full py-16 items-center justify-center text-slate-500"):
+                    ui.icon("collections", size="48px").classes("text-slate-600 mb-2")
+                    ui.label(f"'{state['roster']}' 로스터에 등록된 비포즈 / 기타 에셋이 없습니다.").classes("text-sm font-semibold")
+                    ui.label("💡 레퍼런스 이미지(references/)나 배경 이미지(backgrounds/)가 이곳에 자동 표시됩니다.").classes("text-xs text-slate-600 mt-1")
+                return
+
+            with ui.row().classes("w-full items-center justify-between mb-4 pb-2 border-b border-slate-800"):
+                ui.label(f"✨ 비포즈 / 기타 에셋 목록 (총 {len(assets)}장)").classes("text-base font-bold text-purple-300")
+                ui.label(f"현재 로스터: {state['roster']}").classes("text-xs text-slate-400 font-mono")
+
+            # 4열 반응형 카드 그리드
+            with ui.grid(columns=4).classes("w-full gap-4"):
+                for a in assets:
+                    img_path: Path = a["path"]
+                    rel_path = img_path.relative_to(PROJECTS_DIR).as_posix()
+                    web_url = f"/projects_static/{rel_path}"
+                    cat_name = a["category"]
+                    folder_name = a.get("folder", "")
+                    type_str = a.get("type", "misc")
+
+                    badge_color = "purple-500" if type_str == "reference" else ("blue-500" if type_str == "background" else "emerald-500")
+
+                    with ui.card().classes("bg-slate-800/80 border border-slate-700/60 p-2 rounded-lg hover:border-purple-400 transition-all"):
+                        ui.image(web_url).classes(
+                            "w-full h-72 object-cover rounded shadow cursor-pointer hover:scale-[1.02] transition-transform"
+                        ).on("click", lambda u=web_url, p=img_path: open_lightbox(u, p))
+
+                        with ui.column().classes("w-full mt-2 px-1 gap-1"):
+                            with ui.row().classes("w-full justify-between items-center"):
+                                ui.badge(cat_name, color=badge_color).props("dense text-[10px]")
+                                ui.label(f"{(a['size_bytes']/1024):.0f} KB").classes("text-[10px] text-slate-400")
+
+                            ui.label(a["name"]).classes("text-xs font-bold text-slate-100 truncate w-full").tooltip(a["name"])
+                            ui.label(f"📁 {folder_name}").classes("text-[10px] text-slate-500 font-mono truncate w-full")
 
     def open_lightbox(img_url: str, file_path: Path):
         with ui.dialog() as dialog, ui.card().classes("max-w-4xl p-4 bg-slate-950 border border-slate-700"):
