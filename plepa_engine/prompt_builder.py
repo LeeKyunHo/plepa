@@ -74,7 +74,7 @@ def assemble_flux_prompt(
                 )
         elif is_no_bg:
             if "white background" not in pose_text.lower():
-                pose_text = f"{pose_text.rstrip('.')} against a completely solid pure white minimalist background with no furniture and no scenery."
+                pose_text = f"{pose_text.rstrip('.')} against a completely solid pure white minimalist background with no furniture and no scenery, single centered view, no character sheet."
 
     if pose_text:
         if not pose_text.endswith("."):
@@ -133,7 +133,7 @@ _HAIR_KEYWORDS = (
     "twintails", "braid", "updo", "ahoge", "curls"
 )
 
-DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, very aesthetic, absurdres, newest, glossy skin, delicate anime coloring"
+DEFAULT_SDXL_QUALITY_TAGS = "masterpiece, best quality, highly detailed, soft lighting, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes"
 
 # 언홀리(Unholy) 전용 베스트 프랙티스 네거티브 (2D 미소녀 작화 극대화, 실사/3D 및 다중 인물/마네킹 차단)
 DEFAULT_SDXL_NEGATIVE = (
@@ -222,9 +222,11 @@ def assemble_sdxl_prompt(
                 pose_tag = re.sub(r"clean\s+background", bg_prompt.strip(), pose_tag, flags=re.IGNORECASE)
             else:
                 pose_tag = f"{pose_tag}, {bg_prompt.strip()}"
+            if is_no_bg and "single view" not in pose_tag.lower():
+                pose_tag = f"{pose_tag}, single view, single shot"
         elif is_no_bg:
-            if "simple background" not in pose_tag.lower():
-                pose_tag = f"{pose_tag}, simple background, white background, solid background"
+            if "clean background" not in pose_tag.lower():
+                pose_tag = f"{pose_tag}, single view, single shot, clean background, white background, solid background"
 
     # 2. 긍정 프롬프트 조립
     if char.sdxl_positive:
@@ -238,10 +240,10 @@ def assemble_sdxl_prompt(
 
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
-            # 기존 실사/과노출 태그 정제
-            quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
-            # 2D 만화체 전용 은은한 광택 태그 주입
-            for kw in ("glossy skin", "delicate anime coloring"):
+            # 기존 실사/과노출/번들거림 태그 정제
+            quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
+            # 2D 만화체 전용 키로 황금 부드러운 음영/조명 태그 주입
+            for kw in ("soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"):
                 if kw.lower() not in quality_clean.lower():
                     quality_clean = f"{quality_clean}, {kw}"
             prefix_tags = f"{custom_pos.strip()}, {quality_clean.strip()}" if custom_pos and custom_pos.strip() else quality_clean.strip()
@@ -275,12 +277,20 @@ def assemble_sdxl_prompt(
     if "(photorealistic, realistic, 3d" not in negative_prompt:
         negative_prompt = f"(photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), {negative_prompt}"
 
-    # [패치 0] 무배경(none) 프리셋 선택 시 복잡한 배경 및 불필요 가구 원천 차단
+    # [패치 0] 무배경(none) 프리셋 선택 시 복잡한 배경, 불필요 가구 및 캐릭터 설정 시트/미니컷/과노출/타버림/흰반점/망점 원천 차단
     if is_no_bg:
-        negative_prompt = f"{negative_prompt}, (detailed background, complex background, outdoors, indoors, scenery, room, window, wallpaper:1.35)"
+        negative_prompt = (
+            f"{negative_prompt}, "
+            f"(character sheet, model sheet, reference sheet, concept art, turnaround, multiple views, multiple angles, split screen, inset, chibi, pop-up, reaction face, comic, collage, photo montage:1.4), "
+            f"(halftone, screentone, dot pattern, stippling, grain, speckles, noise, dithering, textured skin, rough skin, pores, white dots, spots on skin:1.3), "
+            f"(severed head, decapitation, headless, floating head, disembodied head, cut off head:1.4), "
+            f"(overexposed, blown highlights, washed out:1.2), (heavy shadow, shadow crush, black crush, deep black shadow, burnt skin, colored skin, dark skin:1.25), (cyan tint, blue tint, neon glow:1.2), "
+            f"(oversaturated, high contrast, harsh lighting, blinding white highlight, oily skin:1.2), "
+            f"(detailed background, complex background, outdoors, indoors, scenery, room, window, wallpaper:1.25)"
+        )
         furnitures = [f for f in ("furniture", "chair", "sofa", "bed", "table", "desk", "counter") if f not in pose_tag.lower()]
         if furnitures:
-            negative_prompt = f"{negative_prompt}, ({', '.join(furnitures)}:1.3)"
+            negative_prompt = f"{negative_prompt}, ({', '.join(furnitures)}:1.2)"
 
     # [패치 A] 탈의(nude) 상태 시 의상/에이프런/소품 잔류 원천 차단
     if nude:
@@ -333,7 +343,7 @@ def assemble_sdxl_prompt(
         # 부정 프롬프트에서 남성 차단 태그(1boy, male) 제거하여 여성 얼굴 복제 방지
         negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
         # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 손 색상 오염/장갑 원천 차단
-        negative_prompt = f"{negative_prompt}, (multiple heads:1.3), (two heads:1.3), (2girls:1.3), (duplicate:1.3), (2boys:1.35), (multiple males:1.35), (extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, (colored skin:1.2), orange skin"
+        negative_prompt = f"{negative_prompt}, (severed head:1.4), (decapitation:1.4), (headless:1.4), (floating head:1.4), (disembodied head:1.4), (multiple heads:1.35), (two heads:1.35), (2girls:1.35), (multiple girls:1.35), (extra girl:1.35), (two girls:1.35), (duplicate:1.35), (reaction face:1.35), (inset:1.35), (2boys:1.35), (multiple males:1.35), (extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, (colored skin:1.2), orange skin, (pitch black shadow on body:1.25), (burnt skin:1.25)"
 
         # 화면 밖(off-screen) 파트너 씬의 경우 남성 하반신/의상 화면 침범 원천 차단
         if is_offscreen_partner:
@@ -345,12 +355,12 @@ def assemble_sdxl_prompt(
             # 모브 남성 파트너: BREAK를 통한 여주인공과 모브의 Attention 완전 격리 (이염 원천 차단)
             # 포즈의 착의/탈의 여부에 따른 하의(단색 블랙 팬츠 vs 완전 탈의) 정밀 분기
             if nude:
-                # 탈의/성인 씬: 완전 탈의 모브
-                mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (naked male:1.2), (shirtless male:1.15), (bottomless male:1.2), muscular build, featureless silhouette"
+                # 탈의/성인 씬: 완전 탈의 모브 (시커먼 실루엣 대신 자연스러운 매끄러운 피부)
+                mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (naked male:1.15), (shirtless male:1.1), (bottomless male:1.15), (smooth skin:1.05), muscular build"
                 mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
             else:
-                # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정 (하의 무작위성 방지)
-                mob_positive = "BREAK (faceless male:1.2), (bald male:1.2), (shirtless male:1.15), (bare shoulders:1.1), (solid black pants:1.2), muscular build, featureless silhouette"
+                # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정
+                mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (shirtless male:1.1), (bare shoulders:1.1), (smooth skin:1.05), (solid black pants:1.2), muscular build"
                 mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
 
             positive_prompt = f"{positive_prompt} {mob_positive}"
