@@ -221,13 +221,19 @@
       - **탐색기 프로세스 호출 안정화**: `open_in_explorer`를 `subprocess.Popen(["explorer.exe", ...])` 리스트 인자 호출 방식으로 교체하여 cmd 파싱 오류 제거. 파일 대상일 경우 `explorer.exe /select,...`로 해당 이미지 자동 하이라이트.
       - **NiceGUI 슬롯 삭제 에러 방지**: `update_control_bars()` 호출 전에 `ui.notify`를 먼저 띄우고 `try...except` 보호를 적용하여 안전한 UI 라이프사이클 확립.
 
-27. **설하율 의상 리뉴얼 (크롭 흰티 & 청바지) 및 4자매 캐주얼 밸런스 확립 (ADR 2026-10-07)**
-    - **배경 및 사용자 피드백**: 하율이의 기존 네이비 롱 드레스가 다른 자매들의 복장(교복, 캐주얼)과 비교했을 때 혼자 지나치게 격식 있어 보여 일상 및 감정 씬에서 어색함 발생.
+27. **설하율 의상 언더붑(Underboob) 크롭 흰티 리뉴얼 및 쨍함(과포화/네온) 색감 교정 (ADR 2026-10-07)**
+    - **배경 및 사용자 피드백**:
+      1. 귀걸이를 없애고, 크롭티셔츠를 더 짧게 만들어 언더붑(가슴 밑선 노출) 스타일로 변경 요청.
+      2. 세린 등 다른 자매들과 비교했을 때 하율이만 지나치게 쨍하고 차가운 푸른빛/시안빛이 도는 톤 불균형 발생.
+    - **원인 규명**:
+      - 이전 레퍼런스(`references/hayul.webp`)가 푸른 도시 야경 조명 아래에서 생성되어 IP-Adapter가 시안빛 색조를 복제함.
+      - `crystal drop earrings` 태그가 형광 청록 보석을 생성하며 주변으로 네온빛을 산란시킴.
+      - 네거티브에 시안/네온/과포화 차단 태그 부재.
     - **해결 조치**:
-      - `hayul.json`의 의상 프로필을 `fitted white cropped t-shirt, short sleeves, tight cropped tee, exposed midriff and navel, high-waisted blue denim jeans`로 전면 개편.
-      - 네거티브에 `(dress:1.25), (long dress:1.25), (evening dress:1.25), (gown:1.25)` 등을 주입하여 드레스 잔여 원천 차단.
-      - 신규 의상 기반 `#001 미소` 컷을 `projects/ykn/references/hayul.webp` 공식 레퍼런스로 즉시 교체.
-      - 하율이의 `#000`~`#010` 11종 전수 에셋을 신규 의상으로 일괄 재생성 완료(장당 16초 완주)하여 4자매의 의상 조화 달성.
+      - `hayul.json`에서 귀걸이 완전 삭제 및 네거티브 `(earrings:1.25)` 차단.
+      - 언더붑 크롭티 프롬프트 공식화: `(underboob:1.15), (exposed underboob:1.15), (plain white cropped t-shirt:1.15), short sleeves, underboob cut, exposed midriff, navel, blue denim jeans`.
+      - 색감 안정화: 포지티브에 `soft natural lighting, warm indoor lighting`, 네거티브에 `(oversaturated:1.25), (neon:1.25), (blue tint:1.25), (cyan hair:1.2), (teal hair:1.2), (color burn:1.25)` 주입.
+      - 세린이와 동일한 따뜻하고 부드러운 자연광 톤의 `#001 미소` 컷을 새 공식 레퍼런스로 확정 갱신.
 
 ---
 
