@@ -181,6 +181,34 @@
     - **문제점 규명**: 모바일 Antigravity 클라우드 웹 뷰어에서 윈도우 역슬래시(`\`) 및 선행 슬래시 누락 시 "Preview unavailable"이 발생하는 결함 확인.
     - **해결 조치**: 마크다운 아티팩트 내 이미지 경로를 웹 표준인 `/C:/Users/...` (선행 슬래시 + 포워드 슬래시)로 통일하고, `plepa_gui` 매트릭스 뷰에 `[🌸 네쌍둥이 4인 (000, 001)]` 원클릭 프리셋 버튼 신설.
 
+23. **신규 독립 로스터 `projects/ykn/` 분리 및 캐릭터 접두사 한글명 매핑 (ADR 2026-10-07)**
+    - **배경**: 기존 `don` 로스터에 혼재되어 있던 네쌍둥이 자매 캐릭터를 전용 프로젝트 폴더인 `projects/ykn/`으로 완전 분리 독립.
+    - **캐릭터 ID 표준화**:
+      - 1녀 설유아: `ykn_1st` ➔ **`yua`**
+      - 2녀 설세린: `ykn_2nd` ➔ **`serin`**
+      - 3녀 설시아: `ykn_3rd` ➔ **`sia`**
+      - 4녀 설하율: `ykn_4th` ➔ **`hayul`**
+    - **1번 미소 에셋 기반 레퍼런스 확립**: 4자매 전원의 #001 미소 에셋을 `references/{prefix}.webp`로 확정 배치하여 일관된 2D 애니 톤 및 의상 가이드라인 구축.
+
+24. **SDXL Unholy 가중치 클램핑 안전선(긍정 1.15 / 부정 1.25) 및 다중 동의어 앵커링 기법 확립 (ADR 2026-10-07)**
+    - **문제점 규명**:
+      - SDXL Unholy Desire Mix v9.0 체크포인트는 가중치가 1.20을 초과하면 라텐트 클리핑으로 인해 피부가 황토색으로 타버리거나(overburn), 네온 컬러 왜곡이 발생함.
+      - 반대로 가중치를 1.15로 일률 클램핑하면 원작 유키노의 압도적인 롱헤어 편향(99% 허리 기장)과 양쪽 리본 구조로 인해 사이드 테일이 양갈래로 변형되거나 단발/세미롱이 길어지는 현상 발생.
+    - **해결 공식 및 불변식**:
+      - **가중치 안전 클램핑선**: `clamp_sdxl_weights`에서 긍정 프롬프트는 과포화 방지를 위해 `max_weight=1.15`, 부정 프롬프트는 왜곡 없는 형태 억제를 위해 `max_weight=1.25`로 분리 제한.
+      - **다중 동의어 앵커링 기법**: 높은 단일 가중치 대신 동의어와 형태 묘사를 4~5개 분할 나열하여 색상 왜곡 없이 100% 형태 고정:
+        - 설유아 (단일 사이드 테일): `((side ponytail:1.15)), ((single ponytail:1.15)), ((hair tied on one side:1.15)), ((asymmetrical hairstyle:1.15)), ((hair draped over one shoulder:1.15)), single hair ribbon` (양갈래 유발 `sidelocks` 배제, 네거티브 `twintails, ribbons on both sides` 차단).
+        - 설세린 (쇄골 단발 허쉬컷): `((short hair:1.15)), ((collarbone length hair:1.15)), ((layered bob:1.15)), ((medium short hair:1.15)), ((hush cut:1.15)), ((hair ends at collarbone:1.15))` (네거티브 `long hair, hair past shoulders, hair past collarbone` 차단).
+        - 설시아 (허리 긴 생머리): `((waist-length straight hair:1.15)), ((long straight hair:1.15)), ((small red hair ribbons on sides:1.15))` (네거티브 `short hair, bob cut, shoulder-length hair` 차단).
+        - 설하율 (어깨 세미롱 & 귀걸이): `((shoulder-length hair:1.15)), ((medium hair:1.15)), ((hair ends at shoulders:1.15)), hair tucked behind ear, (crystal drop earrings:1.15)` (네거티브 `long hair, hair past shoulders, pixie cut, short crop` 양방향 차단).
+
+25. **웹 GUI 무결점 초기화(Zero-Selection) 원칙 및 매트릭스 뷰 엄격 로스터 격리 (ADR 2026-10-07)**
+    - **배경 및 사용자 피드백**: 인터페이스 진입 시 기존/타 캐릭터가 임의로 선택되어 있거나 테이블에 타 로스터 캐릭터가 "미생성"으로 끼어드는 UX 혼선 원천 차단.
+    - **해결 조치**:
+      - **Zero-Selection 원칙**: 갤러리(`/gallery`) 및 배치 생성(`/generate`) 진입 시 및 로스터 전환 시, 캐릭터 선택 상태를 완전 빈 상태(`selected_chars = []`, `single_char = ""`)로 초기화. 사용자가 직접 원하는 대상을 능동적으로 선택하도록 보장.
+      - **매트릭스 뷰 엄격 격리**: `prefixes = [p for p in state["selected_chars"] if p in char_counts]` 필터링을 통해 현재 로스터에 속하지 않는 캐릭터의 화면 출력을 원천 차단.
+      - **라이트박스 풀사이즈 확대**: 모바일 및 PC 갤러리 팝업 다이얼로그를 화면 폭 92%, 높이 82vh의 쾌적한 풀사이즈로 확대.
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
