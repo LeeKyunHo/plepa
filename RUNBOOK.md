@@ -25,6 +25,10 @@ python main.py --port 8188 --preview-method auto
 
 ## ⚡ 2. 에셋 생성 실전 명령어 (flux_batch_generator.py)
 
+> 💡 **기본 엔진 안내 (Default: SDXL)**:  
+> 2026-10-05 부로 **SDXL (`meichiILIghtMIXV1_meichiILUstMIXV1.safetensors`)**이 기본 엔진으로 자동 적용됩니다.  
+> 별도의 `--engine` 옵션을 지정하지 않아도 장당 15초의 고속 2D 미소녀 애니 셀화 모드로 생성되며, FLUX 모드가 필요할 때만 `--engine flux`를 명시합니다.
+
 ### 2.1 단일 캐릭터 포즈 테스트 생성
 신규 캐릭터의 얼굴과 의상 무결성을 단 1장으로 빠르게 검증할 때 사용합니다:
 ```powershell
@@ -59,6 +63,38 @@ python flux_batch_generator.py -r maid -c hana -p 000..005 --dry-run
 
 # 2) 가상 더미 WebP 생성으로 전체 I/O 무결성 검증
 python flux_batch_generator.py -r maid -c all -p 000 --mock
+```
+
+### 2.5 에셋 파일명 형식 선택 (`--naming`)
+- 기본값: `hybrid` (`prefix_000_라벨.webp` 형식으로 생성하여 탐색기 정렬 및 한글 직관성 동시 확보)
+```powershell
+# 1) 하이브리드 표준형 (기본 권장값)
+python flux_batch_generator.py -r maid -c han -p 000 --naming hybrid
+# 결과: han_000_평상.webp
+
+# 2) 순수 한글형 (간결성)
+python flux_batch_generator.py -r maid -c han -p 000 --naming label
+# 결과: han_평상.webp
+
+# 3) 기존 번호형 (Kiro 3자리 번호 하위 호환)
+python flux_batch_generator.py -r maid -c han -p 000 --naming code
+# 결과: han_000.webp
+```
+
+### 2.6 2D 일러스트 자동 성기 검열 (`--censor`)
+- 나체/성인 씬 생성 시 무검열 원본과 함께 상업 동인 표준 검열본(`*_censored.webp`)을 동시 보존합니다.
+```powershell
+# 1) 와이드 솔리드 바 (기본 권장값: 18% 적응형 캡슐 마진으로 100% 누수 차단 및 인체 곡선 보존)
+python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style bar
+
+# 2) 그림자 실루엣 (형태 윤곽선 보존 및 내부 선화 디테일 흑회색 음영 덮개)
+python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style shadow
+
+# 3) 격자 모자이크 (클래식 픽셀레이션)
+python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style mosaic
+
+# 4) 검열 부위 지정 (--censor-targets {genital, penis, pussy, all})
+python flux_batch_generator.py -r maid -c han -p 044,052 --censor --censor-targets genital
 ```
 
 ---

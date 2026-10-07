@@ -143,6 +143,19 @@
 
 ---
 
+19. **SDXL 기본 샘플러 DPM++ 2M Karras 영구 확정 및 SDE 망점 결함 규명 (ADR 2026-10-07)**
+    - **배경 및 원인 규명**:
+      - SDXL 생성물에서 발견되던 미세한 흰 반점, 망점, 자글거리는 도트 노이즈 결함의 원인을 규명하기 위해 SDE(`dpmpp_2m_sde`)와 2M(`dpmpp_2m`)을 동일 조건(유키노 동탄복 `ykn_don` 024~059 포즈 36장)으로 직접 A/B 비교 검증.
+      - SDE는 매 스텝마다 브라운 운동 노이즈를 재주입하는 확률적(Stochastic) 특성으로 인해 2D 셀 채색 표면에 미세한 노이즈 잔상을 남기고 생성 속도도 장당 약 69.8초로 지연됨.
+      - 반면 DPM++ 2M은 결정론적(Deterministic) 감쇄를 수행하여 잡티 없는 매끄러운 2D 셀 채색을 완벽히 구현하며, 장당 약 34.3초로 속도가 2배 이상 빠름.
+      - 한편, 034번 머리통 분리 및 028/036번 시커먼 타버림 결함은 샘플러 문제가 아니라 포즈 DB의 프롬프트 중복(`holding head`) 및 `featureless silhouette` 태그 결함이었음을 확인하고 포즈 DB(`sdxl_pose_database.json`)를 교정하여 완전 해결함.
+    - **최종 의사결정 및 불변식**:
+      - **`DPM++ 2M Karras`**를 플에파 SDXL 파이프라인의 공식 기본 샘플러로 영구 확정.
+      - 기본 파라미터 불변식: `DEFAULT_SDXL_SAMPLER = "dpmpp_2m"`, `DEFAULT_SDXL_SCHEDULER = "karras"`, `DEFAULT_SDXL_STEPS = 30`, `DEFAULT_SDXL_CFG = 5.0`.
+      - 엔진 설정(`config.py`, `config_service.py`), 상태 파일(`.plepa_state/config.json`), GUI 설정 및 생성 화면 뱃지 전반에 기본값 동기화 완료.
+
+---
+
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
 
 ### 3.1 디렉토리 구조
