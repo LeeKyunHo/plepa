@@ -18,6 +18,9 @@ from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_gui.components.header import render_header
 
+import mimetypes
+mimetypes.add_type("image/webp", ".webp")
+
 # 정적 파일 서빙 등록
 app.add_static_files("/projects_static", str(PROJECTS_DIR))
 
@@ -56,8 +59,8 @@ def render_gallery_page() -> None:
         "roster": default_roster,
         "single_char": "",
         "selected_chars": [],
-        "selected_codes": [f"{i:03d}" for i in range(24, 60)],  # 체형 테스트 24~59 기본
-        "pose_set": "adult_testing",
+        "selected_codes": sorted(all_poses.keys()),  # 전체 포즈 (000~159) 기본
+        "pose_set": "all",  # "전체 포즈"
         "misc_filter": "all",
     }
 
@@ -126,6 +129,10 @@ def render_gallery_page() -> None:
             target = PROJECTS_DIR / state["roster"] / "assets"
         target.mkdir(parents=True, exist_ok=True)
         open_in_explorer(target)
+        try:
+            ui.notify(f"📂 PC 파일 탐색기에서 폴더를 열었습니다: {target.name}", type="positive")
+        except Exception:
+            pass
 
     def update_control_bars():
         matrix_controls.clear()
@@ -147,9 +154,9 @@ def render_gallery_page() -> None:
 
                     # 네쌍둥이 4인 세트 퀵 버튼
                     if any(k in char_asset_counts for k in ["yua", "serin", "sia", "hayul", "ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]):
-                        ui.button("🌸 네쌍둥이 4인 (000, 001)", icon="auto_awesome", on_click=lambda: select_quadruplets_preset()).props(
+                        ui.button("🌸 네쌍둥이 4인 (전체 포즈)", icon="auto_awesome", on_click=lambda: select_quadruplets_preset()).props(
                             "unelevated dense size=xs color=rose-500/20 text-color=rose-300 border border-rose-500/40"
-                        ).tooltip("설유아, 설세린, 설시아, 설하율 4인의 000, 001 표정 비교")
+                        ).tooltip("설유아, 설세린, 설시아, 설하율 4인의 전체 포즈 비교")
 
                     # 땋은머리 3종 세트 퀵 버튼
                     if any(k in char_asset_counts for k in ["ykn_brd_a", "ykn_brd_b", "ykn_brd_c"]):
@@ -180,13 +187,14 @@ def render_gallery_page() -> None:
 
                     # 포즈 범위 선택 셀렉터
                     ui.label("포즈 범위:").classes("text-xs text-slate-400 font-semibold ml-4")
-                    set_opts = {s.id: f"{s.name} ({len(s.codes)}종)" for s in pose_sets}
-                    set_opts["all_80"] = "전체 80종 포즈"
+                    set_opts = {"all": f"전체 포즈 ({len(all_poses)}종)"}
+                    for s in pose_sets:
+                        set_opts[s.id] = f"{s.name} ({len(s.codes)}종)"
                     ui.select(
                         options=set_opts,
                         value=state["pose_set"],
                         on_change=lambda e: on_set_changed(e.value)
-                    ).props("dense outlined dark options-dense").classes("w-52 text-xs")
+                    ).props("dense outlined dark options-dense").classes("w-56 text-xs")
 
                 # 2. 개별 캐릭터 칩 목록 (보유 장수 뱃지 포함)
                 with ui.row().classes("items-center gap-2 flex-wrap mt-1"):
@@ -274,26 +282,36 @@ def render_gallery_page() -> None:
         render_content()
 
     def select_quadruplets_preset():
+        try:
+            ui.notify("🌸 네쌍둥이 4인 (전체 포즈) 선택 완료!", type="positive")
+        except Exception:
+            pass
         counts = get_character_asset_counts(state["roster"])
         quad_prefixes = ["yua", "serin", "sia", "hayul"] if any(k in counts for k in ["yua", "serin"]) else ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]
         state["selected_chars"] = [p for p in quad_prefixes if p in counts]
-        state["pose_set"] = "all_80"
-        state["selected_codes"] = ["000", "001"]
+        state["pose_set"] = "all"
+        state["selected_codes"] = sorted(all_poses.keys())
         update_control_bars()
         render_content()
-        ui.notify("🌸 네쌍둥이 4인 (#000 평상, #001 미소) 선택 완료!", type="positive")
 
     def select_ykn_braid_preset():
+        try:
+            ui.notify("유키노 땋은머리 샘플 3종 (#000 평상) 선택 완료!", type="positive")
+        except Exception:
+            pass
         braid_prefixes = ["ykn_brd_a", "ykn_brd_b", "ykn_brd_c"]
         counts = get_character_asset_counts(state["roster"])
         state["selected_chars"] = [p for p in braid_prefixes if p in counts]
-        state["pose_set"] = "all_80"
+        state["pose_set"] = "all"
         state["selected_codes"] = ["000"]
         update_control_bars()
         render_content()
-        ui.notify("유키노 땋은머리 샘플 3종 (#000 평상) 선택 완료!", type="positive")
 
     def select_ykn_preset():
+        try:
+            ui.notify("유키노 성인 5대 체형 및 업스케일 6종 선택 완료!", type="positive")
+        except Exception:
+            pass
         ykn_prefixes = ["ykn_sle", "ykn_std", "ykn_mat", "ykn_crv", "ykn_gla", "ykn_gla_up"]
         counts = get_character_asset_counts(state["roster"])
         state["selected_chars"] = [p for p in ykn_prefixes if p in counts]
@@ -301,9 +319,12 @@ def render_gallery_page() -> None:
         state["selected_codes"] = [f"{i:03d}" for i in range(24, 60)]
         update_control_bars()
         render_content()
-        ui.notify("유키노 성인 5대 체형 및 업스케일 6종 선택 완료!", type="positive")
 
     def select_ykn_outfit_preset():
+        try:
+            ui.notify("유키노 신규 테마 의상 6종 선택 완료!", type="positive")
+        except Exception:
+            pass
         ykn_outfits = ["ykn_bun", "ykn_nur", "ykn_mai", "ykn_swm", "ykn_qip", "ykn_gya"]
         counts = get_character_asset_counts(state["roster"])
         state["selected_chars"] = [p for p in ykn_outfits if p in counts]
@@ -311,7 +332,6 @@ def render_gallery_page() -> None:
         state["selected_codes"] = [f"{i:03d}" for i in range(24, 60)]
         update_control_bars()
         render_content()
-        ui.notify("유키노 신규 테마 의상 6종 선택 완료!", type="positive")
 
     def select_has_assets():
         counts = get_character_asset_counts(state["roster"])
@@ -327,7 +347,7 @@ def render_gallery_page() -> None:
 
     def on_set_changed(set_id: str):
         state["pose_set"] = set_id
-        if set_id == "all_80":
+        if set_id in ("all", "all_80"):
             state["selected_codes"] = sorted(all_poses.keys())
         else:
             s = next((item for item in pose_sets if item.id == set_id), None)
@@ -509,21 +529,27 @@ def render_gallery_page() -> None:
                 with ui.row().classes("items-center gap-2"):
                     size_kb = file_path.stat().st_size / 1024 if file_path.exists() else 0
                     ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400 mr-2")
-                    # 모바일 및 브라우저에서 원본 전체화면으로 보기 (새 탭)
+                    # 새 탭에서 원본 전용 뷰어로 열기 (브라우저 다운로드 강제 튕김 방지 및 줌 확대)
+                    view_url = f"/view_image?src={img_url}&name={file_path.name}"
                     ui.button(
                         "새 탭에서 원본 보기",
                         icon="open_in_new",
-                        on_click=lambda: ui.navigate.to(img_url, new_tab=True)
-                    ).props("flat dense size=sm color=amber-400").tooltip("브라우저 새 탭에서 원본 풀사이즈 열기 (모바일 핀치 줌 및 저장 최적화)")
+                        on_click=lambda u=view_url: ui.navigate.to(u, new_tab=True)
+                    ).props(f'flat dense size=sm color=amber-400 href="{view_url}" target="_blank"').tooltip(
+                        "새 탭에서 고화질 뷰어로 보기 (다운로드 방지 및 줌 확대 지원)"
+                    )
 
-                    # PC 탐색기 열기 (피드백 알림 포함)
+                    # PC 탐색기 열기 (해당 파일 하이라이트 선택)
                     def handle_open_folder():
-                        open_in_explorer(file_path.parent)
-                        ui.notify(f"🖥️ PC 파일 탐색기를 열었습니다: {file_path.parent.name}", type="positive")
+                        open_in_explorer(file_path)
+                        try:
+                            ui.notify(f"🖥️ PC 파일 탐색기를 열었습니다: {file_path.name}", type="positive")
+                        except Exception:
+                            pass
 
                     ui.button("PC 폴더 열기", icon="folder", on_click=handle_open_folder).props(
                         "flat dense size=sm color=slate-300"
-                    ).tooltip("호스트 PC의 파일 탐색기로 원본 폴더 열기")
+                    ).tooltip("호스트 PC 파일 탐색기에서 해당 파일 위치 열기")
                     ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
 
             # 네이티브 HTML <img> 태그로 브라우저 기본 렌더링 (Quasar q-img 높이 0 축소 버그 원천 해결)

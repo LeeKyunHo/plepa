@@ -27,6 +27,14 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
+import mimetypes
+
+# 브라우저 새 탭에서 WebP 이미지가 다운로드되지 않고 정상 표시되도록 MIME 타입 등록
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/png", ".png")
+mimetypes.add_type("image/jpeg", ".jpg")
+mimetypes.add_type("image/jpeg", ".jpeg")
+
 from nicegui import app, ui
 from plepa_gui.pages.backgrounds import render_backgrounds_page
 from plepa_gui.pages.characters import render_characters_page
@@ -78,6 +86,25 @@ def setup_routes():
     def page_settings():
         ui.dark_mode().enable()
         render_settings_page()
+
+    @ui.page("/view_image")
+    def page_view_image(src: str = "", name: str = ""):
+        """새 탭 전용 무손실 이미지 뷰어 (모바일 다운로드 튕김 방지 및 줌 지원)."""
+        ui.dark_mode().enable()
+        ui.add_head_html("""
+        <style>
+            body { margin: 0; background: #07090e; display: flex; align-items: center; justify-content: center; min-height: 100vh; overflow: auto; }
+            .img-stage { max-width: 96vw; max-height: 92vh; width: auto; height: auto; object-fit: contain; border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); cursor: zoom-in; }
+            .img-stage.zoomed { max-width: none; max-height: none; cursor: zoom-out; }
+        </style>
+        <script>
+            function toggleZoom(el) { el.classList.toggle('zoomed'); }
+        </script>
+        """)
+        with ui.column().classes("w-full min-h-screen items-center justify-center p-2 gap-2"):
+            if name:
+                ui.label(name).classes("text-xs text-slate-400 font-mono")
+            ui.html(f'<img src="{src}" alt="{name}" class="img-stage" onclick="toggleZoom(this)" title="클릭하여 확대/축소 토글" />')
 
 
 setup_routes()

@@ -35,15 +35,25 @@ def asset_filename(
         return f"{prefix}_{code_str}_{clean_label}.webp"
 
 
-def open_in_explorer(path: Path) -> None:
-    """완료 시 결과 폴더를 윈도우 파일 탐색기로 자동 오픈."""
+def open_in_explorer(path: Path | str) -> None:
+    """완료 시 결과 폴더 또는 파일을 윈도우 파일 탐색기로 확실히 오픈."""
     if os.name == "nt":
+        import subprocess
         target = Path(path).resolve()
-        if target.exists():
-            try:
-                os.startfile(str(target))
-            except Exception:
-                pass
+        try:
+            if target.is_file():
+                # 파일인 경우 탐색기에서 해당 파일 선택 상태로 열기
+                subprocess.Popen(["explorer.exe", f"/select,{str(target)}"])
+            else:
+                target.mkdir(parents=True, exist_ok=True)
+                subprocess.Popen(["explorer.exe", str(target)])
+            return
+        except Exception:
+            pass
+        try:
+            os.startfile(str(target if not target.is_file() else target.parent))
+        except Exception:
+            pass
 
 
 def print_batch_summary(
