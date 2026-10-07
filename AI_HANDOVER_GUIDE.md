@@ -209,6 +209,18 @@
       - **매트릭스 뷰 엄격 격리**: `prefixes = [p for p in state["selected_chars"] if p in char_counts]` 필터링을 통해 현재 로스터에 속하지 않는 캐릭터의 화면 출력을 원천 차단.
       - **라이트박스 풀사이즈 확대**: 모바일 및 PC 갤러리 팝업 다이얼로그를 화면 폭 92%, 높이 82vh의 쾌적한 풀사이즈로 확대.
 
+26. **갤러리 전체 포즈 기본화, WebP 새 탭 다운로드 방지 뷰어 및 윈도우 탐색기 오픈 안정화 (ADR 2026-10-07)**
+    - **배경 및 사용자 피드백**:
+      1. 갤러리 진입 시 포즈 기본 범위가 36종/80종으로 제한되어 있어 전체 포즈(000~159)를 한눈에 볼 수 없었음.
+      2. 라이트박스에서 "새 탭에서 원본 보기" 클릭 시 브라우저가 정적 WebP MIME 타입을 인식하지 못해 새 탭 화면 대신 파일 다운로드가 강제 실행됨.
+      3. 상단 "에셋 폴더 열기" 및 라이트박스 "PC 폴더 열기" 클릭 시 파일 탐색기 창이 뜨지 않던 현상 발생.
+      4. 퀵 버튼 클릭 시 제어 바를 재생성하면서 부모 슬롯이 삭제되어 `The parent element this slot belongs to has been deleted.` 런타임 에러로 이벤트가 중단되던 현상 발생.
+    - **해결 조치**:
+      - **전체 포즈 기본화**: `state["pose_set"] = "all"`, `state["selected_codes"] = sorted(all_poses.keys())` 및 포즈 범위 드롭다운 기본값 `"all": "전체 포즈 (160종)"` 설정. 퀵 버튼 라벨을 `[🌸 네쌍둥이 4인 (전체 포즈)]`로 동기화.
+      - **새 탭 고화질 웹 뷰어 신설**: `mimetypes.add_type("image/webp", ".webp")` 등록 및 `@ui.page("/view_image")` 무손실 반응형 뷰어 라우트 구축. 라이트박스 버튼에 `href="/view_image?..." target="_blank"` 네이티브 링크를 부여하여 다운로드 튕김 0% 보장 및 원클릭 줌 인/아웃 토글 지원.
+      - **탐색기 프로세스 호출 안정화**: `open_in_explorer`를 `subprocess.Popen(["explorer.exe", ...])` 리스트 인자 호출 방식으로 교체하여 cmd 파싱 오류 제거. 파일 대상일 경우 `explorer.exe /select,...`로 해당 이미지 자동 하이라이트.
+      - **NiceGUI 슬롯 삭제 에러 방지**: `update_control_bars()` 호출 전에 `ui.notify`를 먼저 띄우고 `try...except` 보호를 적용하여 안전한 UI 라이프사이클 확립.
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
