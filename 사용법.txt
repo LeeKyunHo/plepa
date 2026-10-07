@@ -57,6 +57,7 @@
   ── 특정 번호만 골라서 생성 ────────────────────────────────────────────────
   python flux_batch_generator.py -r maid --char han --codes "0"         # 000번(평상) 단 1장
   python flux_batch_generator.py -r maid --char han --codes "0,1,2,3"   # 감정 표정만
+  python flux_batch_generator.py -r don --char ykn_1st,ykn_2nd,ykn_3rd,ykn_4th --codes "000,001" -f # 네쌍둥이 4인 000평상, 001미소 일괄 생성
   python flux_batch_generator.py -r maid --char han --codes "44,52"     # H씬 (기승위, 구강봉사)
   python flux_batch_generator.py -r maid --char ren --codes "144,152"   # 오토코노코 H씬
 
