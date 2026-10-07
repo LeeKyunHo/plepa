@@ -21,12 +21,12 @@
       "prompt": "A delightful bust shot upper body portrait of the character laughing wholeheartedly with eyes gently closed in pure joy, mouth open in cheerful laughter, radiating vibrant happiness. Clean background, soft lighting."
     },
     "003": {
-      "label": "홍조",
+      "label": "수줍은홍조",
       "description": "양 볼을 붉게 물들이며 수줍게 시선을 보내는 부끄러운 표정. 설렘과 순수한 부끄러움 연출.",
       "prompt": "A close bust shot upper body portrait of the character with intensely flushed cheeks and a bashful expression, looking directly at the viewer with shy affectionate eyes and a hesitant sweet smile. Clean minimalist background."
     },
     "004": {
-      "label": "뾰로통",
+      "label": "토라짐",
       "description": "볼을 빵빵하게 부풀리고 입술을 삐죽 내민 뾰로통한 토라진 표정. 귀엽게 삐치거나 투정 부리는 연출.",
       "prompt": "A close bust shot upper body portrait of the character pouting with adorably puffed cheeks, arms crossed defensively over chest, giving an irritated yet cute sidelong glare. Clean background, soft lighting."
     },
@@ -41,7 +41,7 @@
       "prompt": "A dramatic low-angle bust shot upper body portrait of the character looking down at the viewer with a cold, haughty expression, scornful half-closed eyes, and slight contempt. Clean indoor background."
     },
     "007": {
-      "label": "슬픔",
+      "label": "울먹임",
       "description": "눈가에 눈물이 글썽이며 입술을 파르르 떠는 애처로운 슬픈 표정. 비련과 보호본능을 자극하는 연출.",
       "prompt": "A poignant bust shot upper body portrait of the character with downcast sorrowful eyes glistening with unshed tears, corners of mouth drooping in quiet melancholy and sadness. Clean background, subdued soft lighting."
     },
@@ -51,12 +51,12 @@
       "prompt": "An adorable bust shot upper body portrait of the character shyly turning her face slightly away while casting a hesitant sidelong glance at the viewer, cheeks intensely flushed with deep rosy blush, lower lip gently bitten in bashful fluster and sweet nervousness. Clean background, soft warm lighting."
     },
     "009": {
-      "label": "놀람",
+      "label": "깜짝놀람",
       "description": "눈을 동그랗게 뜨고 입을 벌린 채 깜짝 놀란 표정. 예상치 못한 상황에 당황한 순간 포착.",
       "prompt": "A dynamic bust shot upper body portrait of the character caught in astonishment, eyes wide open in surprise, lips parted in a slight gasp, posture recoiling gently in shock. Clean background, crisp lighting."
     },
     "010": {
-      "label": "자신감",
+      "label": "자신만만",
       "description": "손을 허리에 얹고 당당하고 여유 넘치는 미소를 짓는 자신감 있는 표정. 당찬 매력 연출.",
       "prompt": "A spirited bust shot upper body portrait of the character standing tall with one hand resting on the hip, displaying a proud, confident smirk and bright self-assured eyes. Clean background, bright lighting."
     },
@@ -66,7 +66,7 @@
       "prompt": "A curious bust shot upper body portrait of the character tilting head slightly to the side with an inquisitive glance, one eyebrow subtly raised in thought and wonder. Clean background, soft lighting."
     },
     "012": {
-      "label": "장난",
+      "label": "메롱장난",
       "description": "한쪽 눈을 윙크하며 혓바닥을 살짝 내민 장난기 가득한 메롱 표정. 짓궂고 유쾌한 매력.",
       "prompt": "A lively bust shot upper body portrait of the character playfully winking with one eye, sticking out tongue tip in cheeky mischief while flashing a cute peace sign. Clean background, vibrant lighting."
     },
@@ -76,17 +76,17 @@
       "prompt": "An affectionate bust shot upper body portrait of the character with deep rosy blush across cheeks and nose, pupils displaying distinctive heart shapes, gazing with ecstatic adoration and breathless delight. Clean background, dreamy soft lighting."
     },
     "014": {
-      "label": "유혹",
+      "label": "가슴유혹",
       "description": "양손으로 가슴을 모아 올리고 살짝 주무르며 가슴골을 강조하는 도발적이고 치명적인 유혹 포즈.",
       "prompt": "An alluring close-up bust shot upper body portrait of the character sensually cupping and gently squeezing her own breasts with both hands to accentuate her deep cleavage, looking directly at the viewer with seductive bedroom eyes, intensely flushed blushing cheeks, and parted sultry lips in playful temptation. Clean background, warm soft lighting."
     },
     "015": {
-      "label": "나른",
+      "label": "나른함",
       "description": "턱을 괸 채 게슴츠레한 눈으로 멍하니 바라보는 나른하고 무기력하며 편안한 휴식 표정.",
       "prompt": "A cozy bust shot upper body portrait of the character sitting casually with chin resting on palm, heavy-lidded drowsy eyes looking forward with comfortable lethargy and mild boredom. Clean background, mellow warm lighting."
     },
     "016": {
-      "label": "진지",
+      "label": "진지함",
       "description": "흐트러짐 없는 곧은 자세와 흔들림 없는 날카로운 눈빛의 엄숙하고 결연한 진지한 표정.",
       "prompt": "A resolute bust shot upper body portrait of the character standing with straight upright posture, gaze intense, focused and unwavering with a calm and deeply serious expression. Clean background, neutral studio lighting."
     },
@@ -101,19 +101,19 @@
       "prompt": "An affectionate, close bust shot upper body portrait of the character leaning close towards the viewer with sweet possessive devotion, cheeks glowing with deep crimson blush, gaze intensely loving and attentive, lips curved into a charming clingy smile. Minimal clean background, romantic atmospheric lighting."
     },
     "019": {
-      "label": "키스조름",
+      "label": "뽀뽀조름",
       "description": "상체를 앞으로 쑥 내밀며 눈을 살포시 감고, 볼을 붉힌 채 입술을 동그랗게 오므려 키스를 기다리는 사랑스러운 뽀뽀 구도.",
       "prompt": "A delightful close-up bust shot upper body portrait of the character leaning forward towards the camera from a slightly high angle, eyes softly closed in sweet bliss. Her cheeks and nose are deeply flushed with an adorable crimson blush, and her cute lips are puckered into a small rounded kiss shape in tender anticipation. Her hands rest gently in front as she leans close alone, creating an intimate romantic moment. Clean background, warm soft lighting."
     }
   },
   "poses": {
     "020": {
-      "label": "윙크",
+      "label": "윙크브이",
       "description": "한쪽 눈을 깜빡이며 손으로 브이(V) 포즈를 그리는 발랄하고 사랑스러운 아이돌풍 제스처.",
       "prompt": "A playful cowboy shot of the character standing and winking with one eye, giving a cute cheerful peace sign with hand near cheek, smiling warmly. Soft ambient studio lighting."
     },
     "021": {
-      "label": "양손하트",
+      "label": "손하트",
       "description": "양손 손가락을 모아 하트 모양을 만들어 가슴 앞에 내미는 다정하고 사랑스러운 팬서비스 포즈.",
       "prompt": "A sweet cowboy shot of the character forming a delicate heart shape with both hands held in front of the chest, smiling with genuine affection and glowing rosy cheeks. Warm inviting lighting."
     },
@@ -123,7 +123,7 @@
       "prompt": "A welcoming cowboy shot of the character with one hand raised waving politely, looking toward the viewer with a gentle, lovely smile and shy blush on cheeks. Bright clean lighting."
     },
     "023": {
-      "label": "팔짱",
+      "label": "도도한팔짱",
       "description": "가슴 아래로 단단히 팔짱을 껴서 볼륨감을 자연스럽게 강조하며 도도하게 서 있는 포즈.",
       "prompt": "A confident and alluring cowboy shot of the character with arms crossed neatly under the bust, casting a teasing sidelong glance with a playful smirk and sultry eyes. Subtle rim lighting."
     },
@@ -133,12 +133,12 @@
       "prompt": "A captivating back view cowboy shot of the character turned away, looking back over shoulder with an arched lower back, casting a seductive and lingering glance with heavy-lidded bedroom eyes and parted lips. Cinematic lighting."
     },
     "025": {
-      "label": "앉아유혹",
+      "label": "소파유혹",
       "description": "소파나 의자에 깊숙이 기대앉아 다리를 살짝 벌리며 매혹적인 시선으로 유혹하는 자세.",
       "prompt": "A provocative cowboy shot of the character sitting relaxed on a plush sofa, leaning slightly back with thighs parted gracefully, hands resting on the cushions, gazing directly at the viewer with sultry bedroom eyes and flushed cheeks. Soft interior lounge lighting."
     },
     "026": {
-      "label": "체벌",
+      "label": "양손결박",
       "description": "침대에 누워 양 손목이 머리 위로 묶인 채 무력하게 누워 있는 구속 및 체벌 연출 포즈.",
       "prompt": "A dramatic cowboy shot of the character lying on back on a bed with wrists held gently above head, back arched vulnerably, looking up with tearful pleading eyes and flushed face, biting lower lip with breathless panting. Dim moody lighting."
     },
@@ -158,12 +158,12 @@
       "prompt": "An alluring view from behind on a bed with the character on all fours, back arched sensually with hips raised, looking back over shoulder with a teasing, sultry smile, flushed cheeks, and inviting bedroom eyes. Soft bedroom lighting."
     },
     "030": {
-      "label": "전신나체",
+      "label": "알몸스탠딩",
       "description": "실오라기 하나 걸치지 않은 완전한 나체 상태에서 수줍은 듯 정면을 응시하는 스탠딩 누드 씬.",
       "prompt": "A bashful cowboy shot of the character completely nude with bare skin, standing and attempting to shyly shield breasts and lower body with hands, body flushed crimson with embarrassment, looking directly at the viewer with tearful bashful eyes. Soft natural lighting."
     },
     "031": {
-      "label": "후방애무",
+      "label": "후방가슴애무",
       "description": "파트너가 뒤에서 덮쳐 양손으로 가슴을 감싸 쥐며 애무하는 등 뒤 스킨십 제스처.",
       "prompt": "A tense cowboy shot as male hands wrap from behind around her waist to cup her breasts, the character turning head with flustered teary eyes and parted lips in vocal protest, deeply flushed face, arched back. Moody room lighting."
     },
@@ -173,12 +173,12 @@
       "prompt": "An immersive point-of-view upper body shot of the character pinned against a wall (kabedon) by a partner's arm, looking upwards with wide, moist, flustered eyes, rapid shallow breathing, heavily flushed cheeks and trembling lips. Soft dramatic shadows."
     },
     "033": {
-      "label": "턱올리기",
+      "label": "턱들기",
       "description": "파트너의 손가락이 턱을 살짝 들어올려 강제로 시선을 맞추게 하는 권력적이고 로맨틱한 터치 구도.",
       "prompt": "An intimate point-of-view close-up upper body shot where the partner remains off-screen, with only a single masculine hand reaching in to gently lift her chin upwards. The character has both of her own hands resting delicately over her upper chest, fingers trembling slightly against her heart. She gazes straight into the viewer eyes with forced direct eye contact, wide moist pupils, heavily flushed blushing cheeks, and breathless parted lips in emotional surrender. Warm soft romantic lighting, shallow depth of field."
     },
     "034": {
-      "label": "가슴안김",
+      "label": "가슴파묻힘",
       "description": "파트너가 가슴팍에 얼굴을 깊숙이 파묻고 기대며 온기를 나누는 포근하고 농밀한 안김 포즈.",
       "prompt": "An affectionate upper body embrace as the partner buries his face into her cleavage, while she lovingly rests her hands on partner's head and shoulders, gazing down with a tender, deeply devoted smile and soft loving blush. Gentle warm glow."
     },
@@ -188,7 +188,7 @@
       "prompt": "A dynamic cowboy shot of the character pinned down on bedsheets, partner hovering above gently pinning her wrists overhead, character looking up with wide tearful eyes, heart pupils, deeply flushed cheeks and breathless helpless excitement. Soft bedroom lighting."
     },
     "036": {
-      "label": "공주안기",
+      "label": "공주님안기",
       "description": "파트너의 양팔에 안겨 들려 올려진 채 목을 감싸 안고 부끄러워하는 공주님 안기 포즈.",
       "prompt": "A full body shot of the character being carried in arms bridal-style (princess carry) by her partner, arms wrapped securely around partner's neck, blushing intensely with bashful yet delighted eyes looking up. Soft romantic lighting."
     },
@@ -198,12 +198,12 @@
       "prompt": "An intimate close upper body shot of a passionate deep french kiss with partner, lips pressed and tangled intimately, cheeks burning with rosy flush, eyes gently closed in breathless pleasure. Cinematic soft focus and warm lighting."
     },
     "038": {
-      "label": "샤워실 뒤태",
+      "label": "샤워뒤태",
       "description": "샤워기 물줄기를 맞으며 젖은 머릿결과 함께 드러나는 매끄러운 뒷태 나체 실루엣.",
       "prompt": "A sensual rear-angle cowboy shot of the character standing completely nude inside a clear glass shower stall under streaming water, droplets cascading over glistening wet skin and damp clinging hair, dripping water, looking back over her shoulder directly at the viewer with a sultry inviting gaze. Wet hair, arched back, steamy diffuse background."
     },
     "039": {
-      "label": "샤워창 밀착",
+      "label": "샤워창밀착",
       "description": "샤워실 투명 유리벽에 맨가슴과 맨몸을 밀착시키며 밖을 도발적으로 바라보는 섹슈얼 씬.",
       "prompt": "An intimate upper body shot of the character completely nude pressed against the foggy glass of a shower stall, hands flat on the wet glass, glistening wet skin, damp hair strands clinging to flushed cheeks, dripping water, looking through water condensation with breathless seductive eyes and a flushed, biting-lip expression. Steamy diffuse lighting."
     }
@@ -215,7 +215,7 @@
       "prompt": "A side-angle cowboy shot showing the character completely nude lying on a bed with thighs spread wide in an intimate missionary position with partner, body flushed with intense heat, head tilted back, lips parted in a breathless moan, eyes glistening with deep pleasure. Soft dim bedroom lighting."
     },
     "041": {
-      "label": "정면절정",
+      "label": "정상위절정",
       "description": "정상위 또는 대면 결합 상태에서 등을 젖히고 입을 벌려 신음하며 맞이하는 정면 황홀경 절정.",
       "prompt": "An intense cowboy shot of the character experiencing an overwhelming climax while lying on bed in missionary position, body drenched in thick fluids pooling on sheets, eyes rolled upward in ecstasy, tongue resting out with saliva, trembling throughout with deep body flush. Moody intimate lighting."
     },
@@ -225,7 +225,7 @@
       "prompt": "A side-angle cowboy shot on a bed with the character completely nude on all fours, back deeply arched in doggystyle position, looking back over shoulder with heavily flushed cheeks, biting lower lip while gasping in breathless pleasure, trembling with arousal. Warm dim lighting."
     },
     "043": {
-      "label": "후방절정",
+      "label": "후배위절정",
       "description": "후배위 또는 스푸닝 상태에서 허리를 둥글게 꺾고 시트를 쥐어뜯으며 뒤돌아 절정에 빠져드는 순간.",
       "prompt": "A powerful climax cowboy shot on all fours, back arched deeply as fluids drip along thighs and bedsheets, head turned back with an ecstatic ahegao expression, rolling eyes and panting mouth, limbs quivering in euphoric exhaustion. Dramatic soft lighting."
     },
@@ -235,12 +235,12 @@
       "prompt": "A commanding cowboy shot of the character completely nude straddling atop her partner on the bed in cowgirl position, hands resting on partner's chest, looking down with heavy-lidded seductive eyes and flushed decolletage, hips swaying in pleasure. Warm atmospheric lighting."
     },
     "045": {
-      "label": "상위절정",
+      "label": "기승위절정",
       "description": "기승위 상태에서 극도의 쾌감에 허리를 뒤로 젖히고 가슴을 앞으로 내밀며 도달하는 강렬한 절정.",
       "prompt": "An ecstatic cowboy shot atop her partner during a peak cowgirl climax, head thrown back, spine arched gracefully, fluids covering lower abdomen and thighs, tears of intense pleasure streaming from rolled-back eyes, mouth agape in a silent cry of bliss. Soft moody glow."
     },
     "046": {
-      "label": "역기승위",
+      "label": "M자개각",
       "description": "파트너를 등지고 반대 방향으로 올라타 엉덩이를 내보이며 주도하는 역방향 기승 체위.",
       "prompt": "A view from behind cowboy shot of the character straddling partner backwards in reverse cowgirl position, glancing back over shoulder with seductive heavy eyelids, biting lip to stifle breathless moans, flushed back and buttocks trembling with heat. Soft bedroom lights."
     },
@@ -260,22 +260,22 @@
       "prompt": "A gentle cowboy shot lying on side spooning together on bed, partner's arm wrapped gently around waist, character's head tilted back against pillow, eyes fluttering half-closed in sweet blissful arousal, lips parted in quiet rhythmic sighs. Soft morning bedroom light."
     },
     "050": {
-      "label": "가슴밀착",
+      "label": "파이즈리",
       "description": "풍만한 양 가슴으로 파트너의 신체 부위를 감싸 쥐고 조이며 시선을 맞추는 가슴 애무 씬.",
       "prompt": "An upper body perspective sitting upright on bed, tightly pressing both bare breasts together around partner, looking down with breathless flushed face, heavy-lidded intoxicated gaze and parted lips shivering with pleasure. Warm soft lighting."
     },
     "051": {
-      "label": "가슴절정",
+      "label": "가슴사정",
       "description": "가슴 애무 중 가슴골과 쇄골 위로 백탁의 액체가 분출되는 순간을 올려다보는 절정 씬.",
       "prompt": "An intimate upper body close-up following a chest climax, thick white fluids coating cleavage and breasts, character kneeling and gazing down at partner with a deeply devoted, loving smile and sweet affectionate blush across cheeks. Soft romantic lighting."
     },
     "052": {
-      "label": "구강봉사",
+      "label": "펠라치오",
       "description": "파트너 앞에 무릎을 꿇고 눈을 올려다보며 입술과 혀로 섬세하게 봉사하는 구강 성교 씬.",
       "prompt": "An intimate close upper body shot kneeling between partner's legs, looking up submissively with moist, dilated, intoxicated eyes, lips parted wide taking partner intimately, drool and saliva tracing chin, cheeks burning with intense arousal. Low moody lighting."
     },
     "053": {
-      "label": "구강절정",
+      "label": "결합딥키스",
       "description": "무릎 꿇은 채 얼굴과 뺨, 입술 위로 백탁의 액체를 받아내며 황홀경에 젖은 페이셜 클라이맥스.",
       "prompt": "A close-up portrait kneeling between partner's legs, face and cheeks splattered with thick fluids dripping down chin and neck, looking upward with an extraordinarily fond, devoted gaze and gentle loving smile, flushed with contented bliss. Warm soft focus lighting."
     },
@@ -285,17 +285,17 @@
       "prompt": "An intense close-up shot kneeling with partner's hand guiding her head, taking partner deeply into throat, tears of overwhelming intensity in eyes, throat visibly filled, saliva tracing lips, flushed face showing profound intoxicating submission. Dramatic low-key lighting."
     },
     "055": {
-      "label": "구강사후",
+      "label": "펠라사후",
       "description": "봉사가 끝난 후 입가에 액체를 흘리며 혀를 살짝 내밀고 만족스레 올려다보는 사후 여운 씬.",
       "prompt": "A solo upper body portrait kneeling on bed, looking up with a dazed and blissfully exhausted expression, fluids dripping from lips down chin onto bare collarbone, messy hair, unfocused heavy-lidded eyes, cheeks still flushed from deep oral pleasure. Soft bedroom lighting."
     },
     "056": {
-      "label": "벽밀착",
+      "label": "서서벽밀착",
       "description": "벽에 등이나 가슴을 밀착당해 한쪽 다리를 들어 올린 상태로 선 채 결합하는 격렬한 스탠딩 섹스.",
       "prompt": "A passionate standing cowboy shot pinned against a bedroom wall with one leg raised and hands bracing against the wall surface, looking back at partner with wide teary eyes and open mouth gasping in intense standing union, thighs trembling with heat. Soft wall sconce lighting."
     },
     "057": {
-      "label": "샤워벽치기",
+      "label": "샤워실섹스",
       "description": "샤워실 젖은 타일 벽에 기대어 쏟아지는 온수 물줄기 속에서 나누는 농밀한 수중 결합 씬.",
       "prompt": "An intimate standing cowboy shot inside a glass shower enclosure with water cascading down, back pinned gently against steam-covered glass, glistening wet skin with water droplets dripping, wet hair, one leg wrapped around partner, head tilted back in sensual moaning bliss under falling water. Misty translucent lighting."
     },
@@ -317,7 +317,7 @@
       "prompt": "A side-angle cowboy shot showing the slender male character completely nude lying on bed with thighs spread wide in an intimate missionary position with partner, delicate physique flushed with heat, head tilted back, lips parted in a breathless moan, moist eyes glistening. Soft bedroom lighting."
     },
     "141": {
-      "label": "정면절정",
+      "label": "정상위절정",
       "description": "대면 결합 상태에서 파트너의 손을 쥐고 등을 젖히며 맞이하는 황홀한 정면 아날 클라이맥스.",
       "prompt": "An intense cowboy shot of the slender male character climaxing deeply while lying on bed in missionary position, body drenched in thick fluids, eyes rolled back in ecstasy, tongue resting out with saliva, slender frame trembling throughout with deep flush. Moody intimate lighting."
     },
@@ -327,7 +327,7 @@
       "prompt": "A side-angle cowboy shot on bed with the slender male character on all fours, back arched deeply in doggystyle position, looking back over shoulder with heavily flushed cheeks, biting lip while gasping in breathless pleasure, trembling with arousal. Warm dim lighting."
     },
     "143": {
-      "label": "후방절정",
+      "label": "후배위절정",
       "description": "후배위 상태에서 허리를 활처럼 휘며 시트를 쥐어뜯고 절정에 도달하는 후방 결합 클라이맥스.",
       "prompt": "A powerful climax cowboy shot on all fours, slender back arched deeply as fluids drip along thighs and bedsheets, head turned back with an ecstatic ahegao expression, rolling eyes and panting mouth, limbs quivering in euphoric exhaustion. Dramatic soft lighting."
     },
@@ -337,12 +337,12 @@
       "prompt": "A delicate cowboy shot of the slender male character completely nude straddling atop his partner on the bed in cowgirl position, hands resting on partner's chest, looking down with heavy-lidded seductive eyes and flushed slender torso, hips moving in pleasure. Warm atmospheric lighting."
     },
     "145": {
-      "label": "상위절정",
+      "label": "기승위절정",
       "description": "기승위 결합 중 극도의 자극에 가슴을 젖히고 목을 뒤로 젖히며 맞이하는 상위 아날 절정.",
       "prompt": "An ecstatic cowboy shot atop partner during a peak cowgirl climax, head thrown back, slender spine arched gracefully, fluids covering lower abdomen and thighs, tears of intense pleasure streaming from rolled-back eyes, mouth agape in bliss. Soft moody glow."
     },
     "146": {
-      "label": "역기승위",
+      "label": "M자개각",
       "description": "파트너를 등지고 올라타 뒤태와 엉덩이를 보이며 주도하는 역방향 기승 아날 체위.",
       "prompt": "A view from behind cowboy shot of the slender male character straddling partner backwards in reverse cowgirl position, glancing back over shoulder with seductive heavy eyelids, biting lip to stifle breathless moans, flushed back trembling with heat. Soft bedroom lights."
     },
@@ -362,22 +362,22 @@
       "prompt": "A gentle cowboy shot lying on side spooning together on bed, partner's arm wrapped gently around slender waist, character's head tilted back against pillow, eyes fluttering half-closed in sweet blissful arousal, lips parted in quiet rhythmic sighs. Soft morning bedroom light."
     },
     "150": {
-      "label": "상호자극",
+      "label": "핸드잡",
       "description": "침대에 마주 앉아 서로의 손으로 서로의 신체 부위를 부드럽고 섬세하게 애무하는 핸드잡 씬.",
       "prompt": "A cowboy shot of the slender male character sitting on bed leaning back on hands, thighs parted as partner kneels between legs stroking intimately, character looking down at partner's hand with heavily flushed face, breathless panting, and teary overwhelmed eyes. Warm soft lighting."
     },
     "151": {
-      "label": "상호절정",
+      "label": "동시사정",
       "description": "서로의 손놀림에 절정에 다다르며 복부와 침대 위로 동시에 사정하고 떨며 느끼는 상호 절정.",
       "prompt": "A dramatic cowboy shot lying back on bed with spine deeply arched, hands gripping bedsheets tightly during an intense handjob climax, fluids spraying across stomach and sheets, head thrown back with eyes rolled in ecstasy and mouth agape, trembling violently. Soft dramatic lighting."
     },
     "152": {
-      "label": "구강봉사",
+      "label": "펠라치오",
       "description": "파트너 앞에 무릎을 꿇고 올려다보며 입술과 혀로 정성스럽게 애무하는 구강 성교 씬.",
       "prompt": "An intimate close upper body shot kneeling between partner's legs, looking up submissively with moist, dilated, intoxicated eyes, lips parted wide taking partner intimately, drool and saliva tracing chin, flushed face burning with intense arousal. Low moody lighting."
     },
     "153": {
-      "label": "구강절정",
+      "label": "결합딥키스",
       "description": "무릎 꿇은 채 얼굴과 입가에 분출되는 액체를 맞으며 황홀경에 젖은 페이셜 클라이맥스.",
       "prompt": "A close-up portrait kneeling between partner's legs, face and cheeks splattered with thick fluids dripping down chin and neck, looking upward with an extraordinarily fond, devoted gaze and gentle loving smile, flushed with contented bliss. Warm soft focus lighting."
     },
@@ -387,17 +387,17 @@
       "prompt": "An intense close-up shot kneeling with partner's hand guiding his head, taking partner deeply into throat, tears of overwhelming intensity in eyes, throat visibly filled, saliva tracing lips, flushed face showing profound intoxicating submission. Dramatic low-key lighting."
     },
     "155": {
-      "label": "구강사후",
+      "label": "펠라사후",
       "description": "구강 봉사 직후 입가에 백탁의 액체를 묻힌 채 혀를 내밀고 만족스레 올려다보는 사후 여운.",
       "prompt": "A solo upper body portrait kneeling on bed, looking up with a dazed and blissfully exhausted expression, fluids dripping from lips down chin onto bare collarbone, messy hair, unfocused heavy-lidded eyes, cheeks still flushed from deep oral pleasure. Soft bedroom lighting."
     },
     "156": {
-      "label": "벽밀착",
+      "label": "서서벽밀착",
       "description": "벽에 몸을 기댄 채 한쪽 다리를 들고 선 자세로 결합하는 격렬하고 거친 스탠딩 아날 씬.",
       "prompt": "A passionate standing cowboy shot pinned against a bedroom wall with one leg raised and hands bracing against the wall surface, looking back at partner with wide teary eyes and open mouth gasping in intense standing union, slender thighs trembling. Soft wall sconce lighting."
     },
     "157": {
-      "label": "샤워벽치기",
+      "label": "샤워실섹스",
       "description": "샤워실 쏟아지는 물줄기 아래 벽을 짚고 서서 젖은 몸으로 나누는 농밀한 수중 아날 결합 씬.",
       "prompt": "An intimate standing cowboy shot inside a glass shower enclosure with water cascading down, back pinned gently against steam-covered glass, glistening wet skin with water droplets dripping, wet hair, one slender leg wrapped around partner, head tilted back in sensual moaning bliss under falling water. Misty translucent lighting."
     },
