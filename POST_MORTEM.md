@@ -9,6 +9,11 @@
 
 | 사건 번호 | 발생 일자 | 문제 요약 | 상태 |
 | :---: | :---: | :--- | :---: |
+| **INC-20261006-01** | 2026-10-06 | HEXMIX IP-Adapter 품질 저하 및 비호환 결정 | `[RESOLVED]` |
+| **INC-20261006-02** | 2026-10-06 | oes 머리 상투 이탈/복수 변이 및 목 주위 점 분산 버그 | `[RESOLVED]` |
+| **INC-20261006-03** | 2026-10-06 | xia/oes `clean pale skin` 창백한 얼굴 과렌더링 | `[RESOLVED]` |
+| **INC-20261006-04** | 2026-10-06 | 포즈 #041 `cum pool` 태그로 초록 배경 생성 | `[RESOLVED]` |
+| **INC-20261006-05** | 2026-10-06 | 포즈 #056 남성 2명 등장 | `[RESOLVED]` |
 | **INC-20261004-01** | 2026-10-04 | 포즈 #014(유혹)의 메인 의상 탈의/노출 파손 버그 | `[RESOLVED]` |
 | **INC-20261004-02** | 2026-10-04 | 포즈 #019(키스)의 입술 찌그러짐 및 앵글 불일치 버그 | `[RESOLVED]` |
 | **INC-20261003-01** | 2026-10-03 | 젠잇 JSX 라이트 모드 글씨 증발(투명화) 버그 | `[RESOLVED]` |
@@ -16,7 +21,83 @@
 
 ---
 
-## 1. [INC-20261004-01] 포즈 #014(유혹) 메인 의상 탈의 파손
+---
+
+## 5. [INC-20261006-01] HEXMIX IP-Adapter 품질 저하 및 비호환 결정
+
+### 5.1 사건 개요
+- **증상**: HEXMIX v5.0 체크포인트에서 IP-Adapter 활성화 시 이미지 품질이 급격히 저하되고 금빛 장식 프레임이 생성됨. 레퍼런스 해상도를 1024×1536으로 맞춰도 개선되지 않음.
+
+### 5.2 근본 원인 분석
+1. **방식 불일치**: Kiro(Forge WebUI)는 ControlNet 기반 IP-Adapter를 자동 최적화하는 반면, PLEPA(ComfyUI)는 IPAdapterPlus를 수동 설정함.
+2. **프리셋 과포화**: ComfyUI IPAdapterPlus의 "PLUS (high strength)" 프리셋이 HEXMIX 모델의 특성에 과도하게 작용함.
+3. **금빛 프레임 원인**: Illustrious 계열 모델이 `masterpiece` 품질 태그를 고급 일러스트로 해석하여 장식 테두리를 생성 (IP-Adapter 미사용 시에도 발생 가능).
+
+### 5.3 영구 대책
+- **HEXMIX 사용 시 `--no_ref` 기본 적용** (IP-Adapter 비활성화).
+- 네거티브에 `(border:1.5), (frame:1.5), (ornate border:1.5), (decorative frame:1.5)` 추가.
+- `캐릭터_포즈_제작_규칙.md` 체크포인트별 IP-Adapter 호환성 표 참조.
+
+---
+
+## 6. [INC-20261006-02] oes 머리 상투 이탈/복수 변이 및 목 주위 점 분산 버그
+
+### 6.1 사건 개요
+- **증상 1**: `single hair bun`이 두 개로 분리(double bun)되거나 뒷통수에서 정수리로 위치가 이동함.
+- **증상 2**: `beauty mark under left eye near cheek`가 왼쪽 눈 아래가 아닌 목/턱 주위에 여러 개 분산 생성됨.
+
+### 6.2 근본 원인 분석
+1. **가중치 부족**: `((single hair bun...:1.3))`이 Illustrious 모델의 롱헤어 편향을 이기지 못함.
+2. **모호한 위치 지시어**: `near cheek`가 얼굴 전체 넓은 영역으로 해석되어 점이 분산됨.
+3. **네거티브 방어선 부재**: `hair bun on top of head`, `multiple beauty marks` 차단 태그 없음.
+
+### 6.3 영구 대책
+- 머리 가중치: `1.3` → `1.45` + 위치 명시 `positioned at nape of neck` 강화.
+- 점 표현: `single beauty mark directly under left eye` (near cheek 제거, directly 추가).
+- 네거티브 추가: `((hair bun on top of head, high hair bun, bun on crown:1.5))`, `((multiple beauty marks, beauty marks on neck, beauty mark on chin:1.5))`.
+
+---
+
+## 7. [INC-20261006-03] `clean pale skin` 창백한 얼굴 과렌더링
+
+### 7.1 사건 개요
+- **증상**: xia 및 oes 캐릭터에서 피부가 병적으로 창백하게 렌더링됨.
+
+### 7.2 근본 원인 분석
+- `clean pale skin`의 `pale`이 Illustrious 계열 모델에서 혈색 없는 창백함으로 과해석됨.
+
+### 7.3 영구 대책
+- `clean pale skin` → `fair skin with healthy complexion` 교체.
+- `캐릭터제작규칙.md` 권장 표현 목록에 `fair skin with healthy complexion` 추가.
+
+---
+
+## 8. [INC-20261006-04] 포즈 #041 `cum pool` 태그 초록 배경 생성
+
+### 8.1 사건 개요
+- **증상**: 포즈 #041 정상위절정 생성 시 배경이 초록색으로 렌더링됨.
+
+### 8.2 근본 원인 분석
+- `cum pool` 태그의 `pool`이 Illustrious 계열에서 수영장/물웅덩이로 오해석 → 초록 배경(수초/풀밭) 생성.
+
+### 8.3 영구 대책
+- `cum pool` → `cum puddle on sheets, cum stain on bedsheets` 교체.
+- `캐릭터제작규칙.md` 2.4항에 `pool` 어휘 금지 및 `puddle`, `stain` 대체어 규칙 명문화 (기존 등재 확인).
+
+---
+
+## 9. [INC-20261006-05] 포즈 #056 남성 2명 등장
+
+### 9.1 사건 개요
+- **증상**: 포즈 #056 스탠딩섹스에서 여성 1명 + 남성 1명이 정상인데, 남성이 2명 생성됨.
+
+### 9.2 근본 원인 분석
+- 모브 주입 로직이 포즈 프롬프트의 `1girl` 태그 없이 실행되어 2명의 남성 모브를 생성.
+
+### 9.3 영구 대책
+- 포즈 DB #056에 `1girl` 명시 및 네거티브에 `(2boys:1.5), (multiple boys:1.5)` 추가.
+
+1. [INC-20261004-01] 포즈 #014(유혹) 메인 의상 탈의 파손
 
 ### 1.1 사건 개요 (Summary)
 - **증상**: 감정/상호작용 씬 #014(유혹) 에셋 생성 시, 캐릭터가 입고 있던 기본 메인 의상(스웨터, 교복, 원피스 등)이 의도치 않게 완전히 벗겨져 속옷이나 피부가 노출되는 결함 발생.

@@ -307,6 +307,37 @@
       - `projects/man/characters/` 5개 파일에 정규 한국어/영문 이름(`채유림`, `한수현`, `강민아`, `서지안`, `윤채아`) 부여 및 동기화.
       - `plepa_engine/services/schemas.py`의 `CharacterSchema`에서 `name: str = Field(default="")` 및 `normalize_character_fields` 검증기에서 `name` 누락 시 `prefix`로 자동 폴백하는 2중 안전장치 추가. 향후 어떤 레거시/미완성 캐릭터 JSON이 유입되어도 서버 크래시 0% 보장.
 
+35. **oes 기반 캐릭터 얼굴 통일 규격 및 ykn 프로젝트 캐릭터 전면 재구성 (ADR 2026-10-06)**
+    - **배경 및 사용자 피드백**:
+      1. xia 캐릭터의 얼굴이 과도하게 창백하게 렌더링되는 현상 발생.
+      2. oes 캐릭터에서 헤어 상투가 두 개로 분리되거나 정수리로 올라가는 현상, 목 주위에 점이 여러 개 생기는 현상 발생.
+      3. ykn 프로젝트 4명(yua, ser, sia, hay) 캐릭터를 oes 얼굴 기반으로 통일 재구성 요청. hay는 검정 블레이저 + 흰 셔츠 조임 연출.
+    - **원인 규명**:
+      - `clean pale skin` 태그: Illustrious 계열 모델에서 병적으로 창백한 피부로 오해석됨. `fair skin with healthy complexion`으로 교체.
+      - `(beauty mark under left eye near cheek:1.2)`: `near cheek` 위치 지시어가 모호하여 목/턱 주위에 점이 분산 생성됨. `single beauty mark directly under left eye`로 명확화.
+      - `((single hair bun...:1.3))`: 가중치 1.3이 부족하여 double bun으로 분리되거나 정수리로 이동. 1.45로 상향 및 네거티브에 `((hair bun on top of head:1.5))` 추가.
+    - **oes/xia 수정 사항**:
+      - 피부 표현: `clean pale skin` → `fair skin with healthy complexion` (양 캐릭터 공통)
+      - 점 위치: `(beauty mark under left eye near cheek:1.2)` → `(single beauty mark directly under left eye:1.25)`
+      - 머리 가중치: `:1.3` → `:1.45` (상투 이탈 방지)
+      - 네거티브 추가: `((hair bun on top of head, high hair bun, bun on crown:1.5))`, `((multiple beauty marks, beauty marks on neck, beauty mark on chin, beauty mark on cheek:1.5))`
+    - **ykn 프로젝트 캐릭터 재구성 (oes 얼굴 계승)**:
+      - 공통 계승 요소: `(dark eyes:1.2)`, `(single beauty mark directly under left eye:1.25)`, `fair skin with healthy complexion`
+      - 공통 네거티브: oes 동일한 3단계 방어선 (기형방지 + 성별배제 + 레이아웃배제 + 헤어색상 고정)
+      - 개별 개성 유지:
+        - **yua** (1녀): 사이드 포니테일 | 풍만한 볼륨 | 크림 니트 카디건 + 화이트 블라우스
+        - **ser** (2녀): 히메컷 | 중간 가슴 + 넓은 힙 | 화이트 케이블 카디건
+        - **sia** (3녀): 하이 포니테일 | 슬렌더 소가슴 | 베이지 트렌치 재킷
+        - **hay** (4녀): 어깨선 세미롱 | 거대 가슴 | **검정 블레이저 조임 + 흰 셔츠**
+    - **hay 의상 특이사항 — 블레이저 조임 연출 확립**:
+      - `white collared shirt underneath` + `navy blue blazer worn over shirt` 레이어 구조 명시
+      - `buttoned blazer straining over bust`, `blazer tightly covering breasts`, `buttons pulling taut`, `blazer stretched across chest`로 블레이저가 거대 가슴을 조이며 덮는 연출 구현
+      - 의상 본체(`white collared shirt`, `navy blue blazer`, `dark pleated skirt`)는 가중치 1.0 평문 유지 (탈의씬 옷 잔류 방지 불변식 준수)
+    - **IP-Adapter HEXMIX 비호환 결정**:
+      - HEXMIX v5.0 체크포인트에서 IP-Adapter 활성화 시 품질 저하 현상 확인. 레퍼런스 해상도(700×1024 → 1024×1536) 일치 후 재시도에도 개선 없음.
+      - 원인: Kiro(Forge ControlNet 자동 최적화) vs PLEPA(ComfyUI IPAdapterPlus 수동 설정) 방식 차이 및 IPAdapterPlus "PLUS (high strength)" 프리셋 과포화.
+      - **결정**: HEXMIX 사용 시 `--no_ref` 옵션 기본 권장. 다른 체크포인트(Unholy, WAI)에서는 IP-Adapter 사용 가능.
+
 34. **ComfyUI `object_info` 실시간 모델 자동 감지 및 체크포인트/UNet 동적 드롭다운 선택 구현 (ADR 2026-10-07)**
     - **배경 및 사용자 피드백**:
       1. ComfyUI `models/checkpoints/` 폴더 내에 위치한 모델 파일들을 GUI에서 일일이 타이핑하지 않고 드롭다운으로 편리하게 선택할 수 있도록 개선 요청.
