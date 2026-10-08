@@ -105,6 +105,12 @@
   python flux_batch_generator.py -r maid -c han --bg-preset night
   python flux_batch_generator.py -r maid -c han --bg "luxurious classic maid mansion lobby"
 
+  ── 레퍼런스(IP-Adapter) 동작 (기본: 완전 비활성화 고화질 모드) ──────────────
+  # 기본 상태: IP-Adapter 없이 순수 프롬프트 + 체크포인트 최고 화질로 생성됩니다.
+  python flux_batch_generator.py -r hey -c mal -p 034
+  # 레퍼런스 강제 주입이 필요한 경우만:
+  python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
+
   ── 실행 전 미리보기 (GPU 호출 없이 프롬프트/파일명 점검) ───────────────────
   python flux_batch_generator.py -r maid -c han -p all --dry-run
 

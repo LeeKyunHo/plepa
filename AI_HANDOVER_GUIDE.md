@@ -352,7 +352,20 @@
         - 배치 생성 페이지에서 엔진 전환(`sdxl` / `flux`) 시 대상 모델 선택기가 실시간 동적 전환되도록 구축.
       - **파이프라인 매핑 무결성 확립**:
         - `GenerationParams`의 `ckpt`, `unet` 기본값을 `None`으로 정비하여 `사용자 명시 선택값 ➔ 전역 설정값 ➔ 기본 상수` 순의 엄격한 우선순위 폴백 체계 확립.
-        - `workflow_templates.py`의 Node 1 `CheckpointLoaderSimple` (`ckpt_name`)에 100% 직결 주입됨을 실측 검증.
+36. **IP-Adapter(레퍼런스) 전역 기본 비활성화 및 2인 상호작용 포즈 충돌 필터 탑재 (ADR 2026-10-09)**
+    - **배경 및 원인 규명**:
+      1. 고정된 정면 스탠딩 레퍼런스 이미지를 ComfyUI IP-Adapter로 주입할 경우, 복잡한 체위나 2인 상호작용 포즈에서 인체 왜곡, 텍스처 뭉개짐(Color Bleeding), 디테일 상실 및 평면화(Flat)가 유발됨.
+      2. 034번(`가슴파묻힘`) 등 파트너가 등장하는 2인 씬에서 캐릭터 기본 태그의 `solo` 및 네거티브의 `1boy, male, multiple characters`가 주입되어, 포즈 프롬프트의 남성 모브 지시와 정면 충돌하고 남성이 뒤에서 백허그하거나 괴기한 형태로 왜곡되는 구도 파괴 현상 발생.
+    - **해결 조치**:
+      - **IP-Adapter 전역 기본 비활성화**:
+        - `config.py`의 `DEFAULT_REF_WEIGHT = 0.0` 설정.
+        - `GenerationParams.no_ref = True` 기본값 확립 및 CLI 기본 동작을 비활성화로 설정 (`--use-ref` 플래그 명시 시에만 예외적 사용 허용).
+        - 순수 프롬프트 + 체크포인트 + VAE + Face Detailer 조합으로 본연의 최고 선화 디테일 및 질감 100% 회복.
+      - **2인 상호작용 프롬프트 충돌 필터 (`prompt_builder.py`)**:
+        - 2인 포즈(`is_interactive` 감지 시) 캐릭터 프롬프트에서 `solo` 태그를 자동 스트리핑.
+        - SDXL 네거티브에서 남성 차단 태그(`1boy`, `male`, `masculine`, `multiple characters` 등)를 자동 제거하여 파트너 모브 생성 정상화.
+      - **034번 `가슴파묻힘` 포즈 구도 완전 개편 (`sdxl_pose_database.json`)**:
+        - 남성이 앞에서 여자의 가슴골에 얼굴을 파묻고(`(man burying face between woman breasts:1.4)`, `(face buried in cleavage:1.35)`), 여성이 두 팔로 남성의 머리를 가슴으로 끌어안는 안도/포근 구도(`(woman hugging man head to her chest:1.4)`)로 수정하여 의도와 100% 일치하는 에셋 생성 확인.
 
 ---
 
@@ -417,3 +430,106 @@ plepa/
 3. 포즈 수정 및 캐릭터 제작 시 [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)와 [`POSE_CATALOG.md`](POSE_CATALOG.md)를 최우선 참조할 것.
 4. 포즈 DB의 모든 명칭은 2~6글자(`label`), 상세 연출 설명(`description`) 필드를 필수 유지할 것.
 5. Git 커밋 메시지는 민감 표현을 완전히 배제하고 기술적·사무적 한국어로 작성할 것.
+
+---
+
+## 6. hey 프로젝트 — 해리포터 젠더벤드 캐릭터 규격 (ADR 2026-10-08)
+
+### 6.1 프로젝트 개요
+- **로스터 경로**: `projects/hey/characters/`
+- **캐릭터**: `har` (해리), `her` (헤르미온느), `mal` (말포이) — 전원 젠더벤드
+- **기본 엔진**: SDXL
+- **체크포인트**: `flatbreadILV60.safetensors` (Flatbread - IL - v6.0, mommymia 제작, Illustrious 베이스)
+
+### 6.2 캐릭터 규격 3인
+
+| 항목 | har (해리) | her (헤르미온느) | mal (말포이) |
+|------|-----------|----------------|------------|
+| **Prefix** | `har` | `her` | `mal` |
+| **체형** | `(large breasts:1.2)`, 볼륨 모래시계 | 슬렌더, medium breasts | voluptuous, very large breasts |
+| **헤어** | 짧고 헝클어진 칠흑 단발 | 긴 웨이비 밤색 | 긴 직모 플래티넘 블론드 |
+| **눈** | 밝은 청록/녹색 | 따뜻한 앰버 브라운 | 샤프한 회녹색, 쓰리메 |
+| **특징** | 동그란 안경 | 주근깨, 소프트 뱅 | 하이라이트, 창백한 피부 |
+| **착의 의상** | 흰 민소매 리브드 니트 + 딥 V넥 + 데님 쇼츠 + 버건디 가디건 | 버건디 크롭 니트 탑 + 화이트 미니 스커트 + 버건디 가디건 | 아이보리 크롭 카미솔 + 차콜 슬림 트라우저 + 에메랄드 가디건 |
+
+### 6.3 듀얼 캐릭터 JSON 시스템 (핵심 아키텍처)
+
+**원칙**: 포즈 번호에 따라 캐릭터가 자동으로 다른 프롬프트를 사용한다.
+
+```
+000~037번 (착의) → sdxl_positive     참조 (의상 태그 포함)
+038~159번 (탈의) → sdxl_nude_positive 참조 (신체/얼굴 태그만, 의상 태그 0%)
+```
+
+**자동 분기 조건** (`plepa_engine/prompt_builder.py`의 `is_nude_pose()` 기준):
+- `section == "shower"` (038~039) → nude
+- `section == "h_scenes"` (040~059) → nude
+- `section == "scenes_otokonoko"` (140~159) → nude
+- 나머지 (000~037) → 착의
+
+**엔진 처리 흐름**:
+1. `is_nude_pose()` → nude 여부 판별
+2. nude=True + `sdxl_nude_positive` 존재 → **`sdxl_nude_positive` 직접 사용** (의상 strip 불필요)
+3. nude=True + `sdxl_nude_positive` 없음 → `sdxl_positive`에서 `strip_sdxl_outfit_tags()` 후 사용 (fallback)
+4. `prompt_builder.py`가 자동으로 `, nude, completely nude` 추가
+
+**`sdxl_nude_positive` 작성 규칙**:
+- 의상 태그를 처음부터 포함하지 않을 것 (strip 로직 불필요)
+- 체형 / 얼굴 / 헤어 / 눈 등 신체 외형 태그만 포함
+- `nude, completely nude`는 엔진이 자동 추가하므로 직접 쓰지 않아도 됨
+
+### 6.4 Flatbread IL v6.0 체크포인트 설정
+
+| 항목 | 값 |
+|------|-----|
+| **파일명** | `flatbreadILV60.safetensors` |
+| **제작자** | mommymia |
+| **베이스** | Illustrious XL |
+| **해상도** | 1024 × 1536 |
+| **Sampler** | DPM++ 2M |
+| **Scheduler** | Karras |
+| **Steps** | 30 |
+| **CFG** | 5.0 |
+| **품질 태그(Positive)** | `masterpiece, newest, absurdres, incredibly absurdres, best quality, amazing quality, very aesthetic` |
+| **품질 태그(Negative)** | `lowres, bad anatomy, worst quality, low quality, normal quality, bad hands, mutated, extra fingers, artifacts, disfigured` |
+| **Face Detailer** | ✅ 권장 |
+| **Upscale** | ✅ 권장 |
+
+> `artist:hexmix:1.1` 태그 사용 금지 — Flatbread는 별도 아티스트 믹스 불필요
+
+### 6.5 har (해리) 상세 규격
+
+**착의 프롬프트 핵심 태그 (sdxl_positive)**:
+- `((white sleeveless ribbed knit top:1.3))` — 민소매 흰 리브드 니트
+- `((sleeveless:1.25)), ((bare shoulders:1.2))` — 민소매/어깨 노출
+- `((deep v-neck:1.35)), ((plunging neckline:1.3))` — 깊은 V넥 가슴골 노출
+- `((deep cleavage:1.35)), ((cleavage visible:1.25))` — 가슴골 강조
+- `(blue denim shorts:1.15)` — 데님 쇼츠
+- `(burgundy red open cardigan loosely draped:1.1)` — 버건디 오픈 가디건
+
+**네거티브 핵심**:
+- `long sleeves, turtleneck, high collar, covered shoulders, crew neck, round neck, closed neckline, covered chest`
+
+### 6.6 변경 이력
+
+| 날짜 | 변경 내용 |
+|------|-----------|
+| 2026-10-08 | har 초기 생성. 터틀넥 스웨터 착의 컨셉. hexmix 체크포인트. |
+| 2026-10-08 | `sdxl_nude_positive` 필드 신설. 038번~부터 탈의 씬 자동 적용. |
+| 2026-10-08 | har 의상 변경: 터틀넥 → 민소매 흰 리브드 니트 + 딥 V넥. |
+| 2026-10-08 | har 가슴 크기 조정: `gigantic/massive/huge` → `(large breasts:1.2)` 통일. |
+| 2026-10-08 | `models.py` `sdxl_nude_positive` 필드 누락 버그 수정. `prompt_builder.py` 분기 로직 추가. 속옷 등장 문제 해결. |
+| 2026-10-08 | 체크포인트 전환: hexmix → **Flatbread IL v6.0** (`flatbreadILV60.safetensors`). her/mal 포함 3캐릭터 전체 적용. |
+| 2026-10-08 | her/mal `sdxl_nude_positive` 신규 추가. hey 프로젝트 전체 듀얼 JSON 시스템 완비. |
+
+### 6.7 관련 파일 목록
+
+| 파일 | 역할 |
+|------|------|
+| `projects/hey/characters/har.json` | 해리 캐릭터 정의 |
+| `projects/hey/characters/her.json` | 헤르미온느 캐릭터 정의 |
+| `projects/hey/characters/mal.json` | 말포이 캐릭터 정의 |
+| `plepa_engine/models.py` | `CharacterConfig.sdxl_nude_positive` 필드 |
+| `plepa_engine/services/schemas.py` | `CharacterSchema.sdxl_nude_positive` 스키마 |
+| `plepa_engine/prompt_builder.py` | `is_nude_pose()` + `assemble_sdxl_prompt()` 분기 로직 |
+| `plepa_engine/checkpoint_profiles.json` | Flatbread IL v6.0 프로필 등록 |

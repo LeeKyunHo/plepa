@@ -97,6 +97,16 @@ python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-s
 python flux_batch_generator.py -r maid -c han -p 044,052 --censor --censor-targets genital
 ```
 
+### 2.7 레퍼런스(IP-Adapter) 동작 제어 (`--no_ref` / `--use-ref`)
+- **기본값**: **비활성화 (`no_ref=True`)**. ComfyUI IP-Adapter로 인한 형태 왜곡, 색상 번짐, 평면화(Flat)를 방지하고 순수 체크포인트 본연의 고화질 디테일을 보장합니다.
+```powershell
+# 1) 기본 생성 (IP-Adapter 없이 순수 고화질 프롬프트 생성 - 기본 동작)
+python flux_batch_generator.py -r hey -c mal -p 034
+
+# 2) 레퍼런스 강제 활성화가 필요할 때 (--use-ref)
+python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
+```
+
 ---
 
 ## 🚨 3. 긴급 장애 조치 매뉴얼 (Emergency Troubleshooting)
