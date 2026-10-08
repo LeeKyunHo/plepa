@@ -21,6 +21,7 @@ from plepa_engine.config import (
     PROJECTS_DIR,
     configure_stdio,
 )
+from plepa_engine.checkpoint_service import CheckpointService
 
 configure_stdio()
 from plepa_engine.models import (
@@ -262,6 +263,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--profile", default=None, help="캐릭터 프로필/의상 선택 (JSON 내 profiles 섹션)")
     parser.add_argument("--engine", choices=["sdxl", "flux"], default=DEFAULT_ENGINE, help=f"이미지 생성 엔진 (기본: {DEFAULT_ENGINE} [고속 2D 애니 체크포인트], flux: FLUX.1 [dev] GGUF)")
     parser.add_argument("--ckpt", default=None, help=f"SDXL 모드에서 사용할 체크포인트 파일명 (기본: 설정값 또는 {DEFAULT_SDXL_CKPT})")
+    parser.add_argument("--ckpt-tag", default=None, dest="ckpt_tag", help="체크포인트 비교용 서브폴더 태그 (예: wai, unholy) - 지정 시 assets/prefix/ckpt_태그/ 폴더에 저장")
     parser.add_argument("--bg", default=None, help="즉석 배경 프롬프트 직접 주입 (지정 시 --bg-preset 보다 우선 적용)")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
     parser.add_argument("--custom_pos", "--style", default=None, help="추가 긍정 프롬프트 또는 특정 작가 화풍 태그 주입 (예: 'art by ratatatat74')")
@@ -352,6 +354,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         censor=args.censor,
         censor_style=args.censor_style,
         censor_targets=args.censor_targets,
+        ckpt_tag=args.ckpt_tag,
     )
 
     try:

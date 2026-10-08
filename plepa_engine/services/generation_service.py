@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from plepa_engine.censor import censor_file
+from plepa_engine.checkpoint_service import CheckpointService
 from plepa_engine.comfy_client import ComfyClient, ComfyClientError
 from plepa_engine.config import (
     COMFY_HOST,
@@ -98,6 +99,7 @@ class GenerationParams:
     censor: bool = False
     censor_style: str = "bar"
     censor_targets: str = "penis"
+    ckpt_tag: Optional[str] = None  # 체크포인트 비교용 서브폴더 태그 (예: "unholy", "wai")
 
 
 class GenerationService:
@@ -130,13 +132,22 @@ class GenerationService:
         # 1. 전역 설정(Config) 최신값 조회 및 해상도/샘플러 산출
         conf = default_config_service.get_config()
         if params.engine == "sdxl":
-            width = params.width if params.width is not None else int(conf.get("sdxl_width", DEFAULT_SDXL_WIDTH))
-            height = params.height if params.height is not None else int(conf.get("sdxl_height", DEFAULT_SDXL_HEIGHT))
-            steps = params.steps if params.steps is not None else int(conf.get("sdxl_steps", DEFAULT_SDXL_STEPS))
-            cfg = params.cfg if params.cfg is not None else float(conf.get("sdxl_cfg", DEFAULT_SDXL_CFG))
-            sampler = params.sampler if params.sampler is not None else conf.get("sdxl_sampler", DEFAULT_SDXL_SAMPLER)
-            scheduler = params.scheduler if params.scheduler is not None else conf.get("sdxl_scheduler", DEFAULT_SDXL_SCHEDULER)
             ckpt_name = params.ckpt or conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
+            
+            # 체크포인트 프로필 자동 적용
+            checkpoint_svc = CheckpointService()
+            profile = checkpoint_svc.get_profile_for_checkpoint(ckpt_name)
+            
+            # 우선순위: 사용자 명시 > 프로필 값 > Config 설정 > 기본값
+            width = params.width if params.width is not None else profile.width
+            height = params.height if params.height is not None else profile.height
+            steps = params.steps if params.steps is not None else profile.steps
+            cfg = params.cfg if params.cfg is not None else profile.cfg
+            sampler = params.sampler if params.sampler is not None else profile.sampler
+            scheduler = params.scheduler if params.scheduler is not None else profile.scheduler
+            
+            if not quiet and params.ckpt:
+                print(f"  체크포인트 프로필: '{profile.name}' 자동 적용")
         else:
             width = params.width if params.width is not None else int(conf.get("flux_width", DEFAULT_WIDTH))
             height = params.height if params.height is not None else int(conf.get("flux_height", DEFAULT_HEIGHT))
@@ -145,6 +156,7 @@ class GenerationService:
             sampler = params.sampler if params.sampler is not None else conf.get("flux_sampler", "euler")
             scheduler = params.scheduler if params.scheduler is not None else conf.get("flux_scheduler", "simple")
             unet_name = params.unet or conf.get("flux_unet", DEFAULT_UNET_GGUF)
+            ckpt_name = None  # FLUX 모드에서는 체크포인트 미사용
 
         # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
         db = self.pose_svc.load_pose_db(engine=params.engine)
@@ -200,11 +212,17 @@ class GenerationService:
                 break
 
             bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine=params.engine)
-            output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
+            # --ckpt-tag 지정 시 체크포인트 비교용 서브폴더에 저장
+            if params.ckpt_tag:
+                output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix / f"ckpt_{params.ckpt_tag}"
+            else:
+                output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
             output_dir.mkdir(parents=True, exist_ok=True)
 
             if not quiet:
                 print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
+                if params.ckpt_tag:
+                    print(f"  저장 위치: assets/{char.prefix}/ckpt_{params.ckpt_tag}/")
                 if params.bg:
                     print(f"  즉석 배경: '{params.bg}' 적용")
                 elif bg_prompt:

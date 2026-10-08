@@ -79,6 +79,15 @@
      - `DEFAULT_SDXL_CFG`: **`5.0`** (Unholy 9.0 체크포인트 최적 밸런스).
    - 적용 결과 화이트 클리핑이 38.5% → 12.2%로 정상화되고 피부톤이 자연스럽게 복원됨.
 
+9. **체크포인트 프로필 자동 적용 시스템 (ADR 2026-10-06)**
+   - **배경**: SDXL 체크포인트마다 최적 해상도/샘플러/CFG가 상이함 (예: WAI-Illustrious는 1024×1344 + Euler a, Unholy는 832×1216 + DPM++ 2M 권장).
+   - **의사결정**:
+     - 파라미터(해상도, 스텝, CFG, 샘플러, 스케줄러)는 **자동 적용**
+     - 품질 태그(Positive/Negative)는 **문서 참고용으로만 제공** (프롬프트 자동 주입 안함)
+   - **구현**: `checkpoint_profiles.json`에 5개 주요 체크포인트 프로필 등록 + 퍼지 매칭 로직
+   - **우선순위**: 사용자 명시 인자 > 프로필 값 > Config 설정 > 하드코드 기본값
+   - **참고 문서**: `docs/체크포인트프로필가이드.md`
+
 9. **Face Detailer (Impact Pack) 및 4x Upscaler 연동 규격**
    - **YOLO 얼굴 감지 모델**: `ComfyUI/models/ultralytics/bbox/face_yolov8m.pt` (Bingsu/adetailer repo) 필수 배치.
    - **FaceDetailer 노드 입력 완결성**: 최신 Impact Pack 사양에 맞추어 `positive`, `negative`, `wildcard`, `sam_*` 9개 필수 인자를 FLUX/SDXL 템플릿에 각각 완벽 바인딩.
