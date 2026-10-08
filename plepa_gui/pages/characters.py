@@ -169,6 +169,7 @@ def render_characters_page() -> None:
                 "sdxl_positive": char.sdxl_positive or "",
                 "sdxl_negative": char.sdxl_negative or "",
                 "ref_weight": char.ref_weight,
+                "default_mode": char.default_mode or "",
             }
 
             # 1. 기본 식별 정보
@@ -182,6 +183,17 @@ def render_characters_page() -> None:
                 ui.select(options=["female", "male", "otokonoko"], value=fields["gender"], on_change=lambda e: fields.update({"gender": e.value})).props(
                     "outlined dark dense"
                 ).classes("w-1/4")
+            
+            # default_mode 설정 (키로 스타일)
+            with ui.row().classes("w-full gap-4 mb-4 items-center"):
+                ui.label("⚡ 기본 엔진 모드 (default_mode):").classes("text-xs font-semibold text-slate-400 w-48")
+                ui.select(
+                    options=["", "sdxl", "flux", "fast", "quality"],
+                    value=fields["default_mode"],
+                    on_change=lambda e: fields.update({"default_mode": e.value})
+                ).props("outlined dark dense clearable").classes("flex-1").tooltip(
+                    "빈칸: 시스템 기본값 | sdxl/fast: 고속 2D 체크포인트 | flux/quality/q: FLUX.1 [dev] 고품질"
+                )
 
             # 2. 외형 묘사 (얼굴/헤어, 체형, 의상)
             ui.label("🎨 외형 묘사 (Appearance)").classes("text-sm font-bold text-amber-400 mt-4 mb-2")
@@ -241,6 +253,7 @@ def render_characters_page() -> None:
                         sdxl_positive=fields["sdxl_positive"] if fields["sdxl_positive"].strip() else None,
                         sdxl_negative=fields["sdxl_negative"] if fields["sdxl_negative"].strip() else None,
                         ref_weight=fields["ref_weight"],
+                        default_mode=fields["default_mode"] if fields["default_mode"].strip() else None,
                         profiles=char.profiles,
                     )
                     saved = default_character_service.save_character(

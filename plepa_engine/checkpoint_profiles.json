@@ -36,7 +36,7 @@
       "engine": "sdxl",
       "width": 832,
       "height": 1216,
-      "steps": 28,
+      "steps": 30,
       "cfg": 5.0,
       "sampler": "dpmpp_2m",
       "scheduler": "karras",
@@ -103,6 +103,31 @@
         "face_detailer": true,
         "upscale": true,
         "ref_weight": 0.75
+      }
+    },
+    "flatbreadILV60.safetensors": {
+      "name": "Flatbread - IL - v6.0",
+      "match_patterns": ["flatbread", "flatbread_il", "flatbread-il"],
+      "engine": "sdxl",
+      "width": 1024,
+      "height": 1536,
+      "steps": 30,
+      "cfg": 5.0,
+      "sampler": "dpmpp_2m",
+      "scheduler": "karras",
+      "clip_skip": 2,
+      "baked_vae": true,
+      "recommended_upscaler": "4x-UltraSharp.pth",
+      "hires_steps": 20,
+      "hires_denoise": 0.35,
+      "quality_positive": "masterpiece, newest, absurdres, incredibly absurdres, best quality, amazing quality, very aesthetic",
+      "quality_negative": "lowres, bad anatomy, worst quality, low quality, normal quality, bad hands, mutated, extra fingers, artifacts, disfigured",
+      "description": "Flatbread IL v6.0 (mommymia 제작, Illustrious 베이스, 1024x1536 권장, DPM++ 2M Karras, Hi-Res Fix + ADetailer 권장)",
+      "tags": ["illustrious", "anime", "high_res", "detailed", "adult"],
+      "recommended_settings": {
+        "face_detailer": true,
+        "upscale": true,
+        "ref_weight": 0.65
       }
     },
     "animagineXLV31.safetensors": {

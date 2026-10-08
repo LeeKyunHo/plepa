@@ -93,6 +93,7 @@ class CharacterSchema(BaseModel):
     sdxl_positive: Optional[str] = Field(default=None, description="SDXL 전용 추가 긍정 태그")
     sdxl_negative: Optional[str] = Field(default=None, description="SDXL 전용 추가 부정 태그")
     ref_weight: float = Field(default=0.7, ge=0.0, le=1.0, description="IP-Adapter 참조 이미지 가중치")
+    default_mode: Optional[str] = Field(default=None, description="기본 엔진 모드 (sdxl, flux, fast, quality 등)")
     profiles: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="의상/프로필별 오버라이드 맵")
     is_adult: bool = Field(default=True, description="성인 캐릭터 여부 (가드레일 검증용)")
 

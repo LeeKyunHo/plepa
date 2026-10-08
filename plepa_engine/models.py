@@ -41,10 +41,12 @@ class CharacterConfig:
     lora: LoraConfig = field(default_factory=LoraConfig)
     style_keywords: str = "masterpiece quality, ultra-detailed anime digital art, 8k resolution"
     sdxl_positive: Optional[str] = None
+    sdxl_nude_positive: Optional[str] = None
     sdxl_negative: Optional[str] = None
     ref_weight: float = 0.7
     profiles: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     active_profile: Optional[str] = None
+    default_mode: Optional[str] = None
     file_path: Optional[Path] = None
 
     def apply_profile(self, profile_name: Optional[str]) -> None:
@@ -100,9 +102,11 @@ class CharacterConfig:
             weight=float(lora_raw.get("weight", 0.8))
         )
         sdxl_pos = data.get("sdxl_positive") or data.get("positive")
+        sdxl_nude_pos = data.get("sdxl_nude_positive")
         sdxl_neg = data.get("sdxl_negative") or data.get("negative")
         ref_weight = float(data.get("ref_weight", 0.7))
         profiles_raw = data.get("profiles") or data.get("_profiles") or {}
+        default_mode = data.get("default_mode")
 
         return cls(
             prefix=data.get("prefix", "unknown"),
@@ -112,9 +116,11 @@ class CharacterConfig:
             lora=lora,
             style_keywords=data.get("style_keywords", "masterpiece quality, 8k resolution"),
             sdxl_positive=sdxl_pos,
+            sdxl_nude_positive=sdxl_nude_pos,
             sdxl_negative=sdxl_neg,
             ref_weight=ref_weight,
             profiles=dict(profiles_raw) if isinstance(profiles_raw, dict) else {},
+            default_mode=default_mode,
             file_path=file_path
         )
 
