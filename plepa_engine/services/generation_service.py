@@ -80,7 +80,7 @@ class GenerationParams:
     custom_neg: Optional[str] = None
     ref_image: Optional[str] = None
     ref_weight: Optional[float] = None
-    no_ref: bool = False
+    no_ref: bool = True
     mock: bool = False
     dry_run: bool = False
     overwrite: bool = False
@@ -129,6 +129,22 @@ class GenerationService:
         진행 중 on_progress(현재_항목_인덱스, 전체_항목_수, 결과)를 호출합니다.
         is_cancelled()가 True를 반환하면 생성을 즉시 중단합니다.
         """
+        # 0. 단일 캐릭터인 경우 해당 캐릭터의 default_mode를 engine에 자동 반영 (키로 스타일)
+        from plepa_engine.config import resolve_default_mode
+        target_chars_preliminary = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
+        if len(target_chars_preliminary) == 1:
+            char_obj, _ = target_chars_preliminary[0]
+            if hasattr(char_obj, 'default_mode') and char_obj.default_mode:
+                try:
+                    resolved_engine = resolve_default_mode(char_obj.default_mode)
+                    if resolved_engine != params.engine:
+                        if not quiet:
+                            print(f"  [INFO] 캐릭터 '{char_obj.prefix}'의 default_mode '{char_obj.default_mode}' → '{resolved_engine}' 자동 적용")
+                        params.engine = resolved_engine
+                except ValueError as ve:
+                    if not quiet:
+                        print(f"  [경고] 캐릭터 default_mode '{char_obj.default_mode}' 무효: {ve}")
+
         # 1. 전역 설정(Config) 최신값 조회 및 해상도/샘플러 산출
         conf = default_config_service.get_config()
         if params.engine == "sdxl":
@@ -162,6 +178,29 @@ class GenerationService:
         db = self.pose_svc.load_pose_db(engine=params.engine)
         target_chars = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
         codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db)
+        
+        # 2-1. 젠더별 포즈 필터링 (h_scenes vs scenes_otokonoko)
+        # - female/male → h_scenes (040-059) 사용
+        # - otokonoko → scenes_otokonoko (140-159) 사용
+        def filter_codes_by_gender(base_codes: List[str], gender: str) -> List[str]:
+            """젠더에 따라 40번대/140번대 중 하나만 필터링"""
+            filtered = []
+            for code in base_codes:
+                code_num = int(code)
+                # 40번대(h_scenes)와 140번대(scenes_otokonoko)가 겹칠 때
+                if 40 <= code_num <= 59 or 140 <= code_num <= 159:
+                    if gender == "otokonoko":
+                        # otokonoko는 140번대만
+                        if 140 <= code_num <= 159:
+                            filtered.append(code)
+                    else:
+                        # female/male은 40번대만
+                        if 40 <= code_num <= 59:
+                            filtered.append(code)
+                else:
+                    # 그 외 포즈는 모두 포함
+                    filtered.append(code)
+            return filtered
 
         if params.profile:
             for char_obj, _ in target_chars:
@@ -177,7 +216,13 @@ class GenerationService:
                     "ComfyUI의 run_nvidia_gpu.bat를 가동해 주십시오."
                 )
 
-        total_items = len(target_chars) * len(codes)
+        # 3-1. 캐릭터별 포즈 세트 계산 (젠더 필터링 적용)
+        char_pose_map = {}
+        for char, _ in target_chars:
+            filtered_codes = filter_codes_by_gender(codes, char.gender)
+            char_pose_map[char.prefix] = filtered_codes
+        
+        total_items = sum(len(poses) for poses in char_pose_map.values())
         current_item_index = 0
         all_results: List[GenerationResult] = []
 
@@ -186,7 +231,12 @@ class GenerationService:
             engine_title = f"SDXL ({params.ckpt})" if params.engine == "sdxl" else f"FLUX.1 [dev] (GGUF: {params.unet})"
             print(f"  [플에파] 듀얼 엔진 가동 모드: {engine_title}")
             print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
-            print(f"  캐릭터당 포즈: 총 {len(codes)}개 ({', '.join(codes)}) | 총 {total_items}개 에셋")
+            print(f"  젠더별 포즈 필터링:")
+            for char, _ in target_chars:
+                pose_count = len(char_pose_map[char.prefix])
+                gender_label = "오토코노코(140번대)" if char.gender == "otokonoko" else f"{char.gender}(40번대)"
+                print(f"    - {char.name} ({char.prefix}): {pose_count}개 [{gender_label}]")
+            print(f"  총 생성 에셋: {total_items}개")
             print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
             if params.profile:
                 print(f"  프로필: '{params.profile}' 적용")
@@ -231,7 +281,7 @@ class GenerationService:
             # IP-Adapter 참조 이미지 탐색 및 업로드
             ref_file_name = None
             ref_weight = params.ref_weight if params.ref_weight is not None else getattr(char, "ref_weight", DEFAULT_REF_WEIGHT)
-            if params.engine == "sdxl" and not params.no_ref:
+            if params.engine == "sdxl" and not params.no_ref and ref_weight > 0.0:
                 ref_path = self.asset_svc.find_reference_image(char.prefix, actual_roster, custom_path=params.ref_image)
                 if ref_path:
                     if not params.dry_run and not params.mock:
@@ -247,13 +297,14 @@ class GenerationService:
                         print(f"  IP-Adapter: '{ref_path.name}' 적용 (가중치: {ref_weight:.2f})")
                 elif not quiet:
                     print("  IP-Adapter: 레퍼런스 이미지 없음 (순수 프롬프트 생성)")
-            elif params.no_ref and not quiet:
-                print("  IP-Adapter: 비활성화 (--no_ref)")
+            elif not quiet:
+                print("  IP-Adapter: 비활성화 (순수 고화질 프롬프트 생성)")
 
             char_results: List[GenerationResult] = []
             total_start = time.time()
+            char_codes = char_pose_map[char.prefix]
 
-            for idx, code in enumerate(codes, 1):
+            for idx, code in enumerate(char_codes, 1):
                 if is_cancelled and is_cancelled():
                     if not quiet:
                         print("\n[알림] 사용자에 의해 배치가 취소되었습니다.")
@@ -268,7 +319,8 @@ class GenerationService:
 
                 if params.engine == "sdxl":
                     pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
-                        char, pose, bg_prompt=bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg
+                        char, pose, bg_prompt=bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg,
+                        checkpoint_name=ckpt_name
                     )
                     display_prompt = pos_prompt
                     workflow = build_sdxl_workflow(
@@ -318,7 +370,7 @@ class GenerationService:
                 )
 
                 if not quiet:
-                    print(f"  [{idx:02d}/{len(codes):02d}] #{code} {pose.label:<10} ({pose.section}) -> {out_name}", end="", flush=True)
+                    print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}) -> {out_name}", end="", flush=True)
 
                 # 1. 기존 파일 스킵
                 if not params.overwrite and out_path.exists() and out_path.stat().st_size > 0:

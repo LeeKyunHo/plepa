@@ -206,6 +206,7 @@ def assemble_sdxl_prompt(
     bg_prompt: str = "",
     custom_pos: Optional[str] = None,
     custom_neg: Optional[str] = None,
+    checkpoint_name: Optional[str] = None,
 ) -> Tuple[str, str, bool]:
     """
     SDXL(Unholy Nova AI / Danbooru 포맷) 전용 긍정/부정 프롬프트를 조립합니다.
@@ -213,6 +214,12 @@ def assemble_sdxl_prompt(
     """
     nude = is_nude_pose(pose)
     is_no_bg = _is_no_background(bg_prompt)
+
+    # 체크포인트 프로필 기반 추가 주입 태그 결정
+    # Flatbread/Illustrious 계열은 soft shaded skin, clean pale skin 등 Unholy 전용 태그 불필요
+    _ckpt_lower = (checkpoint_name or "").lower()
+    _is_illustrious = any(k in _ckpt_lower for k in ("flatbread", "wai", "illustrious", "animagine", "animefull"))
+    _extra_quality_kws = [] if _is_illustrious else ["soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"]
 
     # 1. 포즈 태그 정리
     pose_tag = pose.prompt.strip()
@@ -229,21 +236,15 @@ def assemble_sdxl_prompt(
                 pose_tag = f"{pose_tag}, single view, single shot, clean background, white background, solid background"
 
     # 2. 긍정 프롬프트 조립
-    if char.sdxl_positive:
-        base_pos = char.sdxl_positive.strip()
-        # 모래시계 오브젝트 및 실사화 오염 태그 강제 제거
-        base_pos = re.sub(r",?\s*\(?hourglass\s*(shape)?(:[0-9\.]+)?\)?", "", base_pos, flags=re.IGNORECASE)
+    # nude 씬: sdxl_nude_positive 우선 사용 (의상 태그 없는 전용 프롬프트)
+    if nude and getattr(char, "sdxl_nude_positive", None):
+        base_pos = char.sdxl_nude_positive.strip()
         base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
-        if nude:
-            base_pos = strip_sdxl_outfit_tags(base_pos)
-            base_pos = f"{base_pos}, nude, completely nude"
-
+        base_pos = f"{base_pos}, nude, completely nude"
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
-            # 기존 실사/과노출/번들거림 태그 정제
             quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
-            # 2D 만화체 전용 키로 황금 부드러운 음영/조명 태그 주입
-            for kw in ("soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"):
+            for kw in _extra_quality_kws:
                 if kw.lower() not in quality_clean.lower():
                     quality_clean = f"{quality_clean}, {kw}"
             prefix_tags = f"{custom_pos.strip()}, {quality_clean.strip()}" if custom_pos and custom_pos.strip() else quality_clean.strip()
@@ -252,8 +253,47 @@ def assemble_sdxl_prompt(
         else:
             prefix_tags = f"{custom_pos.strip()}, {base_pos}" if custom_pos and custom_pos.strip() else base_pos
             positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+    elif char.sdxl_positive:
+        base_pos = char.sdxl_positive.strip()
+        # 모래시계 오브젝트 및 실사화 오염 태그 강제 제거
+        base_pos = re.sub(r",?\s*\(?hourglass\s*(shape)?(:[0-9\.]+)?\)?", "", base_pos, flags=re.IGNORECASE)
+        base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
+        if nude:
+            base_pos = strip_sdxl_outfit_tags(base_pos)
+            base_pos = f"{base_pos}, nude, completely nude"
+
+        # 2인 이상 상호작용 씬(partner, 1boy, faceless male, male, hug, kiss, carry 등) 판별
+        is_two_person = any(
+            kw in pose_tag.lower()
+            for kw in ("1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl", "fellatio", "cunnilingus", "paizuri")
+        )
+
+        if " BREAK " in base_pos:
+            quality_part, char_part = base_pos.split(" BREAK ", 1)
+            if is_two_person:
+                # 2인 씬에서는 캐릭터 파트의 solo 태그를 반드시 제거하여 구도 충돌 방지
+                char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
+                char_part = re.sub(r"^\s*,\s*", "", char_part)
+            # 기존 실사/과노출/번들거림 태그 정제
+            quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
+            # 체크포인트별 품질 태그 주입 (Illustrious 계열은 Unholy 전용 태그 미주입)
+            for kw in _extra_quality_kws:
+                if kw.lower() not in quality_clean.lower():
+                    quality_clean = f"{quality_clean}, {kw}"
+            prefix_tags = f"{custom_pos.strip()}, {quality_clean.strip()}" if custom_pos and custom_pos.strip() else quality_clean.strip()
+            first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+            positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
+        else:
+            if is_two_person:
+                base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
+            prefix_tags = f"{custom_pos.strip()}, {base_pos}" if custom_pos and custom_pos.strip() else base_pos
+            positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
     else:
         # 폴백: 캐릭터 외형 기반
+        is_two_person = any(
+            kw in pose_tag.lower()
+            for kw in ("1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl", "fellatio", "cunnilingus", "paizuri")
+        )
         char_gender_val = (char.gender or getattr(char, "default_mode", "") or "female").lower()
         gender_tag = "1boy, male" if char_gender_val in ("male", "otokonoko") else "1girl"
         char_desc = f"{char.appearance.face_and_hair}, {char.appearance.physique}".strip(", ")
@@ -266,16 +306,27 @@ def assemble_sdxl_prompt(
         if custom_pos and custom_pos.strip():
             quality_tags = f"{custom_pos.strip()}, {quality_tags}"
         first_chunk = f"{quality_tags}, {pose_tag}" if pose_tag else quality_tags.strip()
-        positive_prompt = f"{first_chunk} BREAK {gender_tag}, solo, {char_desc}"
+        solo_tag = "" if is_two_person else "solo, "
+        positive_prompt = f"{first_chunk} BREAK {gender_tag}, {solo_tag}{char_desc}"
 
     # 3. 부정 프롬프트 조립
     negative_prompt = char.sdxl_negative.strip() if char.sdxl_negative else DEFAULT_SDXL_NEGATIVE
+    if is_two_person:
+        # 2인 씬에서는 남성을 차단하는 네거티브 태그(1boy, male, 2boys 등)를 제거하여 남성 렌더링 붕괴 및 저퀄리티 방지
+        negative_prompt = re.sub(r",?\s*\(?2boys(:[0-9\.]+)?\)?", "", negative_prompt, flags=re.IGNORECASE)
+        negative_prompt = re.sub(r",?\s*\(?multiple boys(:[0-9\.]+)?\)?", "", negative_prompt, flags=re.IGNORECASE)
+        negative_prompt = re.sub(r",?\s*\b1boy\b", "", negative_prompt, flags=re.IGNORECASE)
+        negative_prompt = re.sub(r",?\s*\bmale\b", "", negative_prompt, flags=re.IGNORECASE)
+        negative_prompt = re.sub(r",?\s*\bmasculine\b", "", negative_prompt, flags=re.IGNORECASE)
+        negative_prompt = re.sub(r",?\s*\(?multiple characters(:[0-9\.]+)?\)?", "", negative_prompt, flags=re.IGNORECASE)
+
     if custom_neg and custom_neg.strip():
         negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
 
     # 실사/3D 및 다중 인물/마네킹 차단 방어선 최전방 보장
     if "(photorealistic, realistic, 3d" not in negative_prompt:
-        negative_prompt = f"(photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), {negative_prompt}"
+        char_mult_guard = "" if is_two_person else "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
+        negative_prompt = f"(photorealistic, realistic, 3d, render, cgi:1.25), {char_mult_guard}{negative_prompt}"
 
     # [패치 0] 무배경(none) 프리셋 선택 시 복잡한 배경, 불필요 가구 및 캐릭터 설정 시트/미니컷/과노출/타버림/흰반점/망점 원천 차단
     if is_no_bg:
@@ -334,6 +385,9 @@ def assemble_sdxl_prompt(
         or "shower stall" in pose_tag.lower()
         or "spreading own legs" in pose_tag.lower()
     )
+    # POV 단독 씬: pov + solo focus 조합은 viewer가 파트너이므로 모브 별도 주입 불필요
+    if "pov" in pose_tag.lower() and "solo focus" in pose_tag.lower():
+        is_solo_scene = True
 
     is_interactive = (
         has_interactive_keywords or pose.section in ("h_scenes", "scenes_otokonoko")

@@ -51,9 +51,42 @@ DEFAULT_SDXL_SCHEDULER = "karras"
 DEFAULT_SDXL_WIDTH = 832
 DEFAULT_SDXL_HEIGHT = 1216
 DEFAULT_CLIP_SKIP = 2
-DEFAULT_REF_WEIGHT = 0.5
+DEFAULT_REF_WEIGHT = 0.0
 SDXL_POSE_DB_PATH = ROOT_DIR / "sdxl_pose_database.json"
 FLUX_POSE_DB_PATH = ROOT_DIR / "flux_pose_database.json"
+
+# ── default_mode 맵핑 (키로 roster.py 이식) ──
+_DEFAULT_MODE_MAP = {
+    "sdxl": "sdxl",
+    "flux": "flux",
+    "fast": "sdxl",
+    "quality": "flux",
+    "q": "flux",
+    "f": "sdxl",
+}
+
+def resolve_default_mode(raw_mode: str | None) -> str:
+    """
+    캐릭터 JSON default_mode 필드를 정규화.
+    - None → DEFAULT_ENGINE 반환
+    - 유효한 별칭 → "sdxl" 또는 "flux" 반환
+    - 그 외 → ValueError
+    """
+    if raw_mode is None:
+        return DEFAULT_ENGINE
+    
+    normalized = str(raw_mode).strip().lower()
+    if not normalized:
+        return DEFAULT_ENGINE
+    
+    if normalized in _DEFAULT_MODE_MAP:
+        return _DEFAULT_MODE_MAP[normalized]
+    
+    valid_keys = ", ".join(sorted(_DEFAULT_MODE_MAP.keys()))
+    raise ValueError(
+        f"Invalid default_mode '{raw_mode}'. "
+        f"Valid options: {valid_keys}"
+    )
 
 
 def configure_stdio() -> None:
