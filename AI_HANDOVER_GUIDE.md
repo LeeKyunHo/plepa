@@ -366,6 +366,19 @@
         - SDXL 네거티브에서 남성 차단 태그(`1boy`, `male`, `masculine`, `multiple characters` 등)를 자동 제거하여 파트너 모브 생성 정상화.
       - **034번 `가슴파묻힘` 포즈 구도 완전 개편 (`sdxl_pose_database.json`)**:
         - 남성이 앞에서 여자의 가슴골에 얼굴을 파묻고(`(man burying face between woman breasts:1.4)`, `(face buried in cleavage:1.35)`), 여성이 두 팔로 남성의 머리를 가슴으로 끌어안는 안도/포근 구도(`(woman hugging man head to her chest:1.4)`)로 수정하여 의도와 100% 일치하는 에셋 생성 확인.
+37. **6대 기능 계층별 작동 체크리스트 및 장애 진단 체계 구축 (ADR 2026-10-10)**
+    - **배경**:
+      - 이미지 생성 실패, 구도 왜곡, 화질 저하, 프로세스 크래시 등 복합 장애 발생 시, 어느 계층(인프라, JSON 데이터, 프롬프트 조립, ComfyUI 워크플로우, 후처리/검열, 웹 GUI)에서 문제가 발생했는지 즉각 파악하기 위한 표준화된 진단 매뉴얼 필요.
+    - **해결 조치**:
+      - **[`TROUBLESHOOTING_CHECKLIST.md`](TROUBLESHOOTING_CHECKLIST.md) 공식 신설**:
+        - **계층 1 (인프라 & ComfyUI)**: 8188 포트, VRAM 메모리 정리, 체크포인트 파일명 오타 검증.
+        - **계층 2 (데이터 & JSON)**: 캐릭터 JSON 필수 필드, 포즈 DB 무결성, `.plepa_backup` 복구.
+        - **계층 3 (프롬프트 조립기)**: `--dry-run` 무결성, 탈의(Nude) 스트리핑, 2인 씬 `solo` 및 남성 배제 충돌 필터.
+        - **계층 4 (워크플로우 & I/O)**: IP-Adapter 비활성화(`no_ref=True`), `--mock` 초고속 I/O 검증, 저장 경로 권한.
+        - **계층 5 (후처리 & 검열)**: Face Detailer 얼굴 인식, 성기 자동 검열(`--censor`) BBox 마진.
+        - **계층 6 (웹 GUI & 작업 관리자)**: 8080 포트, `global_job_manager` 작업 중복 방지, 새 탭 뷰어.
+      - **10초 원클릭 진단 명령어 규격화**:
+        - 시스템 자체 진단(`--test`), 통신 점검(`Test-NetConnection`), GPU 미사용 출력 점검(`--dry-run`), 더미 파일 생성(`--mock`) 4단계 진단 프로토콜 확립.
 
 ---
 

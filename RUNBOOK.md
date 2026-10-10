@@ -111,6 +111,20 @@ python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
 
 ## 🚨 3. 긴급 장애 조치 매뉴얼 (Emergency Troubleshooting)
 
+> 💡 **심층 계층별 진단 가이드**: 시스템 전체 6대 기능 계층별 세부 진단 트리 및 체크리스트는 **[`TROUBLESHOOTING_CHECKLIST.md`](TROUBLESHOOTING_CHECKLIST.md)**를 참조하십시오.
+
+### 3.0 원클릭 10초 긴급 무결성 점검
+```powershell
+# 1) 전체 시스템 무결성 자체 진단 (FLUX/SDXL 포즈 DB, 프롬프트 조립, 워크플로우 전수 검사)
+python flux_batch_generator.py --test
+
+# 2) ComfyUI 통신 포트 상태 점검
+Test-NetConnection -ComputerName 127.0.0.1 -Port 8188
+
+# 3) GPU 미사용 프롬프트 출력 점검
+python flux_batch_generator.py -r hey -c mal -p 034 --dry-run
+```
+
 ### 3.1 VRAM 부족 에러 (CUDA Out of Memory) 발생 시
 RTX 4060 Ti 8GB 환경에서 고해상도 생성 중 VRAM이 부족할 때 조치법:
 1. **해상도 강제 조정**: 기본 `896x1152`를 `--width 768 --height 1024`로 낮춰 실행.
