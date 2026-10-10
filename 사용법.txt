@@ -119,6 +119,12 @@
   python plepa_upscaler.py -r hey -c mal -p 034 -f
   # 웹 GUI: 갤러리(/gallery)에서 이미지 클릭 후 [✨ 4K AI 업스케일] 원클릭 버튼 클릭!
 
+  ── [신규] 다이내믹 의상 스왑 & 테마 팩 (themes/swimsuit.json 등) ───────────
+  # 캐릭터 본체 외모는 유지하고 교복을 완전 박멸한 후 수영복/바니걸 등으로 자동 갈아입힘
+  python flux_batch_generator.py -r hey -c mal -p D            # 수영복 7종(D01~D07) 일괄 생성
+  python flux_batch_generator.py -r hey -c mal -p D01         # 수영복 전신 1장 생성
+  python flux_batch_generator.py -r hey -c mal -p D --dry-run # GPU 미사용 프롬프트 사전 점검
+
   ── 실행 전 미리보기 (GPU 호출 없이 프롬프트/파일명 점검) ───────────────────
   python flux_batch_generator.py -r maid -c han -p all --dry-run
 

@@ -404,6 +404,22 @@
         - 비동기 백그라운드 연산(`run.io_bound`) 및 완료 시 라이트박스 이미지/헤더 자동 갱신.
       - **단위 테스트 (`tests/test_upscale.py`)**:
         - 워크플로우 JSON 연결 무결성, 해상도 판별 및 Mock 연산 테스트 작성 (pytest 17개 전수 통과).
+40. **캐릭터 의상 슬롯 모듈화 및 테마 팩 다이내믹 스왑 시스템 (ADR 2026-10-11)**
+    - **배경 및 문제점**:
+      - 기존 파이프라인에서는 캐릭터의 외모(얼굴, 헤어, 체형)와 기본 의상(교복, 사복)이 단일 프롬프트(`base_positive`)에 결합되어 있어, 수영복(D)이나 바니걸(F), 메이드복(G) 등 확장팩 의상을 적용할 때 기존 옷 파편(셔츠 카라, 벨트 등)이 섞여 나오는 **"의상 키메라/오염 현상"** 발생.
+    - **해결 조치 및 기술 설계**:
+      - **의상 슬롯(Costume Slot) 모듈화 (`models.py`)**:
+        - `CharacterConfig`에 `outfits: Dict[str, str]` 딕셔너리 및 `get_outfit(slot)` 메서드 신설 (`default`, `nude`, `swimsuit`, `bunny`, `maid`, `combat` 등).
+        - 캐릭터의 얼굴/헤어/체형(Identity)과 의상을 분리하고, 미지정 시 공용 기본 테마 의상(`DEFAULT_THEME_OUTFITS`)으로 안전 폴백.
+      - **포즈별 다이내믹 의상 스왑 엔진 (`prompt_builder.py`)**:
+        - 포즈의 `required_outfit` 또는 코드/섹션에 따라 의상 슬롯 자동 결정 (`resolve_pose_outfit_slot`).
+        - 테마 포즈(예: `D01`) 요청 시 기존 캐릭터 프롬프트에서 기본 의상 태그를 `strip_sdxl_outfit_tags`로 완전 박멸한 후 테마 의상(비키니)을 결합하여 **의상 오염 0% 보장**.
+      - **모듈형 테마 팩 아키텍처 및 접두사 코드 지원 (`pose_service.py`)**:
+        - `themes/*.json` 또는 `projects/{roster}/themes/*.json` 자동 탐색 및 기본 포즈 DB 병합.
+        - 영문 알파벳 접두사 코드(`D01~D07`, `A01~A32`, `B01~B24` 등) 정규화 및 CLI 표현식(`-p D`, `-p swimsuit`, `-p D01..D07`) 완벽 지원.
+      - **실측 검증**:
+        - `mal_D01_수영복전신.webp` 생성 성공 (기존 아카데미 교복 흔적 0%, 에메랄드 비키니 스왑 100% 무결성 확보).
+        - 신규 단위 테스트 6종 (`tests/test_outfit_swap.py`) 추가, 전체 23개 pytest 100% PASS.
 
 ---
 

@@ -124,6 +124,20 @@ python plepa_upscaler.py -r hey -c mal -p 034 --overwrite
 #    http://localhost:8080/gallery ➔ 이미지 클릭 ➔ 상단 [✨ 4K AI 업스케일] 버튼 클릭
 ```
 
+### 2.9 다이내믹 의상 스왑 및 확장 테마 팩 생성 (`-p D`, `-p swimsuit`)
+- 캐릭터의 외모(얼굴/헤어/체형)는 온전히 보존한 채, 기존 교복을 완전 박멸하고 수영복/바니걸 등 테마 의상으로 자동 갈아입혀 생성합니다.
+- `themes/` 또는 `projects/{roster}/themes/`의 JSON 테마 팩을 자동 로드합니다.
+```powershell
+# 1) 특정 캐릭터의 수영복 테마(D01~D07) 7종 일괄 생성
+python flux_batch_generator.py -r hey -c mal -p D
+
+# 2) 수영복 특정 포즈 단일 생성 (D01 수영복전신)
+python flux_batch_generator.py -r hey -c mal -p D01
+
+# 3) 사전 점검 (GPU 미사용 프롬프트 및 의상 스왑 확인)
+python flux_batch_generator.py -r hey -c mal -p D --dry-run
+```
+
 ---
 
 ## 🚨 3. 긴급 장애 조치 매뉴얼 (Emergency Troubleshooting)
