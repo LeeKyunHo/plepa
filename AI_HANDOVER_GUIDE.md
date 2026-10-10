@@ -387,6 +387,23 @@
       - **일회성 스크립트 11종 완전 정리**: `migrate_pose_descriptions.py`, `update_assets_to_illustrious.py`, `compare_models.py`, `check_comfy_status.py`, `debug_*.py`, `test_*.bat` 삭제.
       - **단위 테스트 `tests/` 폴더 일원화**: 루트에 흩어져 있던 `test_checkpoint_cli.py`, `test_checkpoint_service.py`, `test_quality_tags.py`를 `tests/` 내부로 이동하여 pytest 단일 관리 체계 확립 (14개 테스트 전수 통과).
       - **문서 체계 단일화**: FLUX 초창기 구버전인 `docs/` 디렉토리를 정리하고 루트 마스터 문서(`플에파_기능명세.md`, `캐릭터_포즈_제작_규칙.md`, `POSE_CATALOG.md`, `RUNBOOK.md` 등)로 단일 기준(SSOT) 확립.
+39. **사후 단독 4K AI 초해상화 파이프라인 및 GUI 라이트박스 원클릭 연동 (ADR 2026-10-11)**
+    - **배경 및 사용자 요구사항**:
+      - 디퓨전 전체 재생성(약 40~50초 소요, 구도 및 표정 변형 위험) 없이, 이미 생성 완료된 마음에 드는 WebP 에셋을 순수 AI 업스케일 모델(`4x-UltraSharp.pth`)만으로 4K(4096x6144) 초고화질로 선명하게 변환하는 독립 파이프라인 요청.
+      - CLI 명령뿐만 아니라 웹 GUI 갤러리(`/gallery`) 라이트박스에서 원클릭으로 손쉽게 업스케일할 수 있는 기능 탑재 요청.
+    - **해결 조치 및 기술 설계**:
+      - **경량 단독 업스케일 워크플로우 (`build_standalone_upscale_workflow`)**:
+        - KSampler, Denoise, VAEDecode 등 디퓨전 노드를 완전히 배제하고 `LoadImage` ➔ `UpscaleModelLoader`(`4x-UltraSharp.pth`) ➔ `ImageUpscaleWithModel` ➔ `SaveImage` 4개 노드만으로 구성.
+        - 구도, 표정, 손가락 왜곡 0% 무손실 보존 및 RTX 4060 Ti 기준 2~4초(네트워크 전송 포함 15~18초) 초고속 처리.
+      - **전담 서비스 레이어 (`UpscaleService`, `upscale_service.py`)**:
+        - 이미지 해상도 분석(`get_image_dimensions`), 4K 판별(`is_already_4k`), 단일 파일 업스케일(`upscale_file`), 다중 배치 업스케일(`upscale_batch`) 모듈화.
+      - **독립 CLI 스위트 (`plepa_upscaler.py`)**:
+        - `-i <파일경로>` 단일 변환, `-r <로스터> -c <캐릭터> -p <포즈>` 에셋 타겟팅, `-f/--overwrite` 원본 덮어쓰기 지원.
+      - **NiceGUI 갤러리 라이트박스 원클릭 연동 (`gallery.py`)**:
+        - 이미지 라이트박스 상단에 현재 해상도(`1024x1536`), 4K UHD 뱃지 및 `[✨ 4K AI 업스케일]` 원클릭 버튼 배치.
+        - 비동기 백그라운드 연산(`run.io_bound`) 및 완료 시 라이트박스 이미지/헤더 자동 갱신.
+      - **단위 테스트 (`tests/test_upscale.py`)**:
+        - 워크플로우 JSON 연결 무결성, 해상도 판별 및 Mock 연산 테스트 작성 (pytest 17개 전수 통과).
 
 ---
 

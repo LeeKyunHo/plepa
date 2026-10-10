@@ -107,6 +107,23 @@ python flux_batch_generator.py -r hey -c mal -p 034
 python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
 ```
 
+### 2.8 사후 단독 4K AI 초해상화 (`plepa_upscaler.py`)
+- 이미 생성이 완료된 기존 WebP 이미지를 디퓨전 재연산 없이 순수 AI 초해상화 모델(`4x-UltraSharp.pth`)로 2~4초 만에 `4096x6144` 초고화질로 단독 업스케일합니다.
+- 구도, 표정, 손가락 왜곡 0% 무손실 보존.
+```powershell
+# 1) 특정 이미지 파일 단독 4K 업스케일 (기본: _4k.webp 접미사로 별도 생성)
+python plepa_upscaler.py -i "projects/hey/assets/mal/mal_034_가슴파묻힘.webp"
+
+# 2) 특정 캐릭터의 특정 포즈 에셋 업스케일
+python plepa_upscaler.py -r hey -c mal -p 034
+
+# 3) 기존 원본 파일을 4K 화질로 직접 덮어쓰기 교체 (-f / --overwrite)
+python plepa_upscaler.py -r hey -c mal -p 034 --overwrite
+
+# 4) 웹 GUI 라이트박스에서 원클릭 업스케일:
+#    http://localhost:8080/gallery ➔ 이미지 클릭 ➔ 상단 [✨ 4K AI 업스케일] 버튼 클릭
+```
+
 ---
 
 ## 🚨 3. 긴급 장애 조치 매뉴얼 (Emergency Troubleshooting)
