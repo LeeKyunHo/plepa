@@ -431,13 +431,16 @@ plepa/
 ├── .gitignore
 ├── GEMINI.md                    # 에이전트 행동 지침
 ├── AI_HANDOVER_GUIDE.md         # [본 문서] 시스템 아키텍처 및 의사결정 인계서 (SSOT)
+├── THEME_PACK_GUIDE.md          # 전용 테마 팩 및 다이내믹 의상 스왑 포즈 제작 공식 지침서
 ├── 플에파_기능명세.md             # 파이프라인 인터페이스 및 CLI/ComfyUI 기술 규격서
 ├── 캐릭터_포즈_제작_규칙.md        # 캐릭터 JSON 및 80종 포즈 프롬프트 제작 완전 지침서
 ├── POSE_CATALOG.md              # 80종 포즈 카탈로그 및 2~4글자 명칭 뷰어
 ├── README.md                    # 설치 및 모델 가이드
 ├── flux_batch_generator.py      # 플에파 메인 실행 CLI
+├── plepa_upscaler.py            # 사후 단독 4K AI 초해상화 CLI 도구
 ├── flux_pose_database.json      # 플럭스 전용 80종 영문 서술형 자연어 포즈 DB (3자리 000~159)
 ├── sdxl_pose_database.json      # SDXL 전용 80종 Danbooru 태그 포즈 DB (3자리 000~159)
+├── themes/                      # 전역 공용 테마 팩 모듈 (swimsuit.json 등)
 ├── plepa_engine/                # 플에파 전용 핵심 엔진
 │   ├── __init__.py
 │   ├── config.py                # ComfyUI API 호스트(8188), 해상도, 스텝 등 기본 설정
