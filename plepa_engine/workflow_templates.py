@@ -444,3 +444,43 @@ def build_sdxl_workflow(
 
     return workflow
 
+
+def build_standalone_upscale_workflow(
+    image_name: str,
+    output_prefix: str = "upscale_4k",
+    upscale_model: str = DEFAULT_UPSCALER,
+) -> Dict[str, Any]:
+    """
+    이미 생성 완료된 이미지를 ComfyUI에 업로드하여 AI 모델(4x-UltraSharp 등)로 단독 초고화질 업스케일하는 워크플로우.
+    - 디퓨전(KSampler) 없이 순수 초해상화 모델만 실행하므로 장당 2~3초 초고속 처리 및 형태 변형 0%.
+    """
+    return {
+        "1": {
+            "class_type": "LoadImage",
+            "inputs": {
+                "image": image_name
+            }
+        },
+        "2": {
+            "class_type": "UpscaleModelLoader",
+            "inputs": {
+                "model_name": upscale_model
+            }
+        },
+        "3": {
+            "class_type": "ImageUpscaleWithModel",
+            "inputs": {
+                "upscale_model": ["2", 0],
+                "image": ["1", 0]
+            }
+        },
+        "4": {
+            "class_type": "SaveImage",
+            "inputs": {
+                "filename_prefix": output_prefix,
+                "images": ["3", 0]
+            }
+        }
+    }
+
+
