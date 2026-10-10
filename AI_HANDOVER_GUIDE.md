@@ -379,6 +379,14 @@
         - **계층 6 (웹 GUI & 작업 관리자)**: 8080 포트, `global_job_manager` 작업 중복 방지, 새 탭 뷰어.
       - **10초 원클릭 진단 명령어 규격화**:
         - 시스템 자체 진단(`--test`), 통신 점검(`Test-NetConnection`), GPU 미사용 출력 점검(`--dry-run`), 더미 파일 생성(`--mock`) 4단계 진단 프로토콜 확립.
+38. **레거시 대용량 파일 정리 및 루트/문서 디렉토리 다이어트 (ADR 2026-10-10)**
+    - **배경**:
+      - 프로젝트 장기 진행에 따라 과거 키로(`.kiro/`) 시스템 클론(약 1.99GB), 인코딩 결함 중복 에셋 폴더, 1회성 마이그레이션 및 디버그 스크립트, 구버전 중복 문서(`docs/`) 등이 잔존하여 약 2.1GB의 디스크 낭비 및 문서 SSOT 혼선 유발.
+    - **해결 조치**:
+      - **대용량 잔재 삭제 (2.1GB 확보)**: 미참조 `.kiro/`(1.99GB) 및 `projects/hey/assets/ ` 깨진 중복 폴더(235장), `frameworks/` 삭제.
+      - **일회성 스크립트 11종 완전 정리**: `migrate_pose_descriptions.py`, `update_assets_to_illustrious.py`, `compare_models.py`, `check_comfy_status.py`, `debug_*.py`, `test_*.bat` 삭제.
+      - **단위 테스트 `tests/` 폴더 일원화**: 루트에 흩어져 있던 `test_checkpoint_cli.py`, `test_checkpoint_service.py`, `test_quality_tags.py`를 `tests/` 내부로 이동하여 pytest 단일 관리 체계 확립 (14개 테스트 전수 통과).
+      - **문서 체계 단일화**: FLUX 초창기 구버전인 `docs/` 디렉토리를 정리하고 루트 마스터 문서(`플에파_기능명세.md`, `캐릭터_포즈_제작_규칙.md`, `POSE_CATALOG.md`, `RUNBOOK.md` 등)로 단일 기준(SSOT) 확립.
 
 ---
 
