@@ -406,19 +406,21 @@ def assemble_sdxl_prompt(
             # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
             positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
 
-            # 모브 남성 파트너: BREAK를 통한 여주인공과 모브의 Attention 완전 격리 (이염 원천 차단)
-            # 포즈의 착의/탈의 여부에 따른 하의(단색 블랙 팬츠 vs 완전 탈의) 정밀 분기
-            if nude:
-                # 탈의/성인 씬: 완전 탈의 모브 (시커먼 실루엣 대신 자연스러운 매끄러운 피부)
-                mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (naked male:1.15), (shirtless male:1.1), (bottomless male:1.15), (smooth skin:1.05), muscular build"
-                mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
+            # 모브 남성 파트너: 포즈 태그에 이미 1boy가 명시되어 있다면 중복 주입을 방지하여 2boys 결함 원천 차단
+            if "1boy" not in pose_tag.lower():
+                if nude:
+                    # 탈의/성인 씬: 완전 탈의 모브
+                    mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (naked male:1.15), (shirtless male:1.1), (bottomless male:1.15), (smooth skin:1.05), muscular build"
+                    mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
+                else:
+                    # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정
+                    mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (shirtless male:1.1), (bare shoulders:1.1), (smooth skin:1.05), (solid black pants:1.2), muscular build"
+                    mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
+                positive_prompt = f"{positive_prompt} {mob_positive}"
+                negative_prompt = f"{negative_prompt}, {mob_negative}"
             else:
-                # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정
-                mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (shirtless male:1.1), (bare shoulders:1.1), (smooth skin:1.05), (solid black pants:1.2), muscular build"
-                mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
-
-            positive_prompt = f"{positive_prompt} {mob_positive}"
-            negative_prompt = f"{negative_prompt}, {mob_negative}"
+                # 포즈에 이미 1boy가 있는 경우: 다중 남성(2boys) 차단 네거티브만 주입
+                negative_prompt = f"{negative_prompt}, (2boys:1.5), (multiple boys:1.5), (multiple males:1.5), (extra male:1.5)"
 
         # 파트너를 응시해야 하는 상호작용 포즈인 경우 정면/카메라 응시 차단
         if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):
