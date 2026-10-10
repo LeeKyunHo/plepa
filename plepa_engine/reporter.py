@@ -25,7 +25,10 @@ def asset_filename(
     - code: prefix_000.webp (기존 3자리 번호형)
     - label: prefix_평상.webp (순수 한글형)
     """
-    code_str = f"{int(code):03d}"
+    try:
+        code_str = f"{int(code):03d}"
+    except ValueError:
+        code_str = str(code).strip().upper()
     clean_label = label.strip().replace(" ", "_").replace("/", "_")
     if naming == "code" or not clean_label:
         return f"{prefix}_{code_str}.webp"

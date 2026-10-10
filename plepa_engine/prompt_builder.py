@@ -12,6 +12,8 @@ from plepa_engine.models import CharacterConfig, PoseEntry
 
 def is_nude_pose(entry: PoseEntry) -> bool:
     """해당 포즈가 탈의/나체 상태를 요구하는지 판별."""
+    if getattr(entry, "required_outfit", None) == "nude":
+        return True
     if entry.section in ("h_scenes", "scenes_otokonoko"):
         return True
     # 착의 포즈(20~39 / 020~039) 중 나체 씬 명시적 포함 항목
@@ -21,6 +23,63 @@ def is_nude_pose(entry: PoseEntry) -> bool:
     except (ValueError, TypeError):
         pass
     return False
+
+
+DEFAULT_THEME_OUTFITS = {
+    "swimsuit": "micro bikini, halterneck bikini top, side-tie bikini bottom",
+    "bunny": "black glossy bunny suit, fishnet pantyhose, bunny ears, white collar, bow tie",
+    "maid": "classic maid outfit, black maid dress, white frilled apron, maid headdress, white thighhighs",
+    "bdsm": "black leather strap harness, black choker, leather arm bands",
+    "combat": "tactical battle leotard, light armor chestplate, fingerless gloves, combat boots",
+    "gym": "bloomers, gym uniform, white t-shirt",
+    "school": "school uniform, sailor collar, pleated skirt",
+    "underwear": "white lace bra, matching white lace panties",
+}
+
+
+def resolve_pose_outfit_slot(pose: PoseEntry) -> str:
+    """포즈의 요구 의상 슬롯('default', 'nude', 'swimsuit', 'bunny', 'maid' 등)을 판별."""
+    if getattr(pose, "required_outfit", None):
+        return pose.required_outfit.lower().strip()
+
+    code = str(pose.code).upper().strip()
+    sec = str(pose.section).lower().strip()
+    label = str(getattr(pose, "label", "")).lower().strip()
+
+    if is_nude_pose(pose):
+        return "nude"
+    if code.startswith("D") or sec == "swimsuit" or "수영" in label:
+        return "swimsuit"
+    if code.startswith("F") or sec == "bunny" or "바니" in label:
+        return "bunny"
+    if code.startswith("G") or sec == "maid" or "메이드" in label:
+        return "maid"
+    if code.startswith("E") or sec == "bdsm":
+        return "bdsm"
+    if code.startswith("I") or sec == "combat" or "전투" in label:
+        return "combat"
+    if "속옷" in label:
+        return "underwear"
+
+    return "default"
+
+
+def get_character_outfit_prompt(char: CharacterConfig, slot: str) -> str:
+    """캐릭터 맞춤 또는 공용 테마 의상 프롬프트를 조회."""
+    slot = slot.lower().strip()
+    if slot in ("", "nude"):
+        return ""
+    # 1. 캐릭터 고유 의상 슬롯 확인
+    if hasattr(char, "get_outfit"):
+        custom = char.get_outfit(slot)
+        if custom:
+            return custom
+    elif hasattr(char, "outfits") and isinstance(char.outfits, dict):
+        if slot in char.outfits and char.outfits[slot].strip():
+            return char.outfits[slot].strip()
+
+    # 2. 공용 테마 기본 의상 폴백
+    return DEFAULT_THEME_OUTFITS.get(slot, "")
 
 
 def _is_no_background(bg_prompt: str) -> bool:
@@ -49,7 +108,8 @@ def assemble_flux_prompt(
     - 무배경(none) 프리셋의 경우 배경 소품 및 환경을 원천 배제합니다.
     - 반환값: (최종 조립 프롬프트, 탈의여부 boolean)
     """
-    nude = is_nude_pose(pose)
+    slot = resolve_pose_outfit_slot(pose)
+    nude = (slot == "nude")
     sentences = []
     is_no_bg = _is_no_background(bg_prompt)
 
@@ -89,9 +149,9 @@ def assemble_flux_prompt(
         desc_text = f"The character features {', '.join(char_desc_parts)}."
         sentences.append(desc_text)
 
-    # 3. 의상 묘사 (착의 상태일 때만 주입)
+    # 3. 의상 묘사 (착의 상태일 때만 주입, 테마 의상 슬롯 스왑 지원)
     if not nude:
-        outfit = char.appearance.outfit.strip()
+        outfit = get_character_outfit_prompt(char, slot) or char.appearance.outfit.strip()
         if outfit:
             sentences.append(f"Dressed in {outfit}.")
 
@@ -117,6 +177,7 @@ def assemble_flux_prompt(
 _OUTFIT_KEYWORDS = frozenset({
     "dress", "skirt", "bodycon", "knit", "high-neck", "turtleneck", "sleeves", "sleeved",
     "cutout", "shirt", "blouse", "pants", "jeans", "trousers", "slacks", "jacket", "coat", "sweater", "cardigan",
+    "blazer", "vest", "waistcoat", "overcoat", "outerwear", "miniskirt", "mini-skirt",
     "uniform", "suit", "collar", "cuffs", "tie", "necktie", "bowtie", "necklace", "pendant", "choker",
     "bracelet", "gloves", "socks", "stockings", "pantyhose", "shoes", "boots", "heels",
     "bra", "panties", "underwear", "swimwear", "bikini", "swimsuit", "leotard", "one-piece",
@@ -212,7 +273,8 @@ def assemble_sdxl_prompt(
     SDXL(Unholy Nova AI / Danbooru 포맷) 전용 긍정/부정 프롬프트를 조립합니다.
     - 반환값: (positive_prompt, negative_prompt, is_nude)
     """
-    nude = is_nude_pose(pose)
+    slot = resolve_pose_outfit_slot(pose)
+    nude = (slot == "nude")
     is_no_bg = _is_no_background(bg_prompt)
 
     # 체크포인트 프로필 기반 추가 주입 태그 결정
@@ -261,6 +323,12 @@ def assemble_sdxl_prompt(
         if nude:
             base_pos = strip_sdxl_outfit_tags(base_pos)
             base_pos = f"{base_pos}, nude, completely nude"
+        elif slot != "default":
+            # 테마 의상 다이내믹 스왑 (수영복, 바니걸, 메이드, 전투 등)
+            theme_outfit = get_character_outfit_prompt(char, slot)
+            base_pos = strip_sdxl_outfit_tags(base_pos)
+            if theme_outfit:
+                base_pos = f"{base_pos}, {theme_outfit}"
 
         # 2인 이상 상호작용 씬(partner, 1boy, faceless male, male, hug, kiss, carry 등) 판별
         is_two_person = any(
@@ -297,10 +365,12 @@ def assemble_sdxl_prompt(
         char_gender_val = (char.gender or getattr(char, "default_mode", "") or "female").lower()
         gender_tag = "1boy, male" if char_gender_val in ("male", "otokonoko") else "1girl"
         char_desc = f"{char.appearance.face_and_hair}, {char.appearance.physique}".strip(", ")
-        if not nude and char.appearance.outfit:
-            char_desc += f", {char.appearance.outfit}"
-        elif nude:
+        if nude:
             char_desc += ", nude, completely nude"
+        else:
+            outfit_tag = get_character_outfit_prompt(char, slot) or char.appearance.outfit
+            if outfit_tag:
+                char_desc += f", {outfit_tag}"
 
         quality_tags = DEFAULT_SDXL_QUALITY_TAGS
         if custom_pos and custom_pos.strip():

@@ -33,8 +33,25 @@ class PoseService:
     def _get_db_path(self, engine: str) -> Path:
         return SDXL_POSE_DB_PATH if engine.lower() == "sdxl" else FLUX_POSE_DB_PATH
 
-    def load_pose_db(self, engine: str = "flux", path: Optional[Path] = None) -> Dict[str, PoseEntry]:
-        """기존 CLI 호환: 엔진별 포즈 DB를 로드하여 {코드: PoseEntry} 딕셔너리로 반환."""
+    @staticmethod
+    def normalize_code(code: Any) -> str:
+        """포즈 코드를 정규화합니다 (숫자는 3자리 000, 영문+숫자는 D01, A01 형태로 패딩)."""
+        code_s = str(code).strip()
+        try:
+            return f"{int(code_s):03d}"
+        except ValueError:
+            # 영문 접두사 + 숫자 (예: D1 -> D01, A1 -> A01)
+            if len(code_s) >= 2 and code_s[0].isalpha() and code_s[1:].isdigit():
+                return f"{code_s[0].upper()}{int(code_s[1:]):02d}"
+            return code_s.upper()
+
+    def load_pose_db(
+        self,
+        engine: str = "flux",
+        path: Optional[Path] = None,
+        roster: Optional[str] = None,
+    ) -> Dict[str, PoseEntry]:
+        """기존 CLI 호환: 엔진별 포즈 DB를 로드하여 {코드: PoseEntry} 딕셔너리로 반환. 로스터/테마 포즈 자동 병합."""
         target_path = path or self._get_db_path(engine)
         if not target_path.exists():
             raise FileNotFoundError(f"포즈 데이터베이스를 찾을 수 없습니다: {target_path}")
@@ -44,57 +61,133 @@ class PoseService:
         for section in SECTION_NAMES:
             sec_dict = data.get(section, {})
             for code, item in sec_dict.items():
-                code_str = f"{int(code):03d}"
+                code_str = self.normalize_code(code)
                 entries[code_str] = PoseEntry(
                     code=code_str,
                     section=section,
                     label=item.get("label", "미상"),
                     prompt=item.get("prompt", ""),
-                    description=item.get("description", "")
+                    description=item.get("description", ""),
+                    required_outfit=item.get("required_outfit", ""),
                 )
+
+        # 로스터 전용 테마 포즈 (projects/{roster}/custom_poses.json 또는 themes/*.json) 병합
+        theme_files: List[Path] = []
+        if roster:
+            r_dir = PROJECTS_DIR / roster
+            if (r_dir / "custom_poses.json").exists():
+                theme_files.append(r_dir / "custom_poses.json")
+            themes_dir = r_dir / "themes"
+            if themes_dir.is_dir():
+                theme_files.extend(themes_dir.glob("*.json"))
+
+        # 전역 루트 themes/*.json 병합 지원
+        global_themes = ROOT_DIR / "themes"
+        if global_themes.is_dir():
+            theme_files.extend(global_themes.glob("*.json"))
+
+        for tf in theme_files:
+            try:
+                t_data = self.repo.read_json(tf)
+                for sec_name, sec_dict in t_data.items():
+                    if not isinstance(sec_dict, dict):
+                        continue
+                    for code, item in sec_dict.items():
+                        code_str = self.normalize_code(code)
+                        prompt_val = item.get(f"{engine.lower()}_prompt") or item.get("prompt", "")
+                        entries[code_str] = PoseEntry(
+                            code=code_str,
+                            section=sec_name,
+                            label=item.get("label", "미상"),
+                            prompt=prompt_val,
+                            description=item.get("description", ""),
+                            required_outfit=item.get("required_outfit", ""),
+                        )
+            except Exception:
+                pass
+
         return entries
 
     def resolve_pose_codes(self, expr: str, db: Dict[str, PoseEntry]) -> List[str]:
-        """사용자가 지정한 포즈 표현식(all, emotions, 00..19, 01,02 등)을 코드 목록으로 해석 (기존 CLI 호환)."""
-        expr = expr.strip().lower()
-        if expr == "all":
-            return sorted(db.keys(), key=lambda x: int(x))
-        if expr in ("emotions", "emotion"):
-            return [c for c, e in db.items() if e.section == "emotions"]
-        if expr in ("poses", "pose"):
-            return [c for c, e in db.items() if e.section == "poses"]
-        if expr in ("h_scenes", "h", "scenes"):
-            return [c for c, e in db.items() if e.section == "h_scenes"]
-        if expr in ("otokonoko", "scenes_otokonoko", "oto"):
-            return [c for c, e in db.items() if e.section == "scenes_otokonoko"]
+        """사용자가 지정한 포즈 표현식(all, emotions, swim, 00..19, D01,D02 등)을 코드 목록으로 해석 (기존 CLI 호환)."""
+        expr = expr.strip()
+        expr_lower = expr.lower()
 
-        # 범위 연산자 지원: 00..19, 000..019 등
+        if expr_lower == "all":
+            def sort_key(k: str):
+                try:
+                    return (0, int(k), "")
+                except ValueError:
+                    return (1, 0, k)
+            return sorted(db.keys(), key=sort_key)
+
+        if expr_lower in ("emotions", "emotion", "a"):
+            return [c for c, e in db.items() if e.section == "emotions" or c.startswith("A")]
+        if expr_lower in ("poses", "pose", "b"):
+            return [c for c, e in db.items() if e.section == "poses" or c.startswith("B")]
+        if expr_lower in ("h_scenes", "h", "scenes", "n"):
+            return [c for c, e in db.items() if e.section == "h_scenes" or c.startswith("N")]
+        if expr_lower in ("otokonoko", "scenes_otokonoko", "oto"):
+            return [c for c, e in db.items() if e.section == "scenes_otokonoko"]
+        if expr_lower in ("swimsuit", "swim", "d"):
+            return [c for c, e in db.items() if e.section == "swimsuit" or c.startswith("D")]
+        if expr_lower in ("bunny", "f"):
+            return [c for c, e in db.items() if e.section == "bunny" or c.startswith("F")]
+        if expr_lower in ("maid", "g"):
+            return [c for c, e in db.items() if e.section == "maid" or c.startswith("G")]
+        if expr_lower in ("combat", "battle", "i"):
+            return [c for c, e in db.items() if e.section == "combat" or c.startswith("I")]
+
+        # 범위 연산자 지원: 00..19, 000..019, D01..D07 등
         if ".." in expr:
             start_s, end_s = expr.split("..", 1)
-            start, end = int(start_s), int(end_s)
-            codes = []
-            for i in range(start, end + 1):
-                c_str = f"{i:03d}"
-                if c_str in db:
-                    codes.append(c_str)
-            return codes
+            start_s, end_s = start_s.strip(), end_s.strip()
+            # 영문 접두사 범위 (예: D01..D07 또는 D1..D7)
+            if start_s and end_s and start_s[0].isalpha() and end_s[0].isalpha() and start_s[0].upper() == end_s[0].upper():
+                prefix = start_s[0].upper()
+                try:
+                    s_num, e_num = int(start_s[1:]), int(end_s[1:])
+                    codes = []
+                    for i in range(s_num, e_num + 1):
+                        c_str = f"{prefix}{i:02d}"
+                        if c_str in db:
+                            codes.append(c_str)
+                    return codes
+                except ValueError:
+                    pass
 
-        # 쉼표 구분: 00,01,05 또는 000,001 등
+            try:
+                start, end = int(start_s), int(end_s)
+                codes = []
+                for i in range(start, end + 1):
+                    c_str = f"{i:03d}"
+                    if c_str in db:
+                        codes.append(c_str)
+                return codes
+            except ValueError:
+                pass
+
+        # 쉼표 구분: 00,01,05 또는 D01,D02 등
         if "," in expr:
             codes = []
             for token in expr.split(","):
                 token = token.strip()
                 if not token:
                     continue
-                c_str = f"{int(token):03d}"
+                c_str = self.normalize_code(token)
                 if c_str in db:
                     codes.append(c_str)
             return codes
 
-        # 단일 코드: 00 또는 000 등
-        single_code = f"{int(expr):03d}"
+        # 단일 코드: 00 또는 D1 등
+        single_code = self.normalize_code(expr)
         if single_code in db:
             return [single_code]
+
+        # 대소문자 무시 검색 폴백
+        for k in db.keys():
+            if k.lower() == expr_lower:
+                return [k]
 
         raise ValueError(f"유효하지 않은 포즈 코드/표현식입니다: {expr}")
 

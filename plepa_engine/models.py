@@ -17,6 +17,7 @@ class PoseEntry:
     label: str
     prompt: str
     description: str = ""
+    required_outfit: str = ""
 
 
 @dataclass
@@ -44,10 +45,22 @@ class CharacterConfig:
     sdxl_nude_positive: Optional[str] = None
     sdxl_negative: Optional[str] = None
     ref_weight: float = 0.7
+    outfits: Dict[str, str] = field(default_factory=dict)
     profiles: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     active_profile: Optional[str] = None
     default_mode: Optional[str] = None
     file_path: Optional[Path] = None
+
+    def get_outfit(self, slot: str = "default") -> Optional[str]:
+        """지정된 슬롯의 의상 프롬프트를 반환합니다. 기본값은 appearance.outfit 또는 outfits['default']."""
+        slot = slot.lower().strip()
+        if slot == "nude":
+            return ""
+        if slot in self.outfits and self.outfits[slot].strip():
+            return self.outfits[slot].strip()
+        if slot == "default":
+            return self.outfits.get("default") or self.appearance.outfit
+        return None
 
     def apply_profile(self, profile_name: Optional[str]) -> None:
         """지정된 프로필명에 맞추어 외형, 의상, 긍정/부정 태그 등을 동적으로 오버라이드합니다."""
@@ -107,6 +120,9 @@ class CharacterConfig:
         ref_weight = float(data.get("ref_weight", 0.7))
         profiles_raw = data.get("profiles") or data.get("_profiles") or {}
         default_mode = data.get("default_mode")
+        outfits_raw = dict(data.get("outfits", {}))
+        if appearance.outfit and "default" not in outfits_raw:
+            outfits_raw["default"] = appearance.outfit
 
         return cls(
             prefix=data.get("prefix", "unknown"),
@@ -119,6 +135,7 @@ class CharacterConfig:
             sdxl_nude_positive=sdxl_nude_pos,
             sdxl_negative=sdxl_neg,
             ref_weight=ref_weight,
+            outfits=outfits_raw,
             profiles=dict(profiles_raw) if isinstance(profiles_raw, dict) else {},
             default_mode=default_mode,
             file_path=file_path

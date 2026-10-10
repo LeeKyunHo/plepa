@@ -175,7 +175,7 @@ class GenerationService:
             ckpt_name = None  # FLUX 모드에서는 체크포인트 미사용
 
         # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
-        db = self.pose_svc.load_pose_db(engine=params.engine)
+        db = self.pose_svc.load_pose_db(engine=params.engine, roster=params.roster)
         target_chars = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
         codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db)
         
@@ -183,10 +183,16 @@ class GenerationService:
         # - female/male → h_scenes (040-059) 사용
         # - otokonoko → scenes_otokonoko (140-159) 사용
         def filter_codes_by_gender(base_codes: List[str], gender: str) -> List[str]:
-            """젠더에 따라 40번대/140번대 중 하나만 필터링"""
+            """젠더에 따라 40번대/140번대 중 하나만 필터링 (영문 테마 코드는 안전 통과)"""
             filtered = []
             for code in base_codes:
-                code_num = int(code)
+                try:
+                    code_num = int(code)
+                except ValueError:
+                    # D01, A01, B01, G01 등 영문 테마 코드는 젠더 필터 없이 안전하게 포함
+                    filtered.append(code)
+                    continue
+
                 # 40번대(h_scenes)와 140번대(scenes_otokonoko)가 겹칠 때
                 if 40 <= code_num <= 59 or 140 <= code_num <= 159:
                     if gender == "otokonoko":

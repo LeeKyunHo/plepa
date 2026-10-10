@@ -1,0 +1,53 @@
+{
+  "swimsuit": {
+    "D01": {
+      "label": "수영복전신",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "full body, standing, smiling, sunny beach, ocean, tropical summer, blue sky",
+      "flux_prompt": "A complete full-length shot of the character standing gracefully on a sunny tropical beach with clear turquoise ocean and blue sky in the background.",
+      "description": "수영복 차림의 전신 스탠딩 샷. 맑은 해변 배경."
+    },
+    "D02": {
+      "label": "물놀이",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "upper body, splashing water, happy laugh, sparkling ocean, summer beach, wet hair",
+      "flux_prompt": "Upper body view of the character happily playing in the ocean, splashing crystal clear water towards the viewer with a joyful laughing expression, slightly wet hair.",
+      "description": "바닷물에서 즐겁게 물장구를 치며 웃는 역동적인 물놀이 씬."
+    },
+    "D03": {
+      "label": "선오일",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "reclining on sunbed, applying sunscreen, blushing, looking at viewer, glistening skin, parasol, resort pool",
+      "flux_prompt": "The character reclining comfortably on a poolside sunbed under a parasol, gently applying sunscreen to her collarbone and shoulders with glistening skin, looking at the viewer with a shy blush.",
+      "description": "선베드에 누워 햇빛 아래 오일을 바르며 시선을 마주치는 씬."
+    },
+    "D04": {
+      "label": "수영복정상위",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "missionary sex, on beach towel, lying on back, 1boy, couple, kissing cheek, blushing hard, intimate",
+      "flux_prompt": "An intimate scene lying on a soft beach towel under shade, engaging in missionary embrace, flushed cheeks, loving gaze, tropical breeze.",
+      "description": "비치 타월 위에서 수영복을 입은 채 진행하는 밀착 정상위 씬."
+    },
+    "D05": {
+      "label": "수영복후배위",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "doggystyle sex, on knees on sand, looking back, 1boy, couple, arching back, beach cabana, shaded",
+      "flux_prompt": "In a secluded beach cabana, kneeling on soft sand in a doggystyle position, arching her back and looking back over her shoulder with an aroused expression.",
+      "description": "한적한 비치 카바나 모래 위에서 허리를 젖히고 돌아보는 후배위 씬."
+    },
+    "D06": {
+      "label": "수영복입위",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "standing sex, leaning against palm tree, one leg raised, 1boy, couple, breathless, ocean breeze",
+      "flux_prompt": "Standing embrace leaning back against a shaded palm tree by the ocean, one leg lifted slightly, breathless passionate expression, ocean breeze gently blowing.",
+      "description": "야자수 나무 그늘에 기댄 채 한쪽 다리를 들어올린 스탠딩 입위 씬."
+    },
+    "D07": {
+      "label": "수영복펠라",
+      "required_outfit": "swimsuit",
+      "sdxl_prompt": "fellatio, kneeling on towel, looking up at viewer, 1boy, open mouth, blushing, poolside",
+      "flux_prompt": "Kneeling on a pool towel, looking up submissively at the viewer with wide flushed eyes, poolside setting with glistening water reflections.",
+      "description": "수영장 타월 위에 무릎 꿇고 위를 올려다보는 구강봉사 씬."
+    }
+  }
+}
