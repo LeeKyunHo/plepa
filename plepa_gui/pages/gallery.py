@@ -8,14 +8,16 @@ plepa_gui.pages.gallery
 from __future__ import annotations
 
 from pathlib import Path
+import time
 from typing import Dict, List, Optional
 
-from nicegui import app, ui
+from nicegui import app, run, ui
 from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.reporter import open_in_explorer
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.pose_service import default_pose_service
+from plepa_engine.services.upscale_service import default_upscale_service
 from plepa_gui.components.header import render_header
 
 import mimetypes
@@ -519,46 +521,101 @@ def render_gallery_page() -> None:
                             ui.label(f"📁 {folder_name}").classes("text-[10px] text-slate-500 font-mono truncate w-full")
 
     def open_lightbox(img_url: str, file_path: Path):
+        curr = {"url": img_url, "path": file_path}
+
         with ui.dialog() as dialog, ui.card().classes(
             "max-w-6xl w-full md:w-[92vw] min-h-[450px] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"
         ):
-            with ui.row().classes("w-full justify-between items-center mb-3 px-2 pb-2 border-b border-slate-800 flex-wrap gap-2"):
-                with ui.row().classes("items-center gap-2"):
-                    ui.icon("zoom_in", size="20px").classes("text-amber-400")
-                    ui.label(file_path.name).classes("text-sm md:text-base font-bold text-slate-100 font-mono")
-                with ui.row().classes("items-center gap-2"):
-                    size_kb = file_path.stat().st_size / 1024 if file_path.exists() else 0
-                    ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400 mr-2")
-                    # 새 탭에서 원본 전용 뷰어로 열기 (브라우저 다운로드 강제 튕김 방지 및 줌 확대)
-                    view_url = f"/view_image?src={img_url}&name={file_path.name}"
-                    ui.button(
-                        "새 탭에서 원본 보기",
-                        icon="open_in_new",
-                        on_click=lambda u=view_url: ui.navigate.to(u, new_tab=True)
-                    ).props(f'flat dense size=sm color=amber-400 href="{view_url}" target="_blank"').tooltip(
-                        "새 탭에서 고화질 뷰어로 보기 (다운로드 방지 및 줌 확대 지원)"
+            header_box = ui.row().classes("w-full justify-between items-center mb-3 px-2 pb-2 border-b border-slate-800 flex-wrap gap-2")
+            img_box = ui.column().classes("w-full flex-1 items-center justify-center py-2")
+
+            def refresh_header():
+                header_box.clear()
+                p = curr["path"]
+                with header_box:
+                    with ui.row().classes("items-center gap-2 flex-wrap"):
+                        ui.icon("zoom_in", size="20px").classes("text-amber-400")
+                        ui.label(p.name).classes("text-sm md:text-base font-bold text-slate-100 font-mono")
+
+                        dims = default_upscale_service.get_image_dimensions(p)
+                        if dims:
+                            dim_text = f"{dims[0]}x{dims[1]}"
+                            is_4k = default_upscale_service.is_already_4k(p)
+                            if is_4k:
+                                ui.badge("4K UHD", color="emerald-600").props("dense text-xs")
+                            ui.badge(dim_text, color="slate-800").props("dense text-xs border border-slate-700 text-slate-300 font-mono")
+
+                    with ui.row().classes("items-center gap-2 flex-wrap"):
+                        size_kb = p.stat().st_size / 1024 if p.exists() else 0
+                        ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400 mr-2")
+
+                        # 4K AI 업스케일 버튼
+                        is_already = default_upscale_service.is_already_4k(p)
+
+                        async def on_upscale_click():
+                            upscale_btn.props("loading")
+                            ui.notify("🚀 AI 초해상화(4x-UltraSharp) 연산 중입니다... (약 15~20초 소요)", type="info")
+                            try:
+                                res_path = await run.io_bound(default_upscale_service.upscale_file, curr["path"], overwrite=False)
+                                if res_path and res_path.exists():
+                                    curr["path"] = res_path
+                                    rel = res_path.relative_to(PROJECTS_DIR).as_posix()
+                                    curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                    ui.notify(f"🎉 4K 업스케일 완료: {res_path.name}", type="positive")
+                                    refresh_header()
+                                    refresh_img()
+                                    render_content()
+                                else:
+                                    ui.notify("❌ 4K 업스케일 생성에 실패했습니다.", type="negative")
+                            except Exception as ex:
+                                ui.notify(f"❌ 업스케일 오류: {ex}", type="negative")
+                            finally:
+                                upscale_btn.props(remove="loading")
+
+                        upscale_btn = ui.button(
+                            "4K 완료 (재연산)" if is_already else "✨ 4K AI 업스케일",
+                            icon="auto_fix_high",
+                            on_click=on_upscale_click
+                        ).props(
+                            f"unelevated dense size=sm color={'emerald-700' if is_already else 'purple-600'} text-white"
+                        ).tooltip(
+                            "이미 4K 초고화질입니다 (클릭 시 재연산)" if is_already else "4x-UltraSharp 초해상화 모델로 4K(4096x6144) 무손실 업스케일"
+                        )
+
+                        # 새 탭에서 원본 전용 뷰어로 열기 (브라우저 다운로드 강제 튕김 방지 및 줌 확대)
+                        view_url = f"/view_image?src={curr['url']}&name={p.name}"
+                        ui.button(
+                            "새 탭에서 원본 보기",
+                            icon="open_in_new",
+                            on_click=lambda u=view_url: ui.navigate.to(u, new_tab=True)
+                        ).props(f'flat dense size=sm color=amber-400 href="{view_url}" target="_blank"').tooltip(
+                            "새 탭에서 고화질 뷰어로 보기 (다운로드 방지 및 줌 확대 지원)"
+                        )
+
+                        # PC 탐색기 열기 (해당 파일 하이라이트 선택)
+                        def handle_open_folder():
+                            open_in_explorer(curr["path"])
+                            try:
+                                ui.notify(f"🖥️ PC 파일 탐색기를 열었습니다: {curr['path'].name}", type="positive")
+                            except Exception:
+                                pass
+
+                        ui.button("PC 폴더 열기", icon="folder", on_click=handle_open_folder).props(
+                            "flat dense size=sm color=slate-300"
+                        ).tooltip("호스트 PC 파일 탐색기에서 해당 파일 위치 열기")
+                        ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
+
+            def refresh_img():
+                img_box.clear()
+                with img_box:
+                    ui.html(
+                        f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 400px;">'
+                        f'<img src="{curr["url"]}" alt="{curr["path"].name}" style="max-height: 80vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
+                        f'</div>'
                     )
 
-                    # PC 탐색기 열기 (해당 파일 하이라이트 선택)
-                    def handle_open_folder():
-                        open_in_explorer(file_path)
-                        try:
-                            ui.notify(f"🖥️ PC 파일 탐색기를 열었습니다: {file_path.name}", type="positive")
-                        except Exception:
-                            pass
-
-                    ui.button("PC 폴더 열기", icon="folder", on_click=handle_open_folder).props(
-                        "flat dense size=sm color=slate-300"
-                    ).tooltip("호스트 PC 파일 탐색기에서 해당 파일 위치 열기")
-                    ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
-
-            # 네이티브 HTML <img> 태그로 브라우저 기본 렌더링 (Quasar q-img 높이 0 축소 버그 원천 해결)
-            with ui.column().classes("w-full flex-1 items-center justify-center py-2"):
-                ui.html(
-                    f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 400px;">'
-                    f'<img src="{img_url}" alt="{file_path.name}" style="max-height: 80vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
-                    f'</div>'
-                )
+            refresh_header()
+            refresh_img()
 
         dialog.open()
 
