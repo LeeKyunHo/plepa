@@ -297,6 +297,12 @@ def assemble_sdxl_prompt(
             if "clean background" not in pose_tag.lower():
                 pose_tag = f"{pose_tag}, single view, single shot, clean background, white background, solid background"
 
+    # 2인 이상 상호작용 씬(partner, 1boy, faceless male, male, hug, kiss, carry 등) 판별
+    is_two_person = any(
+        kw in pose_tag.lower()
+        for kw in ("1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl", "fellatio", "cunnilingus", "paizuri")
+    )
+
     # 2. 긍정 프롬프트 조립
     # nude 씬: sdxl_nude_positive 우선 사용 (의상 태그 없는 전용 프롬프트)
     if nude and getattr(char, "sdxl_nude_positive", None):
@@ -305,6 +311,9 @@ def assemble_sdxl_prompt(
         base_pos = f"{base_pos}, nude, completely nude"
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
+            if is_two_person:
+                char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
+                char_part = re.sub(r"^\s*,\s*", "", char_part)
             quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
             for kw in _extra_quality_kws:
                 if kw.lower() not in quality_clean.lower():
@@ -313,6 +322,8 @@ def assemble_sdxl_prompt(
             first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
             positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
         else:
+            if is_two_person:
+                base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
             prefix_tags = f"{custom_pos.strip()}, {base_pos}" if custom_pos and custom_pos.strip() else base_pos
             positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
     elif char.sdxl_positive:
@@ -329,12 +340,6 @@ def assemble_sdxl_prompt(
             base_pos = strip_sdxl_outfit_tags(base_pos)
             if theme_outfit:
                 base_pos = f"{base_pos}, {theme_outfit}"
-
-        # 2인 이상 상호작용 씬(partner, 1boy, faceless male, male, hug, kiss, carry 등) 판별
-        is_two_person = any(
-            kw in pose_tag.lower()
-            for kw in ("1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl", "fellatio", "cunnilingus", "paizuri")
-        )
 
         if " BREAK " in base_pos:
             quality_part, char_part = base_pos.split(" BREAK ", 1)
@@ -358,10 +363,6 @@ def assemble_sdxl_prompt(
             positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
     else:
         # 폴백: 캐릭터 외형 기반
-        is_two_person = any(
-            kw in pose_tag.lower()
-            for kw in ("1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl", "fellatio", "cunnilingus", "paizuri")
-        )
         char_gender_val = (char.gender or getattr(char, "default_mode", "") or "female").lower()
         gender_tag = "1boy, male" if char_gender_val in ("male", "otokonoko") else "1girl"
         char_desc = f"{char.appearance.face_and_hair}, {char.appearance.physique}".strip(", ")

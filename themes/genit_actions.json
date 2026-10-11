@@ -1,0 +1,158 @@
+{
+  "genit_actions": {
+    "B01": {
+      "label": "허그",
+      "required_outfit": "default",
+      "flux_prompt": "Warm affectionate hug, wrapping arms around partner, cheek pressed close, smiling sweetly, intimate embrace, soft lighting.",
+      "sdxl_prompt": "1girl, 1boy, hug, hugging partner, embrace, arms around neck, smiling, close contact, soft lighting",
+      "description": "다정하게 서로를 끌어안는 포옹 씬 (B1)"
+    },
+    "B02": {
+      "label": "행복하게품에안김",
+      "required_outfit": "default",
+      "flux_prompt": "Happily buried in partner's chest, cuddling tightly, joyful radiant smile, eyes blissfully closed, romantic embrace.",
+      "sdxl_prompt": "1girl, 1boy, snuggling, buried in chest, hugging tightly, happy smile, closed eyes, sweet romantic",
+      "description": "행복한 미소로 상대의 품에 푹 안기는 씬 (B2)"
+    },
+    "B03": {
+      "label": "품에안겨움",
+      "required_outfit": "default",
+      "flux_prompt": "Crying in partner's embrace, tears soaking into partner's shirt, trembling shoulders, seeking comfort, emotional tender moment.",
+      "sdxl_prompt": "1girl, 1boy, crying into partner's chest, tears, sobbing, emotional hug, comforting, trembling",
+      "description": "품에 안겨 서럽게 눈물을 흘리는 위로 씬 (B3)"
+    },
+    "B04": {
+      "label": "키스",
+      "required_outfit": "default",
+      "flux_prompt": "Romantic tender kiss on lips, eyes softly closed, hands gently cupping partner's cheek, intimate close-up angle, sweet romantic glow.",
+      "sdxl_prompt": "1girl, 1boy, kiss, kissing on lips, closed eyes, hand on cheek, romantic, soft warm lighting",
+      "description": "입술을 포개는 로맨틱한 입맞춤 (B4)"
+    },
+    "B05": {
+      "label": "팔짱낌",
+      "required_outfit": "default",
+      "flux_prompt": "Character clinging to partner's arm, locking arms intimately while walking together, proud happy smile, breasts pressed softly against arm.",
+      "sdxl_prompt": "1girl, 1boy, linking arms, holding partner's arm, walking together, smiling, clingy, affectionate",
+      "description": "C(히로인)가 U(플레이어)에게 다정하게 팔짱을 끼는 씬 (B5)"
+    },
+    "B06": {
+      "label": "공주님안기",
+      "required_outfit": "default",
+      "flux_prompt": "Carried bridal style by partner, looking up at partner with flushed blushing cheeks, hands wrapped securely around partner's neck, sweet romantic lighting.",
+      "sdxl_prompt": "1girl, 1boy, bridal carry, princess carry, carried in arms, blushing, looking at partner, romantic",
+      "description": "U(플레이어)가 C(히로인)를 번쩍 공주님 안기 하는 씬 (B6)"
+    },
+    "B07": {
+      "label": "U가C넘어뜨림",
+      "required_outfit": "default",
+      "flux_prompt": "Pinned down on a bed by partner who got excited, looking up with surprised wide eyes and flushed cheeks, partner's hands pinning her wrists gently.",
+      "sdxl_prompt": "1girl, 1boy, pushed down on bed, pinned down, looking up at partner, surprised, heavy blush, bed",
+      "description": "U가 흥분하여 C를 침대에 덮치는 씬 (B7)"
+    },
+    "B08": {
+      "label": "C가U넘어뜨림",
+      "required_outfit": "default",
+      "flux_prompt": "Character boldly straddling partner on bed, looking down with a predatory seductive smile, pinning partner's hands, dominant romantic pose.",
+      "sdxl_prompt": "1girl, 1boy, straddling partner, pushed partner down, looking down at viewer, dominant smile, pinning viewer",
+      "description": "C가 흥분하여 U를 역으로 덮치고 올라타는 씬 (B8)"
+    },
+    "B09": {
+      "label": "C가손잡고끌려감",
+      "required_outfit": "default",
+      "flux_prompt": "Being led by hand by partner, looking back slightly flustered, holding partner's hand firmly, dynamic walking angle, blushing.",
+      "sdxl_prompt": "1girl, 1boy, being pulled by hand, holding hands, led by partner, blushing, following, dynamic angle",
+      "description": "C가 U에게 손을 잡힌 채 이끌려가는 씬 (B9)"
+    },
+    "B10": {
+      "label": "U가손잡고끌려감",
+      "required_outfit": "default",
+      "flux_prompt": "Leading partner by hand cheerfully, looking back over shoulder with an energetic joyful smile, holding viewer's hand, POV angle.",
+      "sdxl_prompt": "1girl, holding viewer's hand, leading viewer, looking back over shoulder, smiling cheerfully, follow me pose",
+      "description": "C가 신나서 U의 손을 잡고 앞장서서 이끄는 씬 (B10)"
+    },
+    "B11": {
+      "label": "잠",
+      "required_outfit": "default",
+      "flux_prompt": "Sleeping peacefully in a cozy bed, head nestled in soft white pillow, calm serene expression, gentle breathing, morning sunlight.",
+      "sdxl_prompt": "1girl, solo, sleeping, lying on bed, head on pillow, peaceful sleeping face, cozy blanket, soft morning light",
+      "description": "침대에서 곤히 잠들어 있는 평온한 모습 (B11)"
+    },
+    "B12": {
+      "label": "심한부상",
+      "required_outfit": "combat",
+      "flux_prompt": "Heavily injured, torn damaged clothing, bandages, scratches on pale skin, panting heavily, leaning against wall, grim dramatic lighting.",
+      "sdxl_prompt": "1girl, solo, injured, torn clothes, scratched skin, panting, exhausted, bruised, dramatic lighting, leaning on wall",
+      "description": "전투 후 옷이 찢어지고 상처를 입은 위기 씬 (B12)"
+    },
+    "B13": {
+      "label": "속옷차림",
+      "required_outfit": "underwear",
+      "flux_prompt": "Wearing delicate lace lingerie underwear, standing gracefully in private bedroom, slender silhouette, soft natural lighting.",
+      "sdxl_prompt": "1girl, solo, underwear, lace lingerie, bra and panties, standing in bedroom, slender figure, soft lighting",
+      "description": "단둘이 있는 방에서의 정갈한 속옷 차림 (B13)"
+    },
+    "B14": {
+      "label": "속옷부끄러움",
+      "required_outfit": "underwear",
+      "flux_prompt": "Wearing cute underwear, desperately trying to cover chest and body with hands, blushing furiously with embarrassed tears, bashful gaze.",
+      "sdxl_prompt": "1girl, solo, underwear, covering self, covering chest, embarrassed, deep blush, bashful, teary eyes",
+      "description": "속옷 차림을 들켜 황급히 몸을 가리며 부끄러워하는 씬 (B14)"
+    },
+    "B15": {
+      "label": "판치라",
+      "required_outfit": "default",
+      "flux_prompt": "Wind blowing skirt up slightly, revealing glimpse of cute underwear panty shot, flustered expression, pushing skirt down desperately.",
+      "sdxl_prompt": "1girl, solo, panty shot, panty peek, wind blowing skirt, holding skirt down, blushing, flustered, dynamic angle",
+      "description": "바람이나 움직임으로 스커트 속이 살짝 엿보이는 판치라 (B15)"
+    },
+    "B16": {
+      "label": "목욕중",
+      "required_outfit": "nude",
+      "flux_prompt": "Relaxing inside warm bathtub, glistening wet skin with water droplets, hair pinned up loosely, dense gentle steam, peaceful serene bliss.",
+      "sdxl_prompt": "1girl, solo, in bathtub, soaking in bath, steam, wet skin, wet hair, hair up, water droplets, relaxing",
+      "description": "욕조 안 따뜻한 물에 몸을 담그고 휴식하는 씬 (B16)"
+    },
+    "B17": {
+      "label": "목욕들킴부끄러움",
+      "required_outfit": "nude",
+      "flux_prompt": "Caught in bathtub by sudden intruder, curling up to cover body in water, splashing water, crimson blushing face, wide shocked eyes.",
+      "sdxl_prompt": "1girl, solo, in bathtub, covering body, startled, caught, screaming blush, wide eyes, splashing water, steam",
+      "description": "목욕 도중 문이 열려 경악하며 몸을 웅크리는 씬 (B17)"
+    },
+    "B18": {
+      "label": "옷벗는중",
+      "required_outfit": "default",
+      "flux_prompt": "Slowly undressing, lifting shirt off shoulders, revealing bare midriff and lovely curves, seductive sidelong glance, intimate atmosphere.",
+      "sdxl_prompt": "1girl, solo, undressing, taking off shirt, lifting top, bare midriff, revealing, seductive glance, bedroom",
+      "description": "셔츠나 상의를 천천히 벗으며 매혹적인 눈빛을 보내는 씬 (B18)"
+    },
+    "B19": {
+      "label": "속옷벗는중",
+      "required_outfit": "underwear",
+      "flux_prompt": "Sliding lingerie strap off shoulder, teasingly reaching behind to unhook bra, blushing deeply with sultry bedroom eyes, sensual anticipation.",
+      "sdxl_prompt": "1girl, solo, taking off bra, bra strap falling, unhooking bra, removing underwear, heavy blush, seductive",
+      "description": "어깨끈을 내리며 속옷을 벗으려는 긴장감 있는 씬 (B19)"
+    },
+    "B20": {
+      "label": "결혼식",
+      "required_outfit": "default",
+      "flux_prompt": "Dressed in a breathtaking pure white bridal wedding gown, delicate lace veil, holding bouquet of white roses, happiest radiant smile in the world, chapel sunlight.",
+      "sdxl_prompt": "1girl, solo, wedding dress, white bridal gown, veil, holding bouquet, happiest smile, radiant, cathedral",
+      "description": "순백의 웨딩드레스를 입고 세상에서 가장 행복하게 웃는 결혼식 (B20)"
+    },
+    "B21": {
+      "label": "쓰다듬받는",
+      "required_outfit": "default",
+      "flux_prompt": "Partner's warm hand gently patting her head, closing eyes happily like a contented kitten, sweet blissful smile, blushing softly.",
+      "sdxl_prompt": "1girl, headpat, hand on head, patted on head, closed eyes, happy, sweet smile, blushing, contented",
+      "description": "상대방의 큰 손에 머리를 쓰다듬받으며 기분 좋아하는 씬 (B21)"
+    },
+    "B22": {
+      "label": "볼꼬집힌",
+      "required_outfit": "default",
+      "flux_prompt": "Cheek being gently pinched by partner's fingers, cute squished face, teary pouting eyes, adorable complaining expression.",
+      "sdxl_prompt": "1girl, cheek pinch, pinched cheek, squished face, cute pout, complaining, teary eyes, endearing",
+      "description": "볼을 살짝 꼬집혀 찌그러진 귀여운 뾰로통 표정 (B22)"
+    }
+  }
+}

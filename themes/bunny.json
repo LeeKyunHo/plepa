@@ -1,0 +1,53 @@
+{
+  "bunny": {
+    "F01": {
+      "label": "바니걸전신",
+      "required_outfit": "bunny",
+      "flux_prompt": "Full body shot of character wearing glossy satin bunny suit, fluffy rabbit ears, bowtie collar, fishnet stockings, high heels, posing flirtatiously in a luxury casino lounge.",
+      "sdxl_prompt": "1girl, full body, bunny suit, bunny ears, collar, bow tie, fishnets, high heels, posing, casino lounge, confident smile",
+      "description": "글래머러스한 바니걸 슈트와 망사 스타킹 전신 스탠딩 샷 (F1)"
+    },
+    "F02": {
+      "label": "바니파이즈리",
+      "required_outfit": "bunny",
+      "flux_prompt": "Bunny girl intimacy, pressing cleavage together tightly, looking up with sultry eyes, bunny ears twitching playfully, close-up upper body.",
+      "sdxl_prompt": "1girl, 1boy, cleavage, hands on chest, pressing breasts, looking up, bunny suit, blushing, seductive",
+      "description": "바니 슈트의 깊은 가슴골을 활용한 밀착 유혹 씬 (F2)"
+    },
+    "F03": {
+      "label": "바니뒷태",
+      "required_outfit": "bunny",
+      "flux_prompt": "Rear view of bunny girl, looking back over shoulder with a cheeky wink, adorable round fluffy tail on glossy leotard, fishnet-clad legs.",
+      "sdxl_prompt": "1girl, from behind, looking back over shoulder, bunny tail, bunny suit, fishnets, high heels, wink, alluring",
+      "description": "동그란 꼬리와 허리 라인이 돋보이는 뒤태 샷 (F3)"
+    },
+    "F04": {
+      "label": "바니정상위",
+      "required_outfit": "bunny",
+      "flux_prompt": "Missionary position while wearing bunny suit, bunny ears draped back on soft bed, partner embracing her waist, passionate loving gaze, soft lighting.",
+      "sdxl_prompt": "1girl, 1boy, missionary, bunny suit, lying on back, embracing, blushing, bedroom, romantic",
+      "description": "바니 슈트를 입은 채 마주보며 결합하는 씬 (F4)"
+    },
+    "F05": {
+      "label": "바니후배위",
+      "required_outfit": "bunny",
+      "flux_prompt": "Doggystyle position while wearing bunny suit, arched back highlighting bunny tail and shapely hips, looking back over shoulder with flushed ecstasy.",
+      "sdxl_prompt": "1girl, 1boy, doggystyle, bunny suit, bunny tail, looking back over shoulder, arched back, flushed, pleasure",
+      "description": "뒤태와 꼬리를 감상하며 진행되는 후배위 씬 (F5)"
+    },
+    "F06": {
+      "label": "바니입위",
+      "required_outfit": "bunny",
+      "flux_prompt": "Standing sex against a wall in VIP room, one leg hooked around partner's hip, high heels, panting with pleasure, bunny ears tilted.",
+      "sdxl_prompt": "1girl, 1boy, standing, against wall, leg lifted, bunny suit, high heels, panting, pleasure, intense",
+      "description": "벽에 기댄 채 서서 진행되는 역동적인 입위 씬 (F6)"
+    },
+    "F07": {
+      "label": "바니펠라",
+      "required_outfit": "bunny",
+      "flux_prompt": "Kneeling on velvet carpet in bunny suit, looking up devotedly with glistening teary eyes, bunny ears perked up, tender seductive expression.",
+      "sdxl_prompt": "1girl, 1boy, kneeling, looking up, bunny suit, bunny ears, blushing, devoted gaze, bedroom",
+      "description": "무릎을 꿇고 올려다보는 사랑스러운 바니걸 봉사 씬 (F7)"
+    }
+  }
+}

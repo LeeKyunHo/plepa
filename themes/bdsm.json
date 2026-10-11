@@ -1,0 +1,60 @@
+{
+  "bdsm": {
+    "E01": {
+      "label": "펨섭전신",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Full body shot of female submissive wearing leather bondage straps, collar and leash, kneeling obediently on velvet floor, flushed submissive gaze looking up.",
+      "sdxl_prompt": "1girl, full body, kneeling, submissive, collar, leash, leather straps, bondage lingerie, looking up, blushing",
+      "description": "가죽 하네스와 초커를 착용하고 무릎 꿇은 펨섭 전신 샷 (E1)"
+    },
+    "E02": {
+      "label": "펨돔전신",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Full body shot of dominant mistress holding leather riding crop, stylish black vinyl corset, high heel boots, confident imperious smirk looking down at viewer.",
+      "sdxl_prompt": "1girl, full body, dominant, holding riding crop, leather corset, high heels, stepping forward, confident smirk, looking down",
+      "description": "채찍을 쥐고 당당하게 내려다보는 여왕님(펨돔) 전신 샷 (E2)"
+    },
+    "E03": {
+      "label": "아마존프레스",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Amazon press position, powerful dominant thighs wrapped tightly around partner's neck, pinning partner beneath her, triumphant alluring smile, bedroom.",
+      "sdxl_prompt": "1girl, 1boy, amazon press, thighs around neck, pinning partner, dominant, looking down, smirk, athletic thighs",
+      "description": "허벅지로 상대의 머리/목을 제압하고 올려다보게 만드는 아마존 프레스 (E3)"
+    },
+    "E04": {
+      "label": "풋잡",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Footjob POV angle, delicate bare foot resting arrogantly on partner, haughty commanding expression, looking down with a cruel beautiful smile.",
+      "sdxl_prompt": "1girl, footjob, bare feet, POV, looking down, arrogant expression, cruel smile, toes, sole",
+      "description": "발끝으로 상대를 조교하며 도도하게 내려다보는 풋잡 (E4)"
+    },
+    "E05": {
+      "label": "펫플레이",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Pet play, wearing cat ear headband and bell collar, on all fours like a kitten, looking up with big pleading eyes, blushing cheeks, intimate play.",
+      "sdxl_prompt": "1girl, pet play, collar with bell, on all fours, crawling, looking up, blushing, pleading eyes, obedient",
+      "description": "초커 방울을 달고 네 발로 기어오며 귀여움을 떠는 펫플레이 (E5)"
+    },
+    "E06": {
+      "label": "스팽킹섹스",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Spanking intimacy, bent over bed, partner's hand leaving red palm mark on soft hip, tears in eyes, trembling with mingled pain and pleasure.",
+      "sdxl_prompt": "1girl, 1boy, spanking, hand on hip, red handprint, bent over bed, crying, blushing, pleasure",
+      "description": "스팽킹과 함께 진행되는 짜릿한 씬 (E6)"
+    },
+    "E07": {
+      "label": "촛농플레이",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Wax play, low-temperature colorful candle dripping gently on bare skin, shivering with delicious sensation, arched back, candlelight ambiance.",
+      "sdxl_prompt": "1girl, wax play, dripping wax, candlelight, shivering, arched back, pleasure, blushing, dramatic lighting",
+      "description": "촛불 조명 아래 저온 촛농을 흘려보내는 촛농 플레이 (E7)"
+    },
+    "E08": {
+      "label": "딥스롯",
+      "required_outfit": "bdsm",
+      "flux_prompt": "Deep intimacy from above, kneeling submissively with teary glistening eyes, heavy blush, partner's hands gently gripping her hair, tender devotion.",
+      "sdxl_prompt": "1girl, 1boy, kneeling, looking up, teary eyes, hands in hair, blushing, intensive devotion, bedroom",
+      "description": "헌신적으로 올려다보는 심도 있는 봉사 씬 (E8)"
+    }
+  }
+}

@@ -16,6 +16,7 @@ from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.reporter import open_in_explorer
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.genit_exporter import default_genit_exporter
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
 from plepa_gui.components.header import render_header
@@ -93,6 +94,9 @@ def render_gallery_page() -> None:
                     ).props("dense outlined dark options-dense").classes("w-36 text-sm")
 
                 with ui.row().classes("items-center gap-2"):
+                    ui.button("📦 Genit 내보내기", icon="cloud_download", on_click=lambda: open_genit_export_dialog()).props(
+                        "unelevated color=indigo-500 text-color=white dense size=sm font-bold"
+                    ).tooltip("Genit 상용 규격({{url}}캐릭터코드/상황코드.webp)으로 에셋을 자동 변환 및 패키징합니다.")
                     ui.button("에셋 폴더 열기", icon="folder_open", on_click=lambda: open_current_folder()).props(
                         "outline color=slate-300 dense size=sm"
                     )
@@ -135,6 +139,69 @@ def render_gallery_page() -> None:
             ui.notify(f"📂 PC 파일 탐색기에서 폴더를 열었습니다: {target.name}", type="positive")
         except Exception:
             pass
+
+    def open_genit_export_dialog():
+        """Genit 규격({{url}}캐릭터코드/상황코드.webp) 내보내기 모달 다이얼로그."""
+        chars = default_character_service.list_characters(roster=state["roster"])
+        if not chars:
+            ui.notify(f"로스터 '{state['roster']}'에 캐릭터가 없습니다.", type="warning")
+            return
+
+        with ui.dialog() as dlg, ui.card().classes("w-[500px] p-6 bg-slate-900 border border-indigo-700/60 rounded-xl shadow-2xl"):
+            ui.label("📦 Genit 상용 규격 에셋 내보내기").classes("text-lg font-bold text-indigo-300 mb-1")
+            ui.label("규격: {{url}}캐릭터코드/상황코드.webp (예: dist/genit/AA/A1.webp)").classes("text-xs text-slate-400 mb-4")
+
+            char_opts = {c.prefix: f"{c.name} ({c.prefix})" for _, c, _ in chars}
+            init_char = list(char_opts.keys())[0]
+            selected_char_prefix = {"val": init_char}
+
+            init_char_obj = next(c for _, c, _ in chars if c.prefix == init_char)
+            init_export_code = default_genit_exporter.resolve_export_code(init_char_obj.name, init_char_obj.prefix)
+            code_input_state = {"val": init_export_code}
+
+            ui.label("1. 대상 캐릭터 선택").classes("text-xs font-bold text-amber-400 mb-1")
+            def on_dialog_char_change(prefix_val):
+                selected_char_prefix["val"] = prefix_val
+                c_obj = next(c for _, c, _ in chars if c.prefix == prefix_val)
+                new_code = default_genit_exporter.resolve_export_code(c_obj.name, c_obj.prefix)
+                code_input.value = new_code
+                code_input_state["val"] = new_code
+
+            ui.select(
+                options=char_opts,
+                value=init_char,
+                on_change=lambda e: on_dialog_char_change(e.value),
+            ).props("dense outlined dark options-dense").classes("w-full mb-3")
+
+            ui.label("2. 캐릭터 코드 (2글자 대문자)").classes("text-xs font-bold text-amber-400 mb-1")
+            ui.label("기본 작가 프리셋: 한지아(AA), 서아윤(BB), 정다솜(CC), 차민희(DD), 이수연(EE), 김지아(FF), 윤서희(GG), 박채은(HH)").classes("text-[11px] text-slate-400 mb-1")
+            code_input = ui.input(
+                value=init_export_code,
+                on_change=lambda e: code_input_state.update({"val": e.value.upper()})
+            ).props("dense outlined dark").classes("w-full mb-6 font-mono font-bold")
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("취소", on_click=dlg.close).props("flat color=slate-400")
+                def do_export():
+                    c_prefix = selected_char_prefix["val"]
+                    c_obj = next(c for _, c, _ in chars if c.prefix == c_prefix)
+                    c_code = code_input_state["val"].strip().upper() or "AA"
+                    dlg.close()
+
+                    count, out_path, final_code = default_genit_exporter.export_character(
+                        roster=state["roster"],
+                        char_prefix=c_prefix,
+                        char_name=c_obj.name,
+                        custom_export_code=c_code,
+                    )
+                    if count > 0:
+                        ui.notify(f"🎉 {c_obj.name} ({final_code}) 에셋 {count}개 Genit 변환 완료!", type="positive")
+                        open_in_explorer(out_path)
+                    else:
+                        ui.notify(f"⚠️ 내보낼 수 있는 에셋이 없습니다: {c_prefix}", type="warning")
+
+                ui.button("내보내기 실행", icon="check", on_click=do_export).props("unelevated color=indigo-500 font-bold")
+        dlg.open()
 
     def update_control_bars():
         matrix_controls.clear()

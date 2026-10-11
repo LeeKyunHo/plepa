@@ -1,0 +1,498 @@
+{
+  "adult": {
+    "N01": {
+      "label": "정상위약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Gentle missionary position, male partner on top, completely nude, tender slow thrusts, soft eye contact, light blush, warm bedroom lighting.",
+      "flux_prompt_otokonoko": "Gentle missionary position, slender feminine boy on back, receptive partner, flat chest, tender eye contact, light blush, soft bedroom lighting.",
+      "sdxl_prompt_female": "1girl, 1boy, missionary, completely nude, gentle, lying on back, blushing, soft lighting, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, androgynous, flat chest, slender, missionary, anal, receptive, gentle, bed",
+      "description": "정상위 삽입 (약) - 부드럽고 달콤한 시작 (N1)"
+    },
+    "N02": {
+      "label": "정상위강",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Intense passionate missionary position, deep powerful thrusts, arched back, tears in eyes, ecstatic gasping expression, heavy blush, disheveled sheets.",
+      "flux_prompt_otokonoko": "Intense passionate missionary position, slender boy arching back, deep receptive thrusts, teary ecstatic eyes, heavy blush, disheveled sheets.",
+      "sdxl_prompt_female": "1girl, 1boy, missionary, completely nude, intense, arched back, open mouth, ecstasy, heavy blush, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, slender, flat chest, missionary, anal, intense, pleasure, ecstasy, bed",
+      "description": "정상위 삽입 (강) - 격렬한 피스톤과 절정 (N2)"
+    },
+    "N03": {
+      "label": "후배위약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Gentle doggystyle position on hands and knees, partner gently holding her hips from behind, looking back over shoulder with a bashful loving blush.",
+      "flux_prompt_otokonoko": "Gentle doggystyle position, slender boy on hands and knees, flat chest, looking back over shoulder with blushing face, partner holding hips from behind.",
+      "sdxl_prompt_female": "1girl, 1boy, doggystyle, completely nude, looking back over shoulder, gentle, blushing, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, slender, doggystyle, anal, receptive, looking back over shoulder, blushing, bed",
+      "description": "후배위 삽입 (약) - 뒤에서 부드럽게 진입 (N3)"
+    },
+    "N04": {
+      "label": "후배위강",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Intense doggystyle position, face pushed into pillow, partner gripping hips firmly from behind, trembling with overwhelming sensation, tears of pleasure.",
+      "flux_prompt_otokonoko": "Intense doggystyle position, slender boy with head buried in pillow, partner gripping hips firmly from behind, trembling with intense pleasure.",
+      "sdxl_prompt_female": "1girl, 1boy, doggystyle, completely nude, face in pillow, intense, trembling, heavy blush, ecstasy, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, doggystyle, anal, head in pillow, intense, trembling, pleasure, bed",
+      "description": "후배위 삽입 (강) - 깊은 결합과 전율 (N4)"
+    },
+    "N05": {
+      "label": "기승위약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Cowgirl position, female character sitting gently on top of partner, hands on partner's chest, looking down with a shy sweet smile, gentle rhythm.",
+      "flux_prompt_otokonoko": "Cowgirl position, slender boy sitting gently on top of partner, flat chest, hands on partner's chest, looking down with shy blushing smile.",
+      "sdxl_prompt_female": "1girl, 1boy, cowgirl position, straddling, hands on partner's chest, gentle, blushing, looking down, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, straddling, cowgirl position, anal, flat chest, looking down, shy smile, bed",
+      "description": "기승위 삽입 (약) - 위에서 부드럽게 리드 (N5)"
+    },
+    "N06": {
+      "label": "기승위강",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Ecstatic cowgirl position, bouncing intensely, head thrown back in pure bliss, hands gripping thighs, flushed body glistening with light sheen, tears of joy.",
+      "flux_prompt_otokonoko": "Ecstatic cowgirl position, slender boy rocking hips intensely, head thrown back, glistening skin, crying out with pleasure, trembling thighs.",
+      "sdxl_prompt_female": "1girl, 1boy, cowgirl position, straddling, intense, head back, open mouth, ecstasy, sweat, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, straddling, cowgirl position, anal, intense, head back, ecstasy, bed",
+      "description": "기승위 삽입 (강) - 자발적인 격렬한 절정 (N6)"
+    },
+    "N07": {
+      "label": "입위약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Standing sex against a wall, partner gently lifting one leg, holding onto partner's shoulders for support, soft passionate kissing, standing embrace.",
+      "flux_prompt_otokonoko": "Standing sex against a wall, slender boy with one leg lifted by partner, holding onto partner's shoulders, blushing, standing embrace.",
+      "sdxl_prompt_female": "1girl, 1boy, standing sex, against wall, one leg up, completely nude, embrace, blushing, kissing",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, standing sex, against wall, anal, one leg up, slender, blushing, embrace",
+      "description": "입위 삽입 (약) - 벽에 기댄 스탠딩 결합 (N7)"
+    },
+    "N08": {
+      "label": "입위강",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Intense standing sex, pinned firmly against wall, both legs wrapped around partner's waist, clinging desperately to partner's neck with overwhelmed expression.",
+      "flux_prompt_otokonoko": "Intense standing sex, slender boy pinned to wall, legs wrapped around partner's waist, clinging desperately to partner with breathless ecstasy.",
+      "sdxl_prompt_female": "1girl, 1boy, standing sex, pinned to wall, legs wrapped around waist, intense, clinging, ecstasy",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, standing sex, against wall, anal, legs around waist, intense, breathless",
+      "description": "입위 삽입 (강) - 매달린 채 진행되는 격렬한 입위 (N8)"
+    },
+    "N09": {
+      "label": "파이즈리약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Paizuri beginning, gently pressing ample breasts together, looking up with a teasing bashful smile, hands cupping breasts softly.",
+      "flux_prompt_otokonoko": "Cleavage intimacy, slender boy pressing soft chest together, cute blushing face, teasing expression looking up.",
+      "sdxl_prompt_female": "1girl, 1boy, paizuri, pressing breasts, cleavage, looking up, teasing smile, blushing, bedroom",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, hands on chest, blushing, looking up, cute smile, intimate, bedroom",
+      "description": "파이즈리 (약) - 가슴으로 감싸기 시작 (N9)"
+    },
+    "N10": {
+      "label": "파이즈리강",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Vigorous paizuri, rapid friction between soft breasts, flushed panting face, parted lips, glistening skin, intense dedication.",
+      "flux_prompt_otokonoko": "Intense chest intimacy, slender boy rubbing chest against partner eagerly, panting softly, flushed cheeks, glistening skin.",
+      "sdxl_prompt_female": "1girl, 1boy, paizuri, rapid, cleavage, panting, heavy blush, parted lips, sweat, intense",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, chest friction, panting, heavy blush, parted lips, devotion",
+      "description": "파이즈리 (강) - 격렬한 마찰과 사정 임박 (N10)"
+    },
+    "N11": {
+      "label": "파이즈리후",
+      "required_outfit": "nude",
+      "flux_prompt": "Aftermath of paizuri, white fluid splashed on chest and collarbone, tired contented smile, looking up happily while breathing softly.",
+      "sdxl_prompt": "1girl, 1boy, after paizuri, semen on chest, semen on breasts, tired happy smile, looking up, aftermath",
+      "description": "파이즈리 (후) - 가슴에 사정된 후 만족스러운 여운 (N11)"
+    },
+    "N12": {
+      "label": "펠라치오약",
+      "required_outfit": "nude",
+      "flux_prompt": "Fellatio beginning, kneeling between partner's knees, looking up devotionally with big glistening eyes, tongue gently licking tip, heavy blush.",
+      "sdxl_prompt": "1girl, 1boy, fellatio, blowjob, kneeling, looking up, tongue out, licking tip, blushing, devoted gaze",
+      "description": "펠라치오 (약) - 봉사 시작과 올려다보는 눈빛 (N12)"
+    },
+    "N13": {
+      "label": "펠라치오강",
+      "required_outfit": "nude",
+      "flux_prompt": "Intense fellatio, cheeks hollowed, bobbing head rapidly, hands resting on partner's thighs, teary eyes filled with intense pleasure and devotion.",
+      "sdxl_prompt": "1girl, 1boy, fellatio, deep blowjob, head bobbing, teary eyes, hands on thighs, intense, blushing",
+      "description": "펠라치오 (강) - 깊은 몰입과 빠른 봉사 (N13)"
+    },
+    "N14": {
+      "label": "펠라치오후",
+      "required_outfit": "nude",
+      "flux_prompt": "After fellatio, mouth slightly open showing white fluid on tongue, innocent proud smile, looking up at partner with adoration.",
+      "sdxl_prompt": "1girl, 1boy, after blowjob, semen in mouth, semen on tongue, open mouth, proud smile, looking up, blushing",
+      "description": "펠라치오 (후) - 사정 후 혀를 내밀어 보여주는 씬 (N14)"
+    },
+    "N15": {
+      "label": "가슴만짐",
+      "required_outfit": "nude",
+      "flux_prompt": "Partner's hands passionately caressing and squeezing bare breasts, arched back, gasping with flushed cheeks, fingers sinking into soft skin.",
+      "sdxl_prompt": "1girl, 1boy, breast grab, groping, hands on breasts, squeezing breasts, arched back, open mouth, blushing",
+      "description": "상대방의 손이 가슴을 움켜쥐고 주무르는 씬 (N15)"
+    },
+    "N16": {
+      "label": "젖꼭지핥음",
+      "required_outfit": "nude",
+      "flux_prompt": "Partner's mouth gently licking and teasing sensitive nipple, shivering with pleasure, hands tangled in partner's hair, breathless moan.",
+      "sdxl_prompt": "1girl, 1boy, licking nipple, sucking nipple, breast play, hands in hair, shivering, moaning, blushing",
+      "description": "젖꼭지를 핥고 빨며 애무하는 씬 (N16)"
+    },
+    "N17": {
+      "label": "보지애무약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Partner's fingers gently stroking lower intimate area, arched back, knees trembling apart, shy pleasure, soft bedroom light.",
+      "flux_prompt_otokonoko": "Partner's fingers gently stroking slender boy's intimate area, trembling thighs, flushed face, shy pleasure, soft bedroom light.",
+      "sdxl_prompt_female": "1girl, 1boy, fingering, petting lower body, arched back, trembling knees, blushing, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, stroking intimate area, trembling thighs, blushing, bed",
+      "description": "은밀한 부위를 손가락으로 부드럽게 애무하는 씬 (약: N17)"
+    },
+    "N18": {
+      "label": "커닐링구스약",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Cunnilingus beginning, legs spread gently on bed, partner's face between thighs, blushing furiously with hands clutching bedsheets.",
+      "flux_prompt_otokonoko": "Intimate oral affection, slender boy with legs apart, partner kissing sensitive inner thighs, clutching bedsheets with intense blush.",
+      "sdxl_prompt_female": "1girl, 1boy, cunnilingus, legs spread, partner between legs, clutching sheets, heavy blush, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, intimate oral, thighs spread, partner between legs, clutching sheets, blushing",
+      "description": "하체 부위에 입을 맞추며 애무를 시작하는 씬 (약: N18)"
+    },
+    "N19": {
+      "label": "딥키스",
+      "required_outfit": "nude",
+      "flux_prompt": "Passionate deep french kiss while completely nude on bed, tongues entangled, saliva string, arms wrapped tightly around partner's neck, heavy blush.",
+      "sdxl_prompt": "1girl, 1boy, deep kiss, french kiss, tongues entangled, saliva trail, completely nude, embrace, bed",
+      "description": "혀를 얽으며 나누는 농밀한 딥키스 (N19)"
+    },
+    "N20": {
+      "label": "자위",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Solo masturbation on silk sheets, one hand teasing chest while other hand caresses lower area, arched back, flushed face lost in self-pleasure.",
+      "flux_prompt_otokonoko": "Solo masturbation on silk sheets, slender boy stroking himself gently, arched back, teary eyes, blush of sweet guilty pleasure.",
+      "sdxl_prompt_female": "1girl, solo, masturbation, female masturbation, touching self, arched back, heavy blush, bedroom",
+      "sdxl_prompt_otokonoko": "1boy, solo, otokonoko, masturbation, stroking, flat chest, arched back, heavy blush, bedroom",
+      "description": "침대 위에서 스스로 몸을 만지며 절정에 이르는 자위 (N20)"
+    },
+    "N24": {
+      "label": "교배프레스",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Mating press position, legs folded all the way up to chest, partner pressing deep inside from above, belly slightly bulging, intense flushed ecstasy.",
+      "flux_prompt_otokonoko": "Mating press position, slender boy with legs folded up to shoulders, partner pressing deep inside from above, intense breathless ecstasy.",
+      "sdxl_prompt_female": "1girl, 1boy, mating press, legs folded up, legs to chest, pressed down, intense, heavy blush, bed",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, otokonoko, mating press, anal, legs to chest, pressed down, intense, pleasure, bed",
+      "description": "다리를 가슴까지 접어 올리고 깊숙이 누르는 교배프레스 (N24)"
+    },
+    "N25": {
+      "label": "들박",
+      "required_outfit": "nude",
+      "flux_prompt": "Carried standing sex in mid-air, partner lifting her completely off floor, legs wrapped around hips, bouncing with intense breathless gasps.",
+      "sdxl_prompt": "1girl, 1boy, suspended sex, carried sex, off floor, legs around waist, intense, open mouth, gasping",
+      "description": "공중에 완전히 안아 들어올린 채 진행되는 들박 (N25)"
+    },
+    "N26": {
+      "label": "69자세",
+      "required_outfit": "nude",
+      "flux_prompt": "Intimate 69 position on bed, mutual oral pleasure, heads between each other's thighs, blushing cheeks, coordinated rhythmic ecstasy.",
+      "sdxl_prompt": "1girl, 1boy, 69 position, mutual oral, on bed, completely nude, blush, pleasure, coordinated",
+      "description": "서로의 은밀한 부위를 동시에 애무하는 69 포즈 (N26)"
+    },
+    "N27": {
+      "label": "벽끼임앞",
+      "required_outfit": "default",
+      "flux_prompt": "Stuck in tight wall crevice facing forward, upper body trapped, struggling cute flustered expression, skirt lifted, partner approaching.",
+      "sdxl_prompt": "1girl, stuck in wall, facing forward, trapped, skirt lifted, flustered, blushing, caught, helpless",
+      "description": "벽 틈에 앞면으로 끼어 옴짝달싹 못하는 씬 (N27)"
+    },
+    "N28": {
+      "label": "벽끼임뒤",
+      "required_outfit": "default",
+      "flux_prompt": "Stuck in tight wall from behind, hips and rear protruding helplessly, looking back over shoulder with pleading teary blush, partner approaching.",
+      "sdxl_prompt": "1girl, stuck in wall, from behind, rear protruding, looking back, helpless, teary eyes, blushing, trapped",
+      "description": "벽 틈에 끼어 엉덩이가 뒤로 노출된 벽끼임 뒤태 (N28)"
+    },
+    "N29": {
+      "label": "벽끼임펠라",
+      "required_outfit": "default",
+      "flux_prompt": "Stuck in narrow wall space, kneeling helplessly while partner presents himself, looking up tearfully, forced sweet obedience.",
+      "sdxl_prompt": "1girl, 1boy, stuck in wall, kneeling, looking up, teary eyes, helpless, forced obedience, blushing",
+      "description": "벽에 끼인 상태에서 올려다보며 봉사하게 되는 씬 (N29)"
+    },
+    "N30": {
+      "label": "파일드라이버",
+      "required_outfit": "nude",
+      "flux_prompt": "Piledriver vertical sex position, hips raised high vertically, partner standing above driving deep inside, tears of overwhelming sensation, bed.",
+      "sdxl_prompt": "1girl, 1boy, piledriver position, vertical sex, legs in air, hips raised, deep thrust, ecstasy, tears",
+      "description": "하체를 수직으로 높이 치켜들고 내리꽂는 파일드라이버 (N30)"
+    },
+    "N31": {
+      "label": "3P",
+      "required_outfit": "nude",
+      "flux_prompt": "Threesome intimacy, surrounded by two partners on bed, one partner kissing her while other caresses her body, surrounded by overwhelming attention.",
+      "sdxl_prompt": "1girl, 2boys, threesome, surrounded, double intimacy, bed, completely nude, overwhelmed, blushing",
+      "description": "두 상대에게 둘러싸여 동시에 사랑받는 3P 씬 (N31)"
+    },
+    "N32": {
+      "label": "갱뱅",
+      "required_outfit": "nude",
+      "flux_prompt": "Gangbang scene, kneeling at center surrounded by multiple partners, dazed submissive expression, glistening skin, heavy blush, intense harem atmosphere.",
+      "sdxl_prompt": "1girl, multiple boys, gangbang, kneeling in center, dazed expression, heavy blush, surrounded, harem",
+      "description": "다수의 상대방에게 둘러싸인 하렘/갱뱅 씬 (N32)"
+    },
+    "N33": {
+      "label": "대딸",
+      "required_outfit": "nude",
+      "flux_prompt": "Handjob intimacy, delicate slender hands stroking partner lovingly, looking up with sweet bashful smile, rhythmic motion, bedroom.",
+      "sdxl_prompt": "1girl, 1boy, handjob, stroking, hands on lap, looking up, sweet smile, blushing, bedroom",
+      "description": "손으로 부드럽고 능숙하게 상대의 중심을 자극하는 대딸 (N33)"
+    },
+    "N34": {
+      "label": "수유대딸",
+      "required_outfit": "nude",
+      "flux_prompt": "Motherly handjob intimacy, cradling partner's head against bare breasts while hand strokes gently down below, soothing loving expression.",
+      "sdxl_prompt": "1girl, 1boy, handjob, head on breasts, motherly embrace, hugging head, comforting smile, loving",
+      "description": "가슴에 상대를 안아 젖먹이듯 쓰다듬으며 해주는 수유대딸 (N34)"
+    },
+    "N35": {
+      "label": "뒷스마타",
+      "required_outfit": "nude",
+      "flux_prompt": "Rear sumata, lying prone on stomach, partner friction between her firm thighs from behind without insertion, looking back with flushed smile.",
+      "sdxl_prompt": "1girl, 1boy, sumata, from behind, prone, thigh friction, thighs together, looking back, blushing",
+      "description": "엎드린 채 허벅지 사이에 끼워 마찰하는 뒷스마타 (N35)"
+    },
+    "N36": {
+      "label": "스팽킹",
+      "required_outfit": "nude",
+      "flux_prompt": "Spanking on bed, bent over with red handprints on soft bottom, biting lip, teary eyes filled with sweet submission and excitement.",
+      "sdxl_prompt": "1girl, 1boy, spanking, red marks on rear, bent over bed, biting lip, teary eyes, submission, blushing",
+      "description": "엉덩이를 찰싹 때려 붉은 손자국을 남기는 스팽킹 (N36)"
+    },
+    "N37": {
+      "label": "배복종자세",
+      "required_outfit": "nude",
+      "flux_prompt": "Belly submission pose, lying on back exposing soft vulnerable stomach and throat, hands held up like a submissive pet, shy adoring smile.",
+      "sdxl_prompt": "1girl, solo, belly exposure, lying on back, submissive pose, hands up, showing stomach, adoring smile",
+      "description": "배를 보이고 드러누워 복종을 맹세하는 배복종 자세 (N37)"
+    },
+    "N38": {
+      "label": "보지벌려보여줌",
+      "required_outfit": "nude",
+      "flux_prompt_female": "M-shaped leg spread, pulling folds open with trembling fingers, showing intimate entrance, crimson blushing face, looking at camera shyly.",
+      "flux_prompt_otokonoko": "M-shaped leg spread, slender boy showing delicate intimate area with blushing face, looking directly at viewer with bashful submission.",
+      "sdxl_prompt_female": "1girl, solo, m-legs, spreading, fingers pulling open, showing entrance, heavy blush, looking at viewer",
+      "sdxl_prompt_otokonoko": "1boy, solo, otokonoko, m-legs, slender, flat chest, spreading, showing, heavy blush, looking at viewer",
+      "description": "다리를 M자로 벌리고 부끄러워하며 은밀한 곳을 과시하는 씬 (N38)"
+    },
+    "N39": {
+      "label": "임신누드",
+      "required_outfit": "nude",
+      "flux_prompt_female": "Pregnant nude, beautifully rounded swollen belly, gentle hands resting on pregnant stomach, serene maternal glow, gentle loving smile.",
+      "flux_prompt_otokonoko": "Sensual distended belly after climax, slender boy with gently swollen stomach from intense filling, blushing deeply, peaceful glow.",
+      "sdxl_prompt_female": "1girl, solo, pregnant, pregnant belly, round stomach, hands on belly, maternal, gentle smile, nude",
+      "sdxl_prompt_otokonoko": "1boy, solo, otokonoko, swollen belly, filled stomach, blushing, lying down, satisfied smile, nude",
+      "description": "배가 부풀어오른 누드 씬 (여성: 임신 / 오토코노코: 사정 후 팽만감) (N39)"
+    },
+    "N40": {
+      "label": "임신중삽입약",
+      "required_outfit": "nude",
+      "flux_prompt": "Gentle slow sex with pregnant belly, partner holding her pregnant bump softly from side, loving gentle kiss on forehead, deep warmth.",
+      "sdxl_prompt": "1girl, 1boy, pregnant sex, gentle, pregnant belly, partner hand on belly, side by side, loving, tender",
+      "description": "배가 부른 상태에서 조심스럽게 진행하는 삽입 (약: N40)"
+    },
+    "N41": {
+      "label": "임신중삽입강",
+      "required_outfit": "nude",
+      "flux_prompt": "Passionate deep sex while pregnant, rounded belly vibrating with movement, flushed cheeks, intense loving embrace, breathless joy.",
+      "sdxl_prompt": "1girl, 1boy, pregnant sex, intense, pregnant belly, heavy blush, embrace, open mouth, ecstasy, bed",
+      "description": "임신 상태에서의 뜨겁고 감격적인 절정 삽입 (강: N41)"
+    },
+    "N42": {
+      "label": "애널섹스",
+      "required_outfit": "nude",
+      "flux_prompt": "Anal sex on bed, partner entering back door, wide teary eyes with gasping expression, intense unexpected pleasure, clutching sheets tightly.",
+      "sdxl_prompt": "1girl, 1boy, anal, anal sex, back door, tears, gasping, intense, clutching sheets, bed, blushing",
+      "description": "후방 아날 통로로 진입하는 애널 섹스 (N42)"
+    },
+    "N43": {
+      "label": "풋잡",
+      "required_outfit": "nude",
+      "flux_prompt": "Footjob on couch, slender bare soles and toes stroking partner, charming teasing smirk, leaning back on cushions.",
+      "sdxl_prompt": "1girl, 1boy, footjob, bare feet, toes, soles, teasing smile, couch, POV, looking at partner",
+      "description": "발가락과 발바닥으로 능숙하게 비비는 풋잡 (N43)"
+    },
+    "N44": {
+      "label": "겨드랑이애무",
+      "required_outfit": "nude",
+      "flux_prompt": "Armpit intimacy, arm raised behind head exposing smooth clean armpit, partner kissing and licking delicate hollow, giggling with sweet shivers.",
+      "sdxl_prompt": "1girl, 1boy, armpit, arm up, armpit lick, kissing armpit, giggling, shivering, blushing, bed",
+      "description": "팔을 들어 매끈한 겨드랑이를 핥고 애무하는 씬 (N44)"
+    },
+    "N45": {
+      "label": "배빵",
+      "required_outfit": "default",
+      "flux_prompt": "Gut punch impact, partner striking lower abdomen, coughing breath out, tears flying, body bent in half, intense dramatic shock.",
+      "sdxl_prompt": "1girl, gut punch, stomach punch, impact, tears, coughing, doubled over, dramatic, pain, shock",
+      "description": "복부를 가격당해 숨을 헐떡이며 꺾이는 배빵 씬 (N45)"
+    },
+    "N46": {
+      "label": "상대를씻겨줌",
+      "required_outfit": "nude",
+      "flux_prompt": "Washing partner in shower, lathering soapy bubbles on partner's back with a soft sponge, warm affectionate smile, dense steam.",
+      "sdxl_prompt": "1girl, 1boy, washing partner, shower, soapy bubbles, sponge, steam, wet hair, smiling, caring",
+      "description": "샤워실에서 거품 스펀지로 상대를 정성껏 씻겨주는 씬 (N46)"
+    },
+    "N47": {
+      "label": "씻겨짐",
+      "required_outfit": "nude",
+      "flux_prompt": "Being washed by partner, sitting obediently while partner lathers soap on her shoulders and body, blissful relaxed expression, warm bathroom.",
+      "sdxl_prompt": "1girl, 1boy, being washed, sitting, lathered in soap, soapy, steam, relaxed, trusting smile, shower",
+      "description": "상대방의 손길에 몸을 맡기고 깨끗이 씻겨지는 씬 (N47)"
+    },
+    "N48": {
+      "label": "에로마사지앞",
+      "required_outfit": "nude",
+      "flux_prompt": "Erotic front massage, lying on back on massage table, glistening aromatic oil on bare skin, partner massaging collarbone and chest, soft moans.",
+      "sdxl_prompt": "1girl, front massage, oil massage, glistening skin, oil sheen, lying on back, massage table, moaning",
+      "description": "오일을 바르고 전면 가슴과 복부를 주무르는 에로 마사지 앞 (N48)"
+    },
+    "N49": {
+      "label": "에로마사지뒤",
+      "required_outfit": "nude",
+      "flux_prompt": "Erotic back massage, lying prone on massage table, gleaming oiled back and firm hips, partner's hands pressing lower spine, shivering delight.",
+      "sdxl_prompt": "1girl, back massage, oil massage, lying prone, bare back, oiled skin, trembling, relaxed bliss",
+      "description": "엎드린 채 오일을 듬뿍 발라 등과 엉덩이를 자극하는 에로 마사지 뒤 (N49)"
+    },
+    "N50": {
+      "label": "완전함락",
+      "required_outfit": "nude",
+      "flux_prompt": "Complete submission and surrender, heart-shaped eyes, drooling slightly, dazed blissful smile, mind completely melted in overwhelming pleasure.",
+      "sdxl_prompt": "1girl, complete surrender, heart eyes, drool, dazed smile, ahegao, completely broken, pleasure, bed",
+      "description": "이성이 완전히 녹아내려 하트 눈으로 함락된 상태 (N50)"
+    },
+    "N51": {
+      "label": "필로토크",
+      "required_outfit": "default",
+      "flux_prompt": "Pillow talk after intimacy, wrapped together under soft duvet, whispering sweetly, tracing partner's face with fingers, cozy morning glow.",
+      "sdxl_prompt": "1girl, 1boy, pillow talk, in bed, under blanket, intimate conversation, smiling, touching face, cozy morning",
+      "description": "격정 후 이불 속에서 속삭이며 정담을 나누는 필로토크 (N51)"
+    },
+    "N57": {
+      "label": "NTR가슴움켜쥠",
+      "required_outfit": "default",
+      "flux_prompt": "Rough hand groping her breast from shadows behind her, tearing open shirt, shocked desperate eyes looking at viewer for help, forced grasp.",
+      "sdxl_prompt": "1girl, groped from behind, hand grabbing breast, torn shirt, scared, looking at viewer, NTR, dramatic shadow",
+      "description": "뒤에서 다른 손길이 뻗어와 거칠게 가슴을 움켜쥐는 씬 (N57)"
+    },
+    "N58": {
+      "label": "NTR풀넬슨",
+      "required_outfit": "nude",
+      "flux_prompt": "Full nelson hold, arms pinned behind neck helplessly, thrusting from behind, struggling with teary defiant eyes slowly turning into pleasure.",
+      "sdxl_prompt": "1girl, 1boy, full nelson, arms locked, held helpless, from behind, struggling, tears, NTR",
+      "description": "양팔을 꺾여 풀넬슨으로 제압당한 채 진행되는 씬 (N58)"
+    },
+    "N59": {
+      "label": "NTR야외로터",
+      "required_outfit": "default",
+      "flux_prompt": "Outdoor public setting, hidden vibrating toy inside skirt, walking beside people, biting lip in panic, trembling knees.",
+      "sdxl_prompt": "1girl, solo, outdoor, public, skirt, biting lip, trembling, blushing, hidden toy, panic, blushing",
+      "description": "야외 인파 속에서 치마 속 로터가 켜진 채 걷는 씬 (N59)"
+    },
+    "N60": {
+      "label": "NTR야외로터참는중",
+      "required_outfit": "default",
+      "flux_prompt": "Enduring intense vibration in public, clutching lamppost or railing, flushed face sweating profusely, struggling not to cry out, closed eyes.",
+      "sdxl_prompt": "1girl, holding railing, sweating, enduring vibration, closed eyes, biting lip, trembling body, public",
+      "description": "공공장소에서 소리를 참으며 부들부들 버티는 씬 (N60)"
+    },
+    "N61": {
+      "label": "NTR야외로터절정",
+      "required_outfit": "default",
+      "flux_prompt": "Collapsing to knees in public, intense climax from hidden toy, tears streaming, open mouth gasping silently, soaked skirt.",
+      "sdxl_prompt": "1girl, collapsed on knees, public orgasm, gasping, tears, flushed face, trembling, helpless climax",
+      "description": "참지 못하고 다리에 힘이 풀려 주저앉으며 절정하는 씬 (N61)"
+    },
+    "N62": {
+      "label": "NTR카메라앞",
+      "required_outfit": "nude",
+      "flux_prompt": "Forced to pose in front of camera lens, completely nude, crying while covering face with shame, flash light reflection.",
+      "sdxl_prompt": "1girl, camera POV, camera lens, taking photo, crying, covering face, shameful, completely nude, flash",
+      "description": "카메라 렌즈 앞에서 수치심에 울며 찍히는 씬 (N62)"
+    },
+    "N63": {
+      "label": "NTR강제키스",
+      "required_outfit": "default",
+      "flux_prompt": "Forced kiss, aggressive hands gripping jaw, eyes wide in distress and betrayal, pushing away chest, dramatic backlighting.",
+      "sdxl_prompt": "1girl, 1boy, forced kiss, jaw grabbed, wide eyes, distress, pushing away, crying, dramatic lighting",
+      "description": "턱을 붙잡히고 강제로 빼앗기는 입맞춤 (N63)"
+    },
+    "N64": {
+      "label": "보지애무강",
+      "required_outfit": "nude",
+      "flux_prompt": "Intense lower petting, rapid rhythmic stimulation, hips arching off bed, gasping wildly, bedsheets soaked with pleasure.",
+      "sdxl_prompt": "1girl, 1boy, intense fingering, lower body petting, arched hips, gasping, ecstasy, heavy blush, bed",
+      "description": "하체 부위를 강렬하게 자극하여 분수와 함께 절정에 이르는 씬 (강: N64)"
+    },
+    "N65": {
+      "label": "커닐링구스강",
+      "required_outfit": "nude",
+      "flux_prompt": "Intense oral stimulation between thighs, hands grasping partner's hair desperately, shuddering with explosive climax.",
+      "sdxl_prompt": "1girl, 1boy, intense cunnilingus, partner face between thighs, gripping hair, explosive climax, shivering",
+      "description": "숨 쉴 틈 없이 밀착하는 격렬한 커닐링구스 절정 (강: N65)"
+    },
+    "N66": {
+      "label": "측위삽입약",
+      "required_outfit": "nude",
+      "flux_prompt": "Side-by-side sex, lying on sides facing each other on bed, one leg lifted over partner's hip, gentle loving gaze, slow deep union.",
+      "sdxl_prompt": "1girl, 1boy, side by side, lying on side, leg over hip, gentle sex, loving gaze, bed, soft lighting",
+      "description": "옆으로 나란히 누워 마주보며 천천히 결합하는 측위 (약: N66)"
+    },
+    "N67": {
+      "label": "측위삽입강",
+      "required_outfit": "nude",
+      "flux_prompt": "Intense side sex, partner driving deeply from side, gripping her waist firmly, head pressed into pillow, gasping with rhythmic bliss.",
+      "sdxl_prompt": "1girl, 1boy, side by side sex, intense, partner gripping waist, head in pillow, gasping, heavy blush, bed",
+      "description": "허리를 꽉 쥐고 옆에서 강하게 몰아붙이는 측위 (강: N67)"
+    },
+    "N68": {
+      "label": "프론본삽입약",
+      "required_outfit": "nude",
+      "flux_prompt": "Prone bone sex, lying flat on stomach, partner lying directly over her back, slow gentle rhythm, hands interlocked beside pillow.",
+      "sdxl_prompt": "1girl, 1boy, prone bone, lying on stomach, partner on top, slow gentle, interlocked fingers, bed",
+      "description": "배를 깔고 엎드린 상태에서 포개어지는 프론본 (약: N68)"
+    },
+    "N69": {
+      "label": "프론본삽입강",
+      "required_outfit": "nude",
+      "flux_prompt": "Intense prone bone sex, pressed completely flat into mattress by partner's weight, deep penetrative thrusts, muffled cries of ecstasy.",
+      "sdxl_prompt": "1girl, 1boy, prone bone, pressed flat into bed, intense thrusts, muffled gasps, ecstasy, disheveled sheets",
+      "description": "매트리스에 짓눌린 채 바짝 결합되는 프론본 절정 (강: N69)"
+    },
+    "N70": {
+      "label": "착의섹스약",
+      "required_outfit": "default",
+      "flux_prompt": "Clothed sex, skirt pushed up and underwear shifted aside, partner embracing her waist while fully dressed, furtive thrilling intimacy.",
+      "sdxl_prompt": "1girl, 1boy, clothed sex, skirt lifted, underwear aside, fully dressed, thrilling, blushing, secret room",
+      "description": "옷을 입은 채 치마만 걷어올리고 나누는 착의 씬 (약: N70)"
+    },
+    "N71": {
+      "label": "착의섹스강",
+      "required_outfit": "default",
+      "flux_prompt": "Intense clothed sex, disheveled blouse unbuttoned slightly, skirt hitched high, panting heavily against wall or desk, intense passion.",
+      "sdxl_prompt": "1girl, 1boy, clothed sex, intense, unbuttoned shirt, skirt hiked up, desk, panting, heavy blush",
+      "description": "옷깃이 흐트러진 채 책상이나 벽에서 진행되는 격렬한 착의 씬 (강: N71)"
+    },
+    "N72": {
+      "label": "착의펠라약",
+      "required_outfit": "default",
+      "flux_prompt": "Clothed fellatio, wearing school uniform or formal clothes, kneeling modestly beneath desk, sweet blushing eyes looking up.",
+      "sdxl_prompt": "1girl, 1boy, clothed fellatio, blowjob under desk, uniform, kneeling, looking up, modest, blushing",
+      "description": "단정한 옷차림으로 책상 아래 무릎 꿇고 진행하는 착의 펠라 (약: N72)"
+    },
+    "N73": {
+      "label": "착의펠라강",
+      "required_outfit": "default",
+      "flux_prompt": "Intense clothed deepthroat, uniform collar loose, cheeks hollowed, crying tears of devotion, desperate dedicated suction.",
+      "sdxl_prompt": "1girl, 1boy, clothed fellatio, deepthroat, uniform, loose tie, teary eyes, intense, devoted, kneeling",
+      "description": "옷을 입은 채 깊이 삼키는 착의 딥스로트 (강: N73)"
+    },
+    "N74": {
+      "label": "착의펠라후",
+      "required_outfit": "default",
+      "flux_prompt": "After clothed fellatio, wiping lips with uniform sleeve, white fluid traces, looking up with an affectionate conspiratorial smile.",
+      "sdxl_prompt": "1girl, 1boy, after blowjob, wiping mouth with sleeve, uniform, semen on mouth, conspiratorial smile, blushing",
+      "description": "소매로 입가를 훔치며 비밀스러운 미소를 짓는 착의 펠라 후일담 (후: N74)"
+    }
+  }
+}

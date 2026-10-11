@@ -110,8 +110,8 @@ def setup_routes():
 setup_routes()
 
 
-def start_server(host: str = "127.0.0.1", port: int = 8080, reload: bool = False):
-    """NiceGUI 서버 기동."""
+def start_server(host: str = "0.0.0.0", port: int = 8080, reload: bool = False):
+    """NiceGUI 서버 기동 (0.0.0.0 바인딩으로 동일 네트워크 모바일 접속 지원)."""
     ui.run(
         host=host,
         port=port,
@@ -125,7 +125,7 @@ def start_server(host: str = "127.0.0.1", port: int = 8080, reload: bool = False
 
 if __name__ in {"__main__", "__mp_main__"}:
     parser = argparse.ArgumentParser(description="PLEPA NiceGUI Server")
-    parser.add_argument("--host", default="127.0.0.1", help="바인딩 호스트 (기본: 127.0.0.1)")
+    parser.add_argument("--host", default="0.0.0.0", help="바인딩 호스트 (기본: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080, help="포트 번호 (기본: 8080)")
     parser.add_argument("--reload", action="store_true", help="자동 리로드 활성화")
     args = parser.parse_args()

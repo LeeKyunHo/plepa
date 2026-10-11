@@ -107,9 +107,28 @@ def render_generate_page() -> None:
             # 2. 포즈 선택 (세트 또는 표현식)
             with ui.row().classes("w-full items-center justify-between mb-1"):
                 ui.label("2. 포즈 선택").classes("text-xs font-bold text-amber-400")
-                ui.button("⭐ 전체 80종 포즈", icon="star", on_click=lambda: select_all_80_poses()).props(
+                ui.button("⭐ 기본 80종", icon="star", on_click=lambda: select_all_80_poses()).props(
                     "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
-                ).tooltip("000부터 159까지 전체 80종 포즈 일괄 선택")
+                ).tooltip("000부터 159까지 기본 80종 포즈 일괄 선택")
+
+            # Genit 상용 표준 퀵 셀렉트 버튼 바
+            with ui.row().classes("w-full items-center gap-1.5 p-1.5 bg-indigo-950/40 border border-indigo-700/50 rounded-lg mb-2 flex-wrap"):
+                ui.label("👑 Genit 상용 팩:").classes("text-[11px] font-bold text-indigo-300 mr-1")
+                ui.button("풀패키지(114종)", on_click=lambda: select_genit_set("genit_full", "풀패키지 114종")).props(
+                    "unelevated dense size=xs color=indigo-500 text-color=white font-bold"
+                ).tooltip("감정(24) + 행동(22) + 성인(46) + 의상(22) 전체 일괄 선택")
+                ui.button("🎭 감정 A", on_click=lambda: select_genit_set("genit_emotions", "감정 24종 (A0~A23)")).props(
+                    "outline dense size=xs color=indigo-300"
+                )
+                ui.button("🏃 행동 B", on_click=lambda: select_genit_set("genit_actions", "행동 22종 (B1~B22)")).props(
+                    "outline dense size=xs color=indigo-300"
+                )
+                ui.button("🔥 성인 N", on_click=lambda: select_genit_set("genit_adult", "성인 46종 (N1~N74)")).props(
+                    "outline dense size=xs color=indigo-300"
+                )
+                ui.button("👗 의상 D/E/F", on_click=lambda: select_genit_set("genit_costumes", "의상 팩 22종 (수영복/BDSM/바니걸)")).props(
+                    "outline dense size=xs color=indigo-300"
+                )
 
             with ui.row().classes("w-full gap-4 mb-2"):
                 mode_set_btn = ui.radio(
@@ -192,7 +211,14 @@ def render_generate_page() -> None:
         state["selected_pose_set"] = "all_80"
         mode_set_btn.value = "포즈 세트 사용"
         on_pose_mode_changed("포즈 세트 사용")
-        ui.notify("⭐ 전체 80종 포즈 (000~159) 선택 완료!", type="positive")
+        ui.notify("⭐ 기본 80종 포즈 (000~159) 선택 완료!", type="positive")
+
+    def select_genit_set(set_id: str, label_name: str):
+        state["pose_selection_mode"] = "set"
+        state["selected_pose_set"] = set_id
+        mode_set_btn.value = "포즈 세트 사용"
+        on_pose_mode_changed("포즈 세트 사용")
+        ui.notify(f"👑 Genit {label_name} 선택 완료!", type="positive")
 
     def on_roster_changed(new_r: str):
         state["roster"] = new_r

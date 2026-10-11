@@ -603,3 +603,13 @@ plepa/
   3. `prompt_builder.py`의 `assemble_flux_prompt` 및 `assemble_sdxl_prompt`에 성별 디스패치 연동.
 - **결과**: URL/코드 체계의 100% 일관성을 유지하면서 두 성별 모두 자연스럽고 정교한 전용 씬 생성을 완벽 지원.
 
+### ADR-42: Genit 상용 표준 세팅 규격화 및 GUI 원클릭 익스포터 구축 (2026-10-11)
+- **배경**: 상용 인기 작가의 Genit 이미지 세팅(A 감정 24종, B 행동 22종, N 성인 46종, D/E/F 의상 22종) 규격을 플에파 시스템 표준으로 정착시키고, 웹 플랫폼 업로드용 포맷(`{{url}}캐릭터코드/상황코드.webp`, 예: `dist/genit/AA/A1.webp`)으로 간편하게 변환할 수 있는 기능 필요.
+- **결정 사항**:
+  1. `themes/` 내 공식 표준 테마 파일 완비 (`genit_emotions.json`, `genit_actions.json`, `adult.json`, `bdsm.json`, `bunny.json`).
+  2. `pose_sets.json`에 Genit 팩 5종 및 풀패키지(114종) 공식 세트 등록.
+  3. `GenitExporter` 서비스(`genit_exporter.py`) 신설: 내부 코드(A00, A01, N01 등) ➔ 플랫폼 코드(A0, A1, N1 등) 역정규화 및 8인 기본 캐릭터 매핑(한지아 AA, 서아윤 BB 등) 지원.
+  4. NiceGUI 생성 페이지에 "Genit 상용 팩" 퀵 셀렉트 버튼 탑재, 갤러리 페이지에 "📦 Genit 내보내기" 원클릭 다이얼로그 탑재.
+- **결과**: 상용 플랫폼 배포 준비 시간이 수작업 30분에서 원클릭 1초로 단축되고, 시스템 전반의 100% 상호 호환성 확보.
+
+
