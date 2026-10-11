@@ -3,8 +3,8 @@
     "A00": {
       "label": "첫등장",
       "required_outfit": "default",
-      "flux_prompt": "A magnificent full-body standing introduction shot of the character looking directly at the viewer with an inviting warm smile, stylish pose, clean minimalist background, soft cinematic studio lighting.",
-      "sdxl_prompt": "1girl, full body, standing, gentle smile, looking at viewer, introduction pose, clean background, soft lighting",
+      "flux_prompt": "A magnificent full-body standing introduction shot at eye level of the character looking directly at the viewer with an inviting warm smile, natural standing pose, clean minimalist background, soft cinematic studio lighting.",
+      "sdxl_prompt": "1girl, full body, standing, eye level, gentle smile, looking at viewer, natural standing pose, clean background, soft lighting",
       "description": "시나리오 및 대화 첫 시작을 위한 대표 전신 소개 일러스트 (A0)"
     },
     "A01": {

@@ -11,8 +11,13 @@ from pathlib import Path
 # ── 기본 경로 (상대 경로 기준 자동 산출) ──
 ROOT_DIR = Path(__file__).resolve().parent.parent
 PROJECTS_DIR = ROOT_DIR / "projects"
+DATA_DIR = ROOT_DIR / "data"
+THEMES_DIR = DATA_DIR / "themes"
+DOCS_DIR = ROOT_DIR / "docs"
+SCRIPTS_DIR = ROOT_DIR / "scripts"
 DEFAULT_ROSTER = "default"
-POSE_DB_PATH = ROOT_DIR / "flux_pose_database.json"
+POSE_DB_PATH = DATA_DIR / "flux_pose_database.json"
+POSE_SETS_PATH = DATA_DIR / "pose_sets.json"
 
 # ── ComfyUI 통신 설정 ──
 COMFY_HOST = os.environ.get("COMFYUI_HOST", "127.0.0.1:8188")
@@ -52,8 +57,8 @@ DEFAULT_SDXL_WIDTH = 832
 DEFAULT_SDXL_HEIGHT = 1216
 DEFAULT_CLIP_SKIP = 2
 DEFAULT_REF_WEIGHT = 0.0
-SDXL_POSE_DB_PATH = ROOT_DIR / "sdxl_pose_database.json"
-FLUX_POSE_DB_PATH = ROOT_DIR / "flux_pose_database.json"
+SDXL_POSE_DB_PATH = DATA_DIR / "sdxl_pose_database.json"
+FLUX_POSE_DB_PATH = DATA_DIR / "flux_pose_database.json"
 
 # ── default_mode 맵핑 (키로 roster.py 이식) ──
 _DEFAULT_MODE_MAP = {

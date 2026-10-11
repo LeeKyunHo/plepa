@@ -13,6 +13,10 @@ import time
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
+
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR, configure_stdio
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.character_service import default_character_service

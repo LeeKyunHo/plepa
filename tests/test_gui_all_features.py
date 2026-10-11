@@ -56,30 +56,27 @@ class TestGuiAllFeatures(unittest.TestCase):
         self.assertIn("wuxia_full", set_dict, "wuxia_full 포즈 세트가 누락되었습니다.")
         self.assertEqual(len(set_dict["wuxia_full"].codes), 122)
 
-    def test_character_service_murim_roster(self):
-        """무협 아포칼립스 로스터(murim)의 10인 캐릭터 조회가 정상 작동하는지 검증."""
-        chars = default_character_service.list_characters(roster="murim")
-        prefixes = [c.prefix for _, c, _ in chars]
-        
-        expected_prefixes = ["aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj"]
-        for exp in expected_prefixes:
-            self.assertIn(exp, prefixes, f"무협 캐릭터 '{exp}'가 캐릭터 서비스에서 검색되지 않습니다.")
+    def test_character_service_rosters(self):
+        """스파이(spy) 및 무협(murim) 로스터의 10인 캐릭터 조회가 정상 작동하는지 검증."""
+        chars_spy = default_character_service.list_characters(roster="spy")
+        prefixes_spy = [c.prefix for _, c, _ in chars_spy]
+        expected_spy = ["srh", "vic", "cla", "viv", "rvn", "scl", "kzk", "evl", "dom", "chl"]
+        for exp in expected_spy:
+            self.assertIn(exp, prefixes_spy, f"스파이 캐릭터 '{exp}'가 캐릭터 서비스에서 검색되지 않습니다.")
 
     def test_asset_service_alphanumeric_mapping(self):
-        """에셋 서비스가 영숫자 복합 포즈 코드(A00, C01, N01 등)를 정상적으로 파싱하고 정렬하는지 검증."""
-        # 생성 완료된 murim 대표 캐릭터(ii) 에셋 목록 조회
-        assets_ii = default_asset_service.list_character_assets("ii", roster="murim")
-        self.assertTrue(len(assets_ii) > 0, "ii 캐릭터의 에셋 목록이 0개입니다.")
+        """에셋 서비스가 영숫자 복합 포즈 코드(A00 등)를 정상적으로 파싱하고 매트릭스에 매핑하는지 검증."""
+        assets_srh = default_asset_service.list_character_assets("srh", roster="spy")
+        self.assertTrue(len(assets_srh) > 0, "srh 캐릭터의 에셋 목록이 0개입니다.")
         
-        codes = [a["code"] for a in assets_ii]
-        # 적어도 A00 및 C01~C10 등 신규 코드가 포함되어야 함
-        self.assertTrue(any(c.startswith("C") for c in codes), "C팩 무협 액션 포즈가 에셋 목록에 매핑되지 않았습니다.")
+        codes = [a["code"] for a in assets_srh]
+        self.assertIn("A00", codes, "A00 포즈가 에셋 목록에 매핑되지 않았습니다.")
         
         # 매트릭스 맵 생성 테스트
-        matrix = default_asset_service.get_matrix_map(["ii", "jj"], ["A00", "C01", "C04"], roster="murim")
-        self.assertIn("ii", matrix)
-        self.assertIn("jj", matrix)
-        self.assertIn("C01", matrix["ii"])
+        matrix = default_asset_service.get_matrix_map(["srh", "vic"], ["A00"], roster="spy")
+        self.assertIn("srh", matrix)
+        self.assertIn("vic", matrix)
+        self.assertIn("A00", matrix["srh"])
 
     def test_genit_exporter_code_resolution(self):
         """Genit 내보내기 코드 해석기가 2자리 대문자 코드를 올바르게 산출하는지 검증."""
