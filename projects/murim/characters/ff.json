@@ -1,0 +1,16 @@
+{
+  "prefix": "ff",
+  "name": "진아영 (녹림칠십이채 부채주 딸 / 호쾌한 톰보이 거한도수)",
+  "gender": "female",
+  "faction": "unorthodox_bandit",
+  "appearance": {
+    "face_and_hair": "fiery spiky reddish-brown ponytail, wild stray bangs, fierce amber-orange eyes, confident cocky grin, light tan sun-kissed skin",
+    "physique": "healthy athletic tomboy physique, toned abs, firm buoyant large breasts, muscular thighs, dynamic stance",
+    "outfit": "rough open-chest leather vest with fur trim, sarashi chest bandage wrap, rolled-up baggy martial trousers, heavy broadsword strap across back"
+  },
+  "flux_positive": "1girl, solo, masterpiece, best quality, ultra-detailed, Jin Ah-young, green forest bandit tomboy, messy spiky reddish-brown high ponytail, fierce grinning amber eyes, sun-kissed tan skin, athletic toned body, six-pack abs, large buoyant breasts, wearing open rugged leather martial vest with fur trim, white sarashi bandage wrapped around chest, loose bandit trousers, leather wraps, rugged oriental wuxia atmosphere",
+  "flux_negative": "worst quality, low quality, bad anatomy, bad hands, fragile delicate girl, pale sick skin, elegant dress, petticoat, deformed fingers",
+  "sdxl_positive": "masterpiece, best quality, absurdres, 1girl, solo, jin ah-young, spiky reddish brown ponytail, fierce amber eyes, cocky grin, tan skin, athletic body, toned abs, large breasts, open leather vest with fur trim, sarashi chest wrap, tomboy bandit wuxia",
+  "sdxl_negative": "worst quality, low quality, bad anatomy, deformed, pale skin, delicate princess dress",
+  "sdxl_nude_positive": "masterpiece, best quality, absurdres, 1girl, solo, jin ah-young, spiky reddish brown ponytail, fierce amber eyes, tanned sun-kissed skin, athletic toned body, visible abs, perk large breasts, muscular thighs"
+}

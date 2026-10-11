@@ -1,0 +1,16 @@
+{
+  "prefix": "jj",
+  "name": "흑호련 (천마의 수족 / 마교 우호법 야차)",
+  "gender": "female",
+  "faction": "demonic_cult_enforcer",
+  "appearance": {
+    "face_and_hair": "straight sleek dark plum-purple hair in sharp high ponytail, one eye covered with stylized dark demon horn eyepatch, visible eye burning with fanatical golden-yellow glare, cold sadistic smirk",
+    "physique": "tall toned athletic assassin build, firm large breasts, sharp muscular definition, sadistic aura",
+    "outfit": "form-fitting black lacquered leather demonic battle armor, dark steel gauntlets with spikes, blood-red sash, chained hook blades hanging at waist"
+  },
+  "flux_positive": "1girl, solo, masterpiece, best quality, ultra-detailed, Heuk Ho-ryeon, Right Guardian Yaksha of Demonic Cult, sleek dark plum-purple high ponytail hair, dark ornamental eyepatch over one eye, single burning fierce golden eye, cruel sadistic smirk, athletic tall toned figure, firm large breasts, wearing sleek black leather demonic battle suit, spiked dark steel gauntlets, blood-red sash, chain weapon attachments, menacing dark wuxia executioner",
+  "flux_negative": "worst quality, low quality, bad anatomy, bad hands, kind expression, soft cute girl, modern clothes, sneakers",
+  "sdxl_positive": "masterpiece, best quality, absurdres, 1girl, solo, heuk ho-ryeon, dark purple high ponytail, demonic eyepatch over one eye, burning golden eye, sadistic smirk, tall toned athletic body, firm large breasts, black leather demonic battle suit, spiked gauntlets, blood red sash, demonic cult executioner",
+  "sdxl_negative": "worst quality, low quality, bad anatomy, deformed, cute soft face, modern clothes",
+  "sdxl_nude_positive": "masterpiece, best quality, absurdres, 1girl, solo, heuk ho-ryeon, dark plum purple ponytail, eyepatch, golden eye, sadistic smirk, tall athletic muscular toned body, firm perk breasts, pale skin with combat scars, tight waist"
+}
