@@ -113,8 +113,8 @@ def assemble_flux_prompt(
     sentences = []
     is_no_bg = _is_no_background(bg_prompt)
 
-    # 1. 포즈/구도 및 상황 서술 (선두 배치하여 구도 우선권 부여)
-    pose_text = pose.prompt.strip()
+    # 1. 포즈/구도 및 상황 서술 (선두 배치하여 구도 우선권 부여, 성별 전용 프롬프트 분기 지원)
+    pose_text = pose.get_prompt(char.gender).strip()
     if bg_prompt:
         bg_clean = bg_prompt.strip().rstrip(".")
         if pose.section == "emotions":
@@ -283,8 +283,8 @@ def assemble_sdxl_prompt(
     _is_illustrious = any(k in _ckpt_lower for k in ("flatbread", "wai", "illustrious", "animagine", "animefull"))
     _extra_quality_kws = [] if _is_illustrious else ["soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"]
 
-    # 1. 포즈 태그 정리
-    pose_tag = pose.prompt.strip()
+    # 1. 포즈 태그 정리 (성별 전용 프롬프트 분기 지원)
+    pose_tag = pose.get_prompt(char.gender).strip()
     if bg_prompt:
         if pose.section == "emotions":
             if "clean background" in pose_tag.lower():

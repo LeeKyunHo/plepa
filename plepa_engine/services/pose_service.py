@@ -69,6 +69,8 @@ class PoseService:
                     prompt=item.get("prompt", ""),
                     description=item.get("description", ""),
                     required_outfit=item.get("required_outfit", ""),
+                    prompt_female=item.get("prompt_female", ""),
+                    prompt_otokonoko=item.get("prompt_otokonoko", ""),
                 )
 
         # 로스터 전용 테마 포즈 (projects/{roster}/custom_poses.json 또는 themes/*.json) 병합
@@ -95,6 +97,8 @@ class PoseService:
                     for code, item in sec_dict.items():
                         code_str = self.normalize_code(code)
                         prompt_val = item.get(f"{engine.lower()}_prompt") or item.get("prompt", "")
+                        prompt_f = item.get(f"{engine.lower()}_prompt_female") or item.get("prompt_female", "")
+                        prompt_oto = item.get(f"{engine.lower()}_prompt_otokonoko") or item.get("prompt_otokonoko", "")
                         entries[code_str] = PoseEntry(
                             code=code_str,
                             section=sec_name,
@@ -102,6 +106,8 @@ class PoseService:
                             prompt=prompt_val,
                             description=item.get("description", ""),
                             required_outfit=item.get("required_outfit", ""),
+                            prompt_female=prompt_f,
+                            prompt_otokonoko=prompt_oto,
                         )
             except Exception:
                 pass

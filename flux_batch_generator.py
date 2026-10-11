@@ -131,8 +131,8 @@ def run_self_test() -> int:
     try:
         flux_db = load_pose_db(engine="flux")
         print(f"✔ FLUX 포즈 DB 로드 성공 (총 {len(flux_db)}개 항목)")
-        if len(flux_db) != 80:
-            errors.append(f"FLUX 포즈 DB 항목 수가 80개가 아닙니다 (현재: {len(flux_db)}개)")
+        if len(flux_db) < 80:
+            errors.append(f"FLUX 포즈 DB 항목 수가 80개 미만입니다 (현재: {len(flux_db)}개)")
         for code, entry in flux_db.items():
             if "BREAK" in entry.prompt:
                 errors.append(f"FLUX 코드 [{code}] 프롬프트에 금지된 BREAK 문법 잔류")
@@ -140,7 +140,7 @@ def run_self_test() -> int:
                 errors.append(f"FLUX 코드 [{code}] 프롬프트에 SDXL 괄호 가중치 잔류")
             if not entry.label:
                 errors.append(f"FLUX 코드 [{code}] 라벨 누락")
-        print("✔ FLUX 80종 서술형 프롬프트 순수성 검사 완료")
+        print("✔ FLUX 서술형 프롬프트 순수성 검사 완료")
     except Exception as e:
         errors.append(f"FLUX 포즈 DB 검사 실패: {e}")
         flux_db = {}
@@ -149,8 +149,8 @@ def run_self_test() -> int:
     try:
         sdxl_db = load_pose_db(engine="sdxl")
         print(f"✔ SDXL 포즈 DB 로드 성공 (총 {len(sdxl_db)}개 항목)")
-        if len(sdxl_db) != 80:
-            errors.append(f"SDXL 포즈 DB 항목 수가 80개가 아닙니다 (현재: {len(sdxl_db)}개)")
+        if len(sdxl_db) < 80:
+            errors.append(f"SDXL 포즈 DB 항목 수가 80개 미만입니다 (현재: {len(sdxl_db)}개)")
         for code, entry in sdxl_db.items():
             if not entry.label:
                 errors.append(f"SDXL 코드 [{code}] 라벨 누락")

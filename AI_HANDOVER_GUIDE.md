@@ -590,3 +590,16 @@ plepa/
 | `plepa_engine/services/schemas.py` | `CharacterSchema.sdxl_nude_positive` 스키마 |
 | `plepa_engine/prompt_builder.py` | `is_nude_pose()` + `assemble_sdxl_prompt()` 분기 로직 |
 | `plepa_engine/checkpoint_profiles.json` | Flatbread IL v6.0 프로필 등록 |
+
+---
+
+## 7. 아키텍처 결정 기록 (ADR)
+
+### ADR-41: 1:1 포즈 코드 유지 기반 여성 vs 오토코노코 프롬프트 분기 시스템 (2026-10-11)
+- **배경**: Genit 등 플랫폼 리소스 매핑 규격상 여성과 오토코노코 캐릭터가 동일한 상황 코드(`N01` 등)를 호출해야 함. 이전 방식(40번대 vs 140번대 물리적 코드 분리)은 확장 테마 팩과 단일 규격 매핑에 제약이 있었음.
+- **결정 사항**:
+  1. `PoseEntry` 모델에 `prompt_female` 및 `prompt_otokonoko` 필드와 `get_prompt(gender)` 메서드 도입.
+  2. 공용 씬(A 감정, B 일상)은 기본 `prompt`로 공유하고, 체형/상호작용 분기가 필요한 특수 이벤트 씬은 동일 코드 내에서 내부 프롬프트를 성별에 따라 자동 분기.
+  3. `prompt_builder.py`의 `assemble_flux_prompt` 및 `assemble_sdxl_prompt`에 성별 디스패치 연동.
+- **결과**: URL/코드 체계의 100% 일관성을 유지하면서 두 성별 모두 자연스럽고 정교한 전용 씬 생성을 완벽 지원.
+

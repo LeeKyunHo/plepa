@@ -114,6 +114,29 @@ flowchart TD
 }
 ```
 
+### 4.3 성별 분기 프롬프트 작성법 (`prompt_female` vs `prompt_otokonoko`)
+성별(여성 vs 오토코노코)에 따라 체형이나 상호작용 경로가 달라지는 이벤트 씬의 경우, 단일 코드를 유지한 채 내부 프롬프트를 분기할 수 있습니다:
+
+```json
+{
+  "adult": {
+    "N01": {
+      "label": "정상위삽입",
+      "required_outfit": "nude",
+      "flux_prompt_female": "missionary position, male partner on top, vaginal penetration, gentle thrusting, blushing face, looking up with pleasure",
+      "flux_prompt_otokonoko": "missionary position, male partner on top, receptive anal sex, slender feminine boy body, small male member visible, blushing intensely with teary eyes",
+      "sdxl_prompt_female": "1girl, 1boy, missionary, vaginal penetration, blushing",
+      "sdxl_prompt_otokonoko": "1boy, 1boy, missionary, anal, receptive, otokonoko, blushing",
+      "description": "정상위 삽입 씬 (여성: 전면 기본 경로 / 오토코노코: 후방 경로 및 전용 체형 묘사)"
+    }
+  }
+}
+```
+* **동작 원리**: 캐릭터 JSON의 `"gender"` 속성을 검사하여:
+  - `gender == "otokonoko"` ➔ `prompt_otokonoko` 자동 채택
+  - `gender == "female"` (또는 미지정) ➔ `prompt_female` 자동 채택
+  - 분기 필드가 없으면 기본 `flux_prompt` / `sdxl_prompt` 폴백 적용
+
 ---
 
 ## 🗂️ 5. 파일 저장 및 배치 규칙 (Directory Layout)

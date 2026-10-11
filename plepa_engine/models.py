@@ -18,6 +18,18 @@ class PoseEntry:
     prompt: str
     description: str = ""
     required_outfit: str = ""
+    prompt_female: str = ""
+    prompt_otokonoko: str = ""
+
+    def get_prompt(self, gender: str = "female") -> str:
+        """캐릭터 성별(female, otokonoko 등)에 맞춘 전용 프롬프트를 반환합니다. 미지정 시 기본 prompt 반환."""
+        g = (gender or "").lower().strip()
+        if g == "otokonoko" and self.prompt_otokonoko:
+            return self.prompt_otokonoko
+        if (g in ("female", "girl", "woman") or not g) and self.prompt_female:
+            return self.prompt_female
+        return self.prompt
+
 
 
 @dataclass
