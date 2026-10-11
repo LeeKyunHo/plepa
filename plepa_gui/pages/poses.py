@@ -43,10 +43,14 @@ def render_poses_page() -> None:
         with ui.card().classes("w-[420px] bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg"):
             ui.label("🧘 포즈 데이터베이스").classes("text-lg font-bold text-slate-100 mb-2")
 
-            with ui.tabs().classes("w-full text-amber-400 text-xs") as section_tabs:
-                tab_emo = ui.tab("emotions", label="표정")
-                tab_pose = ui.tab("poses", label="포즈")
-                tab_h = ui.tab("h_scenes", label="H-씬")
+            with ui.tabs().classes("w-full text-amber-400 text-xs flex-wrap") as section_tabs:
+                tab_wuxia = ui.tab("wuxia_actions", label="무협(C)")
+                tab_genit_e = ui.tab("genit_emotions", label="감정(A)")
+                tab_genit_a = ui.tab("genit_actions", label="행동(B)")
+                tab_adult = ui.tab("adult", label="성인(N)")
+                tab_emo = ui.tab("emotions", label="기본표정")
+                tab_pose = ui.tab("poses", label="기본포즈")
+                tab_h = ui.tab("h_scenes", label="레거시H")
                 tab_oto = ui.tab("scenes_otokonoko", label="오토코노코")
 
             # 포즈 항목 스크롤 리스트

@@ -21,7 +21,11 @@ from plepa_engine.services.repository import Repository, default_repo
 from plepa_engine.services.schemas import PoseFlags, PoseItemSchema, PoseSetSchema
 
 POSE_SETS_FILE = ROOT_DIR / "pose_sets.json"
-SECTION_NAMES = ("emotions", "poses", "h_scenes", "scenes_otokonoko")
+SECTION_NAMES = (
+    "emotions", "poses", "h_scenes", "scenes_otokonoko",
+    "wuxia_actions", "genit_emotions", "genit_actions", "adult",
+    "swimsuit", "bunny", "bdsm"
+)
 
 
 class PoseService:

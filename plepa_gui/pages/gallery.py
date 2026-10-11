@@ -50,7 +50,11 @@ def render_gallery_page() -> None:
     render_header("/gallery")
 
     default_roster = detect_best_default_roster()
-    all_poses = default_pose_service.load_pose_db(engine="flux")
+    
+    def get_roster_poses(r: str) -> Dict[str, Any]:
+        return default_pose_service.load_pose_db(engine="sdxl", roster=r)
+
+    all_poses = get_roster_poses(default_roster)
     pose_sets = default_pose_service.load_pose_sets()
 
     available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
@@ -62,8 +66,8 @@ def render_gallery_page() -> None:
         "roster": default_roster,
         "single_char": "",
         "selected_chars": [],
-        "selected_codes": sorted(all_poses.keys()),  # 전체 포즈 (000~159) 기본
-        "pose_set": "all",  # "전체 포즈"
+        "selected_codes": sorted(all_poses.keys()),
+        "pose_set": "all",
         "misc_filter": "all",
     }
 
@@ -123,8 +127,11 @@ def render_gallery_page() -> None:
 
     def on_roster_changed(new_r: str):
         state["roster"] = new_r
+        nonlocal all_poses
+        all_poses = get_roster_poses(new_r)
         state["selected_chars"] = []
         state["single_char"] = ""
+        state["selected_codes"] = sorted(all_poses.keys())
         update_control_bars()
         render_content()
 
@@ -220,6 +227,15 @@ def render_gallery_page() -> None:
                 # 1. 빠른 프리셋 버튼들
                 with ui.row().classes("items-center gap-2 flex-wrap"):
                     ui.label("빠른 캐릭터 프리셋:").classes("text-xs font-semibold text-slate-400 mr-1")
+
+                    # 무협 10인 세트 퀵 버튼
+                    if any(k in char_asset_counts for k in ["aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj"]):
+                        ui.button("🏮 무협 10인 전원", icon="auto_awesome", on_click=lambda: select_murim_all_preset()).props(
+                            "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
+                        ).tooltip("무협 아포칼립스 10인(aa~jj) 전원 선택")
+                        ui.button("🗡️ 정파 3인 (aa, bb, cc)", icon="shield", on_click=lambda: select_murim_orthodox_preset()).props(
+                            "unelevated dense size=xs color=cyan-500/20 text-color=cyan-300 border border-cyan-500/40"
+                        ).tooltip("정파 3인 (백설아, 제갈혜진, 남궁소율) 선택")
 
                     # 네쌍둥이 4인 세트 퀵 버튼
                     if any(k in char_asset_counts for k in ["yua", "serin", "sia", "hayul", "ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]):
@@ -348,6 +364,28 @@ def render_gallery_page() -> None:
             state["selected_chars"].append(prefix)
         elif not selected and prefix in state["selected_chars"]:
             state["selected_chars"].remove(prefix)
+        render_content()
+
+    def select_murim_all_preset():
+        try:
+            ui.notify("🏮 무협 10인 전원 선택 완료!", type="positive")
+        except Exception:
+            pass
+        murim_chars = ["aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj"]
+        counts = get_character_asset_counts(state["roster"])
+        state["selected_chars"] = [p for p in murim_chars if p in counts]
+        update_control_bars()
+        render_content()
+
+    def select_murim_orthodox_preset():
+        try:
+            ui.notify("🗡️ 정파 3인 (aa, bb, cc) 선택 완료!", type="positive")
+        except Exception:
+            pass
+        ortho = ["aa", "bb", "cc"]
+        counts = get_character_asset_counts(state["roster"])
+        state["selected_chars"] = [p for p in ortho if p in counts]
+        update_control_bars()
         render_content()
 
     def select_quadruplets_preset():

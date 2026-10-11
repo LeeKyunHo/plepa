@@ -62,7 +62,8 @@ class AssetService:
         # { "000": { "path": ..., "censored_path": ... } }
         items_by_code: Dict[str, Dict[str, Any]] = {}
 
-        pattern = re.compile(rf"^{re.escape(prefix)}_(\d{{3}})(?:_(.*?))?(?:_censored)?\.(webp|png)$")
+        # 영숫자 포즈 코드 규격 지원 (예: 000, A00, C01, N01, N28 등)
+        pattern = re.compile(rf"^{re.escape(prefix)}_([A-Za-z0-9]+)(?:_(.*?))?(?:_censored)?\.(webp|png)$")
 
         for f in sorted(asset_dir.glob(f"{prefix}_*")):
             if not f.is_file():
@@ -93,8 +94,16 @@ class AssetService:
                 items_by_code[code]["size_bytes"] = f.stat().st_size
                 items_by_code[code]["mtime"] = f.stat().st_mtime
 
+        # 정렬 키: 숫자 단독(000) -> 영문+숫자(A00, C01, N01) -> 일반 문자열
+        def _code_sort_key(k: str) -> Tuple[int, Any, Any]:
+            if k.isdigit():
+                return (0, "", int(k))
+            if len(k) >= 2 and k[0].isalpha() and k[1:].isdigit():
+                return (1, k[0].upper(), int(k[1:]))
+            return (2, k, 0)
+
         # 리스트로 변환 (정렬: 코드 오름차순)
-        result = [v for k, v in sorted(items_by_code.items(), key=lambda x: int(x[0])) if v["path"] is not None]
+        result = [v for k, v in sorted(items_by_code.items(), key=lambda x: _code_sort_key(x[0])) if v["path"] is not None]
         return result
 
     def get_matrix_map(
@@ -167,7 +176,7 @@ class AssetService:
 
         # 3. 에셋 폴더 내 비정규 포즈 파일 및 샘플 이미지 탐색
         assets_dir = roster_dir / "assets"
-        pose_pattern = re.compile(r"^.+_\d{3}(?:_.*)?\.(webp|png)$")
+        pose_pattern = re.compile(r"^.+_[A-Za-z0-9]+(?:_.*)?\.(webp|png)$")
         if assets_dir.is_dir():
             for f in sorted(assets_dir.rglob("*")):
                 if f.is_file() and f.suffix.lower() in valid_exts:

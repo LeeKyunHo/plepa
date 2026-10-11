@@ -285,6 +285,34 @@ def assemble_sdxl_prompt(
 
     # 1. 포즈 태그 정리 (성별 전용 프롬프트 분기 지원)
     pose_tag = pose.get_prompt(char.gender).strip()
+
+    # 세계관 감지 (무협 / 동양풍 여부)
+    is_wuxia = bool(
+        getattr(char, "faction", None)
+        or "wuxia" in (getattr(pose, "section", "") or "").lower()
+        or "murim" in str(getattr(char, "file_path", "")).lower()
+        or any(k in (char.sdxl_positive or "").lower() for k in ("hanfu", "wuxia", "daoist", "sect", "cult", "jianghu", "murim"))
+    )
+
+    # 무협 프로젝트일 경우 포즈 태그의 현대식 침대, 샤워부스, 카메라, 성인용품, 현대의상 정제
+    if is_wuxia:
+        # 침대/침실 -> 동양식 비단 침상, 목조 전각/객잔
+        pose_tag = re.sub(r"\bbed\b", "silk bedding, oriental wooden bed", pose_tag, flags=re.IGNORECASE)
+        pose_tag = re.sub(r"\bbedroom\b", "ornate pavilion room, wooden inn chamber", pose_tag, flags=re.IGNORECASE)
+        # 샤워실 -> 목조 욕탕, 온천, 온수 김
+        pose_tag = re.sub(r"\b(shower room|shower stall|modern shower|standing in shower)\b", "traditional wooden bathtub, rising steam, hot spring bath", pose_tag, flags=re.IGNORECASE)
+        pose_tag = re.sub(r"\bshower sex\b", "intimacy in wooden bathtub, rising steam", pose_tag, flags=re.IGNORECASE)
+        # 카메라 촬영/플래시 -> 은밀한 시점, 초근접 시점
+        pose_tag = re.sub(r"\b(camera POV|camera lens|taking photo|flash|photograph)\b", "intimate close-up view, secret observation angle", pose_tag, flags=re.IGNORECASE)
+        # 바이브/로터 -> 최음향, 점혈 쾌락, 전율
+        pose_tag = re.sub(r"\b(hidden toy|vibrating toy|hidden vibrating toy|sex toy|vibrator)\b", "aphrodisiac sensation, intense pleasure wave, shivering thighs", pose_tag, flags=re.IGNORECASE)
+        # 벽끼임 구체화 (SDXL 3D 매립 버그 방지)
+        if "stuck in wall" in pose_tag.lower():
+            pose_tag = re.sub(r"stuck in wall", "stuck in wooden partition, rear and hips exposed on this side, upper body trapped on other side, caught helpless, wooden wall", pose_tag, flags=re.IGNORECASE)
+        # 착의 씬에서 포즈 태그 내 현대 의상 단어 제거 (캐릭터 고유 무협 도복 보호)
+        if slot == "default":
+            pose_tag = re.sub(r"\b(skirt|blouse|shirt|t-shirt|panties|bra|modern dress|jeans|shorts)\b", "", pose_tag, flags=re.IGNORECASE)
+
     if bg_prompt:
         if pose.section == "emotions":
             if "clean background" in pose_tag.lower():
@@ -406,13 +434,41 @@ def assemble_sdxl_prompt(
             f"(character sheet, model sheet, reference sheet, concept art, turnaround, multiple views, multiple angles, split screen, inset, chibi, pop-up, reaction face, comic, collage, photo montage:1.4), "
             f"(halftone, screentone, dot pattern, stippling, grain, speckles, noise, dithering, textured skin, rough skin, pores, white dots, spots on skin:1.3), "
             f"(severed head, decapitation, headless, floating head, disembodied head, cut off head:1.4), "
-            f"(overexposed, blown highlights, washed out:1.2), (heavy shadow, shadow crush, black crush, deep black shadow, burnt skin, colored skin, dark skin:1.25), (cyan tint, blue tint, neon glow:1.2), "
+            f"(overexposed, blown highlights, washed out:1.2), (heavy shadow, shadow crush, black crush, deep black shadow, burnt skin:1.25), (cyan tint, blue tint, neon glow:1.2), "
             f"(oversaturated, high contrast, harsh lighting, blinding white highlight, oily skin:1.2), "
             f"(detailed background, complex background, outdoors, indoors, scenery, room, window, wallpaper:1.25)"
         )
         furnitures = [f for f in ("furniture", "chair", "sofa", "bed", "table", "desk", "counter") if f not in pose_tag.lower()]
         if furnitures:
             negative_prompt = f"{negative_prompt}, ({', '.join(furnitures)}:1.2)"
+
+    # [패치 0-1] 상시 공통 결함 방어 (말풍선/텍스트, 가면/안대, 동공 소실, 다중 손/팔)
+    negative_prompt = (
+        f"{negative_prompt}, "
+        f"(text:1.4), (speech bubble:1.4), (dialogue:1.4), (dialogue box:1.4), (subtitles:1.4), (comic panel:1.4), (sound effects:1.4), (watermark:1.3), (signature:1.3), "
+        f"(mask:1.4), (white mask:1.4), (face mask:1.4), (noh mask:1.4), (porcelain mask:1.4), (paper mask:1.4), (theatrical mask:1.4), (blindfold:1.4), (covered eyes:1.35), "
+        f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
+        f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35)"
+    )
+
+    # [패치 0-2] 무협(wuxia) 세계관 시대착오 소품/배경 원천 차단
+    if is_wuxia:
+        negative_prompt = (
+            f"{negative_prompt}, "
+            f"(camera:1.4), (phone:1.4), (smartphone:1.4), (tripod:1.4), (photograph:1.4), (flash:1.4), "
+            f"(modern:1.4), (contemporary:1.4), (modern bed:1.4), (western bedroom:1.4), (modern room:1.4), "
+            f"(tiles:1.35), (modern bathroom:1.35), (shower stall:1.35), (glass shower:1.35), "
+            f"(vibrator:1.4), (sex toy:1.4), (adult toy:1.4), (modern underwear:1.4), (bra:1.4), (panties:1.4), (lace lingerie:1.4), (neon lights:1.35)"
+        )
+
+    # [패치 0-3] 구릿빛/태닝 피부(dark skin/tan skin) 캐릭터 피부색 탈색 방지 및 보존
+    char_skin_desc = f"{char.appearance.face_and_hair} {char.appearance.physique} {char.sdxl_positive or ''} {getattr(char, 'sdxl_nude_positive', '') or ''}".lower()
+    is_dark_skin = any(kw in char_skin_desc for kw in ("dark tan", "dark skin", "tanned skin", "sun-kissed skin", "tan skin", "bronze skin"))
+    if is_dark_skin:
+        negative_prompt = re.sub(r",?\s*\b(colored skin|dark skin|tan skin)\b", "", negative_prompt, flags=re.IGNORECASE)
+        negative_prompt = f"{negative_prompt}, (pale skin:1.35), (white skin:1.35), (fair skin:1.3)"
+        if "dark tan skin" not in positive_prompt.lower():
+            positive_prompt = f"{positive_prompt}, (radiant dark tan skin:1.2), (sun-kissed bronze skin:1.15)"
 
     # [패치 A] 탈의(nude) 상태 시 의상/에이프런/소품 잔류 원천 차단
     if nude:
@@ -467,8 +523,16 @@ def assemble_sdxl_prompt(
     if is_interactive:
         # 부정 프롬프트에서 남성 차단 태그(1boy, male) 제거하여 여성 얼굴 복제 방지
         negative_prompt = re.sub(r",?\s*\b(1boy|male)\b", "", negative_prompt, flags=re.IGNORECASE)
+
+        # 다인 씬(갱뱅, 3P, 하렘, 다수 파트너 등) 판별
+        is_multi_partner = any(
+            kw in pose_tag.lower()
+            for kw in ("2boys", "3boys", "multiple boys", "gangbang", "threesome", "foursome", "group sex", "bukkake", "surrounded", "harem")
+        )
+
         # 파트너 위치에 여성 머리/얼굴이 중복 렌더링되거나 자기 손으로 턱/얼굴을 잡는 왜곡, 손 색상 오염/장갑 원천 차단
-        negative_prompt = f"{negative_prompt}, (severed head:1.4), (decapitation:1.4), (headless:1.4), (floating head:1.4), (disembodied head:1.4), (multiple heads:1.35), (two heads:1.35), (2girls:1.35), (multiple girls:1.35), (extra girl:1.35), (two girls:1.35), (duplicate:1.35), (reaction face:1.35), (inset:1.35), (2boys:1.35), (multiple males:1.35), (extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, (colored skin:1.2), orange skin, (pitch black shadow on body:1.25), (burnt skin:1.25)"
+        multi_male_guard = "" if is_multi_partner else "(2boys:1.5), (multiple boys:1.5), (two men:1.5), (extra male:1.5), (group:1.4), (threesome:1.4), "
+        negative_prompt = f"{negative_prompt}, (severed head:1.4), (decapitation:1.4), (headless:1.4), (floating head:1.4), (disembodied head:1.4), (multiple heads:1.35), (two heads:1.35), (2girls:1.35), (multiple girls:1.35), (extra girl:1.35), (two girls:1.35), (duplicate:1.35), (reaction face:1.35), (inset:1.35), {multi_male_guard}(extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, orange skin, (pitch black shadow on body:1.25), (burnt skin:1.25)"
 
         # 화면 밖(off-screen) 파트너 씬의 경우 남성 하반신/의상 화면 침범 원천 차단
         if is_offscreen_partner:
@@ -477,21 +541,32 @@ def assemble_sdxl_prompt(
             # 긍정 프롬프트에서 단독 강제 태그(solo) 제거하여 파트너와의 자연스러운 공존 보장
             positive_prompt = re.sub(r",\s*solo\b", "", positive_prompt, flags=re.IGNORECASE)
 
-            # 모브 남성 파트너: 포즈 태그에 이미 1boy가 명시되어 있다면 중복 주입을 방지하여 2boys 결함 원천 차단
-            if "1boy" not in pose_tag.lower():
+            # 남성 얼굴 디테일 및 미남 요소 강력 차단 네거티브
+            male_face_suppression = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), male hair, male bangs, male haircut"
+
+            if is_multi_partner:
+                # 갱뱅 / 3P / 다인 씬: 다수의 모브 남성이 둘러싸는 연출 허용 및 복수 모브 주입
+                negative_prompt = re.sub(r",?\s*\b(2boys|multiple boys|multiple males|two men|extra male|group|threesome|group sex)\b(:[0-9\.]+)?", "", negative_prompt, flags=re.IGNORECASE)
                 if nude:
-                    # 탈의/성인 씬: 완전 탈의 모브
-                    mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (naked male:1.15), (shirtless male:1.1), (bottomless male:1.15), (smooth skin:1.05), muscular build"
-                    mob_negative = "male clothes, male shirt, pants, trousers, jeans, shorts, underwear, male hair, male bangs, male haircut"
+                    mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (shadow over male eyes:1.1), (from behind:1.1), (naked males:1.15), (bottomless males:1.15), muscular builds"
+                    mob_negative = f"{male_face_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear"
+                else:
+                    mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (shadow over male eyes:1.1), (from behind:1.1), (solid black pants:1.2), muscular builds"
+                    mob_negative = f"{male_face_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants"
+            else:
+                # 1:1 단일 파트너 씬: 1boy 중복 제거 및 남성 2명(2boys) 출현 원천 차단
+                positive_prompt = re.sub(r"\b1boy\b", "", positive_prompt, flags=re.IGNORECASE)
+                if nude:
+                    # 탈의/성인 씬: 구도와 음영 중심의 안전한 단일 모브
+                    mob_positive = "BREAK (faceless male:1.15), (obscured male face:1.15), (male head out of frame:1.15), (shadow over male eyes:1.1), (from behind:1.1), (naked male:1.15), (bottomless male:1.15), muscular build"
+                    mob_negative = f"{male_face_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.5), (multiple boys:1.5), (multiple males:1.5), (two men:1.5), (extra male:1.5), (group:1.4), (threesome:1.4)"
                 else:
                     # 착의 스킨십 씬: 상반신 탈의 + 단색 블랙 팬츠 고정
-                    mob_positive = "BREAK (faceless male:1.15), (bald male:1.15), (shirtless male:1.1), (bare shoulders:1.1), (smooth skin:1.05), (solid black pants:1.2), muscular build"
-                    mob_negative = "male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, male hair, male bangs, male haircut"
-                positive_prompt = f"{positive_prompt} {mob_positive}"
-                negative_prompt = f"{negative_prompt}, {mob_negative}"
-            else:
-                # 포즈에 이미 1boy가 있는 경우: 다중 남성(2boys) 차단 네거티브만 주입
-                negative_prompt = f"{negative_prompt}, (2boys:1.5), (multiple boys:1.5), (multiple males:1.5), (extra male:1.5)"
+                    mob_positive = "BREAK (faceless male:1.15), (obscured male face:1.15), (male head out of frame:1.15), (shadow over male eyes:1.1), (from behind:1.1), (shirtless male:1.1), (bare shoulders:1.1), (solid black pants:1.2), muscular build"
+                    mob_negative = f"{male_face_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.5), (multiple boys:1.5), (multiple males:1.5), (two men:1.5), (extra male:1.5), (group:1.4), (threesome:1.4)"
+
+            positive_prompt = f"{positive_prompt} {mob_positive}"
+            negative_prompt = f"{negative_prompt}, {mob_negative}"
 
         # 파트너를 응시해야 하는 상호작용 포즈인 경우 정면/카메라 응시 차단
         if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):
