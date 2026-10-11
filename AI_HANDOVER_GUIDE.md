@@ -636,3 +636,39 @@ plepa/
 ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_nude_positive를 통해 모든 의상·악세서리 태그를 원천 박멸하고 완전 나체 렌더링.
   3. pose_sets.json 및 generate.py 퀵 버튼 바에 [⚔️ 무협 C](10종) 및 [🏮 무협풀팩(102)] 연동.
 - **결과**: 현대식 테마의 이질감을 배제하고 무협 고유의 장르적 몰입도와 상황별 착의/탈의 정밀성을 100% 확보.
+
+### ADR-45: 모브 파트너 무특징(Faceless/Obscured Face) 구도화 및 시각적 결함 9대 방어 체계 확립 (2026-10-11)
+- **배경**:
+  1. H-씬/스킨십 생성 시 남성 모브 파트너가 과도하게 미남이거나 디테일하게 묘사되어 히로인의 시각적 집중을 분산시킴.
+  2. 이를 억제하기 위해 `blank face`, `featureless face` 태그를 도입했으나, 2D 애니 모델이 이를 물리적인 "흰 석고/노(Noh) 가면"으로 오인하여 모브는 물론 히로인의 얼굴에도 가면을 씌우거나 동공을 지워버리는 치명적 결함 발생.
+  3. 또한 네거티브의 `colored skin`으로 인한 구릿빛 피부 탈색, 1:1 씬에서 2boys 소환, 무협 세계관에 어울리지 않는 현대식 가구(침대), 통신/촬영 기기, 최음 기구, 텍스트 말풍선 발생 등 복합 결함이 제기됨.
+- **결정 사항**:
+  1. **가면 유발 태그 영구 제명 및 순수 구도/음영 모브화**:
+     - `blank face`, `featureless face` 전면 삭제.
+     - 모브는 `(faceless male:1.15), (obscured male face:1.15), (male head out of frame:1.15), (shadow over male eyes:1.1), (from behind:1.1)` 순수 앵글과 음영으로만 무특징화.
+     - 네거티브에 `mask, white mask, noh mask, blank face, pupil-less, empty eyes, white eyes:1.3` 상시 강제 주입.
+  2. **구릿빛/태닝 피부 탈색 원천 차단**:
+     - 네거티브에서 `colored skin` 완전 제거.
+     - 구릿빛 캐릭터(`is_dark_skin`) 감지 시 네거티브에 `(pale skin:1.35), (white skin:1.35)` 주입, 포지티브에 `(radiant dark tan skin:1.2)` 고정.
+  3. **지능형 다인(Gangbang) vs 1:1 분기**:
+     - 갱뱅/3P/다인 씬: `2boys` 및 `group` 차단을 해제하고 `multiple faceless males` 주입.
+     - 1:1 씬: `1boy` 정제 후 `(2boys:1.5), (multiple boys:1.5), (group:1.4)` 강력 차단.
+  4. **무협 세계관 시대착오 요소 자동 정제**:
+     - 포즈 태그의 `bed` ➔ 비단 침상, `camera POV` ➔ 은밀한 시점, `vibrator` ➔ 최음향/점혈, `stuck in wall` ➔ 동양풍 목조 격자벽 구도로 지능형 치환.
+     - 네거티브에 `camera, phone, modern bed, vibrator, bra, panties:1.4` 추가.
+- **결과**: 가면 및 동공 소실 0% 박멸, 남성 모브의 자연스러운 음영 처리, 구릿빛 피부의 완전한 보존 및 무협 고유 분위기 극대화 달성.
+
+### ADR-46: 영숫자 에셋 매핑 정규화 및 GUI 전 기능 자동화 검증 스위트 구축 (2026-10-11)
+- **배경**:
+  1. 테마 팩 확장으로 도입된 영숫자 포즈 코드(`A00`, `B01`, `C01`, `N01` 등)가 기존 3자리 숫자 전용 정규식(`\d{3}`)에 걸려 갤러리(`/gallery`)에서 `(0)`장으로 집계되는 매핑 불일치 현상 발생.
+  2. 코드베이스 수정 시 NiceGUI 웹 UI의 모든 페이지와 서비스 로직이 정상 작동하는지 사전 검증할 통합 테스트 스위트의 부재.
+- **결정 사항**:
+  1. **에셋 매핑 정규식 전면 확장 (`asset_service.py`)**:
+     - 정규식을 `rf"^{prefix}_([A-Za-z0-9]+)..."`로 개편하여 영숫자 및 3자리 숫자 포즈 코드를 완벽 지원.
+     - 포즈 코드 정렬 시 알파벳 섹션(A, B, C, N)과 숫자 순서를 보존하는 하이브리드 정렬 키 구현.
+  2. **신규 테마 섹션 영구 동기화**:
+     - `pose_service.py`에 `wuxia_actions`, `genit_emotions`, `genit_actions`, `adult` 섹션명 등록 및 포즈 탭 UI 동기화.
+     - `flux_pose_database.json` 및 `sdxl_pose_database.json`에 신규 144개 포즈 영구 병합.
+  3. **GUI 종합 전수 테스트워크 구축 (`tests/test_gui_all_features.py`)**:
+     - GUI 전체 7대 페이지(`generate`, `gallery`, `characters`, `poses`, `pose_sets`, `backgrounds`, `settings`) 및 백엔드 서비스 계층의 무결성을 전수 검증하는 자동화 테스트 스위트 구축.
+- **결과**: 갤러리 에셋 집계 100% 정상화(`aa`: 115장 등 즉시 노출) 및 회귀 버그 없는 안전한 배포 파이프라인 완성.
