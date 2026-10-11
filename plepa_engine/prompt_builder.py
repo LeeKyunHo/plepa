@@ -181,7 +181,7 @@ _OUTFIT_KEYWORDS = frozenset({
     "uniform", "suit", "collar", "cuffs", "tie", "necktie", "bowtie", "necklace", "pendant", "choker",
     "bracelet", "gloves", "socks", "stockings", "pantyhose", "shoes", "boots", "heels",
     "bra", "panties", "underwear", "swimwear", "bikini", "swimsuit", "leotard", "one-piece",
-    "apron", "shorts", "robe", "kimono", "hoodie", "top", "camisole",
+    "apron", "shorts", "robe", "robes", "hanfu", "kimono", "hoodie", "top", "camisole", "bracers", "scabbard",
     "underboob", "underbust", "corset", "bodice", "bustier", "strap", "straps", "suspender", "garter", "garters",
     "belt", "buckle", "sash", "shawl", "fabric", "slit", "wrap", "wristwatch", "watch",
     "neckline", "scoop", "plunging", "v-neck", "halter-neck", "halterneck", "off-shoulder", "strapless", "backless",

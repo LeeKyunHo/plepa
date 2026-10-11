@@ -1,16 +1,16 @@
 {
   "prefix": "ff",
-  "name": "진아영 (녹림칠십이채 부채주 딸 / 호쾌한 톰보이 거한도수)",
+  "name": "진아영 (녹림칠십이채 부채주 딸 / 야성적인 구릿빛 여두목)",
   "gender": "female",
   "faction": "unorthodox_bandit",
   "appearance": {
-    "face_and_hair": "fiery spiky reddish-brown ponytail, wild stray bangs, fierce amber-orange eyes, confident cocky grin, light tan sun-kissed skin",
-    "physique": "healthy athletic tomboy physique, toned abs, firm buoyant large breasts, muscular thighs, dynamic stance",
-    "outfit": "rough open-chest leather vest with fur trim, sarashi chest bandage wrap, rolled-up baggy martial trousers, heavy broadsword strap across back"
+    "face_and_hair": "voluminous long wavy reddish-brown hair with feather beads, fierce confident amber-golden eyes, full pouty lips, seductive bold grin, radiant sun-kissed dark tan skin",
+    "physique": "curvaceous exotic athletic hourglass body, toned flat belly, very large buoyant breasts, narrow waist, sculpted wide hips, wild sensual feminine allure",
+    "outfit": "daring open-chest rugged leather halter top with tiger fur trim, brass belly chain, low-rise draped leather slit skirt, leather arm wraps, gold hoop earrings"
   },
-  "flux_positive": "1girl, solo, masterpiece, best quality, ultra-detailed, Jin Ah-young, green forest bandit tomboy, messy spiky reddish-brown high ponytail, fierce grinning amber eyes, sun-kissed tan skin, athletic toned body, six-pack abs, large buoyant breasts, wearing open rugged leather martial vest with fur trim, white sarashi bandage wrapped around chest, loose bandit trousers, leather wraps, rugged oriental wuxia atmosphere",
-  "flux_negative": "worst quality, low quality, bad anatomy, bad hands, fragile delicate girl, pale sick skin, elegant dress, petticoat, deformed fingers",
-  "sdxl_positive": "masterpiece, best quality, absurdres, 1girl, solo, jin ah-young, spiky reddish brown ponytail, fierce amber eyes, cocky grin, tan skin, athletic body, toned abs, large breasts, open leather vest with fur trim, sarashi chest wrap, tomboy bandit wuxia",
-  "sdxl_negative": "worst quality, low quality, bad anatomy, deformed, pale skin, delicate princess dress",
-  "sdxl_nude_positive": "masterpiece, best quality, absurdres, 1girl, solo, jin ah-young, spiky reddish brown ponytail, fierce amber eyes, tanned sun-kissed skin, athletic toned body, visible abs, perk large breasts, muscular thighs"
+  "flux_positive": "1girl, solo, masterpiece, best quality, ultra-detailed, Jin Ah-young, exotic bandit queen of green forest, long wavy wild reddish-brown hair decorated with tribal beads and feathers, piercing amber-golden eyes, bold seductive smile, radiant dark tanned skin, voluptuous hourglass figure, very large breasts, toned flat stomach, wide hips, wearing daring tiger-fur trimmed leather halterneck top, low-rise slit leather skirt, brass belly chain, wild sensual oriental wuxia beauty",
+  "flux_negative": "worst quality, low quality, bad anatomy, bad hands, fragile delicate girl, pale white skin, tomboy, short hair, boyish, flat chest, elegant hanfu, deformed fingers",
+  "sdxl_positive": "masterpiece, best quality, absurdres, 1girl, solo, jin ah-young, long wavy reddish brown hair, amber eyes, seductive smile, dark tan skin, sun-kissed skin, voluptuous hourglass figure, very large breasts, narrow waist, wide hips, open leather halter top with tiger fur trim, brass belly chain, low-rise leather slit skirt, exotic wuxia femme fatale",
+  "sdxl_negative": "worst quality, low quality, bad anatomy, deformed, pale skin, white skin, tomboy, flat chest, boyish, delicate dress, modern clothes",
+  "sdxl_nude_positive": "masterpiece, best quality, absurdres, 1girl, solo, jin ah-young, long wavy reddish brown hair, amber eyes, radiant dark tan skin, voluptuous hourglass figure, very large perk breasts, narrow waist, wide hips, sculpted thighs"
 }

@@ -126,9 +126,16 @@ def render_generate_page() -> None:
                 ui.button("🔥 성인 N", on_click=lambda: select_genit_set("genit_adult", "성인 46종 (N1~N74)")).props(
                     "outline dense size=xs color=indigo-300"
                 )
+                ui.button("⚔️ 무협 C", on_click=lambda: select_genit_set("wuxia_actions", "무협 전용 10종 (C1~C10)")).props(
+                    "unelevated dense size=xs color=amber-700 text-color=white font-bold"
+                ).tooltip("운기수련, 전투대치, 초식공격, 내공주입, 주화입마, 경공 등")
+                ui.button("🏮 무협풀팩(102)", on_click=lambda: select_genit_set("wuxia_full", "무협 통합 풀패키지 102종")).props(
+                    "unelevated dense size=xs color=emerald-700 text-color=white font-bold"
+                ).tooltip("감정(24) + 행동(22) + 성인(46) + 무협정예(10) 통합 생성")
                 ui.button("👗 의상 D/E/F", on_click=lambda: select_genit_set("genit_costumes", "의상 팩 22종 (수영복/BDSM/바니걸)")).props(
                     "outline dense size=xs color=indigo-300"
                 )
+
 
             with ui.row().classes("w-full gap-4 mb-2"):
                 mode_set_btn = ui.radio(
