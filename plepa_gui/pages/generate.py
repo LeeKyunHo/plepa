@@ -17,6 +17,7 @@ from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.generation_service import GenerationParams, default_generation_service
 from plepa_engine.services.job_manager import global_job_manager
+from plepa_engine.services.pose_background_service import default_pose_bg_service
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_gui.components.header import render_header
 
@@ -41,6 +42,17 @@ def render_generate_page() -> None:
     def get_bg_options(r: str, eng: str) -> dict:
         bgs = default_background_service.get_backgrounds(r, engine=eng)
         opts = {}
+        
+        # 프로젝트별 특수 라벨 정의
+        special_labels = {
+            "spy": {
+                "default": "default (1960s 비밀 살롱 VIP 라운지)",
+                "boudoir": "boudoir (고급 살롱 사적 침실)",
+                "clinic": "clinic (비밀 살롱 의료실)",
+                "office": "office (1960s 첩보 아카이브 사무실)"
+            }
+        }
+        
         for k in bgs.keys():
             if k == "none":
                 opts[k] = "none (배경 없음 - 순백색 스튜디오) ⭐"
@@ -49,9 +61,17 @@ def render_generate_page() -> None:
             elif k == "grey_studio":
                 opts[k] = "grey_studio (그레이 스튜디오)"
             elif k == "default":
-                opts[k] = "default (프로젝트 기본 배경)"
+                # 로스터별 특수 라벨이 있으면 사용
+                if r in special_labels and "default" in special_labels[r]:
+                    opts[k] = special_labels[r]["default"]
+                else:
+                    opts[k] = "default (프로젝트 기본 배경)"
             else:
-                opts[k] = k
+                # 로스터별 특수 라벨이 있으면 사용
+                if r in special_labels and k in special_labels[r]:
+                    opts[k] = special_labels[r][k]
+                else:
+                    opts[k] = k
         return opts
 
     # 반응형 폼 상태
@@ -59,7 +79,7 @@ def render_generate_page() -> None:
         "roster": DEFAULT_ROSTER,
         "selected_chars": [],
         "pose_selection_mode": "set",  # 'set' or 'custom'
-        "selected_pose_set": "shower_trio",
+        "selected_pose_set": "genit_full",
         "custom_pose_expr": "000..019",
         "engine": DEFAULT_ENGINE,
         "sdxl_ckpt": conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
@@ -170,6 +190,12 @@ def render_generate_page() -> None:
                     label="배경 프리셋",
                     on_change=lambda e: state.update({"bg_preset": e.value})
                 ).props("dense outlined dark options-dense").classes("flex-1")
+                
+                # 배경 자동 매칭 버튼
+                ui.button(
+                    "🎯",
+                    on_click=lambda: auto_match_background()
+                ).props("flat dense color=amber-400").tooltip("선택된 포즈에 맞는 배경 자동 매칭 (로스터별 최적화)")
 
             model_select_container = ui.column().classes("w-full mb-3")
 
@@ -218,6 +244,7 @@ def render_generate_page() -> None:
         state["selected_pose_set"] = "all_80"
         mode_set_btn.value = "포즈 세트 사용"
         on_pose_mode_changed("포즈 세트 사용")
+        auto_match_background()
         ui.notify("⭐ 기본 80종 포즈 (000~159) 선택 완료!", type="positive")
 
     def select_genit_set(set_id: str, label_name: str):
@@ -225,6 +252,7 @@ def render_generate_page() -> None:
         state["selected_pose_set"] = set_id
         mode_set_btn.value = "포즈 세트 사용"
         on_pose_mode_changed("포즈 세트 사용")
+        auto_match_background()
         ui.notify(f"👑 Genit {label_name} 선택 완료!", type="positive")
 
     def on_roster_changed(new_r: str):
@@ -236,6 +264,50 @@ def render_generate_page() -> None:
         if state["bg_preset"] not in new_opts:
             state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
             bg_sel.value = state["bg_preset"]
+        # 로스터 변경 시 자동으로 배경 매칭
+        auto_match_background()
+
+    def _get_current_pose_codes() -> List[str]:
+        """현재 선택된 포즈 세트 또는 커스텀 표현식의 포즈 코드 목록을 반환합니다."""
+        try:
+            if state["pose_selection_mode"] == "set":
+                if state["selected_pose_set"] == "all_80":
+                    return [f"{i:03d}" for i in range(60)] + [f"{i:03d}" for i in range(140, 160)]
+                sets = default_pose_service.load_pose_sets()
+                target_set = next((s for s in sets if s.id == state["selected_pose_set"]), None)
+                if target_set and target_set.codes:
+                    return list(target_set.codes)
+            else:
+                expr = state["custom_pose_expr"].strip()
+                if expr:
+                    db = default_pose_service.load_pose_db(engine=state["engine"], roster=state["roster"])
+                    return default_pose_service.resolve_pose_codes(expr, db)
+        except Exception:
+            pass
+        return []
+
+    def auto_match_background():
+        """선택된 로스터와 포즈(세트/표현식)에 맞는 배경을 자동으로 매칭합니다."""
+        try:
+            codes = _get_current_pose_codes()
+            recommended_bg = default_pose_bg_service.get_recommended_background_for_poses(
+                state["roster"], codes
+            )
+
+            bg_options_list = get_bg_options(state["roster"], state["engine"])
+            if recommended_bg in bg_options_list:
+                state["bg_preset"] = recommended_bg
+                bg_sel.value = recommended_bg
+                ui.notify(
+                    f"🎯 {state['roster']} 포즈 맞춤 배경 자동 적용: {bg_options_list[recommended_bg]}",
+                    type="positive",
+                )
+            elif "default" in bg_options_list:
+                state["bg_preset"] = "default"
+                bg_sel.value = "default"
+                ui.notify(f"🎯 기본 배경 적용: {bg_options_list['default']}", type="info")
+        except Exception as e:
+            print(f"[WARNING] auto_match_background: {e}")
 
     def update_config_badge():
         conf = default_config_service.get_config()
@@ -304,12 +376,20 @@ def render_generate_page() -> None:
                     on_change=lambda e, p=c.prefix: (state["selected_chars"].append(p) if e.value else state["selected_chars"].remove(p))
                 ).props("dark dense").classes("text-xs text-slate-200")
 
+    def on_pose_set_selected(new_set_id: str):
+        state["selected_pose_set"] = new_set_id
+        auto_match_background()
+
     def on_pose_mode_changed(mode_str: str):
         pose_mode_container.clear()
         sets = default_pose_service.load_pose_sets()
-        set_options = {"all_80": "⭐ 전체 80종 포즈 (000~159)"}
+        set_options = {}
         for s in sets:
             set_options[s.id] = f"{s.name} ({len(s.codes)}종)"
+        set_options["all_80"] = "⭐ 전체 80종 포즈 (000~159) [레거시]"
+
+        if state["selected_pose_set"] not in set_options and set_options:
+            state["selected_pose_set"] = next(iter(set_options.keys()))
 
         with pose_mode_container:
             if "포즈 세트" in mode_str:
@@ -317,7 +397,7 @@ def render_generate_page() -> None:
                 ui.select(
                     options=set_options,
                     value=state["selected_pose_set"],
-                    on_change=lambda e: state.update({"selected_pose_set": e.value})
+                    on_change=lambda e: on_pose_set_selected(e.value)
                 ).props("outlined dark dense options-dense").classes("w-full text-sm")
             else:
                 state["pose_selection_mode"] = "custom"

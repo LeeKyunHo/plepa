@@ -12,15 +12,17 @@ from typing import Any, Dict, List, Optional, Tuple
 from plepa_engine.config import (
     FLUX_POSE_DB_PATH,
     POSE_DB_PATH,
+    POSE_SETS_PATH,
     PROJECTS_DIR,
     ROOT_DIR,
     SDXL_POSE_DB_PATH,
+    THEMES_DIR,
 )
 from plepa_engine.models import PoseEntry
 from plepa_engine.services.repository import Repository, default_repo
 from plepa_engine.services.schemas import PoseFlags, PoseItemSchema, PoseSetSchema
 
-POSE_SETS_FILE = ROOT_DIR / "pose_sets.json"
+POSE_SETS_FILE = POSE_SETS_PATH
 
 # 업계 표준: 단일 진실 공급원(SSOT) 섹션 메타데이터 레지스트리
 # id: {name, short_label, icon, order}
@@ -122,10 +124,10 @@ class PoseService:
             if themes_dir.is_dir():
                 theme_files.extend(themes_dir.glob("*.json"))
 
-        # 전역 루트 themes/*.json 병합 지원
-        global_themes = ROOT_DIR / "themes"
-        if global_themes.is_dir():
-            theme_files.extend(global_themes.glob("*.json"))
+        # 전역 data/themes/*.json (및 레거시 themes/*.json) 병합 지원
+        for g_themes in (THEMES_DIR, ROOT_DIR / "themes"):
+            if g_themes.is_dir():
+                theme_files.extend(g_themes.glob("*.json"))
 
         for tf in theme_files:
             try:
@@ -407,7 +409,15 @@ class PoseService:
         try:
             raw = self.repo.read_json(POSE_SETS_FILE)
             if isinstance(raw, list):
-                return [PoseSetSchema.model_validate(item) for item in raw]
+                valid_sets: List[PoseSetSchema] = []
+                for item in raw:
+                    if not isinstance(item, dict) or "_category" in item or "id" not in item:
+                        continue
+                    try:
+                        valid_sets.append(PoseSetSchema.model_validate(item))
+                    except Exception:
+                        continue
+                return valid_sets
             return []
         except Exception:
             return []

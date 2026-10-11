@@ -1,0 +1,19 @@
+{
+  "prefix": "evl",
+  "name": "Evelyn (에블린 / 살롱 간호 코스프레 엔터테이너)",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.55,
+  "faction": "salon_vigilante_syndicate",
+  "role": "살롱 내 간호사 콘셉트 엔터테이너 및 자백제 조제 연구관",
+  "appearance": {
+    "face_and_hair": "pastel candy pink hair in twin drill curls, luminous pink eyes, half-closed bedroom eyes, seductive enchanting demeanor, clean smooth forehead",
+    "physique": "petite voluptuous figure, huge soft breasts, slim doll-like waist, curvy hips",
+    "outfit": "white nurse cap with red cross, tight form-fitting pure white collared nurse mini dress, wide lapel collar, deep V-neck wrap front showing cleavage, short sleeves, fitted waist, tight white mini skirt, pure white thigh-high stockings, white high heels"
+  },
+  "flux_positive": "1girl, solo, masterpiece, best quality, ultra-detailed, Evelyn, salon nurse entertainer, pastel pink twin drill hair, luminous pink eyes, seductive enchanting demeanor, huge soft breasts, tiny doll waist, wearing white nurse cap with red cross, tight form-fitting pure white collared nurse mini dress, wide lapel collar, deep V-neck wrap front showing cleavage, short sleeves, fitted waist, tight white mini skirt, pure white thigh-high stockings, white high heels",
+  "flux_negative": "worst quality, low quality, bad anatomy, bad hands, heavy winter coat, armor, pink clothes, pink dress, pink top, micro bikini, string bikini, corset lacing, apron, frills, cutout keyhole, deformed hands",
+  "sdxl_positive": "art by raita, balanced body proportions, stylish avant-garde curves, intricate costume details, clean smooth forehead, neat hairline, masterpiece, best quality, absurdres BREAK 1girl, solo, evelyn, petite voluptuous figure, huge breasts, slim doll-like waist, curvy hips, (pastel candy pink hair:1.15), (twin drill curls, twintails:1.15), (luminous pink eyes:1.15), (half-closed bedroom eyes:1.05), seductive enchanting demeanor, subtle blush, (white nurse cap with red cross:1.15), (tight form-fitting pure snow-white nurse uniform mini dress, wide lapel collar, deep V-neck wrap front, deep cleavage, short sleeves, fitted waist, tight white mini pencil skirt:1.25), pure white thighhighs, zettai ryouiki, white high heels",
+  "sdxl_negative": "bikini, micro bikini, string bikini, bikini top, bra only, cutout, breast cutout, keyhole, corset, lace-up, apron, maid apron, frills, frilled skirt, pleated skirt, garter straps, pink clothes, pink top, pink dress, pink bikini, pink skirt, pink trim, green tint, forehead mark, forehead jewel, forehead gem, forehead ornament, forehead tattoo, forehead dot, third eye, bindi, forehead crest, forehead socket, forehead accessory, head jewel, head ornament on forehead, ugly forehead, deformed limbs, worst quality, low quality, bad anatomy, bad proportions, bad hands, missing fingers, extra digits, deformed, 1boy, male, (comic:1.2), (multiple views:1.2), (panel layout:1.2), heavy coat, cape, armor, flat chest, small breasts, pants",
+  "sdxl_nude_positive": "art by raita, balanced body proportions, stylish avant-garde curves, clean smooth forehead, neat hairline, masterpiece, best quality, absurdres BREAK 1girl, solo, evelyn, porcelain skin, huge soft breasts, slender doll waist, curvy hips, (pastel candy pink hair:1.15), (twin drill curls, twintails:1.15), (luminous pink eyes:1.15), (half-closed bedroom eyes:1.05), seductive enchanting demeanor"
+}

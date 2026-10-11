@@ -117,7 +117,7 @@ def assemble_flux_prompt(
     pose_text = pose.get_prompt(char.gender).strip()
     if bg_prompt:
         bg_clean = bg_prompt.strip().rstrip(".")
-        if pose.section == "emotions":
+        if pose.section in ("emotions", "genit_emotions"):
             if is_no_bg:
                 pose_text = re.sub(
                     r"Clean\s+(minimalist|minimalistic|soft)?\s*(indoor\s+)?background[,\.\s]*",
@@ -186,7 +186,9 @@ _OUTFIT_KEYWORDS = frozenset({
     "belt", "buckle", "sash", "shawl", "fabric", "slit", "wrap", "wristwatch", "watch",
     "neckline", "scoop", "plunging", "v-neck", "halter-neck", "halterneck", "off-shoulder", "strapless", "backless",
     "slipping", "clinging", "contouring", "leather", "denim", "lace", "silk", "satin", "velvet", "cashmere",
-    "headband", "headdress", "maid", "pinafore", "capelet", "cape", "petticoat", "brooch", "cross"
+    "headband", "headdress", "maid", "pinafore", "capelet", "cape", "petticoat", "brooch", "cross",
+    "bandage", "bandages", "lanyard", "badge", "holster", "syringe", "holder", "folder", "bolero",
+    "bunny", "suspenders", "tights", "qipao", "cheongsam", "bodysuit", "fishnet", "fishnets", "stiletto"
 })
 
 _HAIR_KEYWORDS = (
@@ -285,6 +287,12 @@ def assemble_sdxl_prompt(
 
     # 1. 포즈 태그 정리 (성별 전용 프롬프트 분기 지원)
     pose_tag = pose.get_prompt(char.gender).strip()
+    if str(pose.code).upper() == "A00":
+        pos_lower = (char.sdxl_positive or "").lower()
+        if any(kw in pos_lower for kw in ("kuudere", "quiet demeanor", "stoic", "aloof")):
+            pose_tag = re.sub(r"\bgentle smile\b", "calm neutral expression, composed gaze", pose_tag, flags=re.IGNORECASE)
+        elif any(kw in pos_lower for kw in ("shy nervous", "nervous demeanor", "timid")):
+            pose_tag = re.sub(r"\bgentle smile\b", "shy nervous expression, timid gaze, slight blush", pose_tag, flags=re.IGNORECASE)
 
     # 세계관 감지 (무협 / 동양풍 여부)
     is_wuxia = bool(
@@ -314,7 +322,7 @@ def assemble_sdxl_prompt(
             pose_tag = re.sub(r"\b(skirt|blouse|shirt|t-shirt|panties|bra|modern dress|jeans|shorts)\b", "", pose_tag, flags=re.IGNORECASE)
 
     if bg_prompt:
-        if pose.section == "emotions":
+        if pose.section in ("emotions", "genit_emotions"):
             if "clean background" in pose_tag.lower():
                 pose_tag = re.sub(r"clean\s+background", bg_prompt.strip(), pose_tag, flags=re.IGNORECASE)
             else:
@@ -477,6 +485,13 @@ def assemble_sdxl_prompt(
     # [패치 A-2] 침대 및 탈의 씬에서 불필요한 와인/음료/유리잔/병 오브젝트 생성 차단
     if nude or "on bed" in pose_tag.lower():
         negative_prompt = f"{negative_prompt}, (wine, wine glass, champagne, glass, bottle, cup, drink, beverage:1.3)"
+
+    # [패치 A-3] 전신 스탠딩(full body, standing / A00) 구도에서 천장(샹들리에)·소파·원경 문짝 압축 및 상하 앵글 왜곡 차단
+    if "full body" in pose_tag.lower() and "standing" in pose_tag.lower():
+        negative_prompt = (
+            f"{negative_prompt}, "
+            f"(ceiling, chandelier, sofa, couch, armchair, door, doorframe, miniature room, giantess, from below, low angle, from above, high angle, overly long legs, tiny head:1.3)"
+        )
 
     # [패치 B] 턱올리기(033) 파트너 손 중복 및 꼬임 차단
     if "chin lift" in pose_tag.lower():
