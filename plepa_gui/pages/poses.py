@@ -16,10 +16,17 @@ from plepa_gui.components.header import render_header
 from plepa_gui.components.prompt_inspector import open_prompt_inspector_dialog
 
 SECTION_LABELS = {
+    "wuxia_actions": "⚔️ 무협 액션 (C01~C10)",
+    "genit_emotions": "😊 Genit 감정 (A00~A23)",
+    "genit_actions": "🎬 Genit 행동 (B01~B22)",
+    "adult": "🔞 Genit 성인 (N01~N74)",
     "emotions": "😊 기본 표정 (000~019)",
     "poses": "🧍 전신·일상 포즈 (020~039)",
-    "h_scenes": "🔞 H-씬 (040~059)",
+    "h_scenes": "🔞 레거시 H (040~059)",
     "scenes_otokonoko": "🎀 오토코노코 (140~159)",
+    "swimsuit": "👙 수영복 (D01~D08)",
+    "bunny": "🐰 바니걸 (F01~F07)",
+    "bdsm": "⛓️ BDSM (E01~E08)",
 }
 
 
@@ -43,7 +50,7 @@ def render_poses_page() -> None:
         with ui.card().classes("w-[420px] bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg"):
             ui.label("🧘 포즈 데이터베이스").classes("text-lg font-bold text-slate-100 mb-2")
 
-            with ui.tabs().classes("w-full text-amber-400 text-xs flex-wrap") as section_tabs:
+            with ui.tabs(value=state["current_section"]).classes("w-full text-amber-400 text-xs flex-wrap") as section_tabs:
                 tab_wuxia = ui.tab("wuxia_actions", label="무협(C)")
                 tab_genit_e = ui.tab("genit_emotions", label="감정(A)")
                 tab_genit_a = ui.tab("genit_actions", label="행동(B)")

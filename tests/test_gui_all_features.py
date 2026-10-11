@@ -105,6 +105,23 @@ class TestGuiAllFeatures(unittest.TestCase):
         self.assertTrue(callable(getattr(p_bg, "render_backgrounds_page", None)))
         self.assertTrue(callable(getattr(p_set, "render_settings_page", None)))
 
+    def test_gui_poses_page_tabs_and_sections_sync(self):
+        """GUI 포즈 페이지의 SECTION_LABELS와 실제 포즈 DB 및 pose_service.SECTION_NAMES 간의 동기화 무결성 검증 (현업 계약 테스트)."""
+        from plepa_engine.services.pose_service import SECTION_NAMES
+        from plepa_gui.pages.poses import SECTION_LABELS
+
+        # 1. pose_service에 정의된 모든 섹션이 포즈 페이지 레이블 딕셔너리에 정의되어 있는지
+        for sec in SECTION_NAMES:
+            self.assertIn(sec, SECTION_LABELS, f"포즈 서비스의 섹션 '{sec}'이 poses.py의 SECTION_LABELS에 누락되었습니다.")
+
+        # 2. 포즈 DB(flux/sdxl)에 존재하는 모든 포즈의 section 값이 SECTION_NAMES에 포함되는지 (유령 섹션 방지)
+        for engine in ("flux", "sdxl"):
+            db = default_pose_service.load_pose_db(engine=engine)
+            db_sections = {e.section for e in db.values() if e.section}
+            for sec in db_sections:
+                self.assertIn(sec, SECTION_NAMES, f"[{engine}] 포즈 DB의 섹션 '{sec}'이 pose_service.SECTION_NAMES에 등록되지 않았습니다.")
+                self.assertIn(sec, SECTION_LABELS, f"[{engine}] 포즈 DB의 섹션 '{sec}'이 poses.py의 SECTION_LABELS에 누락되었습니다.")
+
 
 if __name__ == "__main__":
     unittest.main()
