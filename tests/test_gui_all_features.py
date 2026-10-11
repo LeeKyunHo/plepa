@@ -67,19 +67,19 @@ class TestGuiAllFeatures(unittest.TestCase):
 
     def test_asset_service_alphanumeric_mapping(self):
         """에셋 서비스가 영숫자 복합 포즈 코드(A00, C01, N01 등)를 정상적으로 파싱하고 정렬하는지 검증."""
-        # aa 캐릭터 에셋 목록 조회
-        assets_aa = default_asset_service.list_character_assets("aa", roster="murim")
-        self.assertTrue(len(assets_aa) > 0, "aa 캐릭터의 에셋 목록이 0개입니다.")
+        # 생성 완료된 murim 대표 캐릭터(ii) 에셋 목록 조회
+        assets_ii = default_asset_service.list_character_assets("ii", roster="murim")
+        self.assertTrue(len(assets_ii) > 0, "ii 캐릭터의 에셋 목록이 0개입니다.")
         
-        codes = [a["code"] for a in assets_aa]
-        # 적어도 A00 및 C01, N01 등 신규 코드가 포함되어야 함
+        codes = [a["code"] for a in assets_ii]
+        # 적어도 A00 및 C01~C10 등 신규 코드가 포함되어야 함
         self.assertTrue(any(c.startswith("C") for c in codes), "C팩 무협 액션 포즈가 에셋 목록에 매핑되지 않았습니다.")
         
         # 매트릭스 맵 생성 테스트
-        matrix = default_asset_service.get_matrix_map(["aa", "bb"], ["A00", "C01", "N01"], roster="murim")
-        self.assertIn("aa", matrix)
-        self.assertIn("bb", matrix)
-        self.assertIn("C01", matrix["aa"])
+        matrix = default_asset_service.get_matrix_map(["ii", "jj"], ["A00", "C01", "C04"], roster="murim")
+        self.assertIn("ii", matrix)
+        self.assertIn("jj", matrix)
+        self.assertIn("C01", matrix["ii"])
 
     def test_genit_exporter_code_resolution(self):
         """Genit 내보내기 코드 해석기가 2자리 대문자 코드를 올바르게 산출하는지 검증."""

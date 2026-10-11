@@ -544,7 +544,12 @@ def assemble_sdxl_prompt(
             # 남성 얼굴 디테일 및 미남 요소 강력 차단 네거티브
             male_face_suppression = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), male hair, male bangs, male haircut"
 
-            if is_multi_partner:
+            is_non_sexual_support = any(kw in pose_tag.lower() for kw in ("non-sexual", "channeling qi", "transferring internal energy", "hands resting on back", "palms on upper back"))
+            if is_non_sexual_support:
+                # 비성적 무협 내공 수련/치유 씬: 등 뒤에서 조용히 내공을 주입하는 단정한 도복 모브
+                mob_positive = "BREAK (faceless male partner:1.15), (obscured face:1.15), (head out of frame:1.15), (from behind:1.15), sitting behind her, hands gently resting on her upper back, traditional oriental martial robes, non-sexual, serene healing"
+                mob_negative = f"{male_face_suppression}, (naked male:1.5), (shirtless:1.4), (bare chest:1.4), (penis:1.5), (sexual:1.5), (groping:1.5), (grabbing breasts:1.5), (kissing:1.5), (2boys:1.5), (multiple boys:1.5), (cross-section:1.5)"
+            elif is_multi_partner:
                 # 갱뱅 / 3P / 다인 씬: 다수의 모브 남성이 둘러싸는 연출 허용 및 복수 모브 주입
                 negative_prompt = re.sub(r",?\s*\b(2boys|multiple boys|multiple males|two men|extra male|group|threesome|group sex)\b(:[0-9\.]+)?", "", negative_prompt, flags=re.IGNORECASE)
                 if nude:

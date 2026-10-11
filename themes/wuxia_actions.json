@@ -24,9 +24,9 @@
     "C04": {
       "label": "내공주입",
       "required_outfit": "default",
-      "flux_prompt": "Sitting behind partner, pressing both palms firmly against partner's back to transfer inner qi energy, focused expression with sweat on brow, glowing soft energy light radiating between palms and back, intimate martial arts touch.",
-      "sdxl_prompt": "1girl, 1boy, sitting behind, palms on back, transferring internal energy, healing qi, glowing light from hands, sweat on brow, focused expression, saving life, martial arts healing, close contact",
-      "description": "상대방의 등 뒤에 양손을 얹고 내공을 전수하거나 치유하는 씬 (C4)"
+      "flux_prompt": "Female martial artist sitting upright in formal seiza posture with eyes gently closed, a tranquil and focused expression, while partner sits behind her resting both palms gently against her upper back to channel warm internal qi, soft luminous healing spiritual mist swirling gently between them, serene martial arts energy transfer.",
+      "sdxl_prompt": "1girl, sitting in seiza posture, upright posture, back to camera, partner behind, hands resting on back, palms on upper back, transferring internal energy, channeling qi, gentle healing aura, serene expression, eyes closed, calm breathing, spiritual qi mist, non-sexual, martial arts cultivation, oriental sanctuary",
+      "description": "정좌한 채 등을 곧게 펴고 앉아 있고, 뒤에서 조용히 등에 손을 얹어 내공/기를 불어넣어 주는 치유·수련 씬 (C4)"
     },
     "C05": {
       "label": "주화입마",
@@ -38,9 +38,9 @@
     "C06": {
       "label": "무기손질",
       "required_outfit": "default",
-      "flux_prompt": "Sitting quietly on floor, carefully wiping bare polished blade of weapon with white cloth, quiet concentrated gaze reflecting in the steel, peaceful warrior ritual before battle.",
-      "sdxl_prompt": "1girl, sitting on floor, wiping weapon blade with cloth, blade maintenance, oiling blade, sharp polished metal reflection, quiet concentrated gaze, martial warrior ritual",
-      "description": "차분하게 자신의 무기를 닦으며 출진을 준비하는 정비 씬 (C6)"
+      "flux_prompt": "Sitting formally on floor with knees bent, holding an oriental martial sword blade horizontally across her lap, holding an oiled silk cloth in one hand and delicately polishing the gleaming steel blade, calm reverent warrior expression, sharpening steel, authentic swordsman weapon maintenance ritual.",
+      "sdxl_prompt": "1girl, sitting on floor, holding sword across lap, holding cleaning cloth, wiping sword blade, polishing blade, weapon maintenance, sharpening steel, looking at blade, reverent quiet expression, traditional warrior maintenance, clean oriental wooden room",
+      "description": "무릎 위에 칼을 올려두고 기름먹인 천으로 칼날을 정성스레 닦아내는 정통 검수/무인 무기 정비 씬 (C6)"
     },
     "C07": {
       "label": "달빛음주",
@@ -52,9 +52,9 @@
     "C08": {
       "label": "경공비행",
       "required_outfit": "default",
-      "flux_prompt": "Weightlessly leaping through bamboo forest treetops, graceful Qinggong movement, body leaning forward, robes fluttering behind like wings, confident serene expression, scenic misty mountains below.",
-      "sdxl_prompt": "1girl, leaping through bamboo forest, flying above treetops, qinggong light footwork, flowing robes, graceful aerial posture, serene expression, scenic mountain misty view",
-      "description": "숲이나 지붕 위를 날아오르듯 도약하는 경공 이동 씬 (C8)"
+      "flux_prompt": "Leaping weightlessly high above the earth in mid-air, graceful aerial Qinggong posture, tip-toeing lightly on slender bamboo tips, long oriental sleeves and hair billowing dramatically in the wind, looking down from altitude, floating dynamic aerial leap, scenic sea of clouds and mountain peaks far below.",
+      "sdxl_prompt": "1girl, full body, mid-air leap, qinggong light footwork, flying in air, stepping on bamboo treetops, tip of bamboo, graceful floating pose, arms spread wide, flowing sleeves billowing in wind, hair floating, high altitude, looking down, sea of clouds below, majestic mountain mist, dynamic aerial shot, wuxia wire action style",
+      "description": "대나무 잎 끝을 살포시 딛거나 허공을 박차고 구름 바다 위를 날아오르는 고공 경공술 비행 씬 (C8)"
     },
     "C09": {
       "label": "제압포로",
