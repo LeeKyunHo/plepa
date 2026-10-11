@@ -658,17 +658,21 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - 네거티브에 `camera, phone, modern bed, vibrator, bra, panties:1.4` 추가.
 - **결과**: 가면 및 동공 소실 0% 박멸, 남성 모브의 자연스러운 음영 처리, 구릿빛 피부의 완전한 보존 및 무협 고유 분위기 극대화 달성.
 
-### ADR-46: 영숫자 에셋 매핑 정규화 및 GUI 전 기능 자동화 검증 스위트 구축 (2026-10-11)
-- **배경**:
-  1. 테마 팩 확장으로 도입된 영숫자 포즈 코드(`A00`, `B01`, `C01`, `N01` 등)가 기존 3자리 숫자 전용 정규식(`\d{3}`)에 걸려 갤러리(`/gallery`)에서 `(0)`장으로 집계되는 매핑 불일치 현상 발생.
-  2. 코드베이스 수정 시 NiceGUI 웹 UI의 모든 페이지와 서비스 로직이 정상 작동하는지 사전 검증할 통합 테스트 스위트의 부재.
-- **결정 사항**:
-  1. **에셋 매핑 정규식 전면 확장 (`asset_service.py`)**:
-     - 정규식을 `rf"^{prefix}_([A-Za-z0-9]+)..."`로 개편하여 영숫자 및 3자리 숫자 포즈 코드를 완벽 지원.
-     - 포즈 코드 정렬 시 알파벳 섹션(A, B, C, N)과 숫자 순서를 보존하는 하이브리드 정렬 키 구현.
-  2. **신규 테마 섹션 영구 동기화**:
-     - `pose_service.py`에 `wuxia_actions`, `genit_emotions`, `genit_actions`, `adult` 섹션명 등록 및 포즈 탭 UI 동기화.
-     - `flux_pose_database.json` 및 `sdxl_pose_database.json`에 신규 144개 포즈 영구 병합.
-  3. **GUI 종합 전수 테스트워크 구축 (`tests/test_gui_all_features.py`)**:
-     - GUI 전체 7대 페이지(`generate`, `gallery`, `characters`, `poses`, `pose_sets`, `backgrounds`, `settings`) 및 백엔드 서비스 계층의 무결성을 전수 검증하는 자동화 테스트 스위트 구축.
 - **결과**: 갤러리 에셋 집계 100% 정상화(`aa`: 115장 등 즉시 노출) 및 회귀 버그 없는 안전한 배포 파이프라인 완성.
+
+### ADR-47: 단일 진실 공급원(SSOT) 기반 메타데이터 주도형 동적 GUI 및 전수 계약 테스트 체계 확립 (2026-10-11)
+- **배경**:
+  1. 포즈/테마/로스터가 추가·수정될 때마다 관련 GUI 페이지(`poses.py`, `gallery.py`, `generate.py`)의 탭과 버튼을 일일이 수동 하드코딩해야 하여 누락 및 불일치 결함이 반복됨.
+  2. 영숫자 포즈(`A00`, `C01` 등) 조회 시 `pose_service.py` 내부 레거시 `int(code)` 형변환으로 인해 화면 렌더링이 중단되던 취약점 발생.
+- **결정 사항**:
+  1. **메타데이터 레지스트리 단일 진실 공급원(SSOT) 구축 (`pose_service.py`)**:
+     - `SECTION_METADATA` 단일 저장소를 신설하고, `get_active_sections()`를 통해 DB에 실제로 존재하는 섹션과 포즈 수량을 실시간 계산하여 반환.
+  2. **GUI 포즈 페이지 100% 동적 루프화 (`poses.py`)**:
+     - 하드코딩된 정적 탭(`tab_wuxia = ...`)을 완전 제거하고, `get_active_sections()` 기반 동적 루프로 UI를 자동 생성.
+     - `SECTION_LABELS`를 `SECTION_METADATA`로부터 자동 파생하여 유지보수 포인트 단일화.
+     - 영숫자 포즈 조회의 `int(code)`를 `normalize_code(code)`로 전면 교체하여 예외 차단.
+  3. **전수 무결성 계약 테스트(Contract Test) 강화 (`tests/test_gui_all_features.py`)**:
+     - `test_all_poses_details_rendering_safety`: DB 내 모든 영숫자 포즈의 상세 조회가 예외 없이 100% 성공하는지 자동 전수 스캔.
+     - `test_active_sections_dynamic_metadata_contract`: 활성 섹션의 메타데이터 바인딩 및 정렬 순서 보장 검증.
+     - `test_gui_poses_page_tabs_and_sections_sync`: 서비스 섹션과 GUI 레이블 간의 1:1 일치 보장.
+- **결과**: 향후 어떤 포즈/테마가 추가되더라도 UI 코드를 단 한 줄도 손대지 않고 100% 자동 동기화되며, 계약 테스트로 사전 무결성을 완전 보장.

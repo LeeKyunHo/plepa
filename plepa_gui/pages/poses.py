@@ -11,23 +11,16 @@ from nicegui import ui
 from plepa_engine.config import DEFAULT_ROSTER
 from plepa_engine.models import CharacterConfig, PoseEntry
 from plepa_engine.services.character_service import default_character_service
-from plepa_engine.services.pose_service import SECTION_NAMES, default_pose_service
+from plepa_engine.services.pose_service import (
+    SECTION_METADATA,
+    SECTION_NAMES,
+    default_pose_service,
+)
 from plepa_gui.components.header import render_header
 from plepa_gui.components.prompt_inspector import open_prompt_inspector_dialog
 
-SECTION_LABELS = {
-    "wuxia_actions": "⚔️ 무협 액션 (C01~C10)",
-    "genit_emotions": "😊 Genit 감정 (A00~A23)",
-    "genit_actions": "🎬 Genit 행동 (B01~B22)",
-    "adult": "🔞 Genit 성인 (N01~N74)",
-    "emotions": "😊 기본 표정 (000~019)",
-    "poses": "🧍 전신·일상 포즈 (020~039)",
-    "h_scenes": "🔞 레거시 H (040~059)",
-    "scenes_otokonoko": "🎀 오토코노코 (140~159)",
-    "swimsuit": "👙 수영복 (D01~D08)",
-    "bunny": "🐰 바니걸 (F01~F07)",
-    "bdsm": "⛓️ BDSM (E01~E08)",
-}
+# SSOT 메타데이터 레지스트리 기반 동적 레이블 프록시
+SECTION_LABELS = {sec_id: meta["name"] for sec_id, meta in SECTION_METADATA.items()}
 
 
 def render_poses_page() -> None:
@@ -50,15 +43,14 @@ def render_poses_page() -> None:
         with ui.card().classes("w-[420px] bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg"):
             ui.label("🧘 포즈 데이터베이스").classes("text-lg font-bold text-slate-100 mb-2")
 
+            # DB에 존재하는 섹션들을 메타데이터 레지스트리 기반으로 자동 동적 생성
+            active_sections = default_pose_service.get_active_sections(engine="flux")
+            default_sec = active_sections[0]["id"] if active_sections else "emotions"
+            state["current_section"] = default_sec
+
             with ui.tabs(value=state["current_section"]).classes("w-full text-amber-400 text-xs flex-wrap") as section_tabs:
-                tab_wuxia = ui.tab("wuxia_actions", label="무협(C)")
-                tab_genit_e = ui.tab("genit_emotions", label="감정(A)")
-                tab_genit_a = ui.tab("genit_actions", label="행동(B)")
-                tab_adult = ui.tab("adult", label="성인(N)")
-                tab_emo = ui.tab("emotions", label="기본표정")
-                tab_pose = ui.tab("poses", label="기본포즈")
-                tab_h = ui.tab("h_scenes", label="레거시H")
-                tab_oto = ui.tab("scenes_otokonoko", label="오토코노코")
+                for sec in active_sections:
+                    ui.tab(sec["id"], label=f"{sec['short_label']} ({sec['count']})")
 
             # 포즈 항목 스크롤 리스트
             items_container = ui.column().classes("w-full gap-2 max-h-[620px] overflow-y-auto pr-1 mt-3")
@@ -265,6 +257,11 @@ def render_poses_page() -> None:
 
         dialog.open()
 
-    # 최초 실행
+    # 최초 실행 시 현재 섹션의 첫 번째 코드 자동 선택
+    init_db = default_pose_service.load_pose_db(engine="flux")
+    init_codes = [c for c, e in init_db.items() if e.section == state["current_section"]]
+    if init_codes:
+        state["selected_code"] = sorted(init_codes)[0]
+
     refresh_items_list()
     load_and_render_detail()

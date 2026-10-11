@@ -21,11 +21,24 @@ from plepa_engine.services.repository import Repository, default_repo
 from plepa_engine.services.schemas import PoseFlags, PoseItemSchema, PoseSetSchema
 
 POSE_SETS_FILE = ROOT_DIR / "pose_sets.json"
-SECTION_NAMES = (
-    "emotions", "poses", "h_scenes", "scenes_otokonoko",
-    "wuxia_actions", "genit_emotions", "genit_actions", "adult",
-    "swimsuit", "bunny", "bdsm"
-)
+
+# 업계 표준: 단일 진실 공급원(SSOT) 섹션 메타데이터 레지스트리
+# id: {name, short_label, icon, order}
+SECTION_METADATA: Dict[str, Dict[str, Any]] = {
+    "wuxia_actions": {"name": "무협 액션 (C01~C10)", "short_label": "무협(C)", "icon": "⚔️", "order": 1},
+    "genit_emotions": {"name": "Genit 감정 (A00~A23)", "short_label": "감정(A)", "icon": "😊", "order": 2},
+    "genit_actions": {"name": "Genit 행동 (B01~B22)", "short_label": "행동(B)", "icon": "🎬", "order": 3},
+    "adult": {"name": "Genit 성인 (N01~N74)", "short_label": "성인(N)", "icon": "🔞", "order": 4},
+    "emotions": {"name": "기본 표정 (000~019)", "short_label": "기본표정", "icon": "😊", "order": 5},
+    "poses": {"name": "전신·일상 포즈 (020~039)", "short_label": "기본포즈", "icon": "🧍", "order": 6},
+    "h_scenes": {"name": "레거시 H (040~059)", "short_label": "레거시H", "icon": "🔞", "order": 7},
+    "scenes_otokonoko": {"name": "오토코노코 (140~159)", "short_label": "오토코노코", "icon": "🎀", "order": 8},
+    "swimsuit": {"name": "수영복 (D01~D08)", "short_label": "수영복", "icon": "👙", "order": 9},
+    "bunny": {"name": "바니걸 (F01~F07)", "short_label": "바니걸", "icon": "🐰", "order": 10},
+    "bdsm": {"name": "BDSM (E01~E08)", "short_label": "BDSM", "icon": "⛓️", "order": 11},
+}
+
+SECTION_NAMES = tuple(SECTION_METADATA.keys())
 
 
 class PoseService:
@@ -36,6 +49,28 @@ class PoseService:
 
     def _get_db_path(self, engine: str) -> Path:
         return SDXL_POSE_DB_PATH if engine.lower() == "sdxl" else FLUX_POSE_DB_PATH
+
+    def get_section_registry(self) -> Dict[str, Dict[str, Any]]:
+        """등록된 모든 섹션의 메타데이터(라벨, 아이콘, 정렬순서)를 반환합니다."""
+        return SECTION_METADATA
+
+    def get_active_sections(self, engine: str = "flux", roster: Optional[str] = None) -> List[Dict[str, Any]]:
+        """현재 DB에 실제 포즈가 1개 이상 존재하는 활성 섹션 목록을 정렬하여 반환합니다 (UI 완전 자동 동기화용)."""
+        db = self.load_pose_db(engine=engine, roster=roster)
+        present_sections = set(e.section for e in db.values() if e.section)
+        
+        result = []
+        for sec_id, meta in sorted(SECTION_METADATA.items(), key=lambda x: x[1].get("order", 99)):
+            if sec_id in present_sections:
+                count = sum(1 for e in db.values() if e.section == sec_id)
+                result.append({
+                    "id": sec_id,
+                    "name": meta["name"],
+                    "short_label": meta["short_label"],
+                    "icon": meta.get("icon", "📁"),
+                    "count": count,
+                })
+        return result
 
     @staticmethod
     def normalize_code(code: Any) -> str:
@@ -209,7 +244,7 @@ class PoseService:
             flux_prompt, sdxl_prompt
         }
         """
-        code_str = f"{int(code):03d}"
+        code_str = self.normalize_code(code)
         flux_raw = self.repo.read_json(FLUX_POSE_DB_PATH)
         sdxl_raw = self.repo.read_json(SDXL_POSE_DB_PATH)
 
@@ -249,7 +284,7 @@ class PoseService:
         SDXL과 FLUX 양쪽 DB에 공유 필드(label, description, flags)를 동시에 동기화 기록합니다.
         프롬프트는 전달된 경우에만 각 엔진 DB에 반영합니다.
         """
-        code_str = f"{int(code):03d}"
+        code_str = self.normalize_code(code)
         flux_raw = self.repo.read_json(FLUX_POSE_DB_PATH)
         sdxl_raw = self.repo.read_json(SDXL_POSE_DB_PATH)
 
@@ -293,7 +328,7 @@ class PoseService:
         라벨 변경 시 영향을 받는 기존 에셋 파일들의 변경 전/후 경로 목록을 시뮬레이션(Dry-run)합니다.
         형식: prefix_000_old_label.webp -> prefix_000_new_label.webp
         """
-        code_str = f"{int(code):03d}"
+        code_str = self.normalize_code(code)
         plan: List[Tuple[Path, Path]] = []
         if not old_label or old_label == new_label:
             return plan

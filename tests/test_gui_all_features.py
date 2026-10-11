@@ -122,6 +122,30 @@ class TestGuiAllFeatures(unittest.TestCase):
                 self.assertIn(sec, SECTION_NAMES, f"[{engine}] 포즈 DB의 섹션 '{sec}'이 pose_service.SECTION_NAMES에 등록되지 않았습니다.")
                 self.assertIn(sec, SECTION_LABELS, f"[{engine}] 포즈 DB의 섹션 '{sec}'이 poses.py의 SECTION_LABELS에 누락되었습니다.")
 
+    def test_all_poses_details_rendering_safety(self):
+        """DB에 등록된 모든 포즈(숫자 및 A00, C01, N01 등 영숫자 포함)의 get_pose_details() 조회가 예외 없이 100% 성공하는지 전수 검증."""
+        for engine in ("flux", "sdxl"):
+            db = default_pose_service.load_pose_db(engine=engine)
+            self.assertTrue(len(db) > 0, f"[{engine}] 포즈 DB가 비어있습니다.")
+            for code, entry in db.items():
+                try:
+                    details = default_pose_service.get_pose_details(code)
+                    self.assertEqual(details["code"], code)
+                    self.assertIn("flux_prompt", details)
+                    self.assertIn("sdxl_prompt", details)
+                except Exception as ex:
+                    self.fail(f"[{engine}] 포즈 코드 '{code}' 상세 조회 중 예외 발생: {ex}")
+
+    def test_active_sections_dynamic_metadata_contract(self):
+        """get_active_sections()가 활성 섹션의 카운트와 라벨을 메타데이터와 결합하여 정상 반환하는지 검증."""
+        actives = default_pose_service.get_active_sections(engine="flux")
+        self.assertTrue(len(actives) >= 4, "최소 4개 이상의 활성 섹션이 반환되어야 합니다.")
+        
+        # 순서 보장 검증 (order 기준 오름차순)
+        from plepa_engine.services.pose_service import SECTION_METADATA
+        orders = [SECTION_METADATA[s["id"]]["order"] for s in actives]
+        self.assertEqual(orders, sorted(orders), "활성 섹션 정렬 순서가 메타데이터 order와 일치하지 않습니다.")
+
 
 if __name__ == "__main__":
     unittest.main()
