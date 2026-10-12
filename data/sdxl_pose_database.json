@@ -417,19 +417,19 @@
       "label": "정상위약",
       "description": "정상위 삽입 (약) - 부드럽고 달콤한 시작 (N1)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, ((missionary position:1.3)), ((lying on back on bed, legs spread wide:1.25)), from side view, looking at partner, heavy body blush, flushed cheeks, soft parted lips, breathless gentle expression, disheveled sheets, soft ambient bedroom light"
+      "prompt": "1girl, 1boy, ((missionary position:1.3)), ((lying on back on bed, legs spread wide:1.25)), ((from side view angle:1.2)), looking up at partner with soft loving gaze, heavy body blush, flushed cheeks, soft parted lips, breathless gentle expression, disheveled sheets, soft ambient bedroom light"
     },
     "N02": {
       "label": "정상위강",
       "description": "정상위 삽입 (강) - 침대에 등을 대고 누워 진행되는 격렬한 정상위 (N2)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, ((missionary position:1.35)), ((lying on back on bed, female on bottom:1.35)), ((single male partner on top between her thighs:1.25)), legs spread wide, completely nude, intense pleasure, arched back, open mouth, heavy blush, looking up at partner, bed, disheveled sheets"
+      "prompt": "1girl, 1boy, ((missionary position:1.35)), ((lying on back on bed, female on bottom:1.35)), ((single male partner on top between her thighs:1.25)), ((from front-center view angle:1.2)), legs spread wide, completely nude, intense pleasure, arched back, open mouth, looking up intensely at partner, heavy blush, bed, disheveled sheets"
     },
     "N03": {
       "label": "후배위약",
       "description": "후배위 삽입 (약) - 뒤에서 부드럽게 진입 (N3)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, ((doggystyle, on all fours:1.3)), ((arched back, hips raised:1.25)), from side view, looking back over shoulder at partner, heavy body blush, intensely flushed cheeks, parted lips gasping, teary gentle pleasure gaze, soft bedding"
+      "prompt": "1girl, 1boy, ((doggystyle, on all fours:1.3)), ((arched back, hips raised:1.25)), ((partner gripping hips firmly from behind:1.2)), from side view, looking back over shoulder at partner, heavy body blush, intensely flushed cheeks, parted lips gasping, teary gentle pleasure gaze, soft bedding"
     },
     "N04": {
       "label": "후배위강",
@@ -441,7 +441,7 @@
       "label": "기승위약",
       "description": "기승위 삽입 (약) - 위에서 부드럽게 리드 (N5)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, ((cowgirl position, straddling partner:1.3)), ((hands resting on partner's chest:1.25)), upright posture, looking down at partner, seductive gentle smile, heavy blush, disheveled sheets, warm soft lighting"
+      "prompt": "1girl, 1boy, ((cowgirl position, straddling partner:1.3)), ((hands resting on partner's chest:1.25)), upright posture, looking down at partner with seductive smile, heavy blush, disheveled sheets, warm soft lighting"
     },
     "N06": {
       "label": "기승위강",
@@ -483,7 +483,7 @@
       "label": "펠라치오약",
       "description": "펠라치오 (약) - 봉사 시작과 올려다보는 눈빛 (N12)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, ((kneeling between partner's legs, fellatio:1.35)), ((looking up submissively with devoted gaze:1.3)), open mouth, licking tip, saliva trail, heavy facial blush, teary eyes, intimate tender bedroom atmosphere"
+      "prompt": "1girl, 1boy, ((kneeling between partner's legs, fellatio:1.35)), ((looking up submissively with deeply devoted affectionate gaze:1.3)), open mouth, licking tip, saliva trail, heavy facial blush, teary eyes, intimate tender bedroom atmosphere"
     },
     "N13": {
       "label": "펠라치오강",
@@ -507,7 +507,7 @@
       "label": "젖꼭지핥음",
       "description": "젖꼭지를 핥고 빨며 애무하는 씬 (N16)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, licking nipple, sucking nipple, breast play, hands in hair, shivering, moaning, blushing"
+      "prompt": "1girl, 1boy, ((partner's mouth licking and sucking nipple:1.35)), ((partner's tongue teasing sensitive nipple:1.3)), ((hands tangled in partner's hair:1.25)), arched back, shivering with pleasure, moaning, heavy blush, bed"
     },
     "N17": {
       "label": "보지애무약",
@@ -525,7 +525,7 @@
       "label": "딥키스",
       "description": "혀를 얽으며 나누는 농밀한 딥키스 (N19)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, ((passionate deep french kiss:1.35)), ((intertwined tongues, saliva trail between lips:1.3)), ((tight intimate embrace, arms wrapped around partner's neck:1.25)), completely nude, closed eyes in bliss, heavy body blush, disheveled bedsheets"
+      "prompt": "1girl, 1boy, ((passionate deep french kiss:1.35)), ((intertwined tongues, saliva trail between lips:1.3)), ((tight intimate embrace, arms wrapped around partner's neck:1.25)), completely nude, closed eyes in bliss, heavy body blush, kissing lips together, disheveled bedsheets, soft intimate lighting"
     },
     "N20": {
       "label": "자위",
@@ -543,7 +543,7 @@
       "label": "들박",
       "description": "공중에 완전히 안아 들어올린 채 진행되는 들박 (N25)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, suspended sex, carried sex, off floor, legs around waist, intense, open mouth, gasping"
+      "prompt": "1girl, 1boy, ((suspended sex, carried off floor:1.3)), ((legs wrapped tightly around partner's waist:1.25)), ((partner gripping thighs firmly:1.2)), intense breathless gasps, open mouth, heavy full body blush, tears of pleasure, from front angle showing intimate union, disheveled"
     },
     "N26": {
       "label": "샤워섹스약",
@@ -585,13 +585,13 @@
       "label": "갱뱅",
       "description": "다수의 상대방에게 둘러싸인 하렘/갱뱅 씬 (N32)",
       "required_outfit": "nude",
-      "prompt": "1girl, multiple boys, gangbang, kneeling in center, dazed expression, heavy blush, surrounded, harem"
+      "prompt": "1girl, 2boys, ((surrounded by two male partners:1.4)), ((double penetration, boy in front and boy behind:1.35)), girl between two boys, all three bodies visible, girl intense ecstasy expression, both boys gripping girl firmly, heavy body blush, bed"
     },
     "N33": {
       "label": "대딸",
       "description": "손으로 부드럽고 능숙하게 상대의 중심을 자극하는 대딸 (N33)",
       "required_outfit": "nude",
-      "prompt": "1girl, 1boy, handjob, stroking, hands on lap, looking up, sweet smile, blushing, bedroom"
+      "prompt": "1girl, 1boy, ((handjob, stroking delicately:1.3)), ((hands gripping partner firmly:1.25)), looking up with sweet bashful smile, rhythmic motion, heavy blush, bedroom, from front angle, teary blushing eyes"
     },
     "N34": {
       "label": "수유대딸",
