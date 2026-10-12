@@ -300,12 +300,12 @@
       "prompt": "An intimate standing cowboy shot inside a glass shower enclosure with water cascading down, back pinned gently against steam-covered glass, glistening wet skin with water droplets dripping, wet hair, one leg wrapped around partner, head tilted back in sensual moaning bliss under falling water. Misty translucent lighting."
     },
     "058": {
-      "label": "침대사후",
+      "label": "침대누워사후여운",
       "description": "모든 행위가 끝나고 땀과 체액에 젖은 채 침대에 나른하게 누워 거친 숨을 고르는 사후 여운.",
       "prompt": "A peaceful solo cowboy shot lying exhausted on messy white bedsheets in aftersex afterglow, bare skin glistening with light sweat, fluid traces between thighs, hair spread across pillow, lips curled into a dazed happy smile, eyes heavy in relaxed bliss. Soft dawn light filtering in."
     },
     "059": {
-      "label": "후방사후",
+      "label": "침대엎드려사후",
       "description": "행위 후 침대에 완전히 엎드려 엉덩이와 허벅지에 체액이 흐르는 채 나른하게 뒤돌아보는 여운.",
       "prompt": "A solo back-view cowboy shot lying prone and spent on the bed, hips slightly raised, looking back over shoulder with unfocused sleepy eyes, saliva cornering lips, legs lazily parted with fluid traces on sheets, body completely melted in satisfying afterglow. Gentle ambient bedroom lighting."
     }
@@ -417,81 +417,61 @@
       "label": "정상위약",
       "description": "정상위 삽입 (약) - 부드럽고 달콤한 시작 (N1)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Gentle missionary position, male partner on top, completely nude, tender slow thrusts, soft eye contact, light blush, warm bedroom lighting.",
-      "prompt_otokonoko": "Gentle missionary position, slender feminine boy on back, receptive partner, flat chest, tender eye contact, light blush, soft bedroom lighting."
+      "prompt": "Gentle tender missionary position, female character lying on back on bed with legs spread wide in side-angle view, looking up at partner with soft loving blush and parted lips, intimate gentle embrace, soft ambient lighting."
     },
     "N02": {
       "label": "정상위강",
-      "description": "정상위 삽입 (강) - 격렬한 피스톤과 절정 (N2)",
+      "description": "정상위 삽입 (강) - 침대에 등을 대고 누워 진행되는 격렬한 정상위 (N2)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Intense passionate missionary position, deep powerful thrusts, arched back, tears in eyes, ecstatic gasping expression, heavy blush, disheveled sheets.",
-      "prompt_otokonoko": "Intense passionate missionary position, slender boy arching back, deep receptive thrusts, teary ecstatic eyes, heavy blush, disheveled sheets."
+      "prompt": "Intense passionate missionary position, female character lying on back on bed with legs spread wide, on the bottom under a single partner, arched back, completely nude, ecstatic gasping expression, heavy blush, disheveled sheets."
     },
     "N03": {
       "label": "후배위약",
       "description": "후배위 삽입 (약) - 뒤에서 부드럽게 진입 (N3)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Gentle doggystyle position on hands and knees, partner gently holding her hips from behind, looking back over shoulder with a bashful loving blush.",
-      "prompt_otokonoko": "Gentle doggystyle position, slender boy on hands and knees, flat chest, looking back over shoulder with blushing face, partner holding hips from behind."
+      "prompt": "Gentle doggystyle position on bed, female character on all fours with back softly arched, looking back over shoulder at partner with blushing flushed cheeks and glistening eyes, warm intimate bedroom lighting."
     },
     "N04": {
       "label": "후배위강",
       "description": "후배위 삽입 (강) - 깊은 결합과 전율 (N4)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Intense doggystyle position, face pushed into pillow, partner gripping hips firmly from behind, trembling with overwhelming sensation, tears of pleasure.",
-      "prompt_otokonoko": "Intense doggystyle position, slender boy with head buried in pillow, partner gripping hips firmly from behind, trembling with intense pleasure."
+      "prompt": "Intense deep doggystyle position on bed, female character on all fours with back deeply arched and face pressed into soft pillow, trembling with overwhelming ecstasy, tears at eye corners, passionate bedroom atmosphere."
     },
     "N05": {
       "label": "기승위약",
       "description": "기승위 삽입 (약) - 위에서 부드럽게 리드 (N5)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Cowgirl position, female character sitting gently on top of partner, hands on partner's chest, looking down with a shy sweet smile, gentle rhythm.",
-      "prompt_otokonoko": "Cowgirl position, slender boy sitting gently on top of partner, flat chest, hands on partner's chest, looking down with shy blushing smile."
+      "prompt": "Sensual cowgirl position on bed, female character straddling partner with hands resting gently on his chest, looking down with a tender seductive smile and heavy blush, soft ambient bedroom light."
     },
     "N06": {
       "label": "기승위강",
       "description": "기승위 삽입 (강) - 자발적인 격렬한 절정 (N6)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Ecstatic cowgirl position, bouncing intensely, head thrown back in pure bliss, hands gripping thighs, flushed body glistening with light sheen, tears of joy.",
-      "prompt_otokonoko": "Ecstatic cowgirl position, slender boy rocking hips intensely, head thrown back, glistening skin, crying out with pleasure, trembling thighs."
+      "prompt": "Passionate cowgirl climax on bed, female character straddling partner with back arched deeply, head thrown back exposing throat in ecstatic breathless release, flushed skin glistening, intense romantic lighting."
     },
     "N07": {
       "label": "입위약",
       "description": "입위 삽입 (약) - 벽에 기댄 스탠딩 결합 (N7)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Standing sex against a wall, partner gently lifting one leg, holding onto partner's shoulders for support, soft passionate kissing, standing embrace.",
-      "prompt_otokonoko": "Standing sex against a wall, slender boy with one leg lifted by partner, holding onto partner's shoulders, blushing, standing embrace."
+      "prompt": "Standing sex against a wall, partner gently lifting one leg, holding onto partner's shoulders for support, soft passionate kissing, standing embrace."
     },
     "N08": {
       "label": "입위강",
       "description": "입위 삽입 (강) - 매달린 채 진행되는 격렬한 입위 (N8)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Intense standing sex, pinned firmly against wall, both legs wrapped around partner's waist, clinging desperately to partner's neck with overwhelmed expression.",
-      "prompt_otokonoko": "Intense standing sex, slender boy pinned to wall, legs wrapped around partner's waist, clinging desperately to partner with breathless ecstasy."
+      "prompt": "Intense standing sex, pinned firmly against wall, both legs wrapped around partner's waist, clinging desperately to partner's neck with overwhelmed expression."
     },
     "N09": {
       "label": "파이즈리약",
       "description": "파이즈리 (약) - 가슴으로 감싸기 시작 (N9)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Paizuri beginning, gently pressing ample breasts together, looking up with a teasing bashful smile, hands cupping breasts softly.",
-      "prompt_otokonoko": "Cleavage intimacy, slender boy pressing soft chest together, cute blushing face, teasing expression looking up."
+      "prompt": "Paizuri beginning, gently pressing ample breasts together, looking up with a teasing bashful smile, hands cupping breasts softly."
     },
     "N10": {
       "label": "파이즈리강",
       "description": "파이즈리 (강) - 격렬한 마찰과 사정 임박 (N10)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Vigorous paizuri, rapid friction between soft breasts, flushed panting face, parted lips, glistening skin, intense dedication.",
-      "prompt_otokonoko": "Intense chest intimacy, slender boy rubbing chest against partner eagerly, panting softly, flushed cheeks, glistening skin."
+      "prompt": "Vigorous paizuri, rapid friction between soft breasts, flushed panting face, parted lips, glistening skin, intense dedication."
     },
     "N11": {
       "label": "파이즈리후",
@@ -503,7 +483,7 @@
       "label": "펠라치오약",
       "description": "펠라치오 (약) - 봉사 시작과 올려다보는 눈빛 (N12)",
       "required_outfit": "nude",
-      "prompt": "Fellatio beginning, kneeling between partner's knees, looking up devotionally with big glistening eyes, tongue gently licking tip, heavy blush."
+      "prompt": "Intimate oral devotion scene, female character kneeling between partner's legs, looking up with deeply devoted affectionate gaze and soft blushing cheeks, gentle loving bedroom intimacy."
     },
     "N13": {
       "label": "펠라치오강",
@@ -533,39 +513,31 @@
       "label": "보지애무약",
       "description": "은밀한 부위를 손가락으로 부드럽게 애무하는 씬 (약: N17)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Partner's fingers gently stroking lower intimate area, arched back, knees trembling apart, shy pleasure, soft bedroom light.",
-      "prompt_otokonoko": "Partner's fingers gently stroking slender boy's intimate area, trembling thighs, flushed face, shy pleasure, soft bedroom light."
+      "prompt": "Partner's fingers gently stroking lower intimate area, arched back, knees trembling apart, shy pleasure, soft bedroom light."
     },
     "N18": {
       "label": "커닐링구스약",
       "description": "하체 부위에 입을 맞추며 애무를 시작하는 씬 (약: N18)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Cunnilingus beginning, legs spread gently on bed, partner's face between thighs, blushing furiously with hands clutching bedsheets.",
-      "prompt_otokonoko": "Intimate oral affection, slender boy with legs apart, partner kissing sensitive inner thighs, clutching bedsheets with intense blush."
+      "prompt": "Cunnilingus beginning, legs spread gently on bed, partner's face between thighs, blushing furiously with hands clutching bedsheets."
     },
     "N19": {
       "label": "딥키스",
       "description": "혀를 얽으며 나누는 농밀한 딥키스 (N19)",
       "required_outfit": "nude",
-      "prompt": "Passionate deep french kiss while completely nude on bed, tongues entangled, saliva string, arms wrapped tightly around partner's neck, heavy blush."
+      "prompt": "Passionate intimate french kiss in bed, completely nude in tight embrace, intertwined tongues with delicate saliva trail, arms wrapped around partner's neck, blissful closed eyes and flushed skin."
     },
     "N20": {
       "label": "자위",
       "description": "침대 위에서 스스로 몸을 만지며 절정에 이르는 자위 (N20)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Solo masturbation on silk sheets, one hand teasing chest while other hand caresses lower area, arched back, flushed face lost in self-pleasure.",
-      "prompt_otokonoko": "Solo masturbation on silk sheets, slender boy stroking himself gently, arched back, teary eyes, blush of sweet guilty pleasure."
+      "prompt": "Solo masturbation on silk sheets, one hand teasing chest while other hand caresses lower area, arched back, flushed face lost in self-pleasure."
     },
     "N24": {
       "label": "교배프레스",
       "description": "다리를 가슴까지 접어 올리고 깊숙이 누르는 교배프레스 (N24)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Mating press position, legs folded all the way up to chest, partner pressing deep inside from above, belly slightly bulging, intense flushed ecstasy.",
-      "prompt_otokonoko": "Mating press position, slender boy with legs folded up to shoulders, partner pressing deep inside from above, intense breathless ecstasy."
+      "prompt": "Intense mating press intimacy on bed, female character with legs folded up towards chest, held close under partner's embrace, breathless flushed ecstatic face, hands clutching soft sheets."
     },
     "N25": {
       "label": "들박",
@@ -574,34 +546,34 @@
       "prompt": "Carried standing sex in mid-air, partner lifting her completely off floor, legs wrapped around hips, bouncing with intense breathless gasps."
     },
     "N26": {
-      "label": "69자세",
-      "description": "서로의 은밀한 부위를 동시에 애무하는 69 포즈 (N26)",
+      "label": "샤워섹스약",
+      "description": "샤워실 쏟아지는 온수 물줄기 속에서 벽을 짚고 나누는 부드러운 수중 결합 시작 씬 (N26)",
       "required_outfit": "nude",
-      "prompt": "Intimate 69 position on bed, mutual oral pleasure, heads between each other's thighs, blushing cheeks, coordinated rhythmic ecstasy."
+      "prompt": "Gentle intimate standing shower sex inside a steamy glass shower stall, female character resting hands against the wet tile wall, partner gently holding her hips from behind, warm water cascading down glistening wet skin and hair, soft loving eye contact over shoulder, misty steam."
     },
     "N27": {
-      "label": "벽끼임앞",
-      "description": "벽 틈에 앞면으로 끼어 옴짝달싹 못하는 씬 (N27)",
-      "required_outfit": "default",
-      "prompt": "Stuck in tight wall crevice facing forward, upper body trapped, struggling cute flustered expression, skirt lifted, partner approaching."
+      "label": "샤워섹스중",
+      "description": "샤워실 유리벽에 손과 가슴을 밀착시키며 온수 속에서 리듬을 타는 결합 씬 (N27)",
+      "required_outfit": "nude",
+      "prompt": "Passionate standing shower sex, female character pressing hands against the misty clear glass wall, partner behind her, warm water streaming down her glistening body, panting with a heavy blush and parted lips, steam and water condensation on glass."
     },
     "N28": {
-      "label": "벽끼임뒤",
-      "description": "벽 틈에 끼어 엉덩이가 뒤로 노출된 벽끼임 뒤태 (N28)",
-      "required_outfit": "default",
-      "prompt": "Stuck in tight wall from behind, hips and rear protruding helplessly, looking back over shoulder with pleading teary blush, partner approaching."
+      "label": "샤워섹스강",
+      "description": "쏟아지는 물줄기 아래 한쪽 다리를 들어올려 안긴 채 절정에 달하는 격렬한 샤워 결합 (N28)",
+      "required_outfit": "nude",
+      "prompt": "Intense passionate shower sex, female character with one leg lifted and wrapped around partner waist, clinging tightly to partner shoulders, head tilted back in pure ecstatic bliss under cascading warm water, drenched glistening skin, dense steam."
     },
     "N29": {
-      "label": "벽끼임펠라",
-      "description": "벽에 끼인 상태에서 올려다보며 봉사하게 되는 씬 (N29)",
-      "required_outfit": "default",
-      "prompt": "Stuck in narrow wall space, kneeling helplessly while partner presents himself, looking up tearfully, forced sweet obedience."
+      "label": "샤워섹스후",
+      "description": "결합 후 따뜻한 물줄기 아래 서로의 품에 기대어 숨을 고르는 나른한 샤워 여운 씬 (N29)",
+      "required_outfit": "nude",
+      "prompt": "Aftermath of intimate shower sex, female character resting her tired head against partner chest, warm water gently flowing over both of them, peaceful blissful smile with eyes softly closed, clinging wet hair, relaxing misty steam."
     },
     "N30": {
       "label": "파일드라이버",
-      "description": "하체를 수직으로 높이 치켜들고 내리꽂는 파일드라이버 (N30)",
+      "description": "어깨만 바닥에 닿고 허리와 엉덩이를 수직으로 치켜올려 무릎을 얼굴 옆에 접은 채 위에서 내리꽂듯 결합하는 역전 파일드라이버 자세 (N30)",
       "required_outfit": "nude",
-      "prompt": "Piledriver vertical sex position, hips raised high vertically, partner standing above driving deep inside, tears of overwhelming sensation, bed."
+      "prompt": "Extreme piledriver position sex on bed from side angle, female character in inverted upside-down position with only her shoulders and upper back touching the mattress, her spine arched vertically upward with hips and pelvis raised high in the air, knees folded tightly and pressed to the sides of her head, legs spread wide in the air, male partner standing or crouching above her thrusting straight downward, his hands firmly gripping her elevated hips for support, completely nude, her face visible showing an expression of overwhelming intense ecstasy with eyes rolled back in pleasure, mouth open gasping and moaning, tears streaming down from the intense sensations, deeply flushed face and body, trembling from extreme deep penetration, dramatic intimate lighting, bedroom."
     },
     "N31": {
       "label": "3P",
@@ -623,15 +595,15 @@
     },
     "N34": {
       "label": "수유대딸",
-      "description": "가슴에 상대를 안아 젖먹이듯 쓰다듬으며 해주는 수유대딸 (N34)",
+      "description": "가슴에 젖꼭지를 물려 수유하듯 하면서 동시에 한 손으로 아래를 쓰다듬어주는 수유대딸 (N34)",
       "required_outfit": "nude",
-      "prompt": "Motherly handjob intimacy, cradling partner's head against bare breasts while hand strokes gently down below, soothing loving expression."
+      "prompt": "Nursing handjob intimacy in bed, female character feeding her breast to partner while simultaneously stroking his shaft with her hand, partner's mouth latched onto her nipple suckling, her free hand gently gripping and rhythmically stroking him, sitting position with partner's head resting on her lap, completely nude, looking down with a tender maternal loving smile and soft affectionate blush, warm intimate bedroom atmosphere."
     },
     "N35": {
       "label": "뒷스마타",
       "description": "엎드린 채 허벅지 사이에 끼워 마찰하는 뒷스마타 (N35)",
       "required_outfit": "nude",
-      "prompt": "Rear sumata, lying prone on stomach, partner friction between her firm thighs from behind without insertion, looking back with flushed smile."
+      "prompt": "Rear sumata thigh sex on bed, female character lying on stomach with hips slightly arched and thighs held tight together, partner friction between her thighs from behind, female character looking back over shoulder with a breathless blushing face, completely nude, bedroom."
     },
     "N36": {
       "label": "스팽킹",
@@ -646,20 +618,16 @@
       "prompt": "Belly submission pose, lying on back exposing soft vulnerable stomach and throat, hands held up like a submissive pet, shy adoring smile."
     },
     "N38": {
-      "label": "보지벌려보여줌",
+      "label": "은밀유혹",
       "description": "다리를 M자로 벌리고 부끄러워하며 은밀한 곳을 과시하는 씬 (N38)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "M-shaped leg spread, pulling folds open with trembling fingers, showing intimate entrance, crimson blushing face, looking at camera shyly.",
-      "prompt_otokonoko": "M-shaped leg spread, slender boy showing delicate intimate area with blushing face, looking directly at viewer with bashful submission."
+      "prompt": "M-shaped leg spread, pulling folds open with trembling fingers, showing intimate entrance, crimson blushing face, looking at camera shyly."
     },
     "N39": {
       "label": "임신누드",
       "description": "배가 부풀어오른 누드 씬 (여성: 임신 / 오토코노코: 사정 후 팽만감) (N39)",
       "required_outfit": "nude",
-      "prompt": "",
-      "prompt_female": "Pregnant nude, beautifully rounded swollen belly, gentle hands resting on pregnant stomach, serene maternal glow, gentle loving smile.",
-      "prompt_otokonoko": "Sensual distended belly after climax, slender boy with gently swollen stomach from intense filling, blushing deeply, peaceful glow."
+      "prompt": "Pregnant nude, beautifully rounded swollen belly, gentle hands resting on pregnant stomach, serene maternal glow, gentle loving smile."
     },
     "N40": {
       "label": "임신중삽입약",
@@ -677,7 +645,7 @@
       "label": "애널섹스",
       "description": "후방 아날 통로로 진입하는 애널 섹스 (N42)",
       "required_outfit": "nude",
-      "prompt": "Anal sex on bed, partner entering back door, wide teary eyes with gasping expression, intense unexpected pleasure, clutching sheets tightly."
+      "prompt": "Deep doggystyle anal position on hands and knees on bed, partner holding her hips firmly from behind, female character looking back over shoulder with teary blushing eyes and parted lips, completely nude, soft bedroom sheets."
     },
     "N43": {
       "label": "풋잡",
@@ -692,31 +660,31 @@
       "prompt": "Armpit intimacy, arm raised behind head exposing smooth clean armpit, partner kissing and licking delicate hollow, giggling with sweet shivers."
     },
     "N45": {
-      "label": "배빵",
-      "description": "복부를 가격당해 숨을 헐떡이며 꺾이는 배빵 씬 (N45)",
+      "label": "배부여잡음",
+      "description": "혼자 양손으로 배를 부여잡고 웅크린 채 고통스러워하는 씬 (N45)",
       "required_outfit": "default",
-      "prompt": "Gut punch impact, partner striking lower abdomen, coughing breath out, tears flying, body bent in half, intense dramatic shock."
+      "prompt": "Solo shot, female character curled up and clutching her own stomach with both hands, doubled over in intense abdominal pain, grimacing with clenched teeth, tears in eyes, sweat on face, kneeling on floor, dramatic moody lighting."
     },
     "N46": {
-      "label": "상대를씻겨줌",
+      "label": "씻겨주기",
       "description": "샤워실에서 거품 스펀지로 상대를 정성껏 씻겨주는 씬 (N46)",
       "required_outfit": "nude",
       "prompt": "Washing partner in shower, lathering soapy bubbles on partner's back with a soft sponge, warm affectionate smile, dense steam."
     },
     "N47": {
-      "label": "씻겨짐",
+      "label": "씻겨받기",
       "description": "상대방의 손길에 몸을 맡기고 깨끗이 씻겨지는 씬 (N47)",
       "required_outfit": "nude",
       "prompt": "Being washed by partner, sitting obediently while partner lathers soap on her shoulders and body, blissful relaxed expression, warm bathroom."
     },
     "N48": {
-      "label": "에로마사지앞",
+      "label": "마사지앞",
       "description": "오일을 바르고 전면 가슴과 복부를 주무르는 에로 마사지 앞 (N48)",
       "required_outfit": "nude",
       "prompt": "Erotic front massage, lying on back on massage table, glistening aromatic oil on bare skin, partner massaging collarbone and chest, soft moans."
     },
     "N49": {
-      "label": "에로마사지뒤",
+      "label": "마사지뒤",
       "description": "엎드린 채 오일을 듬뿍 발라 등과 엉덩이를 자극하는 에로 마사지 뒤 (N49)",
       "required_outfit": "nude",
       "prompt": "Erotic back massage, lying prone on massage table, gleaming oiled back and firm hips, partner's hands pressing lower spine, shivering delight."
@@ -730,11 +698,11 @@
     "N51": {
       "label": "필로토크",
       "description": "격정 후 이불 속에서 속삭이며 정담을 나누는 필로토크 (N51)",
-      "required_outfit": "default",
+      "required_outfit": "nude",
       "prompt": "Pillow talk after intimacy, wrapped together under soft duvet, whispering sweetly, tracing partner's face with fingers, cozy morning glow."
     },
     "N57": {
-      "label": "NTR가슴움켜쥠",
+      "label": "뒤강압가슴",
       "description": "뒤에서 다른 손길이 뻗어와 거칠게 가슴을 움켜쥐는 씬 (N57)",
       "required_outfit": "default",
       "prompt": "Rough hand groping her breast from shadows behind her, tearing open shirt, shocked desperate eyes looking at viewer for help, forced grasp."
@@ -746,31 +714,31 @@
       "prompt": "Full nelson hold, arms pinned behind neck helplessly, thrusting from behind, struggling with teary defiant eyes slowly turning into pleasure."
     },
     "N59": {
-      "label": "NTR야외로터",
+      "label": "야외자극약",
       "description": "야외 인파 속에서 치마 속 로터가 켜진 채 걷는 씬 (N59)",
       "required_outfit": "default",
       "prompt": "Outdoor public setting, hidden vibrating toy inside skirt, walking beside people, biting lip in panic, trembling knees."
     },
     "N60": {
-      "label": "NTR야외로터참는중",
+      "label": "야외자극중",
       "description": "공공장소에서 소리를 참으며 부들부들 버티는 씬 (N60)",
       "required_outfit": "default",
       "prompt": "Enduring intense vibration in public, clutching lamppost or railing, flushed face sweating profusely, struggling not to cry out, closed eyes."
     },
     "N61": {
-      "label": "NTR야외로터절정",
+      "label": "야외자극강",
       "description": "참지 못하고 다리에 힘이 풀려 주저앉으며 절정하는 씬 (N61)",
       "required_outfit": "default",
       "prompt": "Collapsing to knees in public, intense climax from hidden toy, tears streaming, open mouth gasping silently, soaked skirt."
     },
     "N62": {
-      "label": "NTR카메라앞",
+      "label": "카메라촬영수치",
       "description": "카메라 렌즈 앞에서 수치심에 울며 찍히는 씬 (N62)",
       "required_outfit": "nude",
       "prompt": "Forced to pose in front of camera lens, completely nude, crying while covering face with shame, flash light reflection."
     },
     "N63": {
-      "label": "NTR강제키스",
+      "label": "강제키스",
       "description": "턱을 붙잡히고 강제로 빼앗기는 입맞춤 (N63)",
       "required_outfit": "default",
       "prompt": "Forced kiss, aggressive hands gripping jaw, eyes wide in distress and betrayal, pushing away chest, dramatic backlighting."
@@ -788,25 +756,25 @@
       "prompt": "Intense oral stimulation between thighs, hands grasping partner's hair desperately, shuddering with explosive climax."
     },
     "N66": {
-      "label": "측위삽입약",
+      "label": "측위약",
       "description": "옆으로 나란히 누워 마주보며 천천히 결합하는 측위 (약: N66)",
       "required_outfit": "nude",
       "prompt": "Side-by-side sex, lying on sides facing each other on bed, one leg lifted over partner's hip, gentle loving gaze, slow deep union."
     },
     "N67": {
-      "label": "측위삽입강",
+      "label": "측위강",
       "description": "허리를 꽉 쥐고 옆에서 강하게 몰아붙이는 측위 (강: N67)",
       "required_outfit": "nude",
       "prompt": "Intense side sex, partner driving deeply from side, gripping her waist firmly, head pressed into pillow, gasping with rhythmic bliss."
     },
     "N68": {
-      "label": "프론본삽입약",
+      "label": "프론본약",
       "description": "배를 깔고 엎드린 상태에서 포개어지는 프론본 (약: N68)",
       "required_outfit": "nude",
       "prompt": "Prone bone sex, lying flat on stomach, partner lying directly over her back, slow gentle rhythm, hands interlocked beside pillow."
     },
     "N69": {
-      "label": "프론본삽입강",
+      "label": "프론본강",
       "description": "매트리스에 짓눌린 채 바짝 결합되는 프론본 절정 (강: N69)",
       "required_outfit": "nude",
       "prompt": "Intense prone bone sex, pressed completely flat into mattress by partner's weight, deep penetrative thrusts, muffled cries of ecstasy."
@@ -939,135 +907,135 @@
   "genit_actions": {
     "B01": {
       "label": "허그",
-      "description": "다정하게 서로를 끌어안는 포옹 씬 (B1)",
+      "description": "다정하게 유저를 끌어안는 1인칭 포옹 씬 (B1)",
       "required_outfit": "default",
-      "prompt": "Warm affectionate hug, wrapping arms around partner, cheek pressed close, smiling sweetly, intimate embrace, soft lighting."
+      "prompt": "Warm affectionate hug, reaching arms toward viewer, cheek pressed close, smiling sweetly, intimate embrace, soft lighting."
     },
     "B02": {
       "label": "행복하게품에안김",
-      "description": "행복한 미소로 상대의 품에 푹 안기는 씬 (B2)",
+      "description": "행복한 미소로 품에 푹 안기는 씬 (B2)",
       "required_outfit": "default",
-      "prompt": "Happily buried in partner's chest, cuddling tightly, joyful radiant smile, eyes blissfully closed, romantic embrace."
+      "prompt": "Happily snuggling close to viewer, cuddling tightly, joyful radiant smile, eyes blissfully closed, romantic embrace."
     },
     "B03": {
       "label": "품에안겨움",
       "description": "품에 안겨 서럽게 눈물을 흘리는 위로 씬 (B3)",
       "required_outfit": "default",
-      "prompt": "Crying in partner's embrace, tears soaking into partner's shirt, trembling shoulders, seeking comfort, emotional tender moment."
+      "prompt": "Crying in viewer's embrace, leaning against viewer, trembling shoulders, seeking comfort, emotional tender moment."
     },
     "B04": {
       "label": "키스",
-      "description": "입술을 포개는 로맨틱한 입맞춤 (B4)",
+      "description": "화면을 향해 다가오는 로맨틱한 입맞춤 (B4)",
       "required_outfit": "default",
-      "prompt": "Romantic tender kiss on lips, eyes softly closed, hands gently cupping partner's cheek, intimate close-up angle, sweet romantic glow."
+      "prompt": "Romantic tender kiss toward viewer, leaning close, eyes softly closed, blushing cheeks, intimate close-up angle."
     },
     "B05": {
       "label": "팔짱낌",
-      "description": "C(히로인)가 U(플레이어)에게 다정하게 팔짱을 끼는 씬 (B5)",
+      "description": "유저에게 다정하게 양손으로 팔짱을 끼는 씬 (B5)",
       "required_outfit": "default",
-      "prompt": "Character clinging to partner's arm, locking arms intimately while walking together, proud happy smile, breasts pressed softly against arm."
+      "prompt": "Character clinging to viewer's arm, locking arms intimately, holding viewer's arm with both hands, happy smile."
     },
     "B06": {
       "label": "공주님안기",
-      "description": "U(플레이어)가 C(히로인)를 번쩍 공주님 안기 하는 씬 (B6)",
+      "description": "유저의 품에 안겨 올려다보는 씬 (B6)",
       "required_outfit": "default",
-      "prompt": "Carried bridal style by partner, looking up at partner with flushed blushing cheeks, hands wrapped securely around partner's neck, sweet romantic lighting."
+      "prompt": "Carried in arms, looking up at viewer with flushed blushing cheeks, hands wrapped around viewer's neck, sweet romantic lighting."
     },
     "B07": {
-      "label": "U가C넘어뜨림",
-      "description": "U가 흥분하여 C를 침대에 덮치는 씬 (B7)",
+      "label": "침대에덮쳐짐",
+      "description": "침대에 누워 유저를 올려다보는 씬 (B7)",
       "required_outfit": "default",
-      "prompt": "Pinned down on a bed by partner who got excited, looking up with surprised wide eyes and flushed cheeks, partner's hands pinning her wrists gently."
+      "prompt": "Lying back on a bed, looking up at viewer with surprised wide eyes and flushed cheeks, hands resting on mattress."
     },
     "B08": {
-      "label": "C가U넘어뜨림",
-      "description": "C가 흥분하여 U를 역으로 덮치고 올라타는 씬 (B8)",
+      "label": "상대방덮치기",
+      "description": "침대 위에서 유저를 내려다보며 다가오는 씬 (B8)",
       "required_outfit": "default",
-      "prompt": "Character boldly straddling partner on bed, looking down with a predatory seductive smile, pinning partner's hands, dominant romantic pose."
+      "prompt": "Kneeling on bed, looking down at viewer with a seductive smile, hands placed on bed beside viewer, confident pose."
     },
     "B09": {
-      "label": "C가손잡고끌려감",
-      "description": "C가 U에게 손을 잡힌 채 이끌려가는 씬 (B9)",
+      "label": "손잡고끌려감",
+      "description": "유저에게 손을 잡힌 채 이끌려가는 씬 (B9)",
       "required_outfit": "default",
-      "prompt": "Being led by hand by partner, looking back slightly flustered, holding partner's hand firmly, dynamic walking angle, blushing."
+      "prompt": "Being led by hand, looking back slightly flustered, holding viewer's hand, dynamic walking angle, blushing."
     },
     "B10": {
-      "label": "U가손잡고끌려감",
-      "description": "C가 신나서 U의 손을 잡고 앞장서서 이끄는 씬 (B10)",
+      "label": "손잡고이끌기",
+      "description": "신나서 유저의 손을 잡고 앞장서서 이끄는 씬 (B10)",
       "required_outfit": "default",
-      "prompt": "Leading partner by hand cheerfully, looking back over shoulder with an energetic joyful smile, holding viewer's hand, POV angle."
+      "prompt": "Leading viewer by hand cheerfully, looking back over shoulder with an energetic joyful smile, holding viewer's hand, POV angle."
     },
     "B11": {
-      "label": "잠",
-      "description": "침대에서 곤히 잠들어 있는 평온한 모습 (B11)",
-      "required_outfit": "default",
-      "prompt": "Sleeping peacefully in a cozy bed, head nestled in soft white pillow, calm serene expression, gentle breathing, morning sunlight."
+      "label": "침대숙면",
+      "description": "침대에서 알몸으로 이불을 덮고 곤히 잠들어 있는 평온한 모습 (B11)",
+      "required_outfit": "nude",
+      "prompt": "Sleeping peacefully in a cozy bed, completely nude under a soft white duvet blanket, bare shoulders visible above sheets, head nestled in pillow, calm serene expression, morning sunlight."
     },
     "B12": {
       "label": "심한부상",
-      "description": "전투 후 옷이 찢어지고 상처를 입은 위기 씬 (B12)",
+      "description": "전투 후 지친 상태로 벽에 기댄 위기 씬 (B12)",
       "required_outfit": "combat",
-      "prompt": "Heavily injured, torn damaged clothing, bandages, scratches on pale skin, panting heavily, leaning against wall, grim dramatic lighting."
+      "prompt": "Heavily injured, torn clothing, panting heavily, leaning against concrete wall, dramatic lighting."
     },
     "B13": {
       "label": "속옷차림",
-      "description": "단둘이 있는 방에서의 정갈한 속옷 차림 (B13)",
+      "description": "방 안에서의 차분한 실내 차림 (B13)",
       "required_outfit": "underwear",
-      "prompt": "Wearing delicate lace lingerie underwear, standing gracefully in private bedroom, slender silhouette, soft natural lighting."
+      "prompt": "Standing gracefully in private bedroom, slender silhouette, soft natural lighting."
     },
     "B14": {
       "label": "속옷부끄러움",
-      "description": "속옷 차림을 들켜 황급히 몸을 가리며 부끄러워하는 씬 (B14)",
+      "description": "황급히 양팔로 몸을 가리며 부끄러워하는 씬 (B14)",
       "required_outfit": "underwear",
-      "prompt": "Wearing cute underwear, desperately trying to cover chest and body with hands, blushing furiously with embarrassed tears, bashful gaze."
+      "prompt": "Desperately trying to cover body with crossed arms, blushing furiously with embarrassed eyes, bashful gaze."
     },
     "B15": {
       "label": "판치라",
-      "description": "바람이나 움직임으로 스커트 속이 살짝 엿보이는 판치라 (B15)",
+      "description": "바람에 스커트 자락을 양손으로 누르는 씬 (B15)",
       "required_outfit": "default",
-      "prompt": "Wind blowing skirt up slightly, revealing glimpse of cute underwear panty shot, flustered expression, pushing skirt down desperately."
+      "prompt": "Wind blowing skirt up slightly, holding skirt down desperately with both hands, flustered expression."
     },
     "B16": {
       "label": "목욕중",
       "description": "욕조 안 따뜻한 물에 몸을 담그고 휴식하는 씬 (B16)",
       "required_outfit": "nude",
-      "prompt": "Relaxing inside warm bathtub, glistening wet skin with water droplets, hair pinned up loosely, dense gentle steam, peaceful serene bliss."
+      "prompt": "Relaxing inside warm bathtub, glistening wet skin, hair pinned up loosely, steam, peaceful serene bliss."
     },
     "B17": {
-      "label": "목욕들킴부끄러움",
-      "description": "목욕 도중 문이 열려 경악하며 몸을 웅크리는 씬 (B17)",
+      "label": "목욕들켜부끄러움",
+      "description": "목욕 도중 인기척에 놀라 웅크리는 씬 (B17)",
       "required_outfit": "nude",
-      "prompt": "Caught in bathtub by sudden intruder, curling up to cover body in water, splashing water, crimson blushing face, wide shocked eyes."
+      "prompt": "Caught in bathtub, curling up to cover body, splashing water, crimson blushing face, wide shocked eyes."
     },
     "B18": {
       "label": "옷벗는중",
-      "description": "셔츠나 상의를 천천히 벗으며 매혹적인 눈빛을 보내는 씬 (B18)",
+      "description": "옷자락을 잡고 매혹적인 시선을 보내는 씬 (B18)",
       "required_outfit": "default",
-      "prompt": "Slowly undressing, lifting shirt off shoulders, revealing bare midriff and lovely curves, seductive sidelong glance, intimate atmosphere."
+      "prompt": "Slowly undressing, lifting hem slightly, seductive sidelong glance, intimate atmosphere."
     },
     "B19": {
       "label": "속옷벗는중",
-      "description": "어깨끈을 내리며 속옷을 벗으려는 긴장감 있는 씬 (B19)",
+      "description": "어깨끈에 손을 얹고 부끄러워하는 씬 (B19)",
       "required_outfit": "underwear",
-      "prompt": "Sliding lingerie strap off shoulder, teasingly reaching behind to unhook bra, blushing deeply with sultry bedroom eyes, sensual anticipation."
+      "prompt": "Sliding strap off shoulder, teasingly unhooking strap, blushing deeply with bedroom eyes, sensual anticipation."
     },
     "B20": {
       "label": "결혼식",
-      "description": "순백의 웨딩드레스를 입고 세상에서 가장 행복하게 웃는 결혼식 (B20)",
-      "required_outfit": "default",
-      "prompt": "Dressed in a breathtaking pure white bridal wedding gown, delicate lace veil, holding bouquet of white roses, happiest radiant smile in the world, chapel sunlight."
+      "description": "웨딩드레스를 입고 부케를 든 행복한 결혼식 (B20)",
+      "required_outfit": "wedding",
+      "prompt": "Dressed in a pure white bridal gown, veil, holding bouquet of white flowers, happiest radiant smile, chapel sunlight."
     },
     "B21": {
       "label": "쓰다듬받는",
-      "description": "상대방의 큰 손에 머리를 쓰다듬받으며 기분 좋아하는 씬 (B21)",
+      "description": "머리를 쓰다듬받으며 기분 좋아하는 1인칭 씬 (B21)",
       "required_outfit": "default",
-      "prompt": "Partner's warm hand gently patting her head, closing eyes happily like a contented kitten, sweet blissful smile, blushing softly."
+      "prompt": "Hand gently patting her head, closing eyes happily, sweet blissful smile, blushing softly."
     },
     "B22": {
       "label": "볼꼬집힌",
-      "description": "볼을 살짝 꼬집혀 찌그러진 귀여운 뾰로통 표정 (B22)",
+      "description": "손가락으로 볼을 살짝 찔려 뾰로통하게 볼을 부풀린 귀여운 씬 (B22)",
       "required_outfit": "default",
-      "prompt": "Cheek being gently pinched by partner's fingers, cute squished face, teary pouting eyes, adorable complaining expression."
+      "prompt": "POV index finger gently poking her soft puffed cheek, cute squished cheek pout, looking at viewer, light blush, adorable complaining expression."
     }
   },
   "genit_emotions": {
@@ -1075,7 +1043,7 @@
       "label": "첫등장",
       "description": "시나리오 및 대화 첫 시작을 위한 대표 전신 소개 일러스트 (A0)",
       "required_outfit": "default",
-      "prompt": "A magnificent full-body standing introduction shot of the character looking directly at the viewer with an inviting warm smile, stylish pose, clean minimalist background, soft cinematic studio lighting."
+      "prompt": "Full body portrait of a female character standing naturally at eye level with balanced body proportions and arms relaxed at her sides, gentle welcoming smile, looking directly at the viewer, showcasing her signature outfit and full silhouette, clean background, soft flattering lighting."
     },
     "A01": {
       "label": "평상시기쁨",
@@ -1266,70 +1234,142 @@
       "required_outfit": "default",
       "flux_prompt": "Sitting in deep lotus meditation posture on ancient stone floor, hands in mudra gesture on knees, eyes closed, calm focused expression, subtle ethereal martial arts qi mist swirling around body, atmospheric wuxia cultivation aura.",
       "sdxl_prompt": "1girl, full body, sitting in lotus position, meditation, eyes closed, serene focused expression, hands in mudra on knees, spiritual qi mist aura, glowing faint energy, oriental wuxia cultivation, atmospheric lighting",
-      "description": "가부좌를 틀고 기를 순환시키는 운기조식/마기 단련 씬 (C1)"
+      "description": "가부좌를 틀고 기를 순환시키는 운기조식/마기 단련 씬 (C1)",
+      "prompt": "Sitting in deep lotus meditation posture on ancient stone floor, hands in mudra gesture on knees, eyes closed, calm focused expression, subtle ethereal martial arts qi mist swirling around body, atmospheric wuxia cultivation aura."
     },
     "C02": {
       "label": "전투대치",
       "required_outfit": "default",
       "flux_prompt": "Dynamic combat ready stance, drawing martial weapon with sharp blade glint, intense fierce glare, tsurime, fighting posture, wind blowing robes and hair, cinematic action lighting, thrilling wuxia confrontation.",
       "sdxl_prompt": "1girl, combat stance, unsheathing weapon, drawing blade, metallic glint, fierce glare, fighting posture, wind blowing clothes, dynamic angle, martial arts duel, dramatic shadows",
-      "description": "상대를 향해 무기를 뽑아 들며 살기를 뿜는 전투 대치 태세 (C2)"
+      "description": "상대를 향해 무기를 뽑아 들며 살기를 뿜는 전투 대치 태세 (C2)",
+      "prompt": "Dynamic combat ready stance, drawing martial weapon with sharp blade glint, intense fierce glare, tsurime, fighting posture, wind blowing robes and hair, cinematic action lighting, thrilling wuxia confrontation."
     },
     "C03": {
       "label": "초식공격",
       "required_outfit": "default",
       "flux_prompt": "Dynamic mid-air leaping martial arts strike attack, slashing weapon leaving glowing ethereal energy blade trail, swirling wind pressure, intense battle expression, exciting wuxia action shot.",
       "sdxl_prompt": "1girl, dynamic action pose, slashing weapon, glowing energy blade trail, mid-air leap, flowing robes, fierce intense expression, martial arts technique, dramatic lighting",
-      "description": "도약하여 기운을 담은 일격을 날리는 전투 초식 시전 씬 (C3)"
+      "description": "도약하여 기운을 담은 일격을 날리는 전투 초식 시전 씬 (C3)",
+      "prompt": "Dynamic mid-air leaping martial arts strike attack, slashing weapon leaving glowing ethereal energy blade trail, swirling wind pressure, intense battle expression, exciting wuxia action shot."
     },
     "C04": {
       "label": "내공주입",
       "required_outfit": "default",
       "flux_prompt": "Female martial artist sitting upright in formal seiza posture with eyes gently closed, a tranquil and focused expression, while partner sits behind her resting both palms gently against her upper back to channel warm internal qi, soft luminous healing spiritual mist swirling gently between them, serene martial arts energy transfer.",
       "sdxl_prompt": "1girl, sitting in seiza posture, upright posture, back to camera, partner behind, hands resting on back, palms on upper back, transferring internal energy, channeling qi, gentle healing aura, serene expression, eyes closed, calm breathing, spiritual qi mist, non-sexual, martial arts cultivation, oriental sanctuary",
-      "description": "정좌한 채 등을 곧게 펴고 앉아 있고, 뒤에서 조용히 등에 손을 얹어 내공/기를 불어넣어 주는 치유·수련 씬 (C4)"
+      "description": "정좌한 채 등을 곧게 펴고 앉아 있고, 뒤에서 조용히 등에 손을 얹어 내공/기를 불어넣어 주는 치유·수련 씬 (C4)",
+      "prompt": "Female martial artist sitting upright in formal seiza posture with eyes gently closed, a tranquil and focused expression, while partner sits behind her resting both palms gently against her upper back to channel warm internal qi, soft luminous healing spiritual mist swirling gently between them, serene martial arts energy transfer."
     },
     "C05": {
       "label": "주화입마",
       "required_outfit": "default",
       "flux_prompt": "Collapsing on knees, clutching chest in pain, dark blood dripping from corner of mouth, disheveled hair, agonized desperate expression, dark chaotic energy sparking around body, dramatic wuxia crisis.",
       "sdxl_prompt": "1girl, on knees, clutching chest in pain, blood dripping from mouth, qi deviation, agonized expression, messy hair, trembling, out of control energy, dramatic wuxia crisis",
-      "description": "내공 역류, 혈기 폭주, 독 중독 등으로 피를 흘리며 괴로워하는 위기 씬 (C5)"
+      "description": "내공 역류, 혈기 폭주, 독 중독 등으로 피를 흘리며 괴로워하는 위기 씬 (C5)",
+      "prompt": "Collapsing on knees, clutching chest in pain, dark blood dripping from corner of mouth, disheveled hair, agonized desperate expression, dark chaotic energy sparking around body, dramatic wuxia crisis."
     },
     "C06": {
       "label": "무기손질",
       "required_outfit": "default",
       "flux_prompt": "Sitting formally on floor with knees bent, holding an oriental martial sword blade horizontally across her lap, holding an oiled silk cloth in one hand and delicately polishing the gleaming steel blade, calm reverent warrior expression, sharpening steel, authentic swordsman weapon maintenance ritual.",
       "sdxl_prompt": "1girl, sitting on floor, holding sword across lap, holding cleaning cloth, wiping sword blade, polishing blade, weapon maintenance, sharpening steel, looking at blade, reverent quiet expression, traditional warrior maintenance, clean oriental wooden room",
-      "description": "무릎 위에 칼을 올려두고 기름먹인 천으로 칼날을 정성스레 닦아내는 정통 검수/무인 무기 정비 씬 (C6)"
+      "description": "무릎 위에 칼을 올려두고 기름먹인 천으로 칼날을 정성스레 닦아내는 정통 검수/무인 무기 정비 씬 (C6)",
+      "prompt": "Sitting formally on floor with knees bent, holding an oriental martial sword blade horizontally across her lap, holding an oiled silk cloth in one hand and delicately polishing the gleaming steel blade, calm reverent warrior expression, sharpening steel, authentic swordsman weapon maintenance ritual."
     },
     "C07": {
       "label": "달빛음주",
       "required_outfit": "default",
       "flux_prompt": "Sitting casually on high tiled rooftop under glowing full moon, drinking from a traditional wine gourd, nostalgic wistful smile, gentle night breeze flowing through hair, romantic wuxia night atmosphere.",
       "sdxl_prompt": "1girl, sitting on traditional tiled rooftop, full moon, holding wine gourd, drinking liquor, nostalgic smile, wind blowing hair, night sky, romantic wuxia mood",
-      "description": "보름달 뜬 밤 지붕이나 절벽에서 술을 마시는 낭만/사색 씬 (C7)"
+      "description": "보름달 뜬 밤 지붕이나 절벽에서 술을 마시는 낭만/사색 씬 (C7)",
+      "prompt": "Sitting casually on high tiled rooftop under glowing full moon, drinking from a traditional wine gourd, nostalgic wistful smile, gentle night breeze flowing through hair, romantic wuxia night atmosphere."
     },
     "C08": {
       "label": "경공비행",
       "required_outfit": "default",
       "flux_prompt": "Leaping weightlessly high above the earth in mid-air, graceful aerial Qinggong posture, tip-toeing lightly on slender bamboo tips, long oriental sleeves and hair billowing dramatically in the wind, looking down from altitude, floating dynamic aerial leap, scenic sea of clouds and mountain peaks far below.",
       "sdxl_prompt": "1girl, full body, mid-air leap, qinggong light footwork, flying in air, stepping on bamboo treetops, tip of bamboo, graceful floating pose, arms spread wide, flowing sleeves billowing in wind, hair floating, high altitude, looking down, sea of clouds below, majestic mountain mist, dynamic aerial shot, wuxia wire action style",
-      "description": "대나무 잎 끝을 살포시 딛거나 허공을 박차고 구름 바다 위를 날아오르는 고공 경공술 비행 씬 (C8)"
+      "description": "대나무 잎 끝을 살포시 딛거나 허공을 박차고 구름 바다 위를 날아오르는 고공 경공술 비행 씬 (C8)",
+      "prompt": "Leaping weightlessly high above the earth in mid-air, graceful aerial Qinggong posture, tip-toeing lightly on slender bamboo tips, long oriental sleeves and hair billowing dramatically in the wind, looking down from altitude, floating dynamic aerial leap, scenic sea of clouds and mountain peaks far below."
     },
     "C09": {
       "label": "제압포로",
       "required_outfit": "default",
       "flux_prompt": "Kneeling on ground, wrists bound with dark ropes or immobilized by acupoint strike, unable to move, breathing heavily with indignant flushed cheeks, defiant glare at opponent, captured warrior.",
       "sdxl_prompt": "1girl, kneeling on ground, bound wrists with ropes, immobilized, acupoint struck, heavy breathing, flushed indignant cheeks, defiant glare, captured, helpless surrender",
-      "description": "혈도가 찔리거나 포박당해 움직이지 못하는 굴욕/포로 씬 (C9)"
+      "description": "혈도가 찔리거나 포박당해 움직이지 못하는 굴욕/포로 씬 (C9)",
+      "prompt": "Kneeling on ground, wrists bound with dark ropes or immobilized by acupoint strike, unable to move, breathing heavily with indignant flushed cheeks, defiant glare at opponent, captured warrior."
     },
     "C10": {
       "label": "호수목욕",
       "required_outfit": "nude",
       "flux_prompt": "Bathing completely nude in a secluded crystal-clear mountain hot spring stream inside ancient misty gorge, wet glistening bare skin, glistening water droplets, sitting relaxed against mossy rock, tranquil peaceful expression, rising gentle steam.",
       "sdxl_prompt": "1girl, solo, nude, completely nude, in hot spring, soaking in mountain stream, wet skin, wet hair, glistening water droplets, mist, steam, relaxing on rocks, peaceful gentle expression, tropical wuxia gorge",
-      "description": "호수나 계곡 온천에서 실오라기 하나 없이 몸을 담그고 목욕하는 씬 (C10)"
+      "description": "호수나 계곡 온천에서 실오라기 하나 없이 몸을 담그고 목욕하는 씬 (C10)",
+      "prompt": "Bathing completely nude in a secluded crystal-clear mountain hot spring stream inside ancient misty gorge, wet glistening bare skin, glistening water droplets, sitting relaxed against mossy rock, tranquil peaceful expression, rising gentle steam."
+    }
+  },
+  "spy_actions": {
+    "S01": {
+      "label": "기밀문서열람",
+      "description": "어두운 첩보 아카이브 조명 아래에서 양손으로 극비 기밀 서류철을 들고 진지하게 열람하는 씬 (S1)",
+      "required_outfit": "default",
+      "prompt": "Upper body cowboy shot in a dimly lit 1960s intelligence archive office, holding an open top-secret manila dossier folder with both hands at chest level, reading classified documents under warm amber desk lamp light, sharp focused gaze, serious espionage atmosphere."
+    },
+    "S02": {
+      "label": "권총겨누기",
+      "description": "양손으로 한 정의 소음 권총을 견착 파지해 정면의 표적을 차갑게 겨누는 첩보 대치 씬 (S2)",
+      "required_outfit": "default",
+      "prompt": "Dynamic cowboy shot in a shadowed corridor, aiming a single compact silenced handgun forward with both hands securely gripping it, sharp cold glare at the target, tense confrontation, dramatic noir chiaroscuro lighting."
+    },
+    "S03": {
+      "label": "밀실심문유혹",
+      "description": "책상 모서리에 걸터앉아 다리를 꼬고 한 손은 책상을 짚은 채 상대의 턱을 치켜들며 압박 심문하는 씬 (S3)",
+      "required_outfit": "default",
+      "prompt": "Cowboy shot sitting on the edge of a mahogany office desk with legs crossed, leaning slightly forward, one hand resting firmly on the desk surface and the other hand's fingertips gently tilting the viewer's chin up, dominant seductive smirk, looking down at viewer, tense interrogation."
+    },
+    "S04": {
+      "label": "골목섹스",
+      "description": "심야의 어두운 벽돌 벽 골목길에 밀착하여 치마를 걷어올린 채 진행되는 스릴 넘치는 야간 골목 결합 씬 (S4)",
+      "required_outfit": "default",
+      "prompt": "Thrilling standing sex in a shadowed narrow alley at night, pinned against a gritty brick wall, skirt hitched up, single partner holding her close in standing embrace, looking over shoulder with flustered heavy blush, dim street lamp glow, suspenseful noir atmosphere."
+    },
+    "S05": {
+      "label": "살롱술접대",
+      "description": "비밀 살롱 바 카운터에 기대어 한 손으로 크리스탈 위스키 잔을 쥐고 상대방을 유혹하듯 접대하는 씬 (S5)",
+      "required_outfit": "default",
+      "prompt": "Cowboy shot leaning gracefully against a polished mahogany bar counter in a 1960s VIP salon lounge, one hand holding a crystal whiskey glass resting on the counter, other hand resting on hip, alluring smile, warm amber wall lamp bokeh."
+    },
+    "S06": {
+      "label": "도청감청중",
+      "description": "한 손으로 귀의 통신 이어피스를 누르고 다른 손으로 도청 녹음기를 조작하며 기밀 대화를 감청하는 씬 (S6)",
+      "required_outfit": "default",
+      "prompt": "Upper body shot in a covert surveillance room, one hand pressing a compact communication earpiece to her ear while the other hand adjusts dials on a vintage reel-to-reel wiretap recorder on the table, calm attentive expression, dim amber indicator lights."
+    },
+    "S07": {
+      "label": "야간잠입수색",
+      "description": "심야의 기밀 보관실에 잠입해 한 손으로 소형 손전등을 비추며 서류함 서랍을 수색하는 씬 (S7)",
+      "required_outfit": "default",
+      "prompt": "Cowboy shot inside a dark classified archive room at night, one hand holding a small tactical flashlight casting a narrow beam of light, other hand pulling open a metal filing cabinet drawer, cautious alert gaze over shoulder, suspenseful stealth mission."
+    },
+    "S08": {
+      "label": "의자포박위기",
+      "description": "적에게 붙잡혀 의자 등받이 뒤로 두 손목이 포박당한 채 거친 숨을 몰아쉬며 노려보는 위기 씬 (S8)",
+      "required_outfit": "default",
+      "prompt": "Cowboy shot sitting captured on a wooden chair in a dim interrogation room, both wrists bound together behind the chair back with leather straps, breathing heavily with flushed cheeks, defiant glare up at the interrogator, tense captivity crisis."
+    },
+    "S09": {
+      "label": "침대밀실거래",
+      "description": "사적 침실 침대 위에 앉아 한 손은 기밀 봉투 위에 얹고 다른 손은 옷깃을 만지며 은밀한 거래를 제안하는 씬 (S9)",
+      "required_outfit": "default",
+      "prompt": "Cowboy shot sitting on a plush velvet bed in a private salon boudoir, one hand resting on a sealed top-secret envelope on the bedsheet while the other hand lightly unbuttons her collar, sultry inviting gaze, secret deal between spy and target."
+    },
+    "S10": {
+      "label": "밀실욕조목욕",
+      "description": "잠입 임무를 마친 뒤 비밀 살롱 대리석 욕조에 실오라기 하나 없이 몸을 담그고 욕조 가장자리에 팔을 얹은 채 휴식하는 씬 (S10)",
+      "required_outfit": "nude",
+      "prompt": "Upper body shot bathing completely nude in a luxurious vintage marble bathtub inside the secret salon bathhouse, wet glistening bare skin, warm rising steam, both arms resting relaxed along the bathtub rim, tranquil languid expression after a long undercover mission."
     }
   }
 }
