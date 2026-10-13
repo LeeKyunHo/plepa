@@ -53,3 +53,5 @@ projects/*/assets_facedetailer/
 .plepa_state/
 data/.backup_poses/
 logs/
+*.bak
+*.before_cleanup
