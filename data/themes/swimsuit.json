@@ -3,7 +3,7 @@
     "D01": {
       "label": "수영복전신",
       "required_outfit": "swimsuit",
-      "sdxl_prompt": "full body, standing, smiling, sunny beach, ocean, tropical summer, blue sky",
+      "sdxl_prompt": "1girl, full body, standing, eye level, balanced body proportions, one hand on hip, smiling, sunny beach, ocean, tropical summer, blue sky",
       "flux_prompt": "A complete full-length shot of the character standing gracefully on a sunny tropical beach with clear turquoise ocean and blue sky in the background.",
       "description": "수영복 차림의 전신 스탠딩 샷. 맑은 해변 배경."
     },

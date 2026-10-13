@@ -79,9 +79,9 @@ def load_background_preset(roster: str, key: str = "default") -> str:
     return default_background_service.get_preset(roster=roster, key=key)
 
 
-def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry]) -> List[str]:
+def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry], roster: Optional[str] = None) -> List[str]:
     """사용자가 지정한 포즈 표현식(all, emotions, 00..19, 01,02 등)을 코드 목록으로 해석."""
-    return default_pose_service.resolve_pose_codes(expr=expr, db=db)
+    return default_pose_service.resolve_pose_codes(expr=expr, db=db, roster=roster)
 
 
 def print_roster_characters(roster: str = DEFAULT_ROSTER) -> int:
@@ -238,6 +238,19 @@ def run_self_test() -> int:
         print("✔ 더미 Mock WebP 생성 파이프라인 검사 통과")
     except Exception as e:
         errors.append(f"더미 Mock 생성 테스트 예외: {e}")
+
+    # 9. 이미지 생산 사전 점검 (포즈 제작 규칙 · 착의 고정 · H씬 알몸 전환 · 테마 스왑 전수 시뮬레이션)
+    try:
+        from plepa_engine.precheck import run_pregeneration_check
+        pre_report = run_pregeneration_check("spy")
+        if not pre_report.passed:
+            errors.extend(pre_report.errors)
+        else:
+            print(
+                f"✔ 이미지 생산 사전 점검 통과 (캐릭터 {pre_report.total_characters}명 × 포즈 {pre_report.total_poses}종 = {pre_report.total_combinations_checked}개 조합 무결성 100%)"
+            )
+    except Exception as e:
+        errors.append(f"이미지 생산 사전 점검 예외: {e}")
 
     print("-" * 60)
     if errors:

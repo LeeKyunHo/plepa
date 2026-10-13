@@ -152,6 +152,12 @@ def render_generate_page() -> None:
                 ui.button("🏮 무협풀팩(102)", on_click=lambda: select_genit_set("wuxia_full", "무협 통합 풀패키지 102종")).props(
                     "unelevated dense size=xs color=emerald-700 text-color=white font-bold"
                 ).tooltip("감정(24) + 행동(22) + 성인(46) + 무협정예(10) 통합 생성")
+                ui.button("🔫 첩보 S", on_click=lambda: select_genit_set("spy_actions", "첩보 살롱 전용 10종 (S1~S10)")).props(
+                    "unelevated dense size=xs color=rose-700 text-color=white font-bold"
+                ).tooltip("기밀열람, 권총겨눔, 밀실심문, 자백제투여, 살롱접대, 도청감시, 잠입수색, 포박위기, 밀실거래, 밀실독욕")
+                ui.button("🕵️ 첩보풀팩(102)", on_click=lambda: select_genit_set("spy_full", "첩보 살롱 통합 풀패키지 102종")).props(
+                    "unelevated dense size=xs color=purple-700 text-color=white font-bold"
+                ).tooltip("감정(24) + 행동(22) + 성인(46) + 첩보전용(10) 통합 생성")
                 ui.button("👗 의상 D/E/F", on_click=lambda: select_genit_set("genit_costumes", "의상 팩 22종 (수영복/BDSM/바니걸)")).props(
                     "outline dense size=xs color=indigo-300"
                 )

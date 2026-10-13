@@ -51,3 +51,5 @@ projects/*/assets_facedetailer/
 # Plepa GUI Backups & State
 .plepa_backup/
 .plepa_state/
+data/.backup_poses/
+logs/

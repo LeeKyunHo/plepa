@@ -1,0 +1,209 @@
+{
+  "summary": {
+    "overall": "FAIL",
+    "test1": "2/13",
+    "test2": "10/10",
+    "test3": "PASS"
+  },
+  "details": {
+    "test1": [
+      {
+        "code": "N46",
+        "old_label": "상대를씻겨줌",
+        "expected_label": "씻겨주기",
+        "flux_label": "씻겨주기",
+        "sdxl_label": "씻겨주기",
+        "flux_prompt": "Washing partner in shower, lathering soapy bubbles on partner's back with a soft sponge, warm affectionate smile, dense steam.",
+        "sdxl_prompt": "1girl, 1boy, washing partner, shower, soapy bubbles, sponge, steam, wet hair, smiling, caring",
+        "status": "PASS"
+      },
+      {
+        "code": "N47",
+        "old_label": "씻겨짐",
+        "expected_label": "씻겨받기",
+        "flux_label": "씻겨받기",
+        "sdxl_label": "씻겨받기",
+        "flux_prompt": "Being washed by partner, sitting obediently while partner lathers soap on her shoulders and body, blissful relaxed expression, warm bathroom.",
+        "sdxl_prompt": "1girl, 1boy, being washed, sitting, lathered in soap, soapy, steam, relaxed, trusting smile, shower",
+        "status": "PASS"
+      },
+      {
+        "code": "N48",
+        "old_label": "에로마사지앞",
+        "expected_label": "앞면에로마사지",
+        "flux_label": "마사지앞",
+        "sdxl_label": "마사지앞",
+        "flux_prompt": "Erotic front massage, lying on back on massage table, glistening aromatic oil on bare skin, partner massaging collarbone and chest, soft moans.",
+        "sdxl_prompt": "1girl, front massage, oil massage, glistening skin, oil sheen, lying on back, massage table, moaning",
+        "status": "FAIL"
+      },
+      {
+        "code": "N49",
+        "old_label": "에로마사지뒤",
+        "expected_label": "뒷면에로마사지",
+        "flux_label": "마사지뒤",
+        "sdxl_label": "마사지뒤",
+        "flux_prompt": "Erotic back massage, lying prone on massage table, gleaming oiled back and firm hips, partner's hands pressing lower spine, shivering delight.",
+        "sdxl_prompt": "1girl, back massage, oil massage, lying prone, bare back, oiled skin, trembling, relaxed bliss",
+        "status": "FAIL"
+      },
+      {
+        "code": "N57",
+        "old_label": "뒤에서가슴잡힘",
+        "expected_label": "착의뒤가슴잡힘",
+        "flux_label": "뒤강압가슴",
+        "sdxl_label": "뒤강압가슴",
+        "flux_prompt": "Rough hand groping her breast from shadows behind her, tearing open shirt, shocked desperate eyes looking at viewer for help, forced grasp.",
+        "sdxl_prompt": "1girl, groped from behind, hand grabbing breast, torn shirt, scared, looking at viewer, NTR, dramatic shadow",
+        "status": "FAIL"
+      },
+      {
+        "code": "N59",
+        "old_label": "야외은밀자극",
+        "expected_label": "착의야외은밀자극",
+        "flux_label": "야외자극약",
+        "sdxl_label": "야외자극약",
+        "flux_prompt": "Outdoor public setting, hidden vibrating toy inside skirt, walking beside people, biting lip in panic, trembling knees.",
+        "sdxl_prompt": "1girl, solo, outdoor, public, skirt, biting lip, trembling, blushing, hidden toy, panic, blushing",
+        "status": "FAIL"
+      },
+      {
+        "code": "N60",
+        "old_label": "야외쾌감참는중",
+        "expected_label": "착의야외쾌감참기",
+        "flux_label": "야외자극중",
+        "sdxl_label": "야외자극중",
+        "flux_prompt": "Enduring intense vibration in public, clutching lamppost or railing, flushed face sweating profusely, struggling not to cry out, closed eyes.",
+        "sdxl_prompt": "1girl, holding railing, sweating, enduring vibration, closed eyes, biting lip, trembling body, public",
+        "status": "FAIL"
+      },
+      {
+        "code": "N61",
+        "old_label": "야외주저앉아절정",
+        "expected_label": "착의야외주저앉아절정",
+        "flux_label": "야외자극강",
+        "sdxl_label": "야외자극강",
+        "flux_prompt": "Collapsing to knees in public, intense climax from hidden toy, tears streaming, open mouth gasping silently, soaked skirt.",
+        "sdxl_prompt": "1girl, collapsed on knees, public orgasm, gasping, tears, flushed face, trembling, helpless climax",
+        "status": "FAIL"
+      },
+      {
+        "code": "N63",
+        "old_label": "강제입맞춤",
+        "expected_label": "착의강제입맞춤",
+        "flux_label": "강제키스",
+        "sdxl_label": "강제키스",
+        "flux_prompt": "Forced kiss, aggressive hands gripping jaw, eyes wide in distress and betrayal, pushing away chest, dramatic backlighting.",
+        "sdxl_prompt": "1girl, 1boy, forced kiss, jaw grabbed, wide eyes, distress, pushing away, crying, dramatic lighting",
+        "status": "FAIL"
+      },
+      {
+        "code": "N66",
+        "old_label": "측위삽입약",
+        "expected_label": "측위약삽입",
+        "flux_label": "측위약",
+        "sdxl_label": "측위약",
+        "flux_prompt": "Side-by-side sex, lying on sides facing each other on bed, one leg lifted over partner's hip, gentle loving gaze, slow deep union.",
+        "sdxl_prompt": "1girl, 1boy, side by side, lying on side, leg over hip, gentle sex, loving gaze, bed, soft lighting",
+        "status": "FAIL"
+      },
+      {
+        "code": "N67",
+        "old_label": "측위삽입강",
+        "expected_label": "측위강삽입",
+        "flux_label": "측위강",
+        "sdxl_label": "측위강",
+        "flux_prompt": "Intense side sex, partner driving deeply from side, gripping her waist firmly, head pressed into pillow, gasping with rhythmic bliss.",
+        "sdxl_prompt": "1girl, 1boy, side by side sex, intense, partner gripping waist, head in pillow, gasping, heavy blush, bed",
+        "status": "FAIL"
+      },
+      {
+        "code": "N68",
+        "old_label": "프론본삽입약",
+        "expected_label": "프론본약삽입",
+        "flux_label": "프론본약",
+        "sdxl_label": "프론본약",
+        "flux_prompt": "Prone bone sex, lying flat on stomach, partner lying directly over her back, slow gentle rhythm, hands interlocked beside pillow.",
+        "sdxl_prompt": "1girl, 1boy, prone bone, lying on stomach, partner on top, slow gentle, interlocked fingers, bed",
+        "status": "FAIL"
+      },
+      {
+        "code": "N69",
+        "old_label": "프론본삽입강",
+        "expected_label": "프론본강삽입",
+        "flux_label": "프론본강",
+        "sdxl_label": "프론본강",
+        "flux_prompt": "Intense prone bone sex, pressed completely flat into mattress by partner's weight, deep penetrative thrusts, muffled cries of ecstasy.",
+        "sdxl_prompt": "1girl, 1boy, prone bone, pressed flat into bed, intense thrusts, muffled gasps, ecstasy, disheveled sheets",
+        "status": "FAIL"
+      }
+    ],
+    "test2": [
+      {
+        "code": "N46",
+        "engine": "flux",
+        "prompt_preview": "Washing partner in shower, lathering soapy bubbles...",
+        "status": "PASS"
+      },
+      {
+        "code": "N46",
+        "engine": "sdxl",
+        "prompt_preview": ", 1girl, beautiful face, detailed eyes, 1girl, , w...",
+        "status": "PASS"
+      },
+      {
+        "code": "N59",
+        "engine": "flux",
+        "prompt_preview": "Outdoor public setting, hidden vibrating toy insid...",
+        "status": "PASS"
+      },
+      {
+        "code": "N59",
+        "engine": "sdxl",
+        "prompt_preview": "1girl, solo, beautiful face, detailed eyes, 1girl,...",
+        "status": "PASS"
+      },
+      {
+        "code": "N63",
+        "engine": "flux",
+        "prompt_preview": "Forced kiss, aggressive hands gripping jaw, eyes w...",
+        "status": "PASS"
+      },
+      {
+        "code": "N63",
+        "engine": "sdxl",
+        "prompt_preview": ", 1girl, beautiful face, detailed eyes, 1girl, , f...",
+        "status": "PASS"
+      },
+      {
+        "code": "N66",
+        "engine": "flux",
+        "prompt_preview": "Side-by-side sex, lying on sides facing each other...",
+        "status": "PASS"
+      },
+      {
+        "code": "N66",
+        "engine": "sdxl",
+        "prompt_preview": ", 1girl, beautiful face, detailed eyes, 1girl, , s...",
+        "status": "PASS"
+      },
+      {
+        "code": "N69",
+        "engine": "flux",
+        "prompt_preview": "Intense prone bone sex, pressed completely flat in...",
+        "status": "PASS"
+      },
+      {
+        "code": "N69",
+        "engine": "sdxl",
+        "prompt_preview": ", 1girl, beautiful face, detailed eyes, 1girl, , p...",
+        "status": "PASS"
+      }
+    ],
+    "test3": {
+      "file_exists": true,
+      "status": "PASS",
+      "details": "GUI는 PoseService를 통해 레이블을 동적으로 참조함"
+    }
+  }
+}

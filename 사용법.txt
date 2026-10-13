@@ -44,17 +44,26 @@
   ★ 화질 특화: 검증된 2D 애니 얼굴 미형 + Face Detailer 고해상도 안면 리터칭 지원.
   ★ 키로 호환: --char, --codes, --all-chars 문법과 플에파 문법(-c, -p) 둘 다 완벽 지원합니다.
 
-  ── [원클릭] 작품 전체 캐릭터 생성 (감정+포즈+H씬 전부) ────────────────────
-  python flux_batch_generator.py -r maid --all-chars       # 메이드 전체 캐릭터
+  ── [원클릭] 작품 전체 캐릭터 생성 (공통 152종 + 로스터 전용 테마 10종 = 총 162종) ──
+  python flux_batch_generator.py -r spy --all-chars        # 스파이 로스터 10인 전원 (1인당 162종 일괄)
+  python flux_batch_generator.py -r maid --all-chars       # 메이드 전체 캐릭터 (162종)
   python flux_batch_generator.py -r don --all-chars        # don 전체 캐릭터
   python flux_batch_generator.py -r man --all-chars        # man 전체 캐릭터
 
-  ── 단일 캐릭터 전체 에셋 생성 ──────────────────────────────────────────────
+  ── 단일 캐릭터 전체 에셋 생성 (로스터 테마 자동 결합) ────────────────────
+  python flux_batch_generator.py -r spy --char chl         # 클로에 (공통 152 + 첩보 10 = 162종)
   python flux_batch_generator.py -r maid --char han        # 하나 전체 생성
   python flux_batch_generator.py -r maid --char ren        # 렌(오토코노코) 전체 생성
   python flux_batch_generator.py -r maid -c rub            # 루비 전체 생성 (-c 동일)
 
+  ── 특수 테마 팩 및 코스튬 팩 개별 생성 (기본 전체 생성에서 분리) ─────────
+  python flux_batch_generator.py -r spy -c chl -p swimsuit # 수영복 팩 7종 (D01~D07)
+  python flux_batch_generator.py -r spy -c chl -p bunny    # 바니걸 팩 7종 (F01~F07)
+  python flux_batch_generator.py -r spy -c chl -p bdsm     # BDSM 팩 8종 (E01~E08)
+
   ── 특정 번호만 골라서 생성 ────────────────────────────────────────────────
+  python flux_batch_generator.py -r spy --char chl -p S01..S10          # 첩보 전용 액션 10종만
+  python flux_batch_generator.py -r spy --char chl -p N30,N34 -f        # 파일드라이버, 수유대딸 강제 덮어쓰기
   python flux_batch_generator.py -r maid --char han --codes "0"         # 000번(평상) 단 1장
   python flux_batch_generator.py -r ykn --char yua,serin,sia,hayul --codes "000..010" -f  # ykn 로스터 네쌍둥이 4인 표정 11종 일괄 생성
   python flux_batch_generator.py -r maid --char han --codes "44,52"     # H씬 (기승위, 구강봉사)

@@ -29,15 +29,16 @@ POSE_SETS_FILE = POSE_SETS_PATH
 SECTION_METADATA: Dict[str, Dict[str, Any]] = {
     "wuxia_actions": {"name": "무협 액션 (C01~C10)", "short_label": "무협(C)", "icon": "⚔️", "order": 1},
     "genit_emotions": {"name": "Genit 감정 (A00~A23)", "short_label": "감정(A)", "icon": "😊", "order": 2},
-    "genit_actions": {"name": "Genit 행동 (B01~B22)", "short_label": "행동(B)", "icon": "🎬", "order": 3},
+    "genit_actions": {"name": "Genit 행동 (040~047 / B01~B22)", "short_label": "행동(B)", "icon": "🎬", "order": 3},
     "adult": {"name": "Genit 성인 (N01~N74)", "short_label": "성인(N)", "icon": "🔞", "order": 4},
     "emotions": {"name": "기본 표정 (000~019)", "short_label": "기본표정", "icon": "😊", "order": 5},
     "poses": {"name": "전신·일상 포즈 (020~039)", "short_label": "기본포즈", "icon": "🧍", "order": 6},
-    "h_scenes": {"name": "레거시 H (040~059)", "short_label": "레거시H", "icon": "🔞", "order": 7},
-    "scenes_otokonoko": {"name": "오토코노코 (140~159)", "short_label": "오토코노코", "icon": "🎀", "order": 8},
+    "h_scenes": {"name": "성인 H-씬 (048~099)", "short_label": "성인(H)", "icon": "🔞", "order": 7},
+    "scenes_otokonoko": {"name": "오토코노코 (148~199)", "short_label": "오토코노코", "icon": "🎀", "order": 8},
     "swimsuit": {"name": "수영복 (D01~D08)", "short_label": "수영복", "icon": "👙", "order": 9},
     "bunny": {"name": "바니걸 (F01~F07)", "short_label": "바니걸", "icon": "🐰", "order": 10},
     "bdsm": {"name": "BDSM (E01~E08)", "short_label": "BDSM", "icon": "⛓️", "order": 11},
+    "spy_actions": {"name": "첩보 액션 (S01~S10)", "short_label": "첩보(S)", "icon": "🕵️", "order": 12},
 }
 
 SECTION_NAMES = tuple(SECTION_METADATA.keys())
@@ -155,18 +156,45 @@ class PoseService:
 
         return entries
 
-    def resolve_pose_codes(self, expr: str, db: Dict[str, PoseEntry]) -> List[str]:
+    ROSTER_THEME_MAP: Dict[str, List[str]] = {
+        "spy": ["spy_actions"],
+        "murim": ["wuxia_actions"],
+        "wuxia": ["wuxia_actions"],
+        "maid": ["maid"],
+    }
+    OPTIONAL_COSTUME_SECTIONS: set = {"swimsuit", "bdsm", "bunny"}
+    THEME_ACTION_SECTIONS: set = {"spy_actions", "wuxia_actions", "maid", "combat"}
+
+    def resolve_pose_codes(
+        self,
+        expr: str,
+        db: Dict[str, PoseEntry],
+        roster: Optional[str] = None,
+    ) -> List[str]:
         """사용자가 지정한 포즈 표현식(all, emotions, swim, 00..19, D01,D02 등)을 코드 목록으로 해석 (기존 CLI 호환)."""
         expr = expr.strip()
         expr_lower = expr.lower()
 
         if expr_lower == "all":
+            allowed_themes = set(self.ROSTER_THEME_MAP.get(roster.lower(), [])) if roster else set()
+
+            def is_allowed_for_all(entry: PoseEntry) -> bool:
+                # 1. 특수 코스튬 팩(수영복, BDSM, 바니걸 등)은 기본 전부생산에서 제외 (명시적 요청 시에만 생성)
+                if entry.section in self.OPTIONAL_COSTUME_SECTIONS:
+                    return False
+                # 2. 테마 액션 팩인 경우: 현재 로스터에 배정된 테마만 포함, 타 로스터 테마는 제외
+                if entry.section in self.THEME_ACTION_SECTIONS:
+                    return entry.section in allowed_themes
+                # 3. 공통 코어(기본표정, 기본포즈, genit_emotions, genit_actions, adult)는 항상 포함
+                return True
+
             def sort_key(k: str):
                 try:
                     return (0, int(k), "")
                 except ValueError:
                     return (1, 0, k)
-            return sorted(db.keys(), key=sort_key)
+
+            return sorted([c for c, e in db.items() if is_allowed_for_all(e)], key=sort_key)
 
         if expr_lower in ("emotions", "emotion", "a"):
             return [c for c, e in db.items() if e.section == "emotions" or c.startswith("A")]
@@ -184,6 +212,27 @@ class PoseService:
             return [c for c, e in db.items() if e.section == "maid" or c.startswith("G")]
         if expr_lower in ("combat", "battle", "i"):
             return [c for c, e in db.items() if e.section == "combat" or c.startswith("I")]
+        if expr_lower in ("spy", "spy_actions", "s"):
+            return [c for c, e in db.items() if e.section == "spy_actions" or c.startswith("S")]
+        if expr_lower in ("wuxia", "wuxia_actions", "c"):
+            return [c for c, e in db.items() if e.section == "wuxia_actions" or c.startswith("C")]
+
+        # 쉼표 구분 복합 표현식 지원: "00,01,05" 또는 "A00..A23,S01..S10,B01..B22" 등
+        if "," in expr:
+            codes = []
+            for token in expr.split(","):
+                token = token.strip()
+                if not token:
+                    continue
+                for sub_c in self.resolve_pose_codes(token, db):
+                    if sub_c not in codes:
+                        codes.append(sub_c)
+            return codes
+
+        # 포즈 세트 ID 매칭 지원 (예: spy_full, genit_full, genit_costumes 등)
+        for pset in self.load_pose_sets():
+            if pset.id.lower() == expr_lower:
+                return [c for c in pset.codes if c in db]
 
         # 범위 연산자 지원: 00..19, 000..019, D01..D07 등
         if ".." in expr:
@@ -213,18 +262,6 @@ class PoseService:
                 return codes
             except ValueError:
                 pass
-
-        # 쉼표 구분: 00,01,05 또는 D01,D02 등
-        if "," in expr:
-            codes = []
-            for token in expr.split(","):
-                token = token.strip()
-                if not token:
-                    continue
-                c_str = self.normalize_code(token)
-                if c_str in db:
-                    codes.append(c_str)
-            return codes
 
         # 단일 코드: 00 또는 D1 등
         single_code = self.normalize_code(expr)
@@ -259,9 +296,26 @@ class PoseService:
                 break
 
         if not f_item or not target_section:
+            # 테마 디렉토리(data/themes/*.json) 탐색 폴백
+            for tf in THEMES_DIR.glob("*.json"):
+                try:
+                    t_data = self.repo.read_json(tf)
+                    for sec_name, sec_dict in t_data.items():
+                        if isinstance(sec_dict, dict) and code_str in sec_dict:
+                            target_section = sec_name
+                            f_item = sec_dict[code_str]
+                            break
+                    if f_item:
+                        break
+                except Exception:
+                    pass
+
+        if not f_item or not target_section:
             raise KeyError(f"포즈 코드 '{code_str}'를 데이터베이스에서 찾을 수 없습니다.")
 
         s_item = sdxl_raw.get(target_section, {}).get(code_str, {})
+        if not s_item and f_item:
+            s_item = f_item
 
         return {
             "code": code_str,
@@ -269,8 +323,8 @@ class PoseService:
             "label": f_item.get("label", s_item.get("label", "")),
             "description": f_item.get("description", s_item.get("description", "")),
             "flags": f_item.get("flags") or s_item.get("flags") or {},
-            "flux_prompt": f_item.get("prompt", ""),
-            "sdxl_prompt": s_item.get("prompt", ""),
+            "flux_prompt": f_item.get("flux_prompt") or f_item.get("prompt", ""),
+            "sdxl_prompt": s_item.get("sdxl_prompt") or s_item.get("prompt", ""),
         }
 
     def update_pose(

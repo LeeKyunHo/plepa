@@ -177,7 +177,7 @@ class GenerationService:
         # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
         db = self.pose_svc.load_pose_db(engine=params.engine, roster=params.roster)
         target_chars = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
-        codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db)
+        codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db, roster=params.roster)
         
         # 2-1. 젠더별 포즈 필터링 (h_scenes vs scenes_otokonoko)
         # - female/male → h_scenes (040-059) 사용
@@ -193,16 +193,20 @@ class GenerationService:
                     filtered.append(code)
                     continue
 
-                # 40번대(h_scenes)와 140번대(scenes_otokonoko)가 겹칠 때
+                # 40번대(h_scenes)와 140번대(scenes_otokonoko)는 N시리즈(N01~N74)로 통합 및 공식 은퇴됨
+                # 기본 전체 배치(all) 시 중복 생성을 방지하며, 명시적으로 지정한 경우에만 하위 호환 생성
                 if 40 <= code_num <= 59 or 140 <= code_num <= 159:
-                    if gender == "otokonoko":
-                        # otokonoko는 140번대만
-                        if 140 <= code_num <= 159:
-                            filtered.append(code)
+                    is_explicit = params.pose_expr and params.pose_expr.strip().lower() not in ("all", "")
+                    if is_explicit:
+                        if gender == "otokonoko":
+                            if 140 <= code_num <= 159:
+                                filtered.append(code)
+                        else:
+                            if 40 <= code_num <= 59:
+                                filtered.append(code)
                     else:
-                        # female/male은 40번대만
-                        if 40 <= code_num <= 59:
-                            filtered.append(code)
+                        # 기본 전체 배치에서는 N시리즈로 단일화되었으므로 건너뜀 (중복 생성 방지)
+                        continue
                 else:
                     # 그 외 포즈는 모두 포함
                     filtered.append(code)

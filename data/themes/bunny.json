@@ -4,7 +4,7 @@
       "label": "바니걸전신",
       "required_outfit": "bunny",
       "flux_prompt": "Full body shot of character wearing glossy satin bunny suit, fluffy rabbit ears, bowtie collar, fishnet stockings, high heels, posing flirtatiously in a luxury casino lounge.",
-      "sdxl_prompt": "1girl, full body, bunny suit, bunny ears, collar, bow tie, fishnets, high heels, posing, casino lounge, confident smile",
+      "sdxl_prompt": "1girl, full body, standing, eye level, balanced body proportions, one hand on hip, bunny suit, bunny ears, collar, bow tie, fishnets, high heels, casino lounge, confident smile",
       "description": "글래머러스한 바니걸 슈트와 망사 스타킹 전신 스탠딩 샷 (F1)"
     },
     "F02": {

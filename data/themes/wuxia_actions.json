@@ -4,72 +4,71 @@
       "label": "운기수련",
       "required_outfit": "default",
       "flux_prompt": "Sitting in deep lotus meditation posture on ancient stone floor, hands in mudra gesture on knees, eyes closed, calm focused expression, subtle ethereal martial arts qi mist swirling around body, atmospheric wuxia cultivation aura.",
-      "sdxl_prompt": "1girl, full body, sitting in lotus position, meditation, eyes closed, serene focused expression, hands in mudra on knees, spiritual qi mist aura, glowing faint energy, oriental wuxia cultivation, atmospheric lighting",
+      "sdxl_prompt": "full body, sitting in lotus position, meditation, eyes closed, serene focused expression, hands in mudra on knees, spiritual qi mist aura, glowing faint energy, oriental wuxia cultivation, atmospheric lighting",
       "description": "가부좌를 틀고 기를 순환시키는 운기조식/마기 단련 씬 (C1)"
     },
     "C02": {
       "label": "전투대치",
       "required_outfit": "default",
       "flux_prompt": "Dynamic combat ready stance, drawing martial weapon with sharp blade glint, intense fierce glare, tsurime, fighting posture, wind blowing robes and hair, cinematic action lighting, thrilling wuxia confrontation.",
-      "sdxl_prompt": "1girl, combat stance, unsheathing weapon, drawing blade, metallic glint, fierce glare, fighting posture, wind blowing clothes, dynamic angle, martial arts duel, dramatic shadows",
+      "sdxl_prompt": "combat stance, unsheathing weapon, drawing blade, metallic glint, fierce glare, fighting posture, wind blowing clothes, dynamic angle, martial arts duel, dramatic shadows",
       "description": "상대를 향해 무기를 뽑아 들며 살기를 뿜는 전투 대치 태세 (C2)"
     },
     "C03": {
       "label": "초식공격",
       "required_outfit": "default",
       "flux_prompt": "Dynamic mid-air leaping martial arts strike attack, slashing weapon leaving glowing ethereal energy blade trail, swirling wind pressure, intense battle expression, exciting wuxia action shot.",
-      "sdxl_prompt": "1girl, dynamic action pose, slashing weapon, glowing energy blade trail, mid-air leap, flowing robes, fierce intense expression, martial arts technique, dramatic lighting",
+      "sdxl_prompt": "dynamic action pose, slashing weapon, glowing energy blade trail, mid-air leap, flowing robes, fierce intense expression, martial arts technique, dramatic lighting",
       "description": "도약하여 기운을 담은 일격을 날리는 전투 초식 시전 씬 (C3)"
     },
     "C04": {
       "label": "내공주입",
       "required_outfit": "default",
       "flux_prompt": "Female martial artist sitting upright in formal seiza posture with eyes gently closed, a tranquil and focused expression, while partner sits behind her resting both palms gently against her upper back to channel warm internal qi, soft luminous healing spiritual mist swirling gently between them, serene martial arts energy transfer.",
-      "sdxl_prompt": "1girl, sitting in seiza posture, upright posture, back to camera, partner behind, hands resting on back, palms on upper back, transferring internal energy, channeling qi, gentle healing aura, serene expression, eyes closed, calm breathing, spiritual qi mist, non-sexual, martial arts cultivation, oriental sanctuary",
+      "sdxl_prompt": "sitting in seiza posture, upright posture, back to camera, partner behind, hands resting on back, palms on upper back, transferring internal energy, channeling qi, gentle healing aura, serene expression, eyes closed, calm breathing, spiritual qi mist, non-sexual, martial arts cultivation, oriental sanctuary",
       "description": "정좌한 채 등을 곧게 펴고 앉아 있고, 뒤에서 조용히 등에 손을 얹어 내공/기를 불어넣어 주는 치유·수련 씬 (C4)"
     },
     "C05": {
       "label": "주화입마",
       "required_outfit": "default",
       "flux_prompt": "Collapsing on knees, clutching chest in pain, dark blood dripping from corner of mouth, disheveled hair, agonized desperate expression, dark chaotic energy sparking around body, dramatic wuxia crisis.",
-      "sdxl_prompt": "1girl, on knees, clutching chest in pain, blood dripping from mouth, qi deviation, agonized expression, messy hair, trembling, out of control energy, dramatic wuxia crisis",
+      "sdxl_prompt": "on knees, clutching chest in pain, blood dripping from mouth, qi deviation, agonized expression, messy hair, trembling, out of control energy, dramatic wuxia crisis",
       "description": "내공 역류, 혈기 폭주, 독 중독 등으로 피를 흘리며 괴로워하는 위기 씬 (C5)"
     },
     "C06": {
       "label": "무기손질",
       "required_outfit": "default",
       "flux_prompt": "Sitting formally on floor with knees bent, holding an oriental martial sword blade horizontally across her lap, holding an oiled silk cloth in one hand and delicately polishing the gleaming steel blade, calm reverent warrior expression, sharpening steel, authentic swordsman weapon maintenance ritual.",
-      "sdxl_prompt": "1girl, sitting on floor, holding sword across lap, holding cleaning cloth, wiping sword blade, polishing blade, weapon maintenance, sharpening steel, looking at blade, reverent quiet expression, traditional warrior maintenance, clean oriental wooden room",
+      "sdxl_prompt": "sitting on floor, holding sword across lap, holding cleaning cloth, wiping sword blade, polishing blade, weapon maintenance, sharpening steel, looking at blade, reverent quiet expression, traditional warrior maintenance, clean oriental wooden room",
       "description": "무릎 위에 칼을 올려두고 기름먹인 천으로 칼날을 정성스레 닦아내는 정통 검수/무인 무기 정비 씬 (C6)"
     },
     "C07": {
       "label": "달빛음주",
       "required_outfit": "default",
       "flux_prompt": "Sitting casually on high tiled rooftop under glowing full moon, drinking from a traditional wine gourd, nostalgic wistful smile, gentle night breeze flowing through hair, romantic wuxia night atmosphere.",
-      "sdxl_prompt": "1girl, sitting on traditional tiled rooftop, full moon, holding wine gourd, drinking liquor, nostalgic smile, wind blowing hair, night sky, romantic wuxia mood",
+      "sdxl_prompt": "sitting on traditional tiled rooftop, full moon, holding wine gourd, drinking liquor, nostalgic smile, wind blowing hair, night sky, romantic wuxia mood",
       "description": "보름달 뜬 밤 지붕이나 절벽에서 술을 마시는 낭만/사색 씬 (C7)"
     },
     "C08": {
       "label": "경공비행",
       "required_outfit": "default",
       "flux_prompt": "Leaping weightlessly high above the earth in mid-air, graceful aerial Qinggong posture, tip-toeing lightly on slender bamboo tips, long oriental sleeves and hair billowing dramatically in the wind, looking down from altitude, floating dynamic aerial leap, scenic sea of clouds and mountain peaks far below.",
-      "sdxl_prompt": "1girl, full body, mid-air leap, qinggong light footwork, flying in air, stepping on bamboo treetops, tip of bamboo, graceful floating pose, arms spread wide, flowing sleeves billowing in wind, hair floating, high altitude, looking down, sea of clouds below, majestic mountain mist, dynamic aerial shot, wuxia wire action style",
+      "sdxl_prompt": "full body, mid-air leap, qinggong light footwork, flying in air, stepping on bamboo treetops, tip of bamboo, graceful floating pose, arms spread wide, flowing sleeves billowing in wind, hair floating, high altitude, looking down, sea of clouds below, majestic mountain mist, dynamic aerial shot, wuxia wire action style",
       "description": "대나무 잎 끝을 살포시 딛거나 허공을 박차고 구름 바다 위를 날아오르는 고공 경공술 비행 씬 (C8)"
     },
     "C09": {
       "label": "제압포로",
       "required_outfit": "default",
       "flux_prompt": "Kneeling on ground, wrists bound with dark ropes or immobilized by acupoint strike, unable to move, breathing heavily with indignant flushed cheeks, defiant glare at opponent, captured warrior.",
-      "sdxl_prompt": "1girl, kneeling on ground, bound wrists with ropes, immobilized, acupoint struck, heavy breathing, flushed indignant cheeks, defiant glare, captured, helpless surrender",
+      "sdxl_prompt": "kneeling on ground, bound wrists with ropes, immobilized, acupoint struck, heavy breathing, flushed indignant cheeks, defiant glare, captured, helpless surrender",
       "description": "혈도가 찔리거나 포박당해 움직이지 못하는 굴욕/포로 씬 (C9)"
     },
     "C10": {
       "label": "호수목욕",
       "required_outfit": "nude",
       "flux_prompt": "Bathing completely nude in a secluded crystal-clear mountain hot spring stream inside ancient misty gorge, wet glistening bare skin, glistening water droplets, sitting relaxed against mossy rock, tranquil peaceful expression, rising gentle steam.",
-      "sdxl_prompt": "1girl, solo, nude, completely nude, in hot spring, soaking in mountain stream, wet skin, wet hair, glistening water droplets, mist, steam, relaxing on rocks, peaceful gentle expression, tropical wuxia gorge",
+      "sdxl_prompt": "solo, nude, completely nude, in hot spring, soaking in mountain stream, wet skin, wet hair, glistening water droplets, mist, steam, relaxing on rocks, peaceful gentle expression, tropical wuxia gorge",
       "description": "호수나 계곡 온천에서 실오라기 하나 없이 몸을 담그고 목욕하는 씬 (C10)"
     }
   }
 }
-

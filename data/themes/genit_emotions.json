@@ -3,169 +3,169 @@
     "A00": {
       "label": "첫등장",
       "required_outfit": "default",
-      "flux_prompt": "A magnificent full-body standing introduction shot at eye level of the character looking directly at the viewer with an inviting warm smile, natural standing pose, clean minimalist background, soft cinematic studio lighting.",
-      "sdxl_prompt": "1girl, full body, standing, eye level, gentle smile, looking at viewer, natural standing pose, clean background, soft lighting",
+      "flux_prompt": "Full body portrait of a female character standing naturally at eye level with balanced body proportions and arms relaxed at her sides, gentle welcoming smile, looking directly at the viewer, showcasing her signature outfit and full silhouette, clean background, soft flattering lighting.",
+      "sdxl_prompt": "1girl, full body, standing, eye level, balanced body proportions, arms at sides, relaxed hands, gentle smile, looking at viewer, natural standing pose, clean background, soft lighting",
       "description": "시나리오 및 대화 첫 시작을 위한 대표 전신 소개 일러스트 (A0)"
     },
     "A01": {
       "label": "평상시기쁨",
       "required_outfit": "default",
       "flux_prompt": "A close-up portrait of the character with a cheerful bright expression, gentle warm smile, peaceful bright eyes, clean background, soft indoor light.",
-      "sdxl_prompt": "1girl, bust shot, smiling, happy, cheerful, peaceful, looking at viewer, clean background",
+      "sdxl_prompt": "1girl, bust shot, ((smiling, cheerful, gentle warm smile:1.2)), peaceful bright eyes, looking at viewer, clean background",
       "description": "평상시 및 약간 기쁜 기본 표정 (A1)"
     },
     "A02": {
       "label": "야릇한",
       "required_outfit": "default",
       "flux_prompt": "A sultry intimate close-up bust shot, seductive bedroom eyes, subtle alluring smile, flushed blushing cheeks, parted lips, teasing romantic atmosphere.",
-      "sdxl_prompt": "1girl, bust shot, seductive bedroom eyes, sultry smile, heavy blush, parted lips, looking at viewer, teasing",
+      "sdxl_prompt": "1girl, bust shot, ((one hand lightly touching own lips or collarbone:1.2)), ((seductive bedroom eyes, sultry smile, heavy blush:1.2)), parted lips, looking at viewer, teasing romantic ambiance",
       "description": "도발적이고 야릇한 매혹 표정 (A2)"
     },
     "A03": {
       "label": "장난스러운",
       "required_outfit": "default",
       "flux_prompt": "Playful teasing expression, winking with one eye, cute smirk, sticking tongue out slightly, lively dynamic pose, clean background.",
-      "sdxl_prompt": "1girl, bust shot, playful, teasing smile, winking, one eye closed, cute expression, looking at viewer",
+      "sdxl_prompt": "1girl, bust shot, ((winking with one eye, cute smirk, tongue out slightly:1.25)), ((peace sign or playful finger gesture:1.15)), lively dynamic angle, looking at viewer",
       "description": "장난기 넘치는 윙크 및 능글맞은 표정 (A3)"
     },
     "A04": {
       "label": "귀엽게화냄",
       "required_outfit": "default",
       "flux_prompt": "Adorable pouting expression, puffed flushed cheeks, cute furrowed brows, slightly angry but endearing look, looking at viewer.",
-      "sdxl_prompt": "1girl, bust shot, cute pout, puffed cheeks, furrowed brows, blushing, adorable angry expression",
+      "sdxl_prompt": "1girl, bust shot, ((cute pout, puffed cheeks, furrowed brows, blushing:1.25)), ((both fists clenched at chest or hands on hips:1.2)), adorable angry expression, looking at viewer",
       "description": "볼을 부풀리며 귀엽게 앙탈부리는 표정 (A4)"
     },
     "A05": {
       "label": "분노",
       "required_outfit": "default",
       "flux_prompt": "Intense angry expression, sharp glare, stern furrowed brows, clenched teeth, fierce dramatic lighting, serious mood.",
-      "sdxl_prompt": "1girl, bust shot, angry, fierce glare, furrowed brow, clenched teeth, intense expression, dramatic lighting",
+      "sdxl_prompt": "1girl, bust shot, ((fierce glare, clenched teeth, sharp angry expression:1.25)), ((intense clenched fist:1.15)), stern furrowed brow, dramatic chiaroscuro lighting, furious mood",
       "description": "진지하고 날카롭게 노려보는 분노 표정 (A5)"
     },
     "A06": {
       "label": "경멸",
       "required_outfit": "default",
       "flux_prompt": "A cold scornful expression, looking down at viewer with disdain, half-closed dismissive eyes, slight sneer, chilly ambiance.",
-      "sdxl_prompt": "1girl, bust shot, looking down at viewer, contempt, scornful gaze, disgusted expression, disdain",
+      "sdxl_prompt": "1girl, bust shot, ((looking down at viewer with cold disdain, contempt, scornful gaze:1.25)), ((chin tilted up, half-closed dismissive eyes, slight sneer:1.2)), chilly ambiance",
       "description": "차갑게 내려다보는 경멸 및 멸시 표정 (A6)"
     },
     "A07": {
       "label": "삐짐",
       "required_outfit": "default",
       "flux_prompt": "Turning face away huffily, arms crossed, stubborn pouting expression, blushing cheeks, sidelong glance back, cute sulking.",
-      "sdxl_prompt": "1girl, bust shot, sulking, pouting, turning head away, crossed arms, looking back, blushing",
+      "sdxl_prompt": "1girl, bust shot, ((arms crossed tightly over chest:1.25)), ((head turned away, sulking pout, blushing, sidelong glance back:1.25)), stubborn cute sulk",
       "description": "고개를 홱 돌리며 토라진 삐짐 표정 (A7)"
     },
     "A08": {
       "label": "슬픔울음",
       "required_outfit": "default",
       "flux_prompt": "Heartbroken crying expression, shimmering teardrops flowing down cheeks, trembling lips, sorrowful glistening eyes, soft emotional lighting.",
-      "sdxl_prompt": "1girl, bust shot, crying, tears, teary eyes, weeping, trembling mouth, sorrowful, sad expression",
+      "sdxl_prompt": "1girl, bust shot, ((both hands covering mouth or wiping tears:1.2)), ((crying, shimmering teardrops on cheeks, weeping, trembling lips:1.25)), sorrowful glistening eyes, heartbreak",
       "description": "눈물방울이 맺혀 흐르는 슬픔과 울음 (A8)"
     },
     "A09": {
       "label": "살짝부끄러움",
       "required_outfit": "default",
       "flux_prompt": "Shy bashful expression, faint rosy blush on cheeks and bridge of nose, looking slightly away with a shy sweet gaze.",
-      "sdxl_prompt": "1girl, bust shot, shy, bashful, slight blush, looking away, sweet expression",
+      "sdxl_prompt": "1girl, bust shot, ((one hand shyly touching cheek:1.2)), ((shy bashful blush on cheeks, looking away nervously, sweet bashful expression:1.2)), modest gaze",
       "description": "살포시 얼굴을 붉히는 수줍은 표정 (A9)"
     },
     "A10": {
       "label": "부끄러움당황",
       "required_outfit": "default",
       "flux_prompt": "Intensely flustered expression, deep crimson blush all over face, wide startled eyes, hands raised in flustered panic, sweet embarrassment.",
-      "sdxl_prompt": "1girl, bust shot, flustered, embarrassed, deep blush, wide eyes, panicked, blush visible",
+      "sdxl_prompt": "1girl, bust shot, ((hands raised waving in flustered panic or covering red face:1.25)), ((deep crimson blush, flustered panic, wide embarrassed eyes:1.25)), cute chaotic embarrassment",
       "description": "어쩔 줄 몰라 얼굴이 새빨개진 당황 표정 (A10)"
     },
     "A11": {
       "label": "깜짝놀람",
       "required_outfit": "default",
       "flux_prompt": "Surprised startled expression, eyes wide open in shock, small open 'O' shaped mouth, sudden realization, dynamic angle.",
-      "sdxl_prompt": "1girl, bust shot, surprised, shocked, wide eyes, open mouth, startled, sudden",
+      "sdxl_prompt": "1girl, bust shot, ((one hand raised to chest in shock:1.2)), ((wide startled eyes, open 'O' shaped mouth, shocked gasp:1.25)), sudden surprise, dynamic angle",
       "description": "예상치 못한 상황에 깜짝 놀란 표정 (A11)"
     },
     "A12": {
       "label": "난처함",
       "required_outfit": "default",
       "flux_prompt": "Troubled awkward expression, awkward wry smile, sweatdrop, hand behind head, worried hesitant eyes.",
-      "sdxl_prompt": "1girl, bust shot, awkward smile, troubled expression, hesitant, sweatdrop, looking troubled",
+      "sdxl_prompt": "1girl, bust shot, ((one hand behind head scratching nape:1.25)), ((awkward wry smile, sweatdrop, troubled hesitant eyes:1.2)), looking embarrassed and troubled",
       "description": "어색하게 쓴웃음을 짓는 난처한 표정 (A12)"
     },
     "A13": {
       "label": "감동",
       "required_outfit": "default",
       "flux_prompt": "Deeply touched emotional expression, hands clasped over chest, shining eyes filled with gratitude and wonder, gentle warm smile.",
-      "sdxl_prompt": "1girl, bust shot, touched, moved, shining eyes, hands on chest, grateful, warm smile",
+      "sdxl_prompt": "1girl, bust shot, ((both hands clasped tightly over chest:1.25)), ((sparkling teary eyes, moved, deeply touched, gentle emotional smile:1.25)), heartfelt gratitude",
       "description": "가슴에 손을 얹고 벅차오르는 감동 표정 (A13)"
     },
     "A14": {
       "label": "자신감",
       "required_outfit": "default",
       "flux_prompt": "Confident proud expression, head held high, smug charming grin, hand on hip, radiating self-assurance.",
-      "sdxl_prompt": "1girl, bust shot, confident, proud, smug smile, hand on hip, poised, self-assured",
+      "sdxl_prompt": "1girl, bust shot, ((one hand firmly on hip:1.25)), ((chin raised proudly, smug confident smirk, self-assured stance:1.25)), radiating pride and confidence",
       "description": "당당하고 자신만만한 미소 (A14)"
     },
     "A15": {
       "label": "절망",
       "required_outfit": "default",
       "flux_prompt": "Despairing hopeless expression, hollow lifeless eyes, pale drained complexion, slumped shoulders, dark heavy mood.",
-      "sdxl_prompt": "1girl, bust shot, despair, hopeless, empty eyes, lifeless gaze, pale, dramatic shadow",
+      "sdxl_prompt": "1girl, bust shot, ((head hanging low, slumped trembling shoulders:1.2)), ((lifeless empty hollow eyes, despair, pale drained complexion:1.25)), dark shadow over face, hopeless",
       "description": "빛을 잃은 눈동자의 깊은 절망 (A15)"
     },
     "A16": {
       "label": "겁먹음",
       "required_outfit": "default",
       "flux_prompt": "Frightened cowering expression, trembling body, wide fearful eyes, clutching self defensively, vulnerable look.",
-      "sdxl_prompt": "1girl, bust shot, frightened, scared, trembling, cowering, wide fearful eyes, defensive",
+      "sdxl_prompt": "1girl, bust shot, ((arms pulled close defensively, trembling:1.25)), ((wide fearful terrified eyes, cowering, scared, pale shivering:1.25)), vulnerable defensive posture",
       "description": "두려움에 떨며 방어적인 자세를 취하는 겁먹음 (A16)"
     },
     "A17": {
       "label": "짜증",
       "required_outfit": "default",
       "flux_prompt": "Annoyed irritated expression, click of tongue, furrowed brow, scowling with displeased eyes, sharp gaze.",
-      "sdxl_prompt": "1girl, bust shot, annoyed, irritated, scowl, displeased, furrowed brow, sharp gaze",
+      "sdxl_prompt": "1girl, bust shot, ((one hand flicking or touching temple in annoyance:1.2)), ((scowl, displeased glare, clicking tongue, heavily furrowed brow:1.25)), deep irritation",
       "description": "불쾌하게 미간을 찌푸리는 짜증 표정 (A17)"
     },
     "A18": {
       "label": "결연함",
       "required_outfit": "default",
       "flux_prompt": "Resolute determined expression, focused unwavering gaze, clenched fist, heroic inspiring lighting, resolute demeanor.",
-      "sdxl_prompt": "1girl, bust shot, determined, resolute, focused gaze, firm expression, clenched fist, heroic",
+      "sdxl_prompt": "1girl, bust shot, ((tightly clenched fist raised at chest level:1.25)), ((unwavering determined sharp gaze, resolute firm expression:1.25)), heroic inspiring ambiance",
       "description": "굳은 의지를 불태우는 결연한 표정 (A18)"
     },
     "A19": {
       "label": "걱정",
       "required_outfit": "default",
       "flux_prompt": "Worried anxious expression, furrowed gentle brows, hand near mouth, caring concerned gaze looking at viewer.",
-      "sdxl_prompt": "1girl, bust shot, worried, concerned, anxious, gentle furrowed brows, caring gaze",
+      "sdxl_prompt": "1girl, bust shot, ((one hand held delicately near mouth or chin:1.25)), ((anxious furrowed gentle brows, caring worried eyes, concerned gaze:1.25)), gentle sympathy",
       "description": "상대방을 염려하고 걱정하는 시선 (A19)"
     },
     "A20": {
       "label": "호기심",
       "required_outfit": "default",
       "flux_prompt": "Curious inquisitive expression, head tilted thoughtfully, wide sparkling eyes, finger on chin, intriguing look.",
-      "sdxl_prompt": "1girl, bust shot, curious, head tilt, sparkling eyes, finger on chin, inquisitive",
+      "sdxl_prompt": "1girl, bust shot, ((head tilted sideways:1.2)), ((index finger resting on chin in thought:1.25)), ((sparkling curious eyes, inquisitive look:1.2)), playful wonder",
       "description": "고개를 갸웃하며 눈을 빛내는 호기심 (A20)"
     },
     "A21": {
       "label": "비웃음",
       "required_outfit": "default",
       "flux_prompt": "Mocking taunting smirk, contemptuous chuckle, arrogant amusement in eyes, chin tilted up proudly.",
-      "sdxl_prompt": "1girl, bust shot, mocking smile, taunting, smirk, arrogant, chuckle, condescending",
+      "sdxl_prompt": "1girl, bust shot, ((one hand partially covering mouth while chuckling:1.2)), ((mocking smirk, taunting chuckle, arrogant condescending gaze:1.25)), looking down at viewer",
       "description": "상대를 깔보며 픽 웃는 비웃음 (A21)"
     },
     "A22": {
       "label": "취함",
       "required_outfit": "default",
       "flux_prompt": "Drunk tipsy expression, heavily flushed red cheeks, sleepy unfocused eyes, dazed goofy smile, relaxed posture.",
-      "sdxl_prompt": "1girl, bust shot, drunk, tipsy, heavily flushed face, sleepy eyes, dazed smile, relaxed",
+      "sdxl_prompt": "1girl, bust shot, ((head resting sideways or leaning tipsily:1.2)), ((heavily flushed red cheeks and nose, sleepy unfocused eyes, dazed silly smile:1.25)), tipsy intoxication",
       "description": "술기운에 얼굴이 붉어져 헤롱거리는 취한 표정 (A22)"
     },
     "A23": {
       "label": "한숨쉬는",
       "required_outfit": "default",
       "flux_prompt": "Sighing exhausted expression, exhaling breath, eyes closed in mild exasperation, hand gently rubbing temple.",
-      "sdxl_prompt": "1girl, bust shot, sighing, exasperated, closed eyes, tired smile, hand on temple",
+      "sdxl_prompt": "1girl, bust shot, ((one hand gently rubbing temple or forehead:1.25)), ((eyes closed in exasperation, exhaling sigh, tired resigned smile:1.2)), weary sigh",
       "description": "체념하듯 가볍게 한숨을 내쉬는 표정 (A23)"
     }
   }

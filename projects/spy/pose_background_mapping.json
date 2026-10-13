@@ -27,6 +27,17 @@
     "N01-N83": "boudoir",
     "D01-D10": "clinic",
     "E01-E08": "boudoir",
-    "F01-F07": "default"
+    "F01-F07": "default",
+    "S01": "office",
+    "S02": "office",
+    "S03": "office",
+    "S04": "clinic",
+    "S05": "default",
+    "S06": "office",
+    "S07": "office",
+    "S08": "boudoir",
+    "S09": "boudoir",
+    "S10": "boudoir",
+    "S01-S10": "office"
   }
 }
