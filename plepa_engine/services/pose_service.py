@@ -115,12 +115,17 @@ class PoseService:
                     prompt_otokonoko=item.get("prompt_otokonoko", ""),
                 )
 
-        # 로스터 전용 테마 포즈 (projects/{roster}/custom_poses.json 또는 themes/*.json) 병합
+        # 로스터 전용 포즈 오버라이드 파일 (projects/{roster}/pose_overrides.json) 로드
         theme_files: List[Path] = []
         if roster:
             r_dir = PROJECTS_DIR / roster
+            # pose_overrides.json: 로스터 전용 포즈 (캠퍼스 200-205 등)
+            if (r_dir / "pose_overrides.json").exists():
+                theme_files.append(r_dir / "pose_overrides.json")
+            # 레거시: custom_poses.json
             if (r_dir / "custom_poses.json").exists():
                 theme_files.append(r_dir / "custom_poses.json")
+            # 테마 디렉토리
             themes_dir = r_dir / "themes"
             if themes_dir.is_dir():
                 theme_files.extend(themes_dir.glob("*.json"))
@@ -185,8 +190,9 @@ class PoseService:
                 # 2. 테마 액션 팩인 경우: 현재 로스터에 배정된 테마만 포함, 타 로스터 테마는 제외
                 if entry.section in self.THEME_ACTION_SECTIONS:
                     return entry.section in allowed_themes
-                # 3. 공통 코어(기본표정, 기본포즈, genit_emotions, genit_actions, adult)는 항상 포함
-                return True
+                # 3. 신규 통합 코어(000~199 숫자 코드)만 항상 포함.
+                #    N/A/B 계열(adult, genit_emotions, genit_actions의 영문 코드)은 은퇴되어 명시 지정 시에만 생성
+                return entry.code.isdigit()
 
             def sort_key(k: str):
                 try:

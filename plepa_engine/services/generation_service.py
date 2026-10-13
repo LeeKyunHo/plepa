@@ -179,37 +179,40 @@ class GenerationService:
         target_chars = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
         codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db, roster=params.roster)
         
-        # 2-1. 젠더별 포즈 필터링 (h_scenes vs scenes_otokonoko)
-        # - female/male → h_scenes (040-059) 사용
-        # - otokonoko → scenes_otokonoko (140-159) 사용
-        def filter_codes_by_gender(base_codes: List[str], gender: str) -> List[str]:
-            """젠더에 따라 40번대/140번대 중 하나만 필터링 (영문 테마 코드는 안전 통과)"""
+        # 2-1. 젠더별 포즈 필터링 + 로스터 전용 포즈 필터링
+        def filter_codes_by_gender_and_roster(base_codes: List[str], char_obj, current_roster: str) -> List[str]:
+            """젠더 필터링 + 로스터 전용 포즈 필터링"""
             filtered = []
+            
+            # 캐릭터의 campus_only 포즈 확인
+            pose_restrictions = getattr(char_obj, 'pose_restrictions', {})
+            campus_only_poses = set(pose_restrictions.get('campus_only', []))
+            
             for code in base_codes:
                 try:
                     code_num = int(code)
                 except ValueError:
-                    # D01, A01, B01, G01 등 영문 테마 코드는 젠더 필터 없이 안전하게 포함
+                    # 영문 테마 코드는 젠더 필터 없이 포함
                     filtered.append(code)
                     continue
 
-                # 40번대(h_scenes)와 140번대(scenes_otokonoko)는 N시리즈(N01~N74)로 통합 및 공식 은퇴됨
-                # 기본 전체 배치(all) 시 중복 생성을 방지하며, 명시적으로 지정한 경우에만 하위 호환 생성
-                if 40 <= code_num <= 59 or 140 <= code_num <= 159:
-                    is_explicit = params.pose_expr and params.pose_expr.strip().lower() not in ("all", "")
-                    if is_explicit:
-                        if gender == "otokonoko":
-                            if 140 <= code_num <= 159:
-                                filtered.append(code)
-                        else:
-                            if 40 <= code_num <= 59:
-                                filtered.append(code)
-                    else:
-                        # 기본 전체 배치에서는 N시리즈로 단일화되었으므로 건너뜀 (중복 생성 방지)
+                # 로스터별 전용 포즈 필터링
+                if code in campus_only_poses:
+                    # 캠퍼스 전용 포즈는 캠퍼스 프로젝트에서만 허용
+                    if current_roster == 'campus':
+                        filtered.append(code)
+                    # 다른 로스터에선 제외
+                    continue
+
+                # 젠더별 필터링
+                if char_obj.gender == "otokonoko":
+                    if 48 <= code_num <= 99:
                         continue
                 else:
-                    # 그 외 포즈는 모두 포함
-                    filtered.append(code)
+                    if 148 <= code_num <= 199:
+                        continue
+                
+                filtered.append(code)
             return filtered
 
         if params.profile:
@@ -226,10 +229,10 @@ class GenerationService:
                     "ComfyUI의 run_nvidia_gpu.bat를 가동해 주십시오."
                 )
 
-        # 3-1. 캐릭터별 포즈 세트 계산 (젠더 필터링 적용)
+        # 3-1. 캐릭터별 포즈 세트 계산 (젠더 필터링 + 로스터 제약 적용)
         char_pose_map = {}
-        for char, _ in target_chars:
-            filtered_codes = filter_codes_by_gender(codes, char.gender)
+        for char, actual_roster in target_chars:
+            filtered_codes = filter_codes_by_gender_and_roster(codes, char, actual_roster)
             char_pose_map[char.prefix] = filtered_codes
         
         total_items = sum(len(poses) for poses in char_pose_map.values())

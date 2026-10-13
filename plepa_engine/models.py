@@ -62,6 +62,7 @@ class CharacterConfig:
     active_profile: Optional[str] = None
     default_mode: Optional[str] = None
     file_path: Optional[Path] = None
+    pose_restrictions: Dict[str, List[str]] = field(default_factory=dict)
 
     def get_outfit(self, slot: str = "default") -> Optional[str]:
         """지정된 슬롯의 의상 프롬프트를 반환합니다. 기본값은 appearance.outfit 또는 outfits['default']."""
@@ -150,7 +151,8 @@ class CharacterConfig:
             outfits=outfits_raw,
             profiles=dict(profiles_raw) if isinstance(profiles_raw, dict) else {},
             default_mode=default_mode,
-            file_path=file_path
+            file_path=file_path,
+            pose_restrictions=dict(data.get("pose_restrictions", {})) if isinstance(data.get("pose_restrictions"), dict) else {}
         )
 
 
