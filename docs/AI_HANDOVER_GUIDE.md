@@ -736,3 +736,24 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   3. **캐릭터 리뉴얼 및 표정 자동 분기**:
      - `chl` (아사 콘셉트 + 하이슬릿 블랙 차이나 드레스), `rvn` (코베니 콘셉트 + 고노출 넥타이 오피스룩), `scl` (피오나 프로스트 콘셉트 + 은백발 비대칭 단발 + 가슴 버클 스트랩 & 크롭 가죽 재킷 스파이룩), `evl` (순백색 슬림핏 원피스형 간호사복) 리뉴얼 완료 및 `A00` 기질별 표정 자동 분기 확립.
 - **결과**: Project Spy 10인 전원의 `A00` 프로필에서 등신대 스케일, 순백색 의상 색감 분리, 캐릭터별 고유 표정 및 콘셉트 무결성 100% 달성.
+
+### ADR-51: 2인 씬 다수 남성(2boys/난교) 렌더링 결함 차단 및 단일 파트너 불변식 확립 (2026-10-14)
+- **배경**:
+  1. H-씬 중 후배위절정(059번) 등에서 남성 파트너가 2명 이상 생성되는(3P/다인 결합) 환각 결함이 발생.
+  2. 원인 분석 결과, 파이프라인(`plepa_engine/prompt_builder.py`)에서 2인 씬 판정 시 `(solo:1.4)`를 네거티브에 주입하면서 동시에 `2boys`, `multiple boys` 차단 태그를 네거티브에서 제거해버리는 로직 버그가 있었음.
+  3. 또한 포즈 DB의 프롬프트에 단일 파트너에 대한 명시가 누락되어 모델이 솔로는 피하되 남성을 2명 이상 생성하는 현상 유발.
+- **결정 사항**:
+  1. **네거티브 다수 남성 원천 차단 (`[패치 2BOYS]`)**:
+     - `prompt_builder.py`의 2인 씬 분기에서 `1boy`, `male`, `masculine`만 제거하고, `((2boys, 3boys, multiple boys, multiple males, group sex, threesome, gangbang:1.35))`를 네거티브에 강제 주입하여 1:1 파트너십을 엄격히 고정.
+  2. **포즈 프롬프트 단일 파트너 명시**:
+     - `data/sdxl_pose_database.json` 및 `data/flux_pose_database.json`의 059번 포즈에 `((deep doggystyle climax with single male partner behind:1.3)), ((faceless male:1.2))`를 명시.
+- **결과**: 2인 씬에서 남성 다수 출현 버그 원천 박멸 및 1:1 결합 씬 구도 안정화 달성.
+
+### ADR-52: 시즈쿠(shz) 헤어 태그 단독 waves 바다/파도 연상 제거 및 네거티브 방어벽 구축 (2026-10-14)
+- **배경**:
+  - 캠퍼스 프로젝트의 시즈쿠(`shz`) 생성 시 실내 배경임에도 불구하고 뒷배경에 바다, 파도, 수면이 지속적으로 출현하는 배경 오염 결함 발생.
+  - 원인 분석 결과, `shz.json`의 헤어스타일 프롬프트에 `(long wavy hair, voluminous messy waves:1.15)`가 포함되어 있었으며, Danbooru/SDXL 태그 체계에서 단독 `waves`는 헤어가 아닌 **바다 파도(ocean waves)** 태그로 인식됨.
+- **결정 사항**:
+  1. `projects/campus/characters/shz.json`의 헤어 태그를 `(voluminous messy wavy hair:1.15)`로 수정하여 머리카락으로 엄격히 한정.
+  2. `sdxl_negative`에 `((ocean, sea, beach, water, waves, crashing waves, seashore, water surface:1.4))`를 추가하여 배경 수면 및 파도 연출 차단.
+- **결과**: 실내 캠퍼스 및 자취방 배경에서 바다/파도 오염 0% 박멸.
