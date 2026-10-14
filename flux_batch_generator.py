@@ -175,9 +175,9 @@ def run_self_test() -> int:
         if nude_flag or char.appearance.outfit not in prompt_clothed:
             errors.append("FLUX 평상 포즈(000)에서 의상 포함 누락 또는 잘못된 탈의 판정")
 
-        prompt_nude, nude_flag = assemble_flux_prompt(char, flux_db["040"])
+        prompt_nude, nude_flag = assemble_flux_prompt(char, flux_db["050"])
         if not nude_flag or char.appearance.outfit in prompt_nude:
-            errors.append("FLUX H-씬(040)에서 의상 탈의 자동 스트리핑 실패")
+            errors.append("FLUX H-씬(050)에서 의상 탈의 자동 스트리핑 실패")
         print("✔ FLUX 의상 착의/탈의 분기 조립 로직 검사 통과")
 
     # 5. SDXL 프롬프트 조립 및 탈의 로직 검사
@@ -186,9 +186,9 @@ def run_self_test() -> int:
         if nude_flag:
             errors.append("SDXL 평상 포즈(000)에서 잘못된 탈의 판정")
 
-        pos_nude, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["040"])
+        pos_nude, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["050"])
         if not nude_flag or "nude" not in pos_nude:
-            errors.append("SDXL H-씬(040)에서 nude 태그 주입 실패")
+            errors.append("SDXL H-씬(050)에서 nude 태그 주입 실패")
         print("✔ SDXL 의상 착의/탈의 분기 조립 로직 검사 통과")
 
     # 6. 워크플로우 템플릿 생성 검사 (FLUX & SDXL)

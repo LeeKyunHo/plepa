@@ -444,18 +444,21 @@ def assemble_sdxl_prompt(
             flags=re.IGNORECASE,
         )
     if is_two_person:
-        # 2인 씬에서는 남성을 차단하는 네거티브 태그(1boy, male, 2boys 등)를 제거하여 남성 렌더링 붕괴 및 저퀄리티 방지
-        negative_prompt = re.sub(r",?\s*\(?2boys(:[0-9\.]+)?\)?", "", negative_prompt, flags=re.IGNORECASE)
-        negative_prompt = re.sub(r",?\s*\(?multiple boys(:[0-9\.]+)?\)?", "", negative_prompt, flags=re.IGNORECASE)
+        # 2인 씬에서는 단일 파트너 렌더링을 위해 단일 남성 차단 태그(1boy, male, masculine)만 제거
         negative_prompt = re.sub(r",?\s*\b1boy\b", "", negative_prompt, flags=re.IGNORECASE)
         negative_prompt = re.sub(r",?\s*\bmale\b", "", negative_prompt, flags=re.IGNORECASE)
         negative_prompt = re.sub(r",?\s*\bmasculine\b", "", negative_prompt, flags=re.IGNORECASE)
         negative_prompt = re.sub(r",?\s*\(?multiple characters(:[0-9\.]+)?\)?", "", negative_prompt, flags=re.IGNORECASE)
         
-        # [패치 SOLO] 2인 씬에서 SDXL이 파트너를 무시하고 솔로 이미지를 생성하는 현상(67% 빈도) 억제
+        # [패치 SOLO] 2인 씬에서 SDXL이 파트너를 무시하고 솔로 이미지를 생성하는 현상 억제
         solo_inhibit = "(solo:1.4), (single person:1.4), (one person:1.3)"
         if solo_inhibit not in negative_prompt:
             negative_prompt = f"{negative_prompt}, {solo_inhibit}"
+
+        # [패치 2BOYS] 2인 씬에서 남성이 2명 이상 생성되는 다수 남성/난교 현상 원천 차단
+        multi_male_inhibit = "((2boys, 3boys, multiple boys, multiple males, group sex, threesome, gangbang:1.35))"
+        if multi_male_inhibit not in negative_prompt:
+            negative_prompt = f"{negative_prompt}, {multi_male_inhibit}"
 
     if custom_neg and custom_neg.strip():
         negative_prompt = f"{negative_prompt}, {custom_neg.strip()}"
