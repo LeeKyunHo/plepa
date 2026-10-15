@@ -508,6 +508,25 @@
         - 캠퍼스 및 전체 로스터 509개 파일 무손실 100% 마이그레이션 달성.
       - **단위 테스트 무결성**:
         - `tests/test_v2_migration.py` 신규 5종 포함 총 49개 테스트 100% 통과.
+48. **PLEPA ➔ KIRO 양방향 시너지 전파 브릿지 및 프롬프트 충돌 방지/체위별 안전 앵커 도입 (ADR 2026-10-16)**
+    - **배경 및 목적**:
+      1. `plepa`에서 확립된 V2 148종 포즈 대역 및 고도화된 검열/품질 판정 엔진을 형제 프로젝트인 `kiro`(`C:\Users\rbsgh\kiro`)로 무손실 전파.
+      2. `kiro`의 프롬프트 충돌 감지(`find_tag_conflicts`) 및 체위별 안전 앵커(`POSE_SAFE_ANCHORS`)를 `plepa`로 역수입하여 양 프로젝트 간 시너지 극대화.
+    - **핵심 아키텍처 및 불변식**:
+      - **골든 스테이트 고정**:
+        - `clamp_sdxl_weights()` (pos 1.15 / neg 1.25 / 다중 괄호 단일화) 및 단일 `CLIPTextEncode` 그래프 구조 유지.
+        - `PositiveAssemblyMutator`에서 캐릭터 기본 품질 태그 2중 중복 주입 방지.
+        - `040`(덮쳐짐) `viewer` 치환 및 네거티브 `camera frame, viewfinder, HUD` 차단.
+        - `060`(딥키스) & `061`(알몸키스) 원본 복원 및 `(partner off-screen:1.15)` 제거.
+      - **자동 전파 브릿지 (`scripts/sync_to_kiro.py`)**:
+        - 포즈 DB 무손실 전파: `kiro`의 `_profiles` 메타데이터를 100% 보존하면서 V2 8대 섹션 148개 포즈 무손실 동기화 (기존 DB 타임스탬프 백업 자동 생성).
+        - 프로젝트 설정 13개 동기화 (`pose_overrides.json`, `pose_background_mapping.json`, `background.json`).
+        - 코어 모듈 전파: `censor.py`, `qa_validator.py`를 `kiro/generator/`로 전파.
+        - V2 에셋 2-Pass 안전 리네임: `__tmp_v2_*`를 경유하여 kiro 내 구 번호 에셋(2,389개)을 연쇄 충돌 없이 V2 번호로 일괄 변경 지원.
+      - **엔진 상호 역수입**:
+        - `find_tag_conflicts`: `plepa_engine/prompt_pipeline.py`의 `SanitizerMutator`에서 긍정/부정 태그 충돌을 감지하여 네거티브에서 자동 정제 및 경고 로깅.
+        - `POSE_SAFE_ANCHORS`: `plepa_engine/censor.py`에 6대 체위 앵커 및 V2 포즈 매핑 추가. H-씬 0건 감지 시 경고 로그 및 폴백 박스 적용 지원 (비노출 여운 씬은 예외 처리).
+        - KIRO 15개 프로젝트 85명 캐릭터 전수 호환성 검증 통과 (100% 무결점).
 
 ---
 
