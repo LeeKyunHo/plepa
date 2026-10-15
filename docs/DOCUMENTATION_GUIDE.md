@@ -61,7 +61,7 @@ flowchart TD
    - `RUNBOOK.md`: 2절에 상세 옵션 설명 추가.
    - `개발일지.md`: 사용법 변경 사항 기록.
 3. **포즈 및 프롬프트 DB 변경 시**:
-   - `sdxl_pose_database.json` / `flux_pose_database.json` 수정.
+   - `data/sdxl_pose_database.json` 단일 수정 (※ `data/legacy/flux_pose_database.json` 수정 금지 - 토큰 절약).
    - `POSE_CATALOG.md`: 라벨명 및 `description` 동기화.
    - `캐릭터_포즈_제작_규칙.md`: 프롬프트 조립 규칙 및 불변식 동기화.
    - `개발일지.md`: 포즈 개선 내역 및 대상 에셋 기록.

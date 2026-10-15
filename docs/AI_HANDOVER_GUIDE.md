@@ -11,6 +11,13 @@
 > - 🤖 에이전트 행동 지침 → [`GEMINI.md`](GEMINI.md)  
 > - 🚀 빠른 시작 및 설치 가이드 → [`README.md`](README.md)  
 
+> [!IMPORTANT]
+> **🚨 AI 에이전트 불변 규칙: FLUX 완전 배제 및 토큰 최적화 (Token Optimization)**
+> - 플에파는 현재 **SDXL(NTR MIX XIII 등) 단일 파이프라인**으로 영구 일원화되었습니다 (ADR-53).
+> - FLUX 관련 파일은 `data/legacy/` 및 `plepa_engine/legacy/`로 완전히 격리·아카이브되었습니다.
+> - **포즈 추가/수정, 기능 수정 시 FLUX 관련 파일(`data/legacy/flux_pose_database.json`, `flux_*.py` 등)을 일체 열람하거나 수정·동기화하지 마십시오.**
+> - 모든 포즈의 단일 진실 공급원(SSOT)은 오직 **[`data/sdxl_pose_database.json`](../data/sdxl_pose_database.json)** 하나뿐입니다.
+
 ---
 
 ## 1. 프로젝트 탄생 배경 및 계보

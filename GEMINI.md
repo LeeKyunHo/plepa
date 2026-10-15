@@ -13,10 +13,14 @@
   - `fix: ComfyUI 웹소켓 응답 파싱 및 이미지 저장 예외 처리 개선`
   - `docs: 다중 PC 이식 및 모델 다운로드 체크리스트 문서화`
 
-## 3. 코드 및 프롬프트 무결성 (Integrity)
+## 3. 코드 및 프롬프트 무결성 (Integrity & Token Optimization)
 - 기존 주석 및 독스트링을 임의로 훼손하지 않습니다.
-- 프롬프트 데이터는 `data/` (`data/flux_pose_database.json`, `data/sdxl_pose_database.json`, `data/themes/`)에, 파이프라인 로직은 `plepa_engine/`에 철저히 격리합니다.
-- Danbooru 쉼표 태그/BREAK 문법은 키로(SDXL) 전용이므로, 플에파에서는 **플럭스 특화 영문 서술형 자연어(Descriptive Natural Language)** 규칙을 엄격히 준수합니다.
+- 프롬프트 데이터는 `data/` (`data/sdxl_pose_database.json`, `data/themes/`)에, 파이프라인 로직은 `plepa_engine/`에 철저히 격리합니다.
+- **FLUX 완전 배제 및 SDXL 단일화 원칙 (Token Optimization)**:
+  - 플에파는 SDXL 단일 파이프라인(Danbooru 쉼표 태그, BREAK 문법, 6대 Mutator 체인)으로 확정되었습니다.
+  - FLUX는 `data/legacy/` 및 `plepa_engine/legacy/`로 완전 격리·아카이브되었습니다.
+  - **포즈 추가/수정, 캐릭터 프롬프트 튜닝, 기능 수정 시 FLUX 관련 파일(`data/legacy/flux_pose_database.json`, `flux_*.py`)을 일체 열람·수정하거나 동기화하지 마십시오.** (토큰 낭비 및 불필요한 이중 작업 엄격 금지)
+  - 모든 포즈 작업의 단일 진실 공급원(SSOT)은 오직 **`data/sdxl_pose_database.json`** 하나입니다.
 
 ## 4. 인계 및 지식 연속성 (Handover & Continuity)
 - 새로운 세션이나 다른 컴퓨터의 Antigravity 에이전트가 투입되었을 때:
