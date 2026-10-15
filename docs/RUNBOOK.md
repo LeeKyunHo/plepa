@@ -81,23 +81,44 @@ python flux_batch_generator.py -r maid -c han -p 000 --naming code
 # 결과: han_000.webp
 ```
 
-### 2.6 2D 일러스트 자동 성기 검열 (`--censor`)
-- 나체/성인 씬 생성 시 무검열 원본과 함께 상업 동인 표준 검열본(`*_censored.webp`)을 동시 보존합니다.
+### 2.6 2D 일러스트 자동 검열 (`--censor`)
+- 나체/성인 씬 생성 시 무검열 원본(`assets/{prefix}/`)과 함께 대등한 위치의 독립 폴더(`censor_{prefix}/`)에 화이트 실루엣 검열본을 1:1 동일한 파일명으로 보존합니다.
+- H-씬(오토코노코 포함)에만 자동 적용되며, 일반 착의 일상 씬은 자동 스킵됩니다.
 ```powershell
-# 1) 와이드 솔리드 바 (기본 권장값: 18% 적응형 캡슐 마진으로 100% 누수 차단 및 인체 곡선 보존)
-python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style bar
+# 1) 화이트 실루엣 (기본 표준값: MobileSAM 기반 외곽선 곡률 100% 보존 및 순백색 #FFFFFF 채우기)
+python batch_generator.py -c aya -p 055,065,068 --censor
 
-# 2) 그림자 실루엣 (형태 윤곽선 보존 및 내부 선화 디테일 흑회색 음영 덮개)
-python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style shadow
+# 2) 블랙 실루엣 (순수 검은색 #000000 외곽선 실루엣)
+python batch_generator.py -c aya -p 065 --censor --censor-style silhouette
 
-# 3) 격자 모자이크 (클래식 픽셀레이션)
-python flux_batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style mosaic
+# 3) 와이드 솔리드 바 (18% 적응형 캡슐 마진)
+python batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style bar
 
-# 4) 검열 부위 지정 (--censor-targets {genital, penis, pussy, all})
-python flux_batch_generator.py -r maid -c han -p 044,052 --censor --censor-targets genital
+# 4) 그림자 실루엣 (형태 윤곽선 보존 및 내부 선화 디테일 흑회색 음영 덮개)
+python batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style shadow
 ```
 
-### 2.7 레퍼런스(IP-Adapter) 동작 제어 (`--no_ref` / `--use-ref`)
+### 2.7 기존 생성 에셋 초고속 소급 검열 (`--censor-only`)
+- ComfyUI GPU 호출 없이 이미 디스크에 생성된 이미지들을 0.2초 만에 스캔하여 `censor_{prefix}/` 폴더로 검열본만 일괄 생성합니다:
+```powershell
+# aya 캐릭터의 전체 에셋 중 H-씬만 선별하여 즉시 검열본 추출
+python batch_generator.py -c aya -p all --censor-only
+```
+
+### 2.8 Auto-QC 결함 자동 감지 및 리롤 루프
+- `imgutils.detect` 초고속 AI 감지기로 인원수 초과(1인 씬 2명 이상, 2인 씬 3명 이상), 손 증식(3개/5개 이상), 남성 얼굴 노출 등을 감지하여 자동으로 새 랜덤 시드로 재시도합니다 (기본 3회):
+```powershell
+# 1) 기본 생성 (Auto-QC 자동 가동, 최대 3회 재시도)
+python batch_generator.py -c aya -p 034,055
+
+# 2) 최대 재시도 횟수 상향
+python batch_generator.py -c aya -p 034 --max-retries 5
+
+# 3) Auto-QC 비활성화 (순수 1회 강제 생성)
+python batch_generator.py -c aya -p 034 --no-qc
+```
+
+### 2.9 레퍼런스(IP-Adapter) 동작 제어 (`--no_ref` / `--use-ref`)
 - **기본값**: **비활성화 (`no_ref=True`)**. ComfyUI IP-Adapter로 인한 형태 왜곡, 색상 번짐, 평면화(Flat)를 방지하고 순수 체크포인트 본연의 고화질 디테일을 보장합니다.
 ```powershell
 # 1) 기본 생성 (IP-Adapter 없이 순수 고화질 프롬프트 생성 - 기본 동작)
@@ -107,7 +128,7 @@ python flux_batch_generator.py -r hey -c mal -p 034
 python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
 ```
 
-### 2.8 Face Detailer 제어 (`--no-face-detailer`)
+### 2.10 Face Detailer 제어 (`--no-face-detailer`)
 - **기본 동작**: 자동 활성화 (SEGS Ordered Filter 훅을 통해 화면 내 면적 1위 얼굴만 단독 필터링하여 여주인공만 고속 보정).
 - 포즈 구도 테스트나 초고속 초안 생성(장당 10~11초)을 위해 Face Detailer를 끄고자 할 때 사용:
 ```powershell

@@ -465,7 +465,25 @@
       1. **SEGS Ordered Filter Detailer Hook 연동 (`workflow_templates.py`)**: `SEGSOrderedFilterDetailerHookProvider`를 `FaceDetailer`의 `detailer_hook`으로 연결하여 면적 기준 최상위 1개 얼굴(`take_count: 1`)만 단독 필터링하도록 구성. `bbox_threshold`를 0.68로 상향하여 모브 얼굴 인페인팅 100% 스킵 및 생성 시간 24~36초대로 대폭 단축.
       2. **표정 지능형 조화 (`harmonize_character_expression`)**: 포즈에 미소/행복/홍조 등 능동 표정/감정 태그가 있을 때 캐릭터 기본 무표정을 자동 제거하여 여주인공의 다정한 미소 100% 반영.
       3. **밀착 씬 독립 모브 중복 방지 (`is_head_hug_scene`)**: 포즈 자체에 파트너 밀착이 이미 정의된 경우 추가 모브 BREAK 청크를 생략하고 네거티브에 `(2boys:1.8), (duplicate male:1.8), (standing male:1.5)`를 주입하여 100% 단일 1:1 관계 확립.
-      4. **네거티브 정규식 교정**: `\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair))`로 복합 명사구를 보호하여 여주인공 얼굴 억제 버그 완치.
+46. **Auto-QC 결함 자동 감지 및 리롤 루프, MobileSAM 화이트 실루엣 검열 및 독립 격리 저장 (ADR 2026-10-15)**
+    - **배경 및 사용자 피드백**:
+      1. 생성 후 인원 초과(1인 씬에 2명, 2인 씬에 3명 등), 손 증식(3개/5개 이상), 모브 남성 얼굴 노출 등 불량 이미지를 수작업으로 찾아 리롤하는 리소스 낭비 원천 차단 요구.
+      2. 단순 사각 박스나 블러가 아닌, 실제 대상 부위의 외곽선(Contour) 곡률을 유지하는 유려한 실루엣 검열 요구 및 화이트 실루엣(#FFFFFF) 스타일 채택.
+      3. 오랄/밀착 씬에서 여주인공 어깨/팔 피부 쪽으로 마스크가 번지던 결함 발견.
+      4. 원본 에셋과 검열본이 한 폴더에 혼재되지 않고, 에셋 폴더와 대등한 위치의 독립 폴더(`censor_{prefix}/`)에 원본과 1:1 동일한 파일명으로 격리 저장되도록 요구.
+    - **해결 조치**:
+      - **초고속 Auto-QC 감지기 및 자동 재시도 루프 (`qa_validator.py`, `generation_service.py`)**:
+        - `imgutils.detect` 기반 4대 감지기(`person`, `head`, `hand`, `face`)를 활용하여 장당 **0.05~0.08초** 만에 판정.
+        - 불량 판정 시 노드 그래프의 KSampler/FaceDetailer 시드를 무작위 재생성하여 최대 `max_retries`(기본 3회)까지 자동 리롤.
+      - **MobileSAM 기반 정밀 화이트 실루엣 (`censor.py`)**:
+        - `mobile_sam.pt` 싱글톤 연동.
+        - **피부 번짐 차단**: 밀착 씬 하단 확장 억제(4%), BBox 마스크 클램핑, 주 덩어리 대비 5% 미만/300px 미만 고립 노이즈 컨투어 100% 제거.
+        - 타원 모폴로지 클로징 및 가우시안 안티앨리어싱을 거쳐 순수 화이트(#FFFFFF)로 메우는 `white_silhouette` 모드를 기본값으로 확정.
+      - **H-씬 자동 분기 및 초고속 소급 검열 (`--censor-only`)**:
+        - `PoseEntry.is_h_scene` 프로퍼티 신설로 착의 일상 포즈는 자동 스킵.
+        - `--censor-only` 플래그로 ComfyUI 가동 없이 기존 에셋들을 장당 0.2초 만에 스캔하여 검열본 일괄 추출.
+      - **독립 폴더 분리 저장 아키텍처**:
+        - `projects/{roster}/censor_{char.prefix}/`에 원본 파일명 그대로 보존하여 게임 엔진/뷰어에서 폴더 경로 교체만으로 1:1 에셋 스왑 지원.
 
 ---
 
