@@ -57,7 +57,7 @@ class PoseService:
         """등록된 모든 섹션의 메타데이터(라벨, 아이콘, 정렬순서)를 반환합니다."""
         return SECTION_METADATA
 
-    def get_active_sections(self, engine: str = "flux", roster: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_active_sections(self, engine: str = "sdxl", roster: Optional[str] = None) -> List[Dict[str, Any]]:
         """현재 DB에 실제 포즈가 1개 이상 존재하는 활성 섹션 목록을 정렬하여 반환합니다 (UI 완전 자동 동기화용)."""
         db = self.load_pose_db(engine=engine, roster=roster)
         present_sections = set(e.section for e in db.values() if e.section)
@@ -89,7 +89,7 @@ class PoseService:
 
     def load_pose_db(
         self,
-        engine: str = "flux",
+        engine: str = "sdxl",
         path: Optional[Path] = None,
         roster: Optional[str] = None,
     ) -> Dict[str, PoseEntry]:

@@ -32,7 +32,7 @@ def test_data_files_exist_and_loadable():
     """data/ 내부의 포즈 데이터베이스, 포즈 세트, 테마 파일들이 정상 로드되는지 검증."""
     assert SDXL_POSE_DB_PATH.is_file(), f"SDXL 포즈 DB 누락: {SDXL_POSE_DB_PATH}"
     assert FLUX_POSE_DB_PATH.is_file(), f"FLUX 포즈 DB 누락: {FLUX_POSE_DB_PATH}"
-    assert POSE_DB_PATH == FLUX_POSE_DB_PATH
+    assert POSE_DB_PATH == SDXL_POSE_DB_PATH
     assert POSE_SETS_PATH.is_file(), f"포즈 세트 파일 누락: {POSE_SETS_PATH}"
 
     theme_files = list(THEMES_DIR.glob("*.json"))

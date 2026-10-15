@@ -17,9 +17,10 @@ DOCS_DIR = ROOT_DIR / "docs"
 SCRIPTS_DIR = ROOT_DIR / "scripts"
 DEFAULT_ROSTER = "default"
 POSE_SETS_PATH = DATA_DIR / "pose_sets.json"
+LEGACY_DATA_DIR = DATA_DIR / "legacy"
 SDXL_POSE_DB_PATH = DATA_DIR / "sdxl_pose_database.json"
-FLUX_POSE_DB_PATH = DATA_DIR / "flux_pose_database.json"
-POSE_DB_PATH = SDXL_POSE_DB_PATH  # 시스템 공식 기본 포즈 DB (SDXL 표준)
+FLUX_POSE_DB_PATH = LEGACY_DATA_DIR / "flux_pose_database.json"  # [레거시 격리]
+POSE_DB_PATH = SDXL_POSE_DB_PATH  # 시스템 공식 기본 포즈 DB (SDXL 표준 단일화)
 
 # ── ComfyUI 통신 설정 ──
 COMFY_HOST = os.environ.get("COMFYUI_HOST", "127.0.0.1:8188")
