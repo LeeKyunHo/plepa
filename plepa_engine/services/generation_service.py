@@ -581,11 +581,13 @@ class GenerationService:
 
                             # Auto-QC 품질 및 결함 검증
                             if params.auto_qc:
+                                is_kiss = "kiss" in (pose.prompt or "").lower() or str(target.code) in ("060", "061", "198", "199", "019")
                                 passed, fail_reason, _ = validate_generated_image(
                                     image=out_path,
                                     is_solo_scene=pose.is_solo_scene,
                                     is_two_person=pose.is_two_person,
                                     is_offscreen_partner=pose.is_offscreen_partner,
+                                    is_kiss_scene=is_kiss,
                                     section=target.section,
                                 )
                                 if not passed:

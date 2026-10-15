@@ -31,6 +31,7 @@ def validate_generated_image(
     is_solo_scene: bool = True,
     is_two_person: bool = False,
     is_offscreen_partner: bool = False,
+    is_kiss_scene: bool = False,
     section: Optional[str] = None,
     conf_threshold: float = 0.55,
 ) -> Tuple[bool, str, Dict[str, Any]]:
@@ -101,8 +102,9 @@ def validate_generated_image(
                 return False, reason, metrics
 
             # 2인 씬에서 모브 남성의 얼굴이 완전히 드러나 얼굴이 2개 이상 잡힌 경우
-            # (단, 053/153 결합키스 등 특정 키스 씬은 예외 허용 가능)
-            if metrics["faces"] > 1:
+            # (단, 060, 061 등 키스 씬은 두 사람의 얼굴이 접촉하므로 faces <= 2 허용)
+            max_faces = 2 if (is_kiss_scene or section == "romance") else 1
+            if metrics["faces"] > max_faces:
                 reason = f"모브 남성 얼굴 노출 감지 (얼굴: {metrics['faces']}개, faceless 위반)"
                 return False, reason, metrics
 
