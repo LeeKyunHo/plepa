@@ -778,3 +778,29 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - `batch_generator.py` 신설 및 `flux_batch_generator.py`를 하위 호환 래퍼로 전환.
 - **결과**: SDXL 단일 중심 고속 파이프라인의 가독성과 응집도 극대화 달성, 필요 시 언제든 FLUX를 호출할 수 있는 완전한 안전 격리 완결.
 
+### ADR-54: 에셋 파이프라인 확장 5대 코어 아키텍처 현대화 (2026-10-15)
+- **배경**:
+  - 도메인 규칙, 신규 로스터/세계관(무협, 판타지, 학원, 스파이 등), 특수 포즈 및 ComfyUI 노드 확장이 가속화됨에 따라 기존 모놀리식 절차적 코드의 5대 구조적 결합도(Coupling)와 유지보수 병목 해소가 요구됨:
+    1. `prompt_builder.py`: 절차적 if-else 및 정규식 패치가 단일 함수에 수십 개 직렬 배치되어 세계관 확장 시 사이드 이펙트 위험 증가.
+    2. `workflow_templates.py`: 노드 ID(`1`, `14`, `30`) 정적 하드코딩으로 다중 LoRA/ControlNet/Inpaint 동적 확장 한계.
+    3. `comfy_client.py`: 이미지 1장 생성마다 반복되는 시스템 상태 폴링, 웹소켓 신규 연결 수립/종료 및 레퍼런스 이미지 무조건 재업로드 오버헤드.
+    4. `generation_service.py`: 매직 넘버(48~99) 기반 필터링 및 대규모 배치 생성 시 복구/재시도를 위한 매니페스트 부재.
+    5. `models.py`: `apply_profile()`의 인플레이스 객체 속성 덮어쓰기로 인한 장기 구동 GUI 서버 메모리 캐시 오염 리스크.
+- **결정 사항**:
+  1. **PromptContext & 6대 Mutator 파이프라인 체인 (`plepa_engine/prompt_pipeline.py`)**:
+     - `PromptContext` 상태 객체를 6단계 미들웨어 체인(`PoseTagPreparationMutator` ➔ `PositiveAssemblyMutator` ➔ `NegativeBaseMutator` ➔ `DefectDefenseMutator` ➔ `TwoPersonMobMutator` ➔ `SanitizerMutator`)으로 순차 변환.
+     - `prompt_builder.py`의 `assemble_sdxl_prompt`는 15줄의 얇은 위임 오케스트레이터로 경량화하여 하위 호환 100% 보장.
+  2. **경량 그래프 빌더 도입 (`plepa_engine/graph_builder.py`)**:
+     - `WorkflowGraph` 클래스를 신설하여 노드 추가 시 `add_node(class_type, **inputs)`로 동적 ID 발급 및 `graph.out(node_id, slot)` 출력 슬롯 레퍼런스 체이닝 지원.
+     - `build_sdxl_workflow` 및 `build_standalone_upscale_workflow`의 노드 하드코딩을 동적 레고 블록 구조로 전면 교체.
+  3. **웹소켓 세션 재사용 및 이미지 캐싱 (`plepa_engine/comfy_client.py`)**:
+     - `with client.session():` 컨텍스트 매니저를 도입하여 배치 생성 루프 내에서 단일 WebSocket 연결을 유지·재사용.
+     - `upload_image()`에 파일 수정 시각(`mtime`) 기반 인메모리 캐시를 적용하여 동일 레퍼런스 이미지의 불필요한 반복 네트워크 전송 0% 달성.
+  4. **데이터 주도 필터링 및 원자적 저널링 (`plepa_engine/services/generation_service.py`)**:
+     - 매직 넘버 대역(48~99) 판별 로직을 폐기하고 `PoseEntry`의 메타데이터(`section`, `target_gender`, `allowed_rosters`) 기반 데이터 주도형 필터링으로 전환.
+     - 배치 생성 시 `projects/{roster}/assets/{prefix}/_batch_manifest.json`에 최종 프롬프트, 시드, 소요 시간, 성공 여부를 원자적 임시 파일 치환 방식으로 기록하여 사후 추적 및 부분 재시도(Retry) 기반 확립.
+  5. **불변 팩토리 메서드 도입 (`plepa_engine/models.py`)**:
+     - `CharacterConfig.with_profile(profile_name)`을 신설하여 `copy.deepcopy` 기반의 안전한 불변 복제본을 반환. 기존 `apply_profile()`도 내부적으로 원본을 건드리지 않고 필드를 안전 갱신하도록 정비.
+- **결과**: Zero-Regression(기존 프롬프트 결과물 100% 일치)을 엄격히 검증 완료하였으며, 대규모 배치 생성 속도 향상, 노드/세계관 확장의 유연성 확보 및 메모리 안정성 극대화 달성.
+
+
