@@ -345,11 +345,80 @@ def apply_mosaic(
     return canvas
 
 
+# 체위별 안전 앵커 바운딩 박스 (정규화 좌표: [x0, y0, x1, y1])
+POSE_SAFE_ANCHORS = {
+    "missionary": [0.34, 0.58, 0.66, 0.84],   # 정상위/배위: 하단 중앙 고환/음순 영역
+    "doggystyle": [0.35, 0.52, 0.65, 0.78],   # 후배위: 중앙 하단 결합부
+    "cowgirl":    [0.34, 0.60, 0.66, 0.86],   # 기승위: 하단 기저부
+    "fellatio":   [0.38, 0.45, 0.64, 0.70],   # 구강/오랄: 중상단 입/성기 접촉부
+    "side":       [0.35, 0.55, 0.65, 0.82],   # 측와위: 측면 교차부
+    "default_h":  [0.34, 0.56, 0.66, 0.84],   # 기본 성인 결합 씬
+}
+
+# 비노출 여운/포옹/키스 씬 목록 (성기 검열 대상 제외)
+NON_EXPOSURE_H_POSES = frozenset({
+    "101", "102", "104", "105", "171", "172", "174", "175"
+})
+
+
+def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
+    """
+    V2 포즈 코드(080~130, 150~200)에 따른 체위 카테고리를 반환합니다.
+    비노출 씬이거나 일반 일상 포즈는 None을 반환합니다.
+    """
+    code_str = str(pose_code).zfill(3)
+    if code_str in NON_EXPOSURE_H_POSES:
+        return None
+
+    try:
+        code_int = int(code_str)
+    except ValueError:
+        return None
+
+    # 구강/오랄 씬
+    if code_str in ("086", "087", "126", "127", "156", "157", "196", "197"):
+        return "fellatio"
+    # 후배위/배면 씬
+    if code_str in ("088", "089", "090", "118", "121", "154", "158", "159", "160", "188", "191"):
+        return "doggystyle"
+    # 기승위/승마 씬
+    if code_str in ("091", "092", "093", "109", "114", "161", "162", "163", "179", "184"):
+        return "cowgirl"
+    # 측와위 씬
+    if code_str in ("098", "119", "168", "189"):
+        return "side"
+    # 정상위/배위/누운 자세
+    if code_str in ("080", "081", "082", "083", "084", "085", "094", "096", "097", "150", "151", "152", "153", "164", "166", "167", "168"):
+        return "missionary"
+    # 그 외 성인 H-씬 대역 (080~130, 150~200)
+    if (80 <= code_int <= 130) or (150 <= code_int <= 200):
+        return "default_h"
+
+    return None
+
+
+def get_pose_anchor_box(
+    pose_code: Union[str, int], img_width: int, img_height: int
+) -> Optional[Tuple[int, int, int, int]]:
+    """포즈 코드에 해당하는 안전 앵커 픽셀 바운딩 박스 (x1, y1, x2, y2)를 계산하여 반환합니다."""
+    cat = get_pose_category(pose_code)
+    if not cat or cat not in POSE_SAFE_ANCHORS:
+        return None
+    x0_pct, y0_pct, x1_pct, y1_pct = POSE_SAFE_ANCHORS[cat]
+    x1 = int(round(x0_pct * img_width))
+    y1 = int(round(y0_pct * img_height))
+    x2 = int(round(x1_pct * img_width))
+    y2 = int(round(y1_pct * img_height))
+    return (x1, y1, x2, y2)
+
+
 def censor_image(
     image: Union[Image.Image, Path, str],
     style: str = "silhouette",
     targets: Sequence[str] = ("penis", "pussy"),
     min_confidence: float = 0.20,
+    pose_code: Optional[Union[str, int]] = None,
+    enable_anchor_fallback: bool = False,
 ) -> Tuple[Image.Image, int]:
     """
     이미지 내 성기 부위를 자동으로 감지하여 검열을 적용합니다.
@@ -390,6 +459,20 @@ def censor_image(
         except Exception as e:
             logger.warning(f"[Censor] 감지 모델 추론 예외: {e}")
 
+    # 검열 미탐지 시 체위별 안전 앵커 폴백 점검
+    if not detected_boxes_with_labels and pose_code is not None:
+        cat = get_pose_category(pose_code)
+        if cat:
+            logger.warning(
+                f"[WARN] [Censor] 포즈 {pose_code}: 성기 미탐지! 안전 앵커 영역({cat}) 폴백 점검 대상입니다."
+            )
+            if enable_anchor_fallback:
+                w, h = img.size
+                anchor_box = get_pose_anchor_box(pose_code, w, h)
+                if anchor_box:
+                    detected_boxes_with_labels.append((anchor_box, "safe_anchor"))
+                    logger.info(f"[Censor] 포즈 {pose_code}: 안전 앵커 폴백 박스 적용 {anchor_box}")
+
     if not detected_boxes_with_labels:
         return img, 0
 
@@ -424,6 +507,8 @@ def censor_file(
     targets: Sequence[str] = ("penis", "pussy"),
     min_confidence: float = 0.20,
     quality: int = 95,
+    pose_code: Optional[Union[str, int]] = None,
+    enable_anchor_fallback: bool = False,
 ) -> Optional[Path]:
     """
     파일 경로를 입력받아 검열본을 생성하고 저장합니다.
@@ -435,7 +520,14 @@ def censor_file(
         return None
 
     img = Image.open(src).convert("RGB")
-    censored_img, count = censor_image(img, style=style, targets=targets, min_confidence=min_confidence)
+    censored_img, count = censor_image(
+        img,
+        style=style,
+        targets=targets,
+        min_confidence=min_confidence,
+        pose_code=pose_code,
+        enable_anchor_fallback=enable_anchor_fallback,
+    )
 
     if count == 0:
         return None

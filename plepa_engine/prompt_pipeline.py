@@ -7,9 +7,12 @@ SDXL 프롬프트 조합을 위한 Pipeline Mutator (미들웨어) 아키텍처.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from plepa_engine.models import CharacterConfig, PoseEntry
 from plepa_engine.prompt_builder import (
@@ -506,10 +509,65 @@ class TwoPersonMobMutator(PromptMutator):
         ctx.negative_prompt = neg
 
 
+_BRACKET_TABLE = str.maketrans("", "", "()[]{}")
+_WEIGHT_SUFFIX_PATTERN = re.compile(r":[0-9]+(?:\.[0-9]+)?$")
+
+
+def normalize_tag(raw: str) -> str:
+    """
+    비교 및 매칭을 위해 태그를 정규화합니다.
+    괄호 및 가중치 표기를 제거하고 소문자 및 공백을 정규화합니다.
+    """
+    tag = raw.strip().lower().translate(_BRACKET_TABLE)
+    tag = _WEIGHT_SUFFIX_PATTERN.sub("", tag)
+    return " ".join(tag.split())
+
+
+def split_tags(text: str) -> List[str]:
+    """쉼표 및 BREAK 구분자로 텍스트를 분리하여 정규화된 태그 리스트를 반환합니다."""
+    cleaned = re.sub(r"\bBREAK\b", ",", text)
+    return [normalize_tag(tag) for tag in cleaned.split(",") if normalize_tag(tag)]
+
+
+def find_tag_conflicts(positive: str, negative: str) -> List[str]:
+    """긍정과 부정 프롬프트에 동시에 존재하는 정규화 태그 목록을 반환합니다."""
+    pos_tags = set(split_tags(positive))
+    neg_tags = set(split_tags(negative))
+    return sorted(pos_tags & neg_tags)
+
+
+def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple[str, List[str]]:
+    """
+    긍정과 부정 사이에 충돌하는 태그를 감지하고, 네거티브 프롬프트에서 해당 태그를 안전하게 제거합니다.
+    """
+    conflicts = find_tag_conflicts(positive, negative)
+    if not conflicts:
+        return negative, []
+
+    conflict_set = set(conflicts)
+    neg_chunks = [c.strip() for c in negative.split(",") if c.strip()]
+    kept_chunks = []
+    for chunk in neg_chunks:
+        norm = normalize_tag(chunk)
+        if norm in conflict_set:
+            continue
+        kept_chunks.append(chunk)
+
+    new_neg = ", ".join(kept_chunks)
+    return new_neg, conflicts
+
+
 class SanitizerMutator(PromptMutator):
-    """6단계: 가중치 안전 클램핑(clamp_sdxl_weights) 및 공백/쉼표/BREAK 구조 정규화."""
+    """6단계: 가중치 안전 클램핑(clamp_sdxl_weights), 태그 충돌 정제 및 공백/쉼표/BREAK 구조 정규화."""
 
     def mutate(self, ctx: PromptContext) -> None:
+        # 1. 긍정/부정 태그 충돌 감지 및 네거티브에서 자동 제거
+        cleaned_neg, conflicts = remove_conflicting_tags_from_negative(ctx.positive_prompt, ctx.negative_prompt)
+        if conflicts:
+            logger.warning(f"[WARN] 프롬프트 태그 충돌 감지: {conflicts} -> 네거티브에서 자동 제거되었습니다.")
+            ctx.negative_prompt = cleaned_neg
+
+        # 2. 가중치 클램핑
         pos = clamp_sdxl_weights(ctx.positive_prompt, max_weight=1.15)
         neg = clamp_sdxl_weights(ctx.negative_prompt, max_weight=1.25)
 
