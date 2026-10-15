@@ -71,17 +71,16 @@
   python flux_batch_generator.py -r maid --char ren --codes "144,152"   # 오토코노코 H씬
 
   ── [★강력추천] MobileSAM 외곽선 화이트 실루엣 자동 검열 (--censor) ──────
-  # 무검열 원본(assets/aya/)과 함께 독립 폴더(censor_aya/)에 화이트 실루엣 검열본 동시 생성:
-  python flux_batch_generator.py -r campus -c aya -p "055,065,068" --censor
-  python flux_batch_generator.py -r maid --char ren -p "148..159" --censor
-  # 저장 위치: projects/{roster}/censor_{캐릭터ID}/ (원본과 1:1 동일 파일명 보존으로 스왑 최적화!)
-  # 자동 분기: H-씬(오토코노코 포함)에만 자동 적용되며, 일상/감정 착의 씬은 자동 스킵됩니다.
-  # 검열 스타일: --censor-style {white_silhouette(화이트기본), silhouette(블랙실루엣), bar(와이드바), shadow(그림자), mosaic(모자이크)}
+  # 검열본은 assets/{prefix}/에 교체 배치되고, 무검열 원본은 assets/{prefix}_origin/에 안전하게 보존됩니다:
+  python batch_generator.py -r campus -c aya -p "060,061,080..090" --censor
+  python batch_generator.py -r campus --all-chars -p all --censor
+  # 자동 분기: 성인 씬(080~149, 150~219) 및 탈의 씬(030, 037~039, 043~045, 061~063)에 자동 적용!
+  # 검열 스타일: --censor-style {white_silhouette(화이트실루엣기본), silhouette(블랙실루엣), bar(와이드바), shadow(그림자), mosaic(모자이크)}
 
   ── [★초고속 소급 적용] 이미 생성된 에셋 일괄 검열본 추출 (--censor-only) ────
-  # ComfyUI 호출 없이 기존 파일들을 0.2초 만에 스캔하여 censor_{캐릭터ID}/ 폴더로 일괄 생성:
-  python flux_batch_generator.py -r campus -c aya -p all --censor-only
-  python flux_batch_generator.py -r ykn --all-chars -p all --censor-only
+  # ComfyUI 호출 없이 기존 파일들을 0.2초 만에 스캔하여 검열본 교체 배치 및 원본 보존:
+  python batch_generator.py -r campus -c aya -p all --censor-only
+  python batch_generator.py -r campus --all-chars -p all --censor-only
 
   ── [★자동화] Auto-QC 불량 감지 및 자동 재시도 루프 (기본 활성화) ────────────
   # 0.05초 초고속 AI 감지기로 인원 초과, 머리 복제, 손 증식, 남성 얼굴 노출 시 새 시드로 자동 리롤(최대 3회):
