@@ -113,15 +113,28 @@ class PoseTagPreparationMutator(PromptMutator):
 
         # 배경 주입
         if ctx.bg_prompt:
-            if ctx.pose.section in ("emotions", "genit_emotions"):
-                if "clean background" in pose_tag.lower():
+            p_low = pose_tag.lower()
+            intrinsic_bg_keywords = (
+                "bed", "shower", "bath", "sofa", "classroom", "cafe", "library",
+                "festival", "cathedral", "desk", "wall"
+            )
+            has_intrinsic_bg = any(re.search(r"\b" + re.escape(kw) + r"\b", p_low) for kw in intrinsic_bg_keywords)
+            
+            # emotions는 항상 적용, 그 외 섹션은 자체 배경 키워드가 없는 일반 스탠딩/일상 포즈(020~024, 030, 041~042, 047 등)에 적용
+            apply_bg = (
+                ctx.pose.section in ("emotions", "genit_emotions")
+                or (not has_intrinsic_bg and ctx.pose.section not in ("h_scenes", "scenes_otokonoko", "adult"))
+            )
+
+            if apply_bg:
+                if "clean background" in p_low:
                     pose_tag = re.sub(r"clean\s+background", ctx.bg_prompt.strip(), pose_tag, flags=re.IGNORECASE)
                 else:
                     pose_tag = f"{pose_tag}, {ctx.bg_prompt.strip()}"
-                if ctx.is_no_bg and "single view" not in pose_tag.lower():
+                if ctx.is_no_bg and "single view" not in p_low:
                     pose_tag = f"{pose_tag}, single view, single shot"
             elif ctx.is_no_bg:
-                if "clean background" not in pose_tag.lower():
+                if "clean background" not in p_low:
                     pose_tag = f"{pose_tag}, single view, single shot, clean background, white background, solid background"
 
         ctx.pose_tag = pose_tag
@@ -131,6 +144,26 @@ class PoseTagPreparationMutator(PromptMutator):
             kw in pose_tag.lower()
             for kw in ("1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl", "fellatio", "cunnilingus", "paizuri")
         )
+
+
+def harmonize_character_expression(char_part: str, pose_tag: str) -> str:
+    """포즈에 구체적인 표정/감정 태그가 있을 경우, 캐릭터 기본 정의의 상반된 무표정/기본 표정 태그를 억제하여 표정 충돌을 방지한다."""
+    has_explicit_pose_expression = any(
+        kw in pose_tag.lower()
+        for kw in (
+            "smile", "smiling", "laugh", "grin", "happy", "blush", "flushed",
+            "crying", "tears", "ecstasy", "screaming", "angry", "moaning",
+            "pleasure", "winking", "embarrassed", "pout", "flustered", "intoxicated"
+        )
+    )
+    if has_explicit_pose_expression:
+        char_part = re.sub(
+            r",?\s*\b(cool calm expression|stoic expression|calm expression|expressionless|emotionless|indifferent gaze|neutral expression)\b",
+            "",
+            char_part,
+            flags=re.IGNORECASE,
+        )
+    return char_part
 
 
 class PositiveAssemblyMutator(PromptMutator):
@@ -150,6 +183,7 @@ class PositiveAssemblyMutator(PromptMutator):
                     base_pos = f"{base_pos}, {theme_outfit}"
             if " BREAK " in base_pos:
                 quality_part, char_part = base_pos.split(" BREAK ", 1)
+                char_part = harmonize_character_expression(char_part, pose_tag)
                 if ctx.is_two_person:
                     char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
                     char_part = re.sub(r"^\s*,\s*", "", char_part)
@@ -161,6 +195,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
                 ctx.positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
             else:
+                base_pos = harmonize_character_expression(base_pos, pose_tag)
                 if ctx.is_two_person:
                     base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
                 prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
@@ -181,6 +216,7 @@ class PositiveAssemblyMutator(PromptMutator):
 
             if " BREAK " in base_pos:
                 quality_part, char_part = base_pos.split(" BREAK ", 1)
+                char_part = harmonize_character_expression(char_part, pose_tag)
                 if ctx.is_two_person:
                     char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
                     char_part = re.sub(r"^\s*,\s*", "", char_part)
@@ -192,6 +228,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
                 ctx.positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
             else:
+                base_pos = harmonize_character_expression(base_pos, pose_tag)
                 if ctx.is_two_person:
                     base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
                 prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
@@ -231,7 +268,7 @@ class NegativeBaseMutator(PromptMutator):
 
         if ctx.is_two_person:
             neg = re.sub(r",?\s*\b1boy\b", "", neg, flags=re.IGNORECASE)
-            neg = re.sub(r",?\s*\bmale\b", "", neg, flags=re.IGNORECASE)
+            neg = re.sub(r",?\s*\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair))", "", neg, flags=re.IGNORECASE)
             neg = re.sub(r",?\s*\bmasculine\b", "", neg, flags=re.IGNORECASE)
             neg = re.sub(r",?\s*\(?multiple characters(:[0-9\.]+)?\)?", "", neg, flags=re.IGNORECASE)
 
@@ -247,6 +284,10 @@ class NegativeBaseMutator(PromptMutator):
 
         if ctx.custom_neg and ctx.custom_neg.strip():
             neg = f"{neg}, {ctx.custom_neg.strip()}"
+
+        # 포즈별 커스텀 네거티브 주입 (204번 발표 포즈 손 왜곡 방지 등)
+        if getattr(ctx.pose, "negative_add", None) and ctx.pose.negative_add.strip():
+            neg = f"{neg}, {ctx.pose.negative_add.strip()}"
 
         if "(photorealistic, realistic, 3d" not in neg:
             char_mult_guard = "" if ctx.is_two_person else "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
@@ -385,15 +426,20 @@ class TwoPersonMobMutator(PromptMutator):
         ) and not ctx.is_aftermath and not ctx.is_solo_scene
 
         if ctx.is_interactive:
-            neg = re.sub(r",?\s*\b(1boy|male)\b", "", neg, flags=re.IGNORECASE)
+            neg = re.sub(r",?\s*\b1boy\b", "", neg, flags=re.IGNORECASE)
+            neg = re.sub(r",?\s*\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair))", "", neg, flags=re.IGNORECASE)
 
             is_multi_partner = any(
                 kw in pose_tag.lower()
                 for kw in ("2boys", "3boys", "multiple boys", "gangbang", "threesome", "foursome", "group sex", "bukkake", "surrounded", "harem")
             )
 
-            multi_male_guard = "" if is_multi_partner else "(2boys:1.5), (multiple boys:1.5), (two men:1.5), (extra male:1.5), (group:1.4), (threesome:1.4), "
-            neg = f"{neg}, (severed head:1.4), (decapitation:1.4), (headless:1.4), (floating head:1.4), (disembodied head:1.4), (multiple heads:1.35), (two heads:1.35), (2girls:1.35), (multiple girls:1.35), (extra girl:1.35), (two girls:1.35), (duplicate:1.35), (reaction face:1.35), (inset:1.35), {multi_male_guard}(extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, orange skin, (pitch black shadow on body:1.25), (burnt skin:1.25)"
+            multi_male_guard = (
+                "" if is_multi_partner
+                else "(2boys:1.6), (multiple boys:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate male:1.5), (two male partners:1.5), (second man:1.5), (multiple partners:1.5), "
+            )
+            limb_guard = "(extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (multiple arms:1.45), (three hands:1.45), (four hands:1.45), (duplicate hands:1.45), (duplicate arms:1.45), (extra limbs:1.4), (fused hands:1.4), (poorly drawn hands:1.4), "
+            neg = f"{neg}, (severed head:1.4), (decapitation:1.4), (headless:1.4), (floating head:1.4), (disembodied head:1.4), (multiple heads:1.35), (two heads:1.35), (2girls:1.35), (multiple girls:1.35), (extra girl:1.35), (two girls:1.35), (duplicate:1.35), (reaction face:1.35), (inset:1.35), {multi_male_guard}{limb_guard}(extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, orange skin, (pitch black shadow on body:1.25), (burnt skin:1.25)"
 
             if ctx.is_offscreen_partner:
                 neg = f"{neg}, ((male body, male torso, male lower body, male legs, pants, trousers, black pants, jeans, lap, sitting between legs, legs of partner, 1boy:1.35))"
@@ -414,18 +460,38 @@ class TwoPersonMobMutator(PromptMutator):
                         mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (shadow over male eyes:1.1), (from behind:1.1), (solid black pants:1.2), muscular builds"
                         mob_negative = f"{male_face_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants"
                 else:
-                    pos = re.sub(r"\b1boy\b", "", pos, flags=re.IGNORECASE)
-                    is_rear_scene = any(kw in pose_tag.lower() for kw in ("behind", "doggystyle", "sumata", "rear", "prone"))
+                    is_head_hug_scene = any(
+                        kw in pose_tag.lower()
+                        for kw in (
+                            "head on chest", "burying face", "face buried", "holding head",
+                            "hugging head", "patting head", "kissing head", "hair from behind",
+                            "back of male", "back of head"
+                        )
+                    )
+                    is_rear_scene = (
+                        any(kw in pose_tag.lower() for kw in ("back hug", "doggystyle", "sumata", "rear", "prone", "grabbed from behind", "hugging from behind"))
+                        or ("behind" in pose_tag.lower() and not any(f in pose_tag.lower() for f in ("head from behind", "hair from behind", "face buried", "cleavage", "buried between breasts", "nestled in cleavage")))
+                    )
                     rear_direction = "(from behind:1.15), " if is_rear_scene else ""
 
-                    if ctx.nude:
-                        mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), (male head out of frame:1.15), (shadow over male eyes:1.1), {rear_direction}(naked male:1.15), (bottomless male:1.15), muscular build"
-                        mob_negative = f"{male_face_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.4)"
+                    if is_head_hug_scene:
+                        # 이미 포즈 자체에 남성의 밀착 위치/뒤통수가 완전히 정의되어 있으므로 추가 모브 BREAK 블록을 주입하지 않음 (남성 분신 2명 방지)
+                        mob_positive = ""
+                        mob_negative = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), (2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)"
                     else:
-                        mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), (male head out of frame:1.15), (shadow over male eyes:1.1), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), (solid black pants:1.2), muscular build"
-                        mob_negative = f"{male_face_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.4)"
+                        head_cue = "(male head out of frame:1.15), "
+                        head_suppression = male_face_suppression
+                        lower_body = "(bottomless male:1.15), muscular build" if ctx.nude else "(solid black pants:1.2), muscular build"
 
-                pos = f"{pos} {mob_positive}"
+                        if ctx.nude:
+                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(shadow over male eyes:1.1), {rear_direction}(naked male:1.15), {lower_body}"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45)"
+                        else:
+                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(shadow over male eyes:1.1), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), {lower_body}"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45)"
+
+                if mob_positive:
+                    pos = f"{pos} {mob_positive}"
                 neg = f"{neg}, {mob_negative}"
 
             if any(kw in pose_tag.lower() for kw in ("looking at partner", "look at partner", "eye contact with partner", "facing partner", "towards partner")):

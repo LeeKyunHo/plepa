@@ -113,6 +113,7 @@ class PoseService:
                     required_outfit=item.get("required_outfit", ""),
                     prompt_female=item.get("prompt_female", ""),
                     prompt_otokonoko=item.get("prompt_otokonoko", ""),
+                    negative_add=item.get("negative_add", ""),
                 )
 
         # 로스터 전용 포즈 오버라이드 파일 (projects/{roster}/pose_overrides.json) 로드
@@ -155,6 +156,7 @@ class PoseService:
                             required_outfit=item.get("required_outfit", ""),
                             prompt_female=prompt_f,
                             prompt_otokonoko=prompt_oto,
+                            negative_add=item.get("negative_add", ""),
                         )
             except Exception:
                 pass

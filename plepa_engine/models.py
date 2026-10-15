@@ -23,6 +23,7 @@ class PoseEntry:
     prompt_otokonoko: str = ""
     target_gender: Optional[str] = None
     allowed_rosters: Optional[List[str]] = None
+    negative_add: str = ""
 
 
     def get_prompt(self, gender: str = "female") -> str:

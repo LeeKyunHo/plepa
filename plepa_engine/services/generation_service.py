@@ -84,11 +84,11 @@ class GenerationParams:
     custom_neg: Optional[str] = None
     ref_image: Optional[str] = None
     ref_weight: Optional[float] = None
-    no_ref: bool = True
+    no_ref: bool = False
     mock: bool = False
     dry_run: bool = False
     overwrite: bool = False
-    face_detailer: bool = False
+    face_detailer: Optional[bool] = None
     upscale: bool = False
     steps: Optional[int] = None
     cfg: Optional[float] = None
@@ -349,6 +349,23 @@ class GenerationService:
                             checkpoint_name=ckpt_name
                         )
                         display_prompt = pos_prompt
+
+                        # IP-Adapter 2-Track 하이브리드 모드 판별:
+                        # - "full": 정적 1인 착의 씬 (emotions 000~019 등)
+                        # - "face_only": 역동적 포즈, 테마 의상 스왑, 탈의/H-씬, 2인 모브 등장 씬 전체
+                        two_person_tokens = (
+                            "1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry",
+                            "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl",
+                            "fellatio", "cunnilingus", "paizuri"
+                        )
+                        p_low = pose.prompt.lower()
+                        from plepa_engine.prompt_builder import resolve_pose_outfit_slot
+                        outfit_slot = resolve_pose_outfit_slot(pose)
+                        if is_nude or outfit_slot != "default" or pose.section not in ("emotions", "genit_emotions") or any(kw in p_low for kw in two_person_tokens):
+                            ref_mode = "face_only"
+                        else:
+                            ref_mode = "full"
+
                         workflow = build_sdxl_workflow(
                             positive_prompt=pos_prompt,
                             negative_prompt=neg_prompt,
@@ -364,6 +381,7 @@ class GenerationService:
                             use_upscale=params.upscale,
                             ref_image_name=ref_file_name,
                             ref_weight=ref_weight,
+                            ref_mode=ref_mode,
                         )
                     else:
                         prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
@@ -396,7 +414,8 @@ class GenerationService:
                     )
     
                     if not quiet:
-                        print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}) -> {out_name}", end="", flush=True)
+                        track_info = f" [IP-A: {ref_mode}]" if (params.engine == "sdxl" and ref_file_name) else ""
+                        print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}){track_info} -> {out_name}", end="", flush=True)
     
                     # 1. 기존 파일 스킵
                     if not params.overwrite and out_path.exists() and out_path.stat().st_size > 0:

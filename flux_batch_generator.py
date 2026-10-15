@@ -198,11 +198,13 @@ def run_self_test() -> int:
             errors.append("FLUX 기본 워크플로우 노드 생성 불완전")
 
         wf_sdxl = build_sdxl_workflow("test pos", "test neg", "test_prefix", use_face_detailer=False)
-        if "1" not in wf_sdxl or "5" not in wf_sdxl or "20" not in wf_sdxl:
+        wf_sdxl_classes = {n.get("class_type") for n in wf_sdxl.values()}
+        if not {"CheckpointLoaderSimple", "KSampler", "SaveImage"}.issubset(wf_sdxl_classes):
             errors.append("SDXL 기본 워크플로우 노드 생성 불완전")
 
         wf_ip = build_sdxl_workflow("test pos", "test neg", "test_prefix", ref_image_name="test_ref.webp")
-        if "30" not in wf_ip or "32" not in wf_ip or "33" not in wf_ip:
+        wf_ip_classes = {n.get("class_type") for n in wf_ip.values()}
+        if not {"IPAdapterUnifiedLoader", "PrepImageForClipVision", "IPAdapterAdvanced"}.issubset(wf_ip_classes):
             errors.append("SDXL IP-Adapter 워크플로우 노드 생성 불완전")
         print("✔ FLUX 및 SDXL + IP-Adapter 워크플로우 템플릿 생성 검사 통과")
     except Exception as e:
@@ -283,8 +285,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
     parser.add_argument("--ref_image", default=None, help="IP-Adapter 참조 이미지 파일 경로 (생략 시 references/{prefix}.webp 자동 탐색)")
     parser.add_argument("--ref_weight", type=float, default=None, help="IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 0.0)")
-    parser.add_argument("--no_ref", action="store_true", default=True, help="레퍼런스 이미지(IP-Adapter)를 비활성화하고 순수 프롬프트로만 생성 (기본값: True)")
-    parser.add_argument("--use-ref", dest="use_ref", action="store_true", help="레퍼런스 이미지(IP-Adapter) 기능 명시적 활성화 (화질 저하 주의)")
+    parser.add_argument("--no_ref", "--no-ref", action="store_true", default=False, help="레퍼런스 이미지(IP-Adapter)를 비활성화하고 순수 프롬프트로만 생성")
+    parser.add_argument("--use-ref", dest="use_ref", action="store_true", default=True, help="레퍼런스 이미지(IP-Adapter) 기능 활성화 (기본값: True)")
     parser.add_argument("--mock", action="store_true", help="ComfyUI 호출 없이 초고속(0.001초) 더미 WebP 이미지 생성으로 파이프라인 무결성 검증")
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
     parser.add_argument("--overwrite", "-f", "--force", action="store_true", help="기존 파일이 있어도 강제로 덮어쓰기 (교체/리롤용)")
@@ -349,7 +351,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         custom_neg=args.custom_neg,
         ref_image=args.ref_image,
         ref_weight=args.ref_weight,
-        no_ref=False if args.use_ref else True,
+        no_ref=args.no_ref,
         mock=args.mock,
         dry_run=args.dry_run,
         overwrite=args.overwrite,

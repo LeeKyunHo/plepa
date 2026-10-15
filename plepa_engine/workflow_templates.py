@@ -52,10 +52,11 @@ def build_sdxl_workflow(
     scheduler: str = DEFAULT_SDXL_SCHEDULER,
     ckpt_name: str = DEFAULT_SDXL_CKPT,
     clip_skip: int = DEFAULT_CLIP_SKIP,
-    use_face_detailer: bool = False,
+    use_face_detailer: Optional[bool] = None,
     use_upscale: bool = False,
     ref_image_name: Optional[str] = None,
     ref_weight: float = DEFAULT_REF_WEIGHT,
+    ref_mode: str = "full",
     ipadapter_model: str = "ip-adapter-plus_sdxl_vit-h.safetensors",
     clip_vision_model: str = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
 ) -> Dict[str, Any]:
@@ -63,6 +64,9 @@ def build_sdxl_workflow(
     ComfyUI 로컬 API 전송용 SDXL(Illustrious-XL / NTR MIX XIII 등) 단독 체크포인트 워크플로우 템플릿.
     - WorkflowGraph 동적 노드 ID 할당 및 자동 배선을 사용합니다.
     - ref_image_name 지정 시 IP-Adapter-Plus(SDXL) 노드 그래프를 동적으로 체이닝합니다.
+    - ref_mode:
+        - "full": 정적 1인 착의 씬(000~019 등), 1차 KSampler와 2차 FaceDetailer 모두 IP-Adapter 연결
+        - "face_only": 역동적 포즈/H씬/2인씬, 1차 KSampler는 순수 base_model(포즈/의상 파괴 차단), 2차 FaceDetailer에만 IP-Adapter 연결
     - clip_skip=2 기본 적용 (Illustrious 공식 표준: CLIPSetLastLayer -2).
     """
     if seed < 0:
@@ -72,7 +76,7 @@ def build_sdxl_workflow(
 
     # 1. Checkpoint 로더
     ckpt_id = graph.add_node("CheckpointLoaderSimple", ckpt_name=ckpt_name)
-    current_model = graph.out(ckpt_id, 0)
+    base_model = graph.out(ckpt_id, 0)
     clip_ref = graph.out(ckpt_id, 1)
     vae_ref = graph.out(ckpt_id, 2)
 
@@ -81,23 +85,41 @@ def build_sdxl_workflow(
         skip_id = graph.add_node("CLIPSetLastLayer", clip=clip_ref, stop_at_clip_layer=-clip_skip)
         clip_ref = graph.out(skip_id, 0)
 
-    # 3. IP-Adapter 결합 (동적 체이닝)
+    # 3. IP-Adapter 결합 (PrepImageForClipVision + 2-Track 하이브리드)
+    ipa_model = None
     if ref_image_name:
-        ipa_loader_id = graph.add_node("IPAdapterUnifiedLoader", model=current_model, preset="PLUS (high strength)")
+        ipa_loader_id = graph.add_node("IPAdapterUnifiedLoader", model=base_model, preset="PLUS (high strength)")
         load_img_id = graph.add_node("LoadImage", image=ref_image_name)
+        prep_img_id = graph.add_node(
+            "PrepImageForClipVision",
+            image=graph.out(load_img_id, 0),
+            interpolation="LANCZOS",
+            crop_position="top",
+            sharpening=0.05,
+        )
+
+        if ref_mode == "face_only":
+            start_at = 0.0
+            end_at = 1.0
+            weight_type = "linear"
+        else:  # full
+            start_at = 0.25
+            end_at = 0.75
+            weight_type = "ease out"
+
         ipa_adv_id = graph.add_node(
             "IPAdapterAdvanced",
             model=graph.out(ipa_loader_id, 0),
             ipadapter=graph.out(ipa_loader_id, 1),
-            image=graph.out(load_img_id, 0),
+            image=graph.out(prep_img_id, 0),
             weight=ref_weight,
-            weight_type="linear",
+            weight_type=weight_type,
             combine_embeds="concat",
-            start_at=0.0,
-            end_at=0.8,
-            embeds_scaling="K+V",
+            start_at=start_at,
+            end_at=end_at,
+            embeds_scaling="K+V w/ C penalty",
         )
-        current_model = graph.out(ipa_adv_id, 0)
+        ipa_model = graph.out(ipa_adv_id, 0)
 
     # 4. 프롬프트 인코딩
     pos_id = graph.add_node("CLIPTextEncode", clip=clip_ref, text=positive_prompt)
@@ -106,10 +128,15 @@ def build_sdxl_workflow(
     # 5. 빈 잠재 공간 생성
     latent_id = graph.add_node("EmptyLatentImage", width=width, height=height, batch_size=1)
 
-    # 6. KSampler
+    # 6. KSampler 모델 결정: full 모드는 IP-Adapter 적용, face_only 모드는 순수 base_model 적용
+    if ref_image_name and ref_mode == "full":
+        ksampler_model = ipa_model
+    else:
+        ksampler_model = base_model
+
     ksampler_id = graph.add_node(
         "KSampler",
-        model=current_model,
+        model=ksampler_model,
         positive=graph.out(pos_id, 0),
         negative=graph.out(neg_id, 0),
         latent_image=graph.out(latent_id, 0),
@@ -125,13 +152,26 @@ def build_sdxl_workflow(
     decode_id = graph.add_node("VAEDecode", samples=graph.out(ksampler_id, 0), vae=vae_ref)
     current_image_output = graph.out(decode_id, 0)
 
-    # 8. (선택) Face Detailer 노드
-    if use_face_detailer:
+    # 8. (선택 / face_only 시 기본 활성화, 명시적 False 시 비활성화) Face Detailer 노드
+    if use_face_detailer is None:
+        should_use_face_detailer = bool(ref_image_name) and (ref_mode == "face_only")
+    else:
+        should_use_face_detailer = use_face_detailer
+    if should_use_face_detailer:
         detector_id = graph.add_node("UltralyticsDetectorProvider", model_name="bbox/face_yolov8m.pt")
+        fd_model = ipa_model if ref_image_name else base_model
+        fd_denoise = 0.40 if (ref_image_name and ref_mode == "face_only") else 0.35
+        hook_id = graph.add_node(
+            "SEGSOrderedFilterDetailerHookProvider",
+            target="area(=w*h)",
+            order=True,
+            take_start=0,
+            take_count=1,
+        )
         fd_id = graph.add_node(
             "FaceDetailer",
             image=current_image_output,
-            model=current_model,
+            model=fd_model,
             clip=clip_ref,
             vae=vae_ref,
             guide_size=512,
@@ -144,11 +184,11 @@ def build_sdxl_workflow(
             scheduler=scheduler,
             positive=graph.out(pos_id, 0),
             negative=graph.out(neg_id, 0),
-            denoise=0.35,
+            denoise=fd_denoise,
             feather=5,
             noise_mask=True,
             force_inpaint=True,
-            bbox_threshold=0.5,
+            bbox_threshold=0.68,
             bbox_dilation=10,
             bbox_crop_factor=3.0,
             sam_detection_hint="center-1",
@@ -161,6 +201,7 @@ def build_sdxl_workflow(
             wildcard="",
             cycle=1,
             bbox_detector=graph.out(detector_id, 0),
+            detailer_hook=graph.out(hook_id, 0),
         )
         current_image_output = graph.out(fd_id, 0)
 
