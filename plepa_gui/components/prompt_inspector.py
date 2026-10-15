@@ -32,8 +32,8 @@ def open_prompt_inspector_dialog(char_config: CharacterConfig, pose_entry: PoseE
             warnings.append("[FLUX] 서술형 프롬프트에 금지된 BREAK 문법이 포함되어 있습니다.")
 
         with ui.tabs().classes("w-full text-amber-400") as tabs:
-            tab_sdxl = ui.tab("SDXL (Unholy Mix)")
-            tab_flux = ui.tab("FLUX.1 [dev] (GGUF)")
+            tab_sdxl = ui.tab("SDXL (NTR MIX / 표준)")
+            tab_flux = ui.tab("FLUX [레거시]")
 
         with ui.tab_panels(tabs, value=tab_sdxl).classes("w-full bg-slate-800 text-slate-200 p-4 rounded-lg mt-2"):
             # SDXL 패널

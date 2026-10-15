@@ -184,11 +184,11 @@ def render_generate_page() -> None:
 
             with ui.row().classes("w-full gap-4 mb-2"):
                 ui.select(
-                    options=["sdxl", "flux"],
+                    options={"sdxl": "SDXL (표준)", "flux": "FLUX [레거시]"},
                     value=state["engine"],
                     label="생성 엔진",
                     on_change=lambda e: on_engine_changed(e.value)
-                ).props("dense outlined dark options-dense").classes("w-32")
+                ).props("dense outlined dark options-dense").classes("w-40")
 
                 bg_sel = ui.select(
                     options=bg_options,
