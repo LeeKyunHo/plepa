@@ -63,6 +63,41 @@ def apply_silhouette(
 
     sam = get_sam_model()
 
+    # 0. 손(Hands) 및 얼굴(Faces) 보호 마스크 추출
+    protection_mask = np.zeros((h, w), dtype=np.uint8)
+    try:
+        from imgutils.detect import detect_hands, detect_faces
+        detected_hands = detect_hands(img, conf_threshold=0.25)
+        detected_faces = detect_faces(img, conf_threshold=0.30)
+
+        overlapping_protect_boxes = []
+        for box, _ in boxes_with_labels:
+            bx1, by1, bx2, by2 = box
+            for (hx1, hy1, hx2, hy2), _, _ in detected_hands:
+                if max(bx1, hx1) < min(bx2, hx2) and max(by1, hy1) < min(by2, hy2):
+                    overlapping_protect_boxes.append([hx1, hy1, hx2, hy2])
+            for (fx1, fy1, fx2, fy2), _, _ in detected_faces:
+                if max(bx1, fx1) < min(bx2, fx2) and max(by1, fy1) < min(by2, fy2):
+                    overlapping_protect_boxes.append([fx1, fy1, fx2, fy2])
+
+        if sam is not None and overlapping_protect_boxes:
+            for p_box in overlapping_protect_boxes:
+                try:
+                    p_res = sam(img, bboxes=[p_box], verbose=False)
+                    if p_res and p_res[0].masks is not None:
+                        pm_data = p_res[0].masks.data.cpu().numpy()
+                        pm = (pm_data[0] * 255).astype(np.uint8)
+                        if pm.shape != (h, w):
+                            pm = cv2.resize(pm, (w, h), interpolation=cv2.INTER_NEAREST)
+                        crop_p = np.zeros_like(pm)
+                        crop_p[p_box[1]:p_box[3], p_box[0]:p_box[2]] = 255
+                        pm = cv2.bitwise_and(pm, crop_p)
+                        protection_mask = np.maximum(protection_mask, pm)
+                except Exception:
+                    pass
+    except Exception as pe:
+        logger.debug(f"[Censor] 보호 영역 검출 생략: {pe}")
+
     for box, label in boxes_with_labels:
         x1, y1, x2, y2 = box
         bw = max(1, x2 - x1)
@@ -72,18 +107,18 @@ def apply_silhouette(
         if is_penis:
             # 적응형 마진: 가로형(bw >= bh)은 오랄/펠라 등 여주인공 신체 밀착 구도이므로 하단 확장 억제(0.04),
             # 세로형(bh > bw * 1.3)일 때만 고환 영역을 고려하여 하단 10% 확장
-            m_x = 0.05
-            m_top = 0.04
-            m_bot = 0.10 if bh > bw * 1.3 else 0.04
+            m_x = 0.04
+            m_top = 0.02
+            m_bot = 0.08 if bh > bw * 1.3 else 0.02
             ex1 = max(0, int(x1 - bw * m_x))
             ey1 = max(0, int(y1 - bh * m_top))
             ex2 = min(w, int(x2 + bw * m_x))
             ey2 = min(h, int(y2 + bh * m_bot))
         else:
-            ex1 = max(0, int(x1 - bw * 0.05))
-            ey1 = max(0, int(y1 - bh * 0.05))
-            ex2 = min(w, int(x2 + bw * 0.05))
-            ey2 = min(h, int(y2 + bh * 0.05))
+            ex1 = max(0, int(x1 - bw * 0.03))
+            ey1 = max(0, int(y1 - bh * 0.03))
+            ex2 = min(w, int(x2 + bw * 0.03))
+            ey2 = min(h, int(y2 + bh * 0.03))
 
         expanded_bbox = [ex1, ey1, ex2, ey2]
         mask_obtained = False
@@ -139,6 +174,12 @@ def apply_silhouette(
         # 3. 최후 폴백: 둥근 직사각형
         if not mask_obtained:
             cv2.rectangle(final_mask, (ex1, ey1), (ex2, ey2), 255, -1)
+
+    # 손가락 및 얼굴 보호 레이어 차감 (1~2px 팽창으로 손/얼굴 선화 경계선 깔끔 보존)
+    if np.count_nonzero(protection_mask) > 0:
+        kernel_protect = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        dilated_protect = cv2.dilate(protection_mask, kernel_protect, iterations=1)
+        final_mask = cv2.bitwise_and(final_mask, cv2.bitwise_not(dilated_protect))
 
     if np.count_nonzero(final_mask) == 0:
         return img
@@ -307,12 +348,13 @@ def apply_mosaic(
 def censor_image(
     image: Union[Image.Image, Path, str],
     style: str = "silhouette",
-    targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.35,
+    targets: Sequence[str] = ("penis", "pussy"),
+    min_confidence: float = 0.20,
 ) -> Tuple[Image.Image, int]:
     """
-    이미지 내 남성기(또는 지정 부위)를 자동으로 감지하여 검열을 적용합니다.
-    - 기본 스타일: 'silhouette' (남성기+고환 외곽선 정밀 블랙 실루엣)
+    이미지 내 성기 부위를 자동으로 감지하여 검열을 적용합니다.
+    - 기본 스타일: 'white_silhouette' (외곽선 화이트 실루엣)
+    - 기본 대상: 남성기 및 여성기 ('penis', 'pussy')
     - 반환값: (검열된 PIL 이미지, 감지된 부위 개수)
     """
     if isinstance(image, (str, Path)):
@@ -379,7 +421,8 @@ def censor_file(
     src_path: Union[Path, str],
     dst_path: Optional[Union[Path, str]] = None,
     style: str = "white_silhouette",
-    targets: Sequence[str] = ("penis",),
+    targets: Sequence[str] = ("penis", "pussy"),
+    min_confidence: float = 0.20,
     quality: int = 95,
 ) -> Optional[Path]:
     """
@@ -392,7 +435,7 @@ def censor_file(
         return None
 
     img = Image.open(src).convert("RGB")
-    censored_img, count = censor_image(img, style=style, targets=targets)
+    censored_img, count = censor_image(img, style=style, targets=targets, min_confidence=min_confidence)
 
     if count == 0:
         return None

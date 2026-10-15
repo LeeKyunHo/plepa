@@ -214,17 +214,19 @@ class GenerationService:
                         continue
                     if target_gender in ("female", "girl") and char_obj.gender == "otokonoko":
                         continue
-                elif section == "scenes_otokonoko" and char_obj.gender != "otokonoko":
+                elif section in ("scenes_otokonoko", "special_otokonoko") and char_obj.gender != "otokonoko":
                     continue
-                elif section == "h_scenes" and char_obj.gender == "otokonoko":
+                elif section in ("h_scenes", "special_h") and char_obj.gender == "otokonoko":
                     continue
                 else:
-                    # 하위 호환용 숫자 대역 fallback
+                    # 하위 호환 및 숫자 대역 기반 젠더 필터링
                     try:
                         code_num = int(code)
-                        if char_obj.gender == "otokonoko" and 48 <= code_num <= 99:
+                        # 여성 성인/특수 대역 (080~149): 오토코노코 제외
+                        if char_obj.gender == "otokonoko" and (80 <= code_num <= 149 or 48 <= code_num <= 99):
                             continue
-                        elif char_obj.gender != "otokonoko" and 148 <= code_num <= 199:
+                        # 오토코노코 성인/특수 대역 (150~219): 여성 제외
+                        elif char_obj.gender != "otokonoko" and 148 <= code_num <= 219:
                             continue
                     except ValueError:
                         pass
@@ -297,13 +299,11 @@ class GenerationService:
                 # --ckpt-tag 지정 시 체크포인트 비교용 서브폴더에 저장
                 if params.ckpt_tag:
                     output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix / f"ckpt_{params.ckpt_tag}"
-                    censor_dir = PROJECTS_DIR / actual_roster / f"censor_{char.prefix}" / f"ckpt_{params.ckpt_tag}"
+                    origin_dir = PROJECTS_DIR / actual_roster / "assets" / f"{char.prefix}_origin" / f"ckpt_{params.ckpt_tag}"
                 else:
                     output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
-                    censor_dir = PROJECTS_DIR / actual_roster / f"censor_{char.prefix}"
+                    origin_dir = PROJECTS_DIR / actual_roster / "assets" / f"{char.prefix}_origin"
                 output_dir.mkdir(parents=True, exist_ok=True)
-                if params.censor:
-                    censor_dir.mkdir(parents=True, exist_ok=True)
     
                 if not quiet:
                     print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
@@ -429,18 +429,30 @@ class GenerationService:
     
                     should_censor = params.censor and (getattr(pose, "is_h_scene", False) or is_nude)
 
-                    # 0. CENSOR-ONLY (기존 이미지 검열 전용 모드)
+                    # 0. CENSOR-ONLY (기존 이미지 소급 검열 모드: 검열본은 assets/{prefix}/에 교체 배치, 원본은 assets/{prefix}_origin/에 보존)
                     if params.censor_only:
-                        if out_path.exists() and out_path.stat().st_size > 0:
+                        origin_path = origin_dir / out_name
+                        src_path = origin_path if (origin_path.exists() and origin_path.stat().st_size > 0) else out_path
+                        if src_path.exists() and src_path.stat().st_size > 0:
                             if should_censor:
-                                c_target = censor_dir / out_path.name
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                c_res = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
+                                tmp_censored = output_dir / f".tmp_{out_name}"
+                                c_res = censor_file(src_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
                                 if c_res and c_res.exists():
+                                    origin_dir.mkdir(parents=True, exist_ok=True)
+                                    # 1. 무검열 원본을 _origin 폴더에 안전하게 보존
+                                    if not origin_path.exists():
+                                        shutil.copy2(src_path, origin_path)
+                                    # 2. 메인 에셋 경로(out_path)에 검열 완성본을 원자적으로 교체 배치
+                                    if out_path.exists():
+                                        out_path.unlink()
+                                    tmp_censored.rename(out_path)
                                     if not quiet:
-                                        print(f" [검열본 생성: {c_res.name}]")
-                                    res = GenerationResult(target=target, success=True, image_path=c_res, duration_sec=0.0)
+                                        print(f" [검열본 적용: assets/{char.prefix}/{out_name} (원본: {char.prefix}_origin/)]")
+                                    res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
                                 else:
+                                    if tmp_censored.exists():
+                                        tmp_censored.unlink()
                                     if not quiet:
                                         print(" [검열 대상 미감지(원본 유지)]")
                                     res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -463,12 +475,21 @@ class GenerationService:
                         if not quiet:
                             print(" [기존 파일 보존: 건너뜀]", end="")
                         if should_censor:
-                            c_target = censor_dir / out_path.name
-                            if not c_target.exists():
+                            origin_path = origin_dir / out_path.name
+                            if not origin_path.exists():
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                c_res = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
-                                if c_res and c_res.exists() and not quiet:
-                                    print(f" [검열본 생성: {c_res.name}]", end="")
+                                tmp_censored = output_dir / f".tmp_{out_path.name}"
+                                c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                if c_res and c_res.exists():
+                                    origin_dir.mkdir(parents=True, exist_ok=True)
+                                    shutil.copy2(out_path, origin_path)
+                                    if out_path.exists():
+                                        out_path.unlink()
+                                    tmp_censored.rename(out_path)
+                                    if not quiet:
+                                        print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
+                                elif tmp_censored.exists():
+                                    tmp_censored.unlink()
                         if not quiet:
                             print()
                         res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -485,12 +506,21 @@ class GenerationService:
                             if not quiet:
                                 print(" [기존 원본에서 하이브리드 사본 복제 완료]", end="")
                             if should_censor:
-                                c_target = censor_dir / out_path.name
-                                if not c_target.exists():
+                                origin_path = origin_dir / out_path.name
+                                if not origin_path.exists():
                                     targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                    c_res = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
-                                    if c_res and c_res.exists() and not quiet:
-                                        print(f" [검열본 생성: {c_res.name}]", end="")
+                                    tmp_censored = output_dir / f".tmp_{out_path.name}"
+                                    c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                    if c_res and c_res.exists():
+                                        origin_dir.mkdir(parents=True, exist_ok=True)
+                                        shutil.copy2(out_path, origin_path)
+                                        if out_path.exists():
+                                            out_path.unlink()
+                                        tmp_censored.rename(out_path)
+                                        if not quiet:
+                                            print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
+                                    elif tmp_censored.exists():
+                                        tmp_censored.unlink()
                             if not quiet:
                                 print()
                             res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -578,10 +608,19 @@ class GenerationService:
                         if should_censor:
                             targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                             try:
-                                c_target = censor_dir / out_path.name
-                                c_path = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
-                                if c_path and c_path.exists() and not quiet:
-                                    print(f" [검열본 생성: {c_path.name}]", end="")
+                                tmp_censored = output_dir / f".tmp_{out_path.name}"
+                                c_path = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                if c_path and c_path.exists():
+                                    origin_dir.mkdir(parents=True, exist_ok=True)
+                                    origin_path = origin_dir / out_path.name
+                                    shutil.copy2(out_path, origin_path)
+                                    if out_path.exists():
+                                        out_path.unlink()
+                                    tmp_censored.rename(out_path)
+                                    if not quiet:
+                                        print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
+                                elif tmp_censored.exists():
+                                    tmp_censored.unlink()
                             except Exception as ce:
                                 if not quiet:
                                     print(f" [검열 실패: {ce}]", end="")

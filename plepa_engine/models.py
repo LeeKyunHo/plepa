@@ -62,10 +62,10 @@ class PoseEntry:
 
     @property
     def is_h_scene(self) -> bool:
-        """H-씬(일반 여성 H씬, 오토코노코 H씬, 성기 관련 액션)인지 여부를 판정합니다."""
+        """H-씬(일반 여성 H씬, 오토코노코 H씬, 특수 H씬, 로맨스, 성기 관련 액션)인지 여부를 판정합니다."""
         sec = (self.section or "").lower()
         return (
-            sec in ("h_scenes", "scenes_otokonoko", "genit_actions", "special_h")
+            sec in ("h_scenes", "scenes_otokonoko", "genit_actions", "special_h", "special_otokonoko", "romance")
             or "h_" in sec
             or "h_scene" in sec
             or self.is_two_person

@@ -44,6 +44,8 @@ projects/*/assets_flux/
 projects/*/assets_facedetailer/
 projects/*/censor_*/
 projects/*/assets/censor_*/
+projects/*/assets/*_origin/
+projects/*/assets/*_censor/
 .kiro/
 *.gguf
 *.safetensors

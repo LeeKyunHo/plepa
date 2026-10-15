@@ -318,8 +318,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument(
         "--censor-targets",
-        default="penis",
-        help="검열 대상 부위 (penis: 남성기만, all: 전체, 쉼표 구분)"
+        default="penis,pussy",
+        help="검열 대상 부위 (penis, pussy, all, 쉼표 구분 기본: penis,pussy)"
     )
     parser.add_argument("--censor-only", action="store_true", help="ComfyUI 호출 없이 기존 생성된 에셋들의 검열본만 초고속(0.2초) 일괄 갱신/생성")
     parser.add_argument("--no-qc", action="store_true", help="Auto-QC 품질 검증 및 불량 시 자동 재시도 비활성화")

@@ -29,16 +29,20 @@ POSE_SETS_FILE = POSE_SETS_PATH
 SECTION_METADATA: Dict[str, Dict[str, Any]] = {
     "wuxia_actions": {"name": "무협 액션 (C01~C10)", "short_label": "무협(C)", "icon": "⚔️", "order": 1},
     "genit_emotions": {"name": "Genit 감정 (A00~A23)", "short_label": "감정(A)", "icon": "😊", "order": 2},
-    "genit_actions": {"name": "Genit 행동 (040~047 / B01~B22)", "short_label": "행동(B)", "icon": "🎬", "order": 3},
-    "adult": {"name": "Genit 성인 (N01~N74)", "short_label": "성인(N)", "icon": "🔞", "order": 4},
-    "emotions": {"name": "기본 표정 (000~019)", "short_label": "기본표정", "icon": "😊", "order": 5},
-    "poses": {"name": "전신·일상 포즈 (020~039)", "short_label": "기본포즈", "icon": "🧍", "order": 6},
-    "h_scenes": {"name": "성인 H-씬 (048~099)", "short_label": "성인(H)", "icon": "🔞", "order": 7},
-    "scenes_otokonoko": {"name": "오토코노코 (148~199)", "short_label": "오토코노코", "icon": "🎀", "order": 8},
-    "swimsuit": {"name": "수영복 (D01~D08)", "short_label": "수영복", "icon": "👙", "order": 9},
-    "bunny": {"name": "바니걸 (F01~F07)", "short_label": "바니걸", "icon": "🐰", "order": 10},
-    "bdsm": {"name": "BDSM (E01~E08)", "short_label": "BDSM", "icon": "⛓️", "order": 11},
-    "spy_actions": {"name": "첩보 액션 (S01~S10)", "short_label": "첩보(S)", "icon": "🕵️", "order": 12},
+    "events": {"name": "스토리 이벤트 (040~059)", "short_label": "이벤트", "icon": "🎬", "order": 3},
+    "genit_actions": {"name": "Genit 행동 (040~047 / B01~B22)", "short_label": "행동(B)", "icon": "🎬", "order": 4},
+    "adult": {"name": "Genit 성인 (N01~N74)", "short_label": "성인(N)", "icon": "🔞", "order": 5},
+    "emotions": {"name": "기본 표정 (000~019)", "short_label": "기본표정", "icon": "😊", "order": 6},
+    "poses": {"name": "전신·일상 포즈 (020~039)", "short_label": "기본포즈", "icon": "🧍", "order": 7},
+    "romance": {"name": "소프트 로맨스 (060~079)", "short_label": "로맨스", "icon": "💖", "order": 8},
+    "h_scenes": {"name": "여성 성인 H-씬 (080~129)", "short_label": "성인(H)", "icon": "🔞", "order": 9},
+    "special_h": {"name": "여성 특수 성인씬 (130~149)", "short_label": "특수(H)", "icon": "🏫", "order": 10},
+    "scenes_otokonoko": {"name": "오토코노코 성인 (150~199)", "short_label": "오토코노코", "icon": "🎀", "order": 11},
+    "special_otokonoko": {"name": "오토코노코 특수 (200~219)", "short_label": "특수(오토)", "icon": "🏫", "order": 12},
+    "swimsuit": {"name": "수영복 (D01~D08)", "short_label": "수영복", "icon": "👙", "order": 13},
+    "bunny": {"name": "바니걸 (F01~F07)", "short_label": "바니걸", "icon": "🐰", "order": 14},
+    "bdsm": {"name": "BDSM (E01~E08)", "short_label": "BDSM", "icon": "⛓️", "order": 15},
+    "spy_actions": {"name": "첩보 액션 (S01~S10)", "short_label": "첩보(S)", "icon": "🕵️", "order": 16},
 }
 
 SECTION_NAMES = tuple(SECTION_METADATA.keys())
@@ -208,10 +212,18 @@ class PoseService:
             return [c for c, e in db.items() if e.section == "emotions" or c.startswith("A")]
         if expr_lower in ("poses", "pose", "b"):
             return [c for c, e in db.items() if e.section == "poses" or c.startswith("B")]
+        if expr_lower in ("events", "event", "genit_actions"):
+            return [c for c, e in db.items() if e.section in ("events", "genit_actions") or c.startswith("B")]
+        if expr_lower in ("romance", "rom"):
+            return [c for c, e in db.items() if e.section == "romance"]
         if expr_lower in ("h_scenes", "h", "scenes", "n"):
-            return [c for c, e in db.items() if e.section == "h_scenes" or c.startswith("N")]
+            return [c for c, e in db.items() if e.section in ("h_scenes", "special_h") or c.startswith("N")]
+        if expr_lower in ("special_h", "special", "sph"):
+            return [c for c, e in db.items() if e.section == "special_h"]
         if expr_lower in ("otokonoko", "scenes_otokonoko", "oto"):
-            return [c for c, e in db.items() if e.section == "scenes_otokonoko"]
+            return [c for c, e in db.items() if e.section in ("scenes_otokonoko", "special_otokonoko")]
+        if expr_lower in ("special_otokonoko", "sp_oto"):
+            return [c for c, e in db.items() if e.section == "special_otokonoko"]
         if expr_lower in ("swimsuit", "swim", "d"):
             return [c for c, e in db.items() if e.section == "swimsuit" or c.startswith("D")]
         if expr_lower in ("bunny", "f"):
@@ -297,13 +309,20 @@ class PoseService:
 
         target_section = None
         f_item = None
+        s_item = None
         for sec in SECTION_NAMES:
-            if code_str in flux_raw.get(sec, {}):
+            if code_str in sdxl_raw.get(sec, {}):
+                target_section = sec
+                s_item = sdxl_raw[sec][code_str]
+                f_item = flux_raw.get(sec, {}).get(code_str)
+                break
+            elif code_str in flux_raw.get(sec, {}):
                 target_section = sec
                 f_item = flux_raw[sec][code_str]
+                s_item = sdxl_raw.get(sec, {}).get(code_str)
                 break
 
-        if not f_item or not target_section:
+        if not target_section:
             # 테마 디렉토리(data/themes/*.json) 탐색 폴백
             for tf in THEMES_DIR.glob("*.json"):
                 try:
@@ -312,18 +331,18 @@ class PoseService:
                         if isinstance(sec_dict, dict) and code_str in sec_dict:
                             target_section = sec_name
                             f_item = sec_dict[code_str]
+                            s_item = f_item
                             break
-                    if f_item:
+                    if target_section:
                         break
                 except Exception:
                     pass
 
-        if not f_item or not target_section:
+        if not target_section:
             raise KeyError(f"포즈 코드 '{code_str}'를 데이터베이스에서 찾을 수 없습니다.")
 
-        s_item = sdxl_raw.get(target_section, {}).get(code_str, {})
-        if not s_item and f_item:
-            s_item = f_item
+        f_item = f_item or s_item or {}
+        s_item = s_item or f_item or {}
 
         return {
             "code": code_str,

@@ -12,16 +12,32 @@ from plepa_engine.models import CharacterConfig, PoseEntry
 
 def is_nude_pose(entry: PoseEntry) -> bool:
     """해당 포즈가 탈의/나체 상태를 요구하는지 판별."""
-    if getattr(entry, "required_outfit", None) == "nude":
+    # 1. required_outfit이 명시되어 있다면 최우선 판정!
+    req = getattr(entry, "required_outfit", None)
+    if req:
+        req = str(req).lower().strip()
+        if req == "nude":
+            return True
+        if req in ("default", "wedding", "swimsuit", "bunny", "maid", "bdsm", "combat", "underwear", "school", "gym"):
+            return False
+
+    # 2. 성인 섹션 기본값은 탈의(nude)이나, 위에서 required_outfit: "default" 등이 명시된 착의 씬은 False로 제외됨
+    sec = getattr(entry, "section", "")
+    if sec in ("h_scenes", "scenes_otokonoko", "special_h", "special_otokonoko"):
         return True
-    if entry.section in ("h_scenes", "scenes_otokonoko"):
-        return True
-    # 착의 포즈(20~39 / 020~039) 중 나체 씬 명시적 포함 항목
+
+    # 3. 일상/로맨스 포즈 중 나체 씬 명시적 포함 항목 (레거시 번호 및 required_outfit 누락 대비)
     try:
-        if int(entry.code) in (30, 38, 39):
+        if int(entry.code) in (30, 37, 38, 39, 43, 44, 45, 61, 62, 63):
             return True
     except (ValueError, TypeError):
         pass
+
+    # 4. 프롬프트 내 나체 키워드 직접 검출
+    p = f"{getattr(entry, 'prompt', '')} {getattr(entry, 'prompt_female', '')} {getattr(entry, 'prompt_otokonoko', '')}".lower()
+    if any(kw in p for kw in ("completely nude", "full nudity", "bare skin", "naked")):
+        return True
+
     return False
 
 
