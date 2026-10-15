@@ -42,11 +42,15 @@ desktop.ini
 projects/*/assets/
 projects/*/assets_flux/
 projects/*/assets_facedetailer/
+projects/*/censor_*/
+projects/*/assets/censor_*/
 .kiro/
 *.gguf
 *.safetensors
 *.pth
 *.ckpt
+*.pt
+scratch/
 
 # Plepa GUI Backups & State
 .plepa_backup/

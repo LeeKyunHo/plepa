@@ -6,8 +6,10 @@ CLI와 GUI가 공통으로 호출하며, 진행률 콜백 및 취소 인터럽�
 
 from __future__ import annotations
 
+import copy
 import json
 import os
+import random
 import shutil
 import time
 import uuid
@@ -20,6 +22,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from plepa_engine.censor import censor_file
 from plepa_engine.checkpoint_service import CheckpointService
 from plepa_engine.comfy_client import ComfyClient, ComfyClientError
+from plepa_engine.qa_validator import validate_generated_image
 from plepa_engine.config import (
     COMFY_HOST,
     DEFAULT_ENGINE,
@@ -101,9 +104,12 @@ class GenerationParams:
     height: Optional[int] = None
     naming: str = "hybrid"
     censor: bool = False
-    censor_style: str = "bar"
+    censor_style: str = "white_silhouette"
     censor_targets: str = "penis"
+    censor_only: bool = False  # 신규 이미지 생성 없이 기존 에셋의 검열본만 일괄 생성
     ckpt_tag: Optional[str] = None  # 체크포인트 비교용 서브폴더 태그 (예: "unholy", "wai")
+    auto_qc: bool = True
+    max_retries: int = 3
 
 
 class GenerationService:
@@ -291,9 +297,13 @@ class GenerationService:
                 # --ckpt-tag 지정 시 체크포인트 비교용 서브폴더에 저장
                 if params.ckpt_tag:
                     output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix / f"ckpt_{params.ckpt_tag}"
+                    censor_dir = PROJECTS_DIR / actual_roster / f"censor_{char.prefix}" / f"ckpt_{params.ckpt_tag}"
                 else:
                     output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
+                    censor_dir = PROJECTS_DIR / actual_roster / f"censor_{char.prefix}"
                 output_dir.mkdir(parents=True, exist_ok=True)
+                if params.censor:
+                    censor_dir.mkdir(parents=True, exist_ok=True)
     
                 if not quiet:
                     print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
@@ -417,12 +427,43 @@ class GenerationService:
                         track_info = f" [IP-A: {ref_mode}]" if (params.engine == "sdxl" and ref_file_name) else ""
                         print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}){track_info} -> {out_name}", end="", flush=True)
     
+                    should_censor = params.censor and (getattr(pose, "is_h_scene", False) or is_nude)
+
+                    # 0. CENSOR-ONLY (기존 이미지 검열 전용 모드)
+                    if params.censor_only:
+                        if out_path.exists() and out_path.stat().st_size > 0:
+                            if should_censor:
+                                c_target = censor_dir / out_path.name
+                                targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
+                                c_res = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
+                                if c_res and c_res.exists():
+                                    if not quiet:
+                                        print(f" [검열본 생성: {c_res.name}]")
+                                    res = GenerationResult(target=target, success=True, image_path=c_res, duration_sec=0.0)
+                                else:
+                                    if not quiet:
+                                        print(" [검열 대상 미감지(원본 유지)]")
+                                    res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
+                            else:
+                                if not quiet:
+                                    print(" [비-H씬(검열 대상 아님): 건너뜀]")
+                                res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
+                        else:
+                            if not quiet:
+                                print(" [원본 파일 없음: 건너뜀]")
+                            res = GenerationResult(target=target, success=False, duration_sec=0.0, error_message="원본 파일 없음")
+                        char_results.append(res)
+                        all_results.append(res)
+                        if on_progress:
+                            on_progress(current_item_index, total_items, res)
+                        continue
+
                     # 1. 기존 파일 스킵
                     if not params.overwrite and out_path.exists() and out_path.stat().st_size > 0:
                         if not quiet:
                             print(" [기존 파일 보존: 건너뜀]", end="")
-                        if params.censor and is_nude:
-                            c_target = out_path.with_name(f"{out_path.stem}_censored{out_path.suffix}")
+                        if should_censor:
+                            c_target = censor_dir / out_path.name
                             if not c_target.exists():
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                                 c_res = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
@@ -436,15 +477,15 @@ class GenerationService:
                         if on_progress:
                             on_progress(current_item_index, total_items, res)
                         continue
-    
+
                     # 2. 스마트 사본 보존
                     if not params.overwrite and not out_path.exists() and legacy_path.exists() and legacy_path.stat().st_size > 0:
                         try:
                             shutil.copy2(legacy_path, out_path)
                             if not quiet:
                                 print(" [기존 원본에서 하이브리드 사본 복제 완료]", end="")
-                            if params.censor and is_nude:
-                                c_target = out_path.with_name(f"{out_path.stem}_censored{out_path.suffix}")
+                            if should_censor:
+                                c_target = censor_dir / out_path.name
                                 if not c_target.exists():
                                     targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                                     c_res = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
@@ -490,14 +531,55 @@ class GenerationService:
                     # 5. 실제 ComfyUI 생성
                     item_start = time.time()
                     try:
-                        client.generate_image(workflow=workflow, output_path=out_path)
+                        max_attempts = (params.max_retries + 1) if params.auto_qc else 1
+                        current_wf = workflow
+                        final_qc_fail = None
+
+                        for attempt in range(max_attempts):
+                            if attempt > 0:
+                                new_seed = random.randint(1, 2**63 - 1)
+                                current_wf = copy.deepcopy(workflow)
+                                for node_id, node_data in current_wf.items():
+                                    if isinstance(node_data, dict) and "inputs" in node_data:
+                                        inp = node_data["inputs"]
+                                        if "seed" in inp:
+                                            inp["seed"] = new_seed
+                                        elif "noise_seed" in inp:
+                                            inp["noise_seed"] = new_seed
+
+                            client.generate_image(workflow=current_wf, output_path=out_path)
+
+                            # Auto-QC 품질 및 결함 검증
+                            if params.auto_qc:
+                                passed, fail_reason, _ = validate_generated_image(
+                                    image=out_path,
+                                    is_solo_scene=pose.is_solo_scene,
+                                    is_two_person=pose.is_two_person,
+                                    is_offscreen_partner=pose.is_offscreen_partner,
+                                    section=target.section,
+                                )
+                                if not passed:
+                                    final_qc_fail = fail_reason
+                                    if attempt < params.max_retries:
+                                        if not quiet:
+                                            print(f" [Auto-QC 불량: {fail_reason} -> 재시도 {attempt+1}/{params.max_retries}]", end="", flush=True)
+                                        continue
+                                    else:
+                                        if not quiet:
+                                            print(f" [Auto-QC 불량(최대 재시도 초과): {fail_reason}]", end="", flush=True)
+                                else:
+                                    if not quiet and attempt > 0:
+                                        print(f" [Auto-QC 통과(재시도 {attempt}회)]", end="", flush=True)
+                            break
+
                         duration = time.time() - item_start
                         if not quiet:
                             print(f" [완료: {duration:.1f}초]", end="")
-                        if params.censor and is_nude:
+                        if should_censor:
                             targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                             try:
-                                c_path = censor_file(out_path, style=params.censor_style, targets=targets)
+                                c_target = censor_dir / out_path.name
+                                c_path = censor_file(out_path, dst_path=c_target, style=params.censor_style, targets=targets)
                                 if c_path and c_path.exists() and not quiet:
                                     print(f" [검열본 생성: {c_path.name}]", end="")
                             except Exception as ce:

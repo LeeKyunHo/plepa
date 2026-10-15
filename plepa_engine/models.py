@@ -35,6 +35,42 @@ class PoseEntry:
             return self.prompt_female
         return self.prompt
 
+    @property
+    def is_two_person(self) -> bool:
+        """남성 파트너 또는 2인 상호작용이 포함된 씬인지 여부를 판정합니다."""
+        p = f"{self.prompt} {self.prompt_female} {self.prompt_otokonoko}".lower()
+        return any(
+            kw in p
+            for kw in (
+                "1boy", "partner", "faceless male", "bald male", "kiss", "hug",
+                "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle",
+                "cowgirl", "fellatio", "cunnilingus", "paizuri", "two person",
+                "man", "penis", "oral"
+            )
+        )
+
+    @property
+    def is_offscreen_partner(self) -> bool:
+        """화면 밖 1인칭(POV) 또는 화면 밖 파트너 연출 씬인지 판정합니다."""
+        p = f"{self.prompt} {self.prompt_female} {self.prompt_otokonoko}".lower()
+        return any(kw in p for kw in ("pov", "off-screen", "offscreen", "cum on body", "facial", "gokkun"))
+
+    @property
+    def is_solo_scene(self) -> bool:
+        """단독 1인 씬인지 여부를 판정합니다."""
+        return not self.is_two_person
+
+    @property
+    def is_h_scene(self) -> bool:
+        """H-씬(일반 여성 H씬, 오토코노코 H씬, 성기 관련 액션)인지 여부를 판정합니다."""
+        sec = (self.section or "").lower()
+        return (
+            sec in ("h_scenes", "scenes_otokonoko", "genit_actions", "special_h")
+            or "h_" in sec
+            or "h_scene" in sec
+            or self.is_two_person
+        )
+
 
 
 @dataclass

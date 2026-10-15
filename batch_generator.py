@@ -312,15 +312,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--censor", action="store_true", help="2D 애니 성기 자동 검열 활성화 (무검열 원본과 함께 _censored.webp 추가 생성)")
     parser.add_argument(
         "--censor-style",
-        choices=["bar", "wide_bar", "slim_bar", "shadow", "mosaic"],
-        default="bar",
-        help="검열 시각 스타일 (bar/wide_bar: 와이드 솔리드 바, slim_bar: 미니멀 슬림 바, shadow: 그림자 실루엣, mosaic: 격자 모자이크)"
+        choices=["white_silhouette", "silhouette", "black_silhouette", "bar", "wide_bar", "slim_bar", "shadow", "mosaic"],
+        default="white_silhouette",
+        help="검열 시각 스타일 (white_silhouette: MobileSAM 외곽선 화이트 실루엣 [기본값], silhouette/black_silhouette: 외곽선 블랙 실루엣, bar/wide_bar: 와이드 솔리드 바, slim_bar: 미니멀 슬림 바, shadow: 그림자 실루엣, mosaic: 격자 모자이크)"
     )
     parser.add_argument(
         "--censor-targets",
         default="penis",
         help="검열 대상 부위 (penis: 남성기만, all: 전체, 쉼표 구분)"
     )
+    parser.add_argument("--censor-only", action="store_true", help="ComfyUI 호출 없이 기존 생성된 에셋들의 검열본만 초고속(0.2초) 일괄 갱신/생성")
+    parser.add_argument("--no-qc", action="store_true", help="Auto-QC 품질 검증 및 불량 시 자동 재시도 비활성화")
+    parser.add_argument("--max-retries", type=int, default=3, help="Auto-QC 불량 시 최대 재시도(리롤) 횟수 (기본: 3)")
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
 
     args = parser.parse_args(argv)
@@ -368,10 +371,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         width=args.width,
         height=args.height,
         naming=args.naming,
-        censor=args.censor,
+        censor=(args.censor or args.censor_only),
         censor_style=args.censor_style,
         censor_targets=args.censor_targets,
+        censor_only=args.censor_only,
         ckpt_tag=args.ckpt_tag,
+        auto_qc=(not args.no_qc),
+        max_retries=args.max_retries,
     )
 
     try:
