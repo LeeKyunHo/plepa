@@ -55,3 +55,8 @@ data/.backup_poses/
 logs/
 *.bak
 *.before_cleanup
+
+# IDE & Workspace
+*.code-workspace
+.vscode/
+

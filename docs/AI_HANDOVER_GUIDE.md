@@ -757,3 +757,24 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   1. `projects/campus/characters/shz.json`의 헤어 태그를 `(voluminous messy wavy hair:1.15)`로 수정하여 머리카락으로 엄격히 한정.
   2. `sdxl_negative`에 `((ocean, sea, beach, water, waves, crashing waves, seashore, water surface:1.4))`를 추가하여 배경 수면 및 파도 연출 차단.
 - **결과**: 실내 캠퍼스 및 자취방 배경에서 바다/파도 오염 0% 박멸.
+
+### ADR-53: FLUX 파이프라인 레거시 패키지 격리 및 SDXL 중심 단일화 (2026-10-15)
+- **배경**:
+  - 플럭스(FLUX.1 [dev] GGUF)는 인체 묘사력은 우수하나 생성 속도가 장당 80~120초로 느리고 2.5D 실사 편향이 있어, 실질적인 메인 작업 흐름은 SDXL(NTR MIX XIII, 장당 34초, 2D 셀 채색 최적화)로 완전히 전환됨.
+  - FLUX 관련 워크플로우 템플릿, 프롬프트 빌더, GUI 선택기, 기본 DB 경로 등이 코드베이스 전반에 분기로 산재하여 유지보수 복잡도를 유발하고 있었음.
+  - 사용자의 의사결정("플럭스 모델은 근시일 안 쓸 것 같으니 분리해서 완전 레거시화")에 따라 FLUX 관련 코드를 전용 레거시 모듈로 완전히 분리 격리함.
+- **결정 사항**:
+  1. **레거시 패키지 신설 (`plepa_engine/legacy/`)**:
+     - `flux_workflows.py`: `build_flux_workflow` 워크플로우 템플릿 분리 보존.
+     - `flux_prompt_builder.py`: `assemble_flux_prompt` T5 자연어 빌더 분리 보존.
+     - 메인 엔진 모듈(`workflow_templates.py`, `prompt_builder.py`)은 얇은 하위 호환 래퍼로 연결하여 기존 호출 코드의 무결성 유지.
+  2. **설정 및 포즈 DB 기본값 SDXL 공식 일원화**:
+     - `plepa_engine/config.py`: `POSE_DB_PATH = SDXL_POSE_DB_PATH`로 영구 확정. FLUX 상수는 레거시 섹션으로 주석 격리.
+     - `data/legacy/flux_pose_database.json` 아카이브 보존.
+     - `scripts/archive/add_gender_tags_flux.py` 이동.
+  3. **GUI 및 CLI 정비**:
+     - `plepa_gui/components/prompt_inspector.py`: `FLUX [레거시]` 탭으로 명시.
+     - `plepa_gui/pages/generate.py`: `SDXL (표준)` 및 `FLUX [레거시]` 드롭다운 정리.
+     - `batch_generator.py` 신설 및 `flux_batch_generator.py`를 하위 호환 래퍼로 전환.
+- **결과**: SDXL 단일 중심 고속 파이프라인의 가독성과 응집도 극대화 달성, 필요 시 언제든 FLUX를 호출할 수 있는 완전한 안전 격리 완결.
+
