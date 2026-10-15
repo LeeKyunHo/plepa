@@ -12,8 +12,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Tuple
 
 try:
     from PIL import Image
@@ -33,6 +34,9 @@ from plepa_engine.config import (
     WEBP_QUALITY,
 )
 
+# 프로세스 전역 레퍼런스 이미지 업로드 캐시: {str(file_path): (mtime, remote_filename)}
+_IMAGE_UPLOAD_CACHE: Dict[str, Tuple[float, str]] = {}
+
 
 class ComfyClientError(Exception):
     """ComfyUI 통신 관련 예외 클래스."""
@@ -45,6 +49,35 @@ class ComfyClient:
         self.base_url = f"http://{host}"
         self.ws_url = f"ws://{host}/ws"
         self.client_id = uuid.uuid4().hex
+        self._shared_ws: Optional[Any] = None
+
+    @contextmanager
+    def session(self):
+        """
+        대규모 배치 생성을 위한 WebSocket 세션 재사용 컨텍스트 매니저.
+        배치 루프 시작 시 1회만 WebSocket을 연결하고, 블록 종료 시 안전하게 닫습니다.
+        """
+        if websocket is None:
+            raise ComfyClientError("websocket-client 라이브러리가 필요합니다.")
+
+        if not self.check_connection():
+            raise ComfyClientError(
+                f"ComfyUI 서버({self.base_url})에 연결할 수 없습니다.\n"
+                f"'run_nvidia_gpu.bat'가 실행 중인지 확인해 주십시오."
+            )
+
+        ws = websocket.WebSocket()
+        ws.connect(f"{self.ws_url}?clientId={self.client_id}")
+        self._shared_ws = ws
+        try:
+            yield self
+        finally:
+            try:
+                ws.close()
+            except Exception:
+                pass
+            self._shared_ws = None
+
 
     def check_connection(self) -> bool:
         """ComfyUI 서버 가동 여부를 확인합니다."""
@@ -92,10 +125,21 @@ class ComfyClient:
     def upload_image(self, file_path: Path, overwrite: bool = True) -> str:
         """
         로컬 이미지 파일을 ComfyUI input 디렉토리로 업로드합니다.
+        mtime 캐싱을 적용하여 동일한 파일의 반복 업로드(I/O 및 네트워크)를 생략합니다.
         반환값: ComfyUI 내부에서 참조할 파일명
         """
         if not file_path.exists():
             raise FileNotFoundError(f"업로드할 레퍼런스 이미지를 찾을 수 없습니다: {file_path}")
+
+        file_path_resolved = file_path.resolve()
+        cache_key = str(file_path_resolved)
+        mtime = file_path_resolved.stat().st_mtime
+
+        # 캐시 조회: 수정 시간이 동일하면 업로드 생략하고 즉시 반환
+        if cache_key in _IMAGE_UPLOAD_CACHE:
+            cached_mtime, cached_name = _IMAGE_UPLOAD_CACHE[cache_key]
+            if cached_mtime == mtime:
+                return cached_name
 
         boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
         filename = file_path.name
@@ -126,7 +170,9 @@ class ComfyClient:
         try:
             with urllib.request.urlopen(req, timeout=30.0) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
-                return result.get("name", filename)
+                remote_name = result.get("name", filename)
+                _IMAGE_UPLOAD_CACHE[cache_key] = (mtime, remote_name)
+                return remote_name
         except Exception as e:
             raise ComfyClientError(f"ComfyUI 이미지 업로드 실패: {e}") from e
 
@@ -139,6 +185,7 @@ class ComfyClient:
     ) -> Path:
         """
         워크플로우를 전송하고 생성이 완료될 때까지 WebSocket으로 대기한 후 WebP 파일로 저장합니다.
+        session() 컨텍스트 매니저 활성화 시 WebSocket 연결을 재사용합니다.
         """
         if websocket is None or Image is None:
             raise ComfyClientError(
@@ -146,14 +193,17 @@ class ComfyClient:
                 "'pip install -r requirements.txt'를 먼저 실행해 주십시오."
             )
 
-        if not self.check_connection():
-            raise ComfyClientError(
-                f"ComfyUI 서버({self.base_url})에 연결할 수 없습니다.\n"
-                f"'run_nvidia_gpu.bat'가 실행 중인지 확인해 주십시오."
-            )
-
-        ws = websocket.WebSocket()
-        ws.connect(f"{self.ws_url}?clientId={self.client_id}")
+        is_shared = self._shared_ws is not None
+        if is_shared:
+            ws = self._shared_ws
+        else:
+            if not self.check_connection():
+                raise ComfyClientError(
+                    f"ComfyUI 서버({self.base_url})에 연결할 수 없습니다.\n"
+                    f"'run_nvidia_gpu.bat'가 실행 중인지 확인해 주십시오."
+                )
+            ws = websocket.WebSocket()
+            ws.connect(f"{self.ws_url}?clientId={self.client_id}")
 
         # 1. 작업 전송
         payload = json.dumps({"prompt": workflow, "client_id": self.client_id}).encode("utf-8")
@@ -167,7 +217,8 @@ class ComfyClient:
                 result = json.loads(resp.read().decode("utf-8"))
                 prompt_id = result.get("prompt_id")
         except urllib.error.HTTPError as he:
-            ws.close()
+            if not is_shared:
+                ws.close()
             err_detail = ""
             try:
                 err_data = json.loads(he.read().decode("utf-8"))
@@ -185,12 +236,15 @@ class ComfyClient:
                 pass
             raise ComfyClientError(f"작업 큐 등록 실패 (HTTP {he.code}: {he.reason}){err_detail}") from he
         except Exception as e:
-            ws.close()
+            if not is_shared:
+                ws.close()
             raise ComfyClientError(f"작업 큐 등록 실패: {e}") from e
 
         if not prompt_id:
-            ws.close()
+            if not is_shared:
+                ws.close()
             raise ComfyClientError("ComfyUI로부터 prompt_id를 수신하지 못했습니다.")
+
 
         # 2. WebSocket 이벤트 루프
         start_time = time.time()
@@ -225,7 +279,12 @@ class ComfyClient:
                             err_msg = data.get("exception_message", "알 수 없는 에러")
                             raise ComfyClientError(f"ComfyUI 실행 에러: {err_msg}")
         finally:
-            ws.close()
+            if not is_shared:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+
 
         if not output_image_info:
             raise ComfyClientError("생성된 이미지 정보를 수신하지 못했습니다.")
