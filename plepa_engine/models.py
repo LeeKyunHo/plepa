@@ -5,6 +5,7 @@ plepa_engine.models
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -20,6 +21,9 @@ class PoseEntry:
     required_outfit: str = ""
     prompt_female: str = ""
     prompt_otokonoko: str = ""
+    target_gender: Optional[str] = None
+    allowed_rosters: Optional[List[str]] = None
+
 
     def get_prompt(self, gender: str = "female") -> str:
         """캐릭터 성별(female, otokonoko 등)에 맞춘 전용 프롬프트를 반환합니다. 미지정 시 기본 prompt 반환."""
@@ -75,8 +79,21 @@ class CharacterConfig:
             return self.outfits.get("default") or self.appearance.outfit
         return None
 
+    def with_profile(self, profile_name: Optional[str]) -> CharacterConfig:
+        """
+        지정된 프로필이 적용된 새로운 CharacterConfig 인스턴스를 반환합니다. (불변성 보장)
+        원본 객체를 in-place 변이시키지 않아 메모리 캐시 오염을 원천 방지합니다.
+        """
+        if not profile_name or profile_name.strip() in ("", "default"):
+            return self
+        
+        clone = copy.deepcopy(self)
+        clone.apply_profile(profile_name)
+        return clone
+
     def apply_profile(self, profile_name: Optional[str]) -> None:
         """지정된 프로필명에 맞추어 외형, 의상, 긍정/부정 태그 등을 동적으로 오버라이드합니다."""
+
         if not profile_name or profile_name.strip() in ("", "default"):
             return
         
