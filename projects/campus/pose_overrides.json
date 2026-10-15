@@ -1,45 +1,60 @@
 {
-  "_note": "Campus project exclusive poses (200-205). These override/extend the main sdxl_pose_database.json only for this roster.",
-  "_usage": "This file is automatically loaded when generating images for the 'campus' roster. Poses here are ONLY available in this project.",
-  "h_scenes": {
-    "200": {
-      "label": "캠퍼스 빈강의실 섹스",
-      "description": "캠퍼스 프로젝트 전용: 빈 강의실 책상 위에 가슴을 대고 엎드려 도기스타일 섹스하는 포즈 (옷 반쯤 벗겨진 상태)",
-      "prompt": "((1girl, 1boy:1.4)), doggystyle, from behind, sex from behind, girl lying face down on desk, breasts pressed against desk surface, ((heavy blush, pleasure expression, half-closed eyes, parted lips, moaning:1.2)), clothes half removed, disheveled clothes, shirt pulled up, skirt pulled down, classroom, empty classroom, lectern desk, intercourse, penetration from behind, ((single male partner:1.3)), two people only",
-      "required_outfit": "default"
-    }
-  },
-  "poses": {
-    "201": {
+  "_note": "캠퍼스 프로젝트 전용 포즈 오버라이드 (V2 규격 동기화)",
+  "_usage": "projects/campus/characters/*.json의 pose_restrictions.campus_only에 정의된 코드들과 연동",
+  "events": {
+    "048": {
       "label": "캠퍼스 카페",
       "description": "캠퍼스 프로젝트 전용: 카페에서 커피를 마시는 포즈",
       "prompt": "1girl, solo, sitting at cafe table, holding coffee cup, looking at viewer, warm lighting, campus setting",
-      "required_outfit": "default"
+      "required_outfit": "default",
+      "section": "events"
     },
-    "202": {
+    "049": {
       "label": "캠퍼스 도서관",
       "description": "캠퍼스 프로젝트 전용: 도서관 책장 사이에 서서 뒤돌아보는 포즈",
       "prompt": "1girl, solo, ((standing between library bookshelves:1.25)), ((looking back over shoulder at viewer:1.35)), looking back, surrounded by tall bookshelves, books on shelves, library setting, warm library lighting, campus setting, cowboy shot",
-      "required_outfit": "default"
+      "required_outfit": "default",
+      "section": "events"
     },
-    "203": {
+    "050": {
       "label": "캠퍼스 벤치",
       "description": "캠퍼스 프로젝트 전용: 캠퍼스 벤치에 앉아있는 포즈",
       "prompt": "1girl, solo, sitting on outdoor bench, relaxed pose, looking at viewer, soft smile, campus setting",
-      "required_outfit": "default"
+      "required_outfit": "default",
+      "section": "events"
     },
-    "204": {
+    "051": {
       "label": "캠퍼스 발표/지도",
       "description": "캠퍼스 프로젝트 전용: 교탁에서 발표/지도하는 포즈 (교수, 학생 둘 다 사용 가능)",
       "prompt": "1girl, solo, standing at lectern desk, teaching pose, ((arm extended forward, hand pointing forward:1.3)), ((hands away from face:1.25)), confident expression, looking at viewer, classroom setting, professional posture",
       "negative_add": "(hand on face:1.5), (hand near eyes:1.5), (hand covering face:1.5), (hand on head:1.4), (touching face:1.4)",
-      "required_outfit": "default"
+      "required_outfit": "default",
+      "section": "events"
     },
-    "205": {
+    "052": {
       "label": "캠퍼스 축제 포장마차",
       "description": "캠퍼스 프로젝트 전용: 축제 포장마차 배경에서 뒤돌아보는 포즈",
       "prompt": "1girl, solo, ((looking back over shoulder:1.35)), looking back at viewer, at campus festival, food stalls background, festival decorations, warm evening lighting, cheerful atmosphere, cowboy shot",
-      "required_outfit": "default"
+      "required_outfit": "default",
+      "section": "events"
+    }
+  },
+  "special_h": {
+    "130": {
+      "label": "캠퍼스 빈강의실 섹스",
+      "description": "캠퍼스 프로젝트 전용: 빈 강의실 책상 위에 가슴을 대고 엎드려 도기스타일 섹스하는 포즈 (옷 반쯤 벗겨진 상태)",
+      "prompt": "((1girl, 1boy:1.4)), doggystyle, from behind, sex from behind, girl lying face down on desk, breasts pressed against desk surface, ((heavy blush, pleasure expression, half-closed eyes, parted lips, moaning:1.2)), clothes half removed, disheveled clothes, shirt pulled up, skirt pulled down, classroom, empty classroom, lectern desk, intercourse, penetration from behind, ((single male partner:1.3)), two people only",
+      "required_outfit": "default",
+      "section": "special_h"
+    }
+  },
+  "special_otokonoko": {
+    "200": {
+      "label": "캠퍼스 빈강의실 섹스",
+      "description": "캠퍼스 프로젝트 전용: 빈 강의실 책상 위에 엎드려 후방 아날 결합 섹스하는 포즈 (옷 반쯤 벗겨진 상태)",
+      "prompt": "((2boys, otokonoko:1.4)), anal doggystyle, from behind, anal penetration from behind, otokonoko lying face down on desk, slender body pressed against desk surface, ((heavy blush, pleasure expression, half-closed eyes, parted lips, moaning:1.2)), clothes half removed, disheveled clothes, shirt pulled up, skirt pulled down, classroom, empty classroom, lectern desk, intercourse, ((single male partner:1.3)), two people only",
+      "required_outfit": "default",
+      "section": "special_otokonoko"
     }
   }
 }
