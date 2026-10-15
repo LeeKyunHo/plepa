@@ -135,6 +135,11 @@
   python flux_batch_generator.py -r hey -c mal -p D01         # 수영복 전신 1장 생성
   python flux_batch_generator.py -r hey -c mal -p D --dry-run # GPU 미사용 프롬프트 사전 점검
 
+  ── [신규] Face Detailer 초고속 제어 (--no-face-detailer) ───────────────────
+  # 기본 상태: SEGS 필터 훅으로 여주인공 얼굴 1개만 단독 고속 보정 (24~36초)
+  # 포즈 구도 테스트나 초고속 초안 생성을 위해 Face Detailer를 끄고자 할 때 (장당 10~11초):
+  python batch_generator.py -c aya -p 034 --no-face-detailer
+
   ── 실행 전 미리보기 (GPU 호출 없이 프롬프트/파일명 점검) ───────────────────
   python flux_batch_generator.py -r maid -c han -p all --dry-run
 

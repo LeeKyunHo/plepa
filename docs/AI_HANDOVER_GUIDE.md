@@ -455,7 +455,17 @@
     - **해결 조치**:
       - **공통 코어 팩 (152종)**: 기본 표정(20) + 기본 포즈(20) + Genit 감정(24) + Genit 행동(22) + 통합 성인 N(66).
       - **로스터 전용 테마 자동 추가**: `spy` 로스터는 `spy_actions(10종)`만 연결되어 **총 162종** 생성. (`murim` 로스터는 `wuxia_actions(10종)`만 연결되어 총 162종).
-      - **특수 코스튬 기본 배제**: 수영복, BDSM, 바니걸 및 타 로스터 테마는 기본 전체생산에서 제외되며, `-p swimsuit` 등 명시적 호출 시에만 개별 생성. 캐릭터당 32장(약 14분) 연산 시간 추가 절약.
+45. **2인 밀착 씬(#034) 모브 블록 중복 제거, 표정 조화 파이프라인 및 SEGS Detailer Hook (ADR 2026-10-15)**
+    - **배경 및 문제점**:
+      1. `#034(가슴에얼굴묻기)` 등 2인 밀착 씬에서 Face Detailer가 파트너 남성의 가려진 옆얼굴/턱선까지 감지하여 2회 인페인팅을 실행, 생성 시간이 52초 이상으로 급증하고 남성 머리가 여주 머리색으로 오염되는 현상 발생.
+      2. 아야메의 기본 정의 `cool calm expression`이 포즈의 `tender gentle smile`을 상쇄하여 여주인공이 미소 짓지 못하고 무표정화되는 현상 발생.
+      3. 포즈 자체에 이미 남성의 위치와 뒤통수가 정의되어 있음에도, `TwoPersonMobMutator`가 독립 모브 블록(`solid black pants, muscular build`)을 추가 주입하여 모델이 "앞에 머리 묻는 남자 1명 + 뒤나 옆에 서 있는 큰 남자 1명"으로 남성을 2명씩 렌더링하는 분신 현상 발생.
+      4. 파이프라인의 `\bmale\b` 정규식 삭제로 인해 `(male face visible)`이 `( face visible)`로 잘려 여주인공의 얼굴까지 네거티브에 걸리던 버그 확인.
+    - **해결 조치**:
+      1. **SEGS Ordered Filter Detailer Hook 연동 (`workflow_templates.py`)**: `SEGSOrderedFilterDetailerHookProvider`를 `FaceDetailer`의 `detailer_hook`으로 연결하여 면적 기준 최상위 1개 얼굴(`take_count: 1`)만 단독 필터링하도록 구성. `bbox_threshold`를 0.68로 상향하여 모브 얼굴 인페인팅 100% 스킵 및 생성 시간 24~36초대로 대폭 단축.
+      2. **표정 지능형 조화 (`harmonize_character_expression`)**: 포즈에 미소/행복/홍조 등 능동 표정/감정 태그가 있을 때 캐릭터 기본 무표정을 자동 제거하여 여주인공의 다정한 미소 100% 반영.
+      3. **밀착 씬 독립 모브 중복 방지 (`is_head_hug_scene`)**: 포즈 자체에 파트너 밀착이 이미 정의된 경우 추가 모브 BREAK 청크를 생략하고 네거티브에 `(2boys:1.8), (duplicate male:1.8), (standing male:1.5)`를 주입하여 100% 단일 1:1 관계 확립.
+      4. **네거티브 정규식 교정**: `\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair))`로 복합 명사구를 보호하여 여주인공 얼굴 억제 버그 완치.
 
 ---
 

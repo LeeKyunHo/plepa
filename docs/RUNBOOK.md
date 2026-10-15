@@ -107,7 +107,14 @@ python flux_batch_generator.py -r hey -c mal -p 034
 python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
 ```
 
-### 2.8 사후 단독 4K AI 초해상화 (`plepa_upscaler.py`)
+### 2.8 Face Detailer 제어 (`--no-face-detailer`)
+- **기본 동작**: 자동 활성화 (SEGS Ordered Filter 훅을 통해 화면 내 면적 1위 얼굴만 단독 필터링하여 여주인공만 고속 보정).
+- 포즈 구도 테스트나 초고속 초안 생성(장당 10~11초)을 위해 Face Detailer를 끄고자 할 때 사용:
+```powershell
+python batch_generator.py -c aya -p 034 --no-face-detailer
+```
+
+### 2.9 사후 단독 4K AI 초해상화 (`plepa_upscaler.py`)
 - 이미 생성이 완료된 기존 WebP 이미지를 디퓨전 재연산 없이 순수 AI 초해상화 모델(`4x-UltraSharp.pth`)로 2~4초 만에 `4096x6144` 초고화질로 단독 업스케일합니다.
 - 구도, 표정, 손가락 왜곡 0% 무손실 보존.
 ```powershell
