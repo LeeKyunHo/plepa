@@ -1,0 +1,26 @@
+{
+  "prefix": "mimi",
+  "name": "Mimi (미미 / 일상 스트릿 댄스 스트리머 - 숄더컷 크롭 후드)",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.55,
+  "faction": "sns_influencer_town",
+  "role": "힙한 골목길과 번화가에서 브이로그와 길거리 댄스 챌린지를 진행하는 귀여운 인플루언서. 동글이 안경과 어깨가 트인 크롭 후드 집업으로 상큼함과 반전 글래머를 뽐내는 베이글녀",
+  "appearance": {
+    "face_and_hair": "dark brown hair in cute messy high bun, clear round glasses, bright cheerful smile, sparkling hazel eyes",
+    "physique": "curvy petite body, generous bust, soft stomach, defined waist, cheerful energetic aura",
+    "outfit": "grey cold-shoulder cropped zip-up hoodie, grey drawstring sweatpants, high-waisted track pants, round glasses, white sneakers"
+  },
+  "sdxl_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, curvy petite, generous bust, defined waist, (dark brown hair in messy high bun:1.15), sparkling hazel eyes, (round glasses:1.15), ((grey cold-shoulder cropped hoodie, shoulder cutouts zip-up hoodie:1.2)), ((grey drawstring sweatpants, high-waisted sweatpants:1.15)), midriff, underbust silhouette, white sneakers",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, extra fingers, missing fingers, mutated hands, extra limbs, deformed, jpeg artifacts, signature, watermark, username, artist name, text, blurry, ((cat ears, animal ears, horns:1.6)), furry, 1boy, male, muscular, photorealistic, realistic, 3d, render, cgi, (comic:1.2), (multiple views:1.2), (speech bubble:1.2), dress, skirt, swimsuit, blonde hair, long coat, formal wear",
+  "sdxl_nude_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, curvy petite, generous bust, defined waist, (dark brown hair in messy high bun:1.15), sparkling hazel eyes, pale smooth skin",
+  "outfits": {
+    "underwear": "grey sporty cotton bralette, matching sporty boy-shorts"
+  },
+  "pose_restrictions": {
+    "sns_only": [
+      "048", "049", "050", "051", "052",
+      "130", "131", "132", "133", "134", "135"
+    ]
+  }
+}

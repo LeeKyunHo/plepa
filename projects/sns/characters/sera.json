@@ -1,0 +1,26 @@
+{
+  "prefix": "sera",
+  "name": "Sera (세라 / 럭셔리 라이프스타일 퀸 - 백리스 레드 드레스)",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.55,
+  "faction": "sns_influencer_town",
+  "role": "화려한 명품 협찬과 스폰서 파티를 누비는 럭셔리 라이프스타일 인플루언서. 등이 100% 노출되고 옆가슴과 골반이 아슬아슬하게 드러나는 레드 드레스로 도시 야경을 정복하는 관능미의 화신",
+  "appearance": {
+    "face_and_hair": "voluminous wavy dark brown long hair, glamorous amber eyes, mature seductive expression, red lipstick",
+    "physique": "voluptuous hourglass figure, large breasts, narrow waist, wide feminine hips, arched back",
+    "outfit": "extreme backless red evening dress, spaghetti straps, completely bare back, sideboob exposure, high pelvic slit, red high heels"
+  },
+  "sdxl_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, voluptuous hourglass figure, large breasts, narrow waist, wide feminine hips, (wavy dark brown long hair:1.15), amber eyes, red lips, ((extreme backless red evening dress, bare back:1.25)), ((sideboob, cleavage:1.15)), ((pelvic curtain, hip cutouts, high side slit:1.2)), spaghetti straps, drapey red silk fabric, red high heels",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, extra fingers, missing fingers, mutated hands, extra limbs, deformed, jpeg artifacts, signature, watermark, username, artist name, text, blurry, ((cat ears, animal ears, horns:1.6)), furry, 1boy, male, muscular, photorealistic, realistic, 3d, render, cgi, (comic:1.2), (multiple views:1.2), (speech bubble:1.2), short hair, blonde hair, blue dress, casual clothes, jacket, covered back",
+  "sdxl_nude_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, voluptuous hourglass figure, large breasts, narrow waist, wide feminine hips, (wavy dark brown long hair:1.15), amber eyes, pale smooth skin",
+  "outfits": {
+    "underwear": "crimson silk lace bra, matching red strappy thong"
+  },
+  "pose_restrictions": {
+    "sns_only": [
+      "048", "049", "050", "051", "052",
+      "130", "131", "132", "133", "134", "135"
+    ]
+  }
+}

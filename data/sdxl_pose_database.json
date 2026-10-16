@@ -280,6 +280,41 @@
       "required_outfit": "default",
       "prompt": "((pov hand patting head:1.25)), ((leaning into hand, blissful smiling face:1.25)), closed eyes in contentment",
       "section": "events"
+    },
+    "048": {
+      "label": "카페휴식",
+      "description": "테이블에 앉아 커피를 마시며 여유를 즐기는 일상 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, solo, sitting at cafe table, holding coffee cup with both hands, looking at viewer, gentle warm smile, outdoor cafe terrace background, soft daylight, cowboy shot",
+      "section": "events"
+    },
+    "049": {
+      "label": "스트릿스냅",
+      "description": "도심 골목길에서 테이크아웃 음료를 들고 자연스럽게 걷는 스냅 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, solo, walking on urban street, holding takeout drink with straw, casual candid snap, looking back over shoulder at viewer, street bokeh, cowboy shot",
+      "section": "events"
+    },
+    "050": {
+      "label": "야경테라스",
+      "description": "도시 야경이 내려다보이는 고급 테라스에서 뒤돌아보는 럭셔리 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, solo, glamorous night city terrace, looking back over shoulder at viewer, alluring gaze, warm ambient streetlights, glowing night bokeh, cowboy shot",
+      "section": "events"
+    },
+    "051": {
+      "label": "룸미러셀카",
+      "description": "전신 거울 앞에서 스마트폰을 들고 바디라인을 찍는 셀카 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, solo, taking mirror selfie in room, holding smartphone, looking into mirror, arched back, emphasizing body curves, aesthetic room lighting, cowboy shot",
+      "section": "events"
+    },
+    "052": {
+      "label": "바이럴더블피스",
+      "description": "양손 브이와 장난스럽고 과감한 표정으로 렌즈에 다가선 클로즈업 셀카",
+      "required_outfit": "default",
+      "prompt": "1girl, solo, ((extreme close-up portrait, upper body zoom:1.35)), ((double peace, two peace signs near face:1.3)), ((ahegao, tongue out, rolling eyes slightly:1.25)), heavy blush on cheeks, tilted head, playful chaotic influencer selfie, ring light reflection in eyes, smartphone camera angle",
+      "section": "events"
     }
   },
   "romance": {
@@ -618,7 +653,29 @@
       "section": "h_scenes"
     }
   },
-  "special_h": {},
+  "special_h": {
+    "130": {
+      "label": "비상계단 섹스",
+      "description": "비상계단 난간에 기대어 치마를 걷어올리고 신속하게 결합하는 스릴 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, 1boy, ((emergency staircase landing, metal handrail:1.3)), ((doggystyle against railing:1.35)), ((clothes half lifted, exposed hips:1.3)), looking back over shoulder with breathless moaning expression, heavy blush, thrilling secret encounter, cowboy shot, ((single male partner:1.3))",
+      "section": "special_h"
+    },
+    "131": {
+      "label": "차안 섹스",
+      "description": "틴팅된 차량 내부 좌석에서 은밀하고 농밀하게 벌어지는 카섹스 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, 1boy, ((car sex, inside car interior:1.4)), ((straddling partner on passenger seat:1.35)), leather car seats, tinted car windows with night streetlights blurred outside, ((clothes disheveled, pulled aside:1.3)), arched back in pleasure, ecstatic flushed face, intimate close space, ((single male partner:1.3))",
+      "section": "special_h"
+    },
+    "132": {
+      "label": "화장실펠라",
+      "description": "문 잠긴 좁은 화장실 칸막이 안에서 무릎 꿇고 올려다보는 착의 펠라 씬",
+      "required_outfit": "default",
+      "prompt": "1girl, 1boy, ((inside bathroom stall, locked door:1.35)), ((clothed fellatio, blowjob:1.4)), looking up at partner with deeply devoted flushed eyes, mouth open taking shaft, saliva trail, intimate close-up, cowboy shot, ((single male partner:1.3))",
+      "section": "special_h"
+    }
+  },
   "scenes_otokonoko": {
     "150": {
       "label": "M자개각",
@@ -913,5 +970,27 @@
       "section": "scenes_otokonoko"
     }
   },
-  "special_otokonoko": {}
+  "special_otokonoko": {
+    "133": {
+      "label": "비상계단 아날섹스",
+      "description": "비상계단 난간을 붙잡고 진행되는 오토코노코 전용 후방 아날 결합 씬",
+      "required_outfit": "default",
+      "prompt": "((2boys, otokonoko:1.4)), anal doggystyle, leaning on emergency staircase railing, slender body, heavy blush, breathless pleasure expression, clothes disheveled, intimate secret spot, ((single male partner:1.3))",
+      "section": "special_otokonoko"
+    },
+    "134": {
+      "label": "차안 아날섹스",
+      "description": "틴팅된 차량 내부 시트 위에서 진행되는 오토코노코 전용 카섹스 씬",
+      "required_outfit": "default",
+      "prompt": "((2boys, otokonoko:1.4)), anal cowgirl, riding partner inside car, car interior, leather seats, tinted windows, night bokeh outside, breathless pleasure, ((single male partner:1.3))",
+      "section": "special_otokonoko"
+    },
+    "135": {
+      "label": "화장실펠라",
+      "description": "화장실 칸막이 안에서 올려다보며 봉사하는 오토코노코 전용 씬",
+      "required_outfit": "default",
+      "prompt": "((2boys, otokonoko:1.4)), kneeling fellatio inside bathroom stall, looking up with flushed cheeks, parted lips, narrow stall, soft lighting, ((single male partner:1.3))",
+      "section": "special_otokonoko"
+    }
+  }
 }

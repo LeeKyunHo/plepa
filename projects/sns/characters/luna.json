@@ -1,0 +1,26 @@
+{
+  "prefix": "luna",
+  "name": "Luna (루나 / 4차원 개인화보 모델 - 시스루 화이트 드레스)",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.55,
+  "faction": "sns_influencer_town",
+  "role": "몽환적인 개인화보와 4차원 엽기·섹시 컨셉 촬영으로 덕후 팔로워를 끌어모으는 비주얼 모델. 몸매 굴곡이 고스란히 비치는 초밀착 화이트 드레스를 입고 부계정에 더블피스 아헤가오 셀카를 올리는 엉뚱한 매력",
+  "appearance": {
+    "face_and_hair": "silvery white long hair in half-up ponytail, mystical light blue eyes, fair pale skin, dreamy smile",
+    "physique": "hourglass silhouette, plump breasts, small waist, rounded hips, long legs",
+    "outfit": "white skin-tight bodycon dress, semi-sheer white fabric, clinging maxi dress, off-shoulder neckline, white slip dress, bare feet"
+  },
+  "sdxl_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, hourglass silhouette, plump breasts, small waist, rounded hips, (silvery white long hair:1.15), light blue eyes, (natural fair skin, healthy peach skin tone, soft warm blush:1.15), ((semi-sheer bodycon maxi dress, white clinging slip dress:1.15)), off-shoulder, visible body curves, bare feet",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, extra fingers, missing fingers, mutated hands, extra limbs, deformed, jpeg artifacts, signature, watermark, username, artist name, text, blurry, ((cat ears, animal ears, horns:1.6)), furry, 1boy, male, muscular, photorealistic, realistic, 3d, render, cgi, (comic:1.2), (multiple views:1.2), (speech bubble:1.2), ((chalky white skin, paper white skin, pale grey skin, blue skin, ghostly, corpse, albino:1.35)), black dress, red dress, dark hair, short hair, heavy coat, oversized clothes",
+  "sdxl_nude_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, hourglass silhouette, plump breasts, small waist, rounded hips, (silvery white long hair:1.15), light blue eyes, natural smooth skin, healthy peach skin tone",
+  "outfits": {
+    "underwear": "pure white silk sheer lingerie set"
+  },
+  "pose_restrictions": {
+    "sns_only": [
+      "048", "049", "050", "051", "052",
+      "130", "131", "132", "133", "134", "135"
+    ]
+  }
+}
