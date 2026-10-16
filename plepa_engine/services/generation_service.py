@@ -437,7 +437,7 @@ class GenerationService:
                             if should_censor:
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                                 tmp_censored = output_dir / f".tmp_{out_name}"
-                                c_res = censor_file(src_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                c_res = censor_file(src_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
                                 if c_res and c_res.exists():
                                     origin_dir.mkdir(parents=True, exist_ok=True)
                                     # 1. 무검열 원본을 _origin 폴더에 안전하게 보존
@@ -479,7 +479,7 @@ class GenerationService:
                             if not origin_path.exists():
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                                 tmp_censored = output_dir / f".tmp_{out_path.name}"
-                                c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
                                 if c_res and c_res.exists():
                                     origin_dir.mkdir(parents=True, exist_ok=True)
                                     shutil.copy2(out_path, origin_path)
@@ -510,7 +510,7 @@ class GenerationService:
                                 if not origin_path.exists():
                                     targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                                     tmp_censored = output_dir / f".tmp_{out_path.name}"
-                                    c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                    c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
                                     if c_res and c_res.exists():
                                         origin_dir.mkdir(parents=True, exist_ok=True)
                                         shutil.copy2(out_path, origin_path)
@@ -611,7 +611,7 @@ class GenerationService:
                             targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                             try:
                                 tmp_censored = output_dir / f".tmp_{out_path.name}"
-                                c_path = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets)
+                                c_path = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
                                 if c_path and c_path.exists():
                                     origin_dir.mkdir(parents=True, exist_ok=True)
                                     origin_path = origin_dir / out_path.name

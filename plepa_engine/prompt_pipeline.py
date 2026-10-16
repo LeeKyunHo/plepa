@@ -503,7 +503,10 @@ class TwoPersonMobMutator(PromptMutator):
                 neg = f"{neg}, looking at viewer, looking straight at camera"
 
         if ctx.is_aftermath or ctx.is_solo_scene:
-            neg = f"{neg}, ((1boy, 2boys, male, masculine, partner, faceless male, multiple characters, extra face:1.35))"
+            if ctx.is_otokonoko:
+                neg = f"{neg}, ((2boys, partner, faceless male, multiple characters, extra face:1.35))"
+            else:
+                neg = f"{neg}, ((1boy, 2boys, male, masculine, partner, faceless male, multiple characters, extra face:1.35))"
 
         ctx.positive_prompt = pos
         ctx.negative_prompt = neg
@@ -511,6 +514,19 @@ class TwoPersonMobMutator(PromptMutator):
 
 _BRACKET_TABLE = str.maketrans("", "", "()[]{}")
 _WEIGHT_SUFFIX_PATTERN = re.compile(r":[0-9]+(?:\.[0-9]+)?$")
+
+# 파이프라인이 구도/시선/인원수 제어를 위해 의도적으로 제어하는 보호 태그 (자동 충돌 제거 제외)
+_PROTECTED_CONTROL_TAGS = frozenset({
+    "1boy",
+    "2boys",
+    "1girl",
+    "2girls",
+    "male",
+    "masculine",
+    "solo",
+    "looking at viewer",
+    "looking straight at camera",
+})
 
 
 def normalize_tag(raw: str) -> str:
@@ -539,22 +555,26 @@ def find_tag_conflicts(positive: str, negative: str) -> List[str]:
 def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple[str, List[str]]:
     """
     긍정과 부정 사이에 충돌하는 태그를 감지하고, 네거티브 프롬프트에서 해당 태그를 안전하게 제거합니다.
+    다중 태그 괄호 그룹 내부 조각이나 구도/인원수 제어용 보호 태그는 괄호 파손 및 가드 무력화를 막기 위해 보존합니다.
     """
-    conflicts = find_tag_conflicts(positive, negative)
+    conflicts = [t for t in find_tag_conflicts(positive, negative) if t not in _PROTECTED_CONTROL_TAGS]
     if not conflicts:
         return negative, []
 
     conflict_set = set(conflicts)
     neg_chunks = [c.strip() for c in negative.split(",") if c.strip()]
     kept_chunks = []
+    removed_tags = []
     for chunk in neg_chunks:
         norm = normalize_tag(chunk)
-        if norm in conflict_set:
+        # 괄호 짝이 맞지 않는 다중 태그 그룹의 일부(예: '((1boy')는 잘라내면 괄호 구문이 깨지므로 보존
+        if norm in conflict_set and chunk.count("(") == chunk.count(")"):
+            removed_tags.append(norm)
             continue
         kept_chunks.append(chunk)
 
     new_neg = ", ".join(kept_chunks)
-    return new_neg, conflicts
+    return new_neg, sorted(set(removed_tags))
 
 
 class SanitizerMutator(PromptMutator):
@@ -562,7 +582,14 @@ class SanitizerMutator(PromptMutator):
 
     def mutate(self, ctx: PromptContext) -> None:
         # 1. 긍정/부정 태그 충돌 감지 및 네거티브에서 자동 제거
-        cleaned_neg, conflicts = remove_conflicting_tags_from_negative(ctx.positive_prompt, ctx.negative_prompt)
+        # 남성 모브 전용 BREAK 블록의 태그(예: bare shoulders)가 여주인공 본체 네거티브를 지우지 않도록 모브 블록 제외 후 검사
+        pos_without_mob = re.sub(
+            r"\bBREAK\s*\((?:single|multiple)?\s*faceless male.*$",
+            "",
+            ctx.positive_prompt,
+            flags=re.IGNORECASE,
+        )
+        cleaned_neg, conflicts = remove_conflicting_tags_from_negative(pos_without_mob, ctx.negative_prompt)
         if conflicts:
             logger.warning(f"[WARN] 프롬프트 태그 충돌 감지: {conflicts} -> 네거티브에서 자동 제거되었습니다.")
             ctx.negative_prompt = cleaned_neg

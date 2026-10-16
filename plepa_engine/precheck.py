@@ -13,7 +13,6 @@ from typing import Dict, List, Tuple
 
 from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.prompt_builder import (
-    assemble_flux_prompt,
     assemble_sdxl_prompt,
     resolve_pose_outfit_slot,
 )
@@ -71,61 +70,64 @@ _FORBIDDEN_LEAK_TOKENS_IN_NUDE: Tuple[str, ...] = (
 
 
 def run_pregeneration_check(roster: str = "spy") -> PrecheckReport:
-    """지정된 로스터와 전체 포즈 DB에 대해 5단계 이미지 생산 사전 점검을 수행합니다."""
+    """지정된 로스터와 SDXL V2 포즈 DB에 대해 5단계 이미지 생산 사전 점검을 수행합니다."""
     report = PrecheckReport(roster=roster)
 
-    sdxl_db = default_pose_service.load_pose_db(engine="sdxl")
-    flux_db = default_pose_service.load_pose_db(engine="flux")
+    sdxl_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
     report.total_poses = len(sdxl_db)
 
     # -------------------------------------------------------------------------
-    # [1단계] 포즈 DB 제작 규칙 준수 전수 검사 (SDXL & FLUX)
+    # [1단계] 포즈 DB 제작 규칙 준수 전수 검사 (SDXL V2 단일 파이프라인)
     # -------------------------------------------------------------------------
-    for engine_name, db in (("sdxl", sdxl_db), ("flux", flux_db)):
-        for code, entry in db.items():
-            # 1-1. 라벨 규격 (2~10글자, 공백/슬래시 금지 — 채팅 AI 상황 매칭 최적화)
-            if not (2 <= len(entry.label) <= 10) or " " in entry.label or "/" in entry.label:
-                report.errors.append(
-                    f"[포즈규칙] {engine_name}:{code} 라벨 규격 위반 ({entry.label!r}, 길이={len(entry.label)})"
-                )
-            # 1-2. 상세 연출 설명(description) 필수
-            if not entry.description or len(entry.description.strip()) < 5:
-                report.errors.append(f"[포즈규칙] {engine_name}:{code} description 누락 또는 너무 짧음")
+    for code, entry in sdxl_db.items():
+        # 1-1. 라벨 규격 (2~15글자)
+        if not (2 <= len(entry.label) <= 15):
+            report.errors.append(
+                f"[포즈규칙] sdxl:{code} 라벨 길이 규격 위반 ({entry.label!r}, 길이={len(entry.label)})"
+            )
+        # 1-2. 상세 연출 설명(description) 필수
+        if not entry.description or len(entry.description.strip()) < 5:
+            report.errors.append(f"[포즈규칙] sdxl:{code} description 누락 또는 너무 짧음")
 
-            # 1-3. 프롬프트 내 금지어 및 충돌 태그 검사
-            for p_field in (entry.prompt, entry.prompt_female, entry.prompt_otokonoko):
-                if not p_field:
-                    continue
-                low = p_field.lower()
-                for bad in (
-                    "introduction pose",
-                    "blank face",
-                    "featureless face",
-                    "mermaid",
-                    "fishtail",
-                    "chandelier",
-                    "curtains",
-                    "pulling collar down",
-                    "bra strap",
-                ):
-                    if re.search(r"\b" + re.escape(bad) + r"\b", low):
-                        report.errors.append(f"[포즈규칙] {engine_name}:{code} 금지어 포함 ({bad!r})")
-                if "parted lips" in low and "puckered lips" in low:
+        # 1-3. 프롬프트 내 금지어 및 충돌 태그 검사
+        for field_name, p_field in (
+            ("prompt", entry.prompt),
+            ("prompt_female", entry.prompt_female),
+            ("prompt_otokonoko", entry.prompt_otokonoko),
+        ):
+            if not p_field:
+                continue
+            low = p_field.lower()
+            for bad in (
+                "introduction pose",
+                "blank face",
+                "featureless face",
+                "mermaid",
+                "fishtail",
+                "chandelier",
+                "curtains",
+                "pulling collar down",
+                "bra strap",
+            ):
+                if re.search(r"\b" + re.escape(bad) + r"\b", low):
+                    report.errors.append(f"[포즈규칙] sdxl:{code} ({field_name}) 금지어 포함 ({bad!r})")
+            if "parted lips" in low and "puckered lips" in low:
+                report.errors.append(
+                    f"[포즈규칙] sdxl:{code} ({field_name}) 구강 왜곡 유발 동시 사용 (parted lips + puckered lips)"
+                )
+
+            # 오토코노코 전용 섹션 또는 prompt_otokonoko 필드에 1girl 포함 금지
+            if entry.section == "scenes_otokonoko" or field_name == "prompt_otokonoko":
+                if re.search(r"\b1girl\b", low):
                     report.errors.append(
-                        f"[포즈규칙] {engine_name}:{code} 구강 왜곡 유발 동시 사용 (parted lips + puckered lips)"
+                        f"[포즈규칙] sdxl:{code} ({field_name}) 오토코노코 프롬프트 내 1girl 하드코딩 금지 위반"
                     )
-                if entry.section in (
-                    "emotions",
-                    "poses",
-                    "h_scenes",
-                    "scenes_otokonoko",
-                    "spy_actions",
-                    "wuxia_actions",
-                ):
-                    if re.search(r"\b1girl\b", low):
-                        report.errors.append(
-                            f"[포즈규칙] {engine_name}:{code} 공용 섹션({entry.section}) 내 1girl 하드코딩 금지 위반"
-                        )
+            # 공용 섹션에서 prompt_otokonoko 분기가 없는데 기본 prompt에 1girl이 하드코딩된 경우 금지
+            elif entry.section in ("emotions", "poses", "romance", "spy_actions", "wuxia_actions"):
+                if field_name == "prompt" and not entry.prompt_otokonoko and re.search(r"\b1girl\b", low):
+                    report.errors.append(
+                        f"[포즈규칙] sdxl:{code} 공용 섹션({entry.section}) 내 prompt_otokonoko 분기 없이 1girl 하드코딩 금지 위반"
+                    )
 
     # -------------------------------------------------------------------------
     # [2단계] 캐릭터 JSON 외형·비율·가중치·슬롯 무결성 검사
@@ -183,14 +185,13 @@ def run_pregeneration_check(roster: str = "spy") -> PrecheckReport:
                 report.errors.append(f"[캐릭터규칙] {pfx}: sdxl_negative에 체액 차단 금지어 포함 ({bad_neg!r})")
 
         # ---------------------------------------------------------------------
-        # [3~5단계] 전 포즈(234종) 조립 시뮬레이션: 착의 고정 / H씬 알몸 전환 / 테마 의상 격리
+        # [3~5단계] 전 포즈 조립 시뮬레이션: 착의 고정 / H씬 알몸 전환 / 테마 의상 격리
         # ---------------------------------------------------------------------
         sig_tokens = _SPY_SIGNATURE_OUTFIT_TOKENS.get(pfx, ())
         for code, pose in sdxl_db.items():
             report.total_combinations_checked += 1
             slot = resolve_pose_outfit_slot(pose)
             pos_out, neg_out, is_nude = assemble_sdxl_prompt(char, pose)
-            flux_out, flux_nude = assemble_flux_prompt(char, pose)
 
             # BREAK 뒷단(캐릭터 본체 파트) 분리
             char_chunk = pos_out.split(" BREAK ")[1].lower() if " BREAK " in pos_out else pos_out.lower()
@@ -209,7 +210,7 @@ def run_pregeneration_check(roster: str = "spy") -> PrecheckReport:
 
             elif slot == "nude":
                 # [4단계] 탈의/H씬: 기본 의상 태그 0% 잔류 + 알몸 태그 주입 + [패치 A] 네거티브 주입 확인
-                if not is_nude or not flux_nude:
+                if not is_nude:
                     report.errors.append(f"[알몸전환] {pfx}:{code} nude 슬롯인데 is_nude=False 반환")
                 if "nude, completely nude" not in pos_out.lower():
                     report.errors.append(f"[알몸전환] {pfx}:{code} 긍정 프롬프트에 'nude, completely nude' 누락")
@@ -253,7 +254,7 @@ if __name__ == "__main__":
     print(f"  [플에파] 이미지 생산 5단계 사전 점검 보고서 (로스터: {rep.roster})")
     print("=" * 68)
     print(f"• 점검 캐릭터 수 : {rep.total_characters}명")
-    print(f"• 점검 포즈 DB 수: {rep.total_poses}종 (SDXL + FLUX)")
+    print(f"• 점검 포즈 DB 수: {rep.total_poses}종 (SDXL V2)")
     print(f"• 조립 시뮬레이션: 총 {rep.total_combinations_checked}개 조합 (착의 고정 / H씬 알몸 전환 / 테마 스왑)")
     print("-" * 68)
     if rep.passed:

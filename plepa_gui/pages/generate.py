@@ -79,7 +79,7 @@ def render_generate_page() -> None:
         "roster": DEFAULT_ROSTER,
         "selected_chars": [],
         "pose_selection_mode": "set",  # 'set' or 'custom'
-        "selected_pose_set": "genit_full",
+        "selected_pose_set": "unified_100",
         "custom_pose_expr": "000..019",
         "engine": DEFAULT_ENGINE,
         "sdxl_ckpt": conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
@@ -126,38 +126,32 @@ def render_generate_page() -> None:
 
             # 2. 포즈 선택 (세트 또는 표현식)
             with ui.row().classes("w-full items-center justify-between mb-1"):
-                ui.label("2. 포즈 선택").classes("text-xs font-bold text-amber-400")
-                ui.button("⭐ 기본 80종", icon="star", on_click=lambda: select_all_80_poses()).props(
+                ui.label("2. 포즈 선택 (V2 규격)").classes("text-xs font-bold text-amber-400")
+                ui.button("🏫 캠퍼스 106종", icon="school", on_click=lambda: select_genit_set("campus_106", "캠퍼스 표준 106종")).props(
                     "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
-                ).tooltip("000부터 159까지 기본 80종 포즈 일괄 선택")
+                ).tooltip("000~052, 060~063, 080~127, 130 (오토코노코 자동 +70 매핑)")
 
-            # Genit 상용 표준 퀵 셀렉트 버튼 바
+            # V2 상용 표준 퀵 셀렉트 버튼 바
             with ui.row().classes("w-full items-center gap-1.5 p-1.5 bg-indigo-950/40 border border-indigo-700/50 rounded-lg mb-2 flex-wrap"):
-                ui.label("👑 Genit 상용 팩:").classes("text-[11px] font-bold text-indigo-300 mr-1")
-                ui.button("풀패키지(114종)", on_click=lambda: select_genit_set("genit_full", "풀패키지 114종")).props(
+                ui.label("👑 V2 표준 팩:").classes("text-[11px] font-bold text-indigo-300 mr-1")
+                ui.button("여성 100종", on_click=lambda: select_genit_set("unified_100", "여성 100종 표준 패키지")).props(
                     "unelevated dense size=xs color=indigo-500 text-color=white font-bold"
-                ).tooltip("감정(24) + 행동(22) + 성인(46) + 의상(22) 전체 일괄 선택")
-                ui.button("🎭 감정 A", on_click=lambda: select_genit_set("genit_emotions", "감정 24종 (A0~A23)")).props(
+                ).tooltip("감정(20) + 일상(20) + 이벤트(8) + 로맨스(4) + H씬(48)")
+                ui.button("마스터(148종)", on_click=lambda: select_genit_set("unified_152", "통합 마스터 148종")).props(
                     "outline dense size=xs color=indigo-300"
+                ).tooltip("여성 100종 + 오토코노코 성인 48종 전체")
+                ui.button("🔥 성인 H씬(52)", on_click=lambda: select_genit_set("h_scenes_52", "여성 성인 H씬 52종 (060~063, 080~127)")).props(
+                    "outline dense size=xs color=rose-300"
                 )
-                ui.button("🏃 행동 B", on_click=lambda: select_genit_set("genit_actions", "행동 22종 (B1~B22)")).props(
-                    "outline dense size=xs color=indigo-300"
-                )
-                ui.button("🔥 성인 N", on_click=lambda: select_genit_set("genit_adult", "성인 46종 (N1~N74)")).props(
-                    "outline dense size=xs color=indigo-300"
+                ui.button("🎀 오토코노코 H(52)", on_click=lambda: select_genit_set("otokonoko_52", "오토코노코 성인 52종 (060~063, 150~197)")).props(
+                    "outline dense size=xs color=pink-300"
                 )
                 ui.button("⚔️ 무협 C", on_click=lambda: select_genit_set("wuxia_actions", "무협 전용 10종 (C1~C10)")).props(
                     "unelevated dense size=xs color=amber-700 text-color=white font-bold"
                 ).tooltip("운기수련, 전투대치, 초식공격, 내공주입, 주화입마, 경공 등")
-                ui.button("🏮 무협풀팩(102)", on_click=lambda: select_genit_set("wuxia_full", "무협 통합 풀패키지 102종")).props(
-                    "unelevated dense size=xs color=emerald-700 text-color=white font-bold"
-                ).tooltip("감정(24) + 행동(22) + 성인(46) + 무협정예(10) 통합 생성")
                 ui.button("🔫 첩보 S", on_click=lambda: select_genit_set("spy_actions", "첩보 살롱 전용 10종 (S1~S10)")).props(
                     "unelevated dense size=xs color=rose-700 text-color=white font-bold"
                 ).tooltip("기밀열람, 권총겨눔, 밀실심문, 자백제투여, 살롱접대, 도청감시, 잠입수색, 포박위기, 밀실거래, 밀실독욕")
-                ui.button("🕵️ 첩보풀팩(102)", on_click=lambda: select_genit_set("spy_full", "첩보 살롱 통합 풀패키지 102종")).props(
-                    "unelevated dense size=xs color=purple-700 text-color=white font-bold"
-                ).tooltip("감정(24) + 행동(22) + 성인(46) + 첩보전용(10) 통합 생성")
                 ui.button("👗 의상 D/E/F", on_click=lambda: select_genit_set("genit_costumes", "의상 팩 22종 (수영복/BDSM/바니걸)")).props(
                     "outline dense size=xs color=indigo-300"
                 )
