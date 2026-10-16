@@ -13,7 +13,7 @@
 ```mermaid
 flowchart TD
     subgraph Browser["1. 클라이언트 (브라우저 http://localhost:8080)"]
-        Header["Global Header (components/header.py)\n- 로고 / 로스터 선택 / 7대 탭 / ComfyUI 상태"]
+        Header["Global Header (components/header.py)\n- 로고 / 🩺 시스템 진단 모달 / 로스터 선택 / 7대 탭 / ComfyUI 상태"]
         Router["라우팅 엔진 (app.py)"]
         
         P1["🚀 /generate (배치 생성 제어실)"]
@@ -24,6 +24,7 @@ flowchart TD
         P6["🏞️ /backgrounds (배경 프리셋 관리자)"]
         P7["⚙️ /settings (시스템 환경설정)"]
     end
+
 
     subgraph Actions["2. 핵심 1클릭 액션 (pages/gallery.py)"]
         ActReroll["🔄 1클릭 새 시드 리롤"]
@@ -157,14 +158,16 @@ flowchart TD
 
 ---
 
-### 2.7 ⚙️ 시스템 환경설정 (`/settings` - [`pages/settings.py`](../plepa_gui/pages/settings.py))
+### 2.7 ⚙️ 시스템 환경설정 & 🩺 통합 진단 (`/settings` & 상단 헤더)
 - **주요 기능**:
+  - **🩺 상단 헤더 [진단] 원클릭 모달 (`open_diagnostics_dialog`)**:
+    - 어느 페이지에서든 상단 헤더의 `[🩺 진단]` 버튼을 누르면 10단계 시스템 통합 무결성 진단(`HealthService`)이 실시간 가동됩니다.
+    - 10개 코어(포즈 DB, 캐릭터, 파이프라인, 사전 점검, 워크플로우 그래프, 검열 엔진, Auto-QC, 에셋 감사, 삼위일체 동기화, ComfyUI 연결)의 합격/주의/결함 여부와 소요 시간을 실시간 배지로 표시합니다.
   - **ComfyUI 서버 설정**:
     - Host URL(`127.0.0.1`), Port(`8188`) 설정 및 실시간 연결 상태 핑(Ping) 테스트.
   - **기본 생성 파라미터 설정**:
     - 기본 체크포인트 모델명, 샘플러 알고리즘, 스케줄러, 기본 해상도(`832x1216`), CFG Scale(`5.0`), Steps(`28`).
-  - **시스템 자가 진단 실행**:
-    - 웹 UI 내에서 `run_self_test()`(듀얼 엔진 9개 항목 무결성 자가 진단)를 실행하고 실시간 리포트 출력.
+
 
 ---
 

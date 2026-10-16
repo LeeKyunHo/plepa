@@ -12,11 +12,13 @@
 
 | 점검 목적 | CLI 명령어 | 정상 기대 결과 |
 | :--- | :--- | :--- |
+| **시스템 10단계 통합 무결성 진단 (`--test`)** | `python batch_generator.py --test` | `10 PASS, 0 WARN, 0 FAIL (10개 코어 무결성 100%)` |
+| **1초 에셋 완비율 전수 감사 (`--audit`)** | `python batch_generator.py -r campus --audit` | 캐릭터별 보유/기대 수량, 완비율, 백업 현황 표 출력 |
 | **ComfyUI 서버 헬스체크** | `Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" \| ConvertTo-Json -Depth 3` | GPU/VRAM JSON 응답 반환 |
-| **시스템 자체 진단 (`--test`)** | `python batch_generator.py --test` | `[PASS] 모든 진단 검사 항목을 통과했습니다.` |
 | **로스터 5단계 사전점검** | `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus` | `✔ [PASS] 위반 사항 0건!` |
 | **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
-| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `57 passed` |
+| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `66 passed` |
+
 
 ---
 
