@@ -629,6 +629,25 @@
       - **키로(kiro) 전파 동기화**: `scripts/sync_to_kiro.py --modules-only`를 통해 `kiro/generator/qa_validator.py`에도 최신 최적화 코드 즉시 반영 완료.
     - **전수 검증**:
       - `tests/test_qa_validator.py`에 `test_cpu_thread_limit_and_priority` 신설, 전체 `pytest` 71 passed.
+53. **외부 AI(Gemini Notebook 등) 지속 코드 리뷰용 3-Tier 컨텍스트 스냅샷 생성기(`scripts/export_context.py`) 구축 및 Stale Context 원천 차단 (ADR 2026-10-16)**
+    - **배경 및 외부 AI 협업 한계**:
+      - 하루에도 수차례 포즈 DB, 프롬프트 파이프라인, 검열 로직, 에셋 상태가 고도화되는 환경에서, 외부 AI(Gemini Notebook 등)에 정적 문서를 업로드해 두면 AI가 '과거 정보(Stale Context)'를 참조하여 이미 폐지된 구버전 포즈 번호(200번 등)나 파라미터를 제시하는 환각 문제가 발생함.
+      - 사람이 손으로 작성한 요약본 역시 작성 즉시 부패하므로, 코드베이스(AST)와 Git 상태로부터 기계적으로 100% 자동 추출하는 단일 진실 공급원(SSOT) 스냅샷 생성 도구가 요구됨.
+    - **해결 조치 및 기술 불변식**:
+      - **3-Tier 정보 계층 및 고정 파일명 체계**:
+        - `00_README_FOR_AI.md`: 외부 AI 읽기 규칙, `snapshot_id`, 폐지 목록(Deprecation Ledger), 직전 대비 변경분(Delta).
+        - `10_TIER1_CONSTITUTION.md`: V2 포즈 대역 규격, `GEMINI.md` 에이전트 헌법, 역대 ADR 목록, 고정 아키텍처 사실.
+        - `20_TIER2_CORE_LOGIC.md`: 6대 Mutator 체인, `GenerationParams` AST 37개 필드, 결과 데이터 모델, QC 및 검열 임계값, 포즈 DB 요약.
+        - `30_TIER3_RUNTIME.md`: Git HEAD 및 미커밋 현황, `plepa ↔ kiro` 드리프트 상태(파일 해시/포즈 수량/로스터 차이), Auto-QC 결함 이력, 로스터별 에셋 달성률.
+        - `40_CORE_CODE.md`: (`--full-code` 옵션 시) 핵심 엔진 모듈 파이썬 원문 자동 번들링.
+      - **Stale Context 원천 방지 4대 안전장치**:
+        - 1) 파일명을 고정하여 재실행 시 덮어쓰기 방식으로 Notebook에 과거 파일이 누적되지 않도록 강제.
+        - 2) 모든 파일 헤더에 고유한 `snapshot_id`(`{날짜}-plepa@{sha}-kiro@{sha}`)를 각인하여 AI에게 "ID가 다른 이전 대화 기억 폐기" 명시.
+        - 3) 폐지 목록(Deprecation Ledger)을 상단에 명시하여 구버전 80종, 200번 슬롯, FLUX 관련 잔재 참조 원천 차단.
+        - 4) 이전 스냅샷의 해시를 `.hashes.json`에 보관하여 직전 실행 대비 변경된 파일 목록(Delta) 자동 추적.
+    - **전수 검증**:
+      - `tests/test_export_context.py` 신설 (AST 파싱, 데이터클래스 필드 추출, Tier 1/2/3 및 README 렌더링 무결성 등 6개 케이스 100% PASS).
+      - `.gitignore`에 `context_snapshot/` 등록하여 로컬 추출물이 깃에 불필요하게 커밋되는 현상 방지.
 
 ---
 

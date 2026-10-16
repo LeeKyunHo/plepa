@@ -93,12 +93,14 @@
   #   캐릭터별 및 전체 최종 종합 보고서에 결함 포즈 목록과 사유를 정리하고,
   #   포즈 프롬프트 수정을 권장하는 안내 메시지를 자동 출력합니다.
 
-  ── [8] 1초 에셋 전수 감사, 사전 점검(Precheck) 및 kiro 동기화 ───────────────
+  ── [8] 1초 에셋 전수 감사, 사전 점검(Precheck), kiro 동기화 및 AI 스냅샷 ────
   python batch_generator.py -r campus --audit                       # 캠퍼스 로스터 전원 완비율, 누락 포즈, _origin 백업 1초 감사
   .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus     # 캠퍼스 로스터 5단계 사전 점검
   .\.venv\Scripts\python.exe -m plepa_engine.precheck -r spy        # 스파이 로스터 5단계 사전 점검
   python scripts/sync_to_kiro.py --dry-run                          # kiro 동기화 시뮬레이션
   python scripts/sync_to_kiro.py                                    # plepa 골든 스테이트를 kiro로 전파
+  python scripts/export_context.py                                  # 외부 AI(Gemini Notebook 등) 코드 리뷰용 3-Tier 스냅샷 생성
+  python scripts/export_context.py --full-code                      # Tier 2 핵심 모듈 원문(40_CORE_CODE.md) 포함 번들링
 
 
 ==============================================================================
