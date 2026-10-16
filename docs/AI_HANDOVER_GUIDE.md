@@ -597,6 +597,23 @@
       - **전수 검증**:
         - `python -m plepa_engine.precheck -r campus`: 6인 × 313포즈 = 1,878조합 100% 무결점 통과.
         - `pytest -q`: 66 passed.
+51. **Auto-QC 리롤 한도 초과 결함 추적, 캐릭터별/전체 종합 요약 보고서 및 포즈 수정 권장 리포트 시스템 (ADR 2026-10-16)**
+    - **배경 및 사용자 요구사항**:
+      1. Auto-QC(모브 얼굴 노출, 색감 과포화, 9등신 기형 등) 및 엄격 검열 QC에서 최대 재시도(기본 3회) 후에도 불량이 해결되지 않으면 이미지가 강제 저장된 채 다음 작업으로 넘어가므로, 장시간의 대량 배치 작업 중 어떤 포즈에 결함이 발생했는지 콘솔 로그에 묻혀 파악하기 어려웠음.
+      2. 캐릭터별 에셋 제작 완료 시점에 몇 번 이미지가 문제였는지 카운트와 목록을 보고하고, 전체 캐릭터 배치가 완료되었을 때 종합적으로 "누구의 몇 번 이미지가 문제였는지"를 정리하여 포즈 프롬프트 수정을 권장하는 안내 피드백이 강력히 요구됨.
+    - **해결 조치 및 기술 불변식**:
+      - **데이터 모델 확장 (`models.py`)**:
+        - `GenerationTarget`: `character_prefix: Optional[str]`, `character_name: Optional[str]` 필드 신설하여 결과 객체에서 역추적 가능.
+        - `GenerationResult`: `qc_passed: bool = True`, `qc_reason: Optional[str] = None`, `retries: int = 0` 신설하여 QC 결함 이력을 영구 보존.
+      - **엔진 런타임 추적 및 매니페스트 저장 (`generation_service.py`)**:
+        - `max_attempts` 소진 시 `final_qc_fail` 사유를 보존하고 `GenerationResult`에 `qc_passed=False`와 결함 사유를 명시적으로 바인딩.
+        - `_save_batch_manifest`: 개별 아이템에 `qc_passed`, `qc_reason`, `retries`를 기록하고 최상위에 `qc_defect_count` 필드를 추가하여 사후 감사(`--audit`) 및 갤러리 GUI 연동 토대 마련.
+      - **캐릭터별 및 전체 종합 요약 보고서 (`reporter.py`)**:
+        - `print_batch_summary`: 개별 캐릭터 완료 시 `Auto-QC 결함(재시도 한도 초과)` 카운트, 결함 포즈 목록(`[{code}] {label}: {reason}`) 및 캐릭터 단위 프롬프트 점검 권장문 출력.
+        - `print_overall_batch_summary`: 모든 캐릭터 배치 종료 시 총 작업자/총 이미지 통계, 결함 발생 캐릭터별 포즈 목록 정리, 📢 `[에이전트 권장 조치사항]` 안내 박스를 자동 렌더링. 결함이 없을 경우 축하 클린 메시지 출력.
+      - **전수 검증**:
+        - `tests/test_qc_summary.py` 신규 4개 테스트 케이스 작성 및 전체 `pytest` 70 passed.
+        - `python -m plepa_engine.precheck -r campus`: 1,878조합 100% PASS.
 
 ---
 

@@ -88,6 +88,10 @@
   python batch_generator.py -r campus -c aya -p 000..019 --reuse-seed
   # • 필수 성인 노출/결합 씬에서 성기 미탐지(구도 이탈) 시 자동 리롤:
   python batch_generator.py -r campus -c aya -p h_scenes --censor --strict-censor-qc
+  # • Auto-QC 리롤 한도 초과 결함 추적 및 배치 최종 포즈 수정 권장 종합 보고서:
+  #   최대 재시도(3회) 후에도 Auto-QC를 통과하지 못한 이미지는 강제 저장 후
+  #   캐릭터별 및 전체 최종 종합 보고서에 결함 포즈 목록과 사유를 정리하고,
+  #   포즈 프롬프트 수정을 권장하는 안내 메시지를 자동 출력합니다.
 
   ── [8] 1초 에셋 전수 감사, 사전 점검(Precheck) 및 kiro 동기화 ───────────────
   python batch_generator.py -r campus --audit                       # 캠퍼스 로스터 전원 완비율, 누락 포즈, _origin 백업 1초 감사
