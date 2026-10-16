@@ -13,26 +13,37 @@
 | 점검 목적 | CLI 명령어 | 정상 기대 결과 |
 | :--- | :--- | :--- |
 | **시스템 10단계 통합 무결성 진단 (`--test`)** | `python batch_generator.py --test` | `10 PASS, 0 WARN, 0 FAIL (10개 코어 무결성 100%)` |
-| **1초 에셋 완비율 전수 감사 (`--audit`)** | `python batch_generator.py -r campus --audit` | 캐릭터별 보유/기대 수량, 완비율, 백업 현황 표 출력 |
+| **전 로스터 1초 에셋 전수 감사 (`-r all --audit`)** | `python batch_generator.py -r all --audit` | 전체 10개 로스터별 보유/기대 수량, 완비율 표 연속 출력 |
+| **단일 로스터 1초 에셋 전수 감사 (`--audit`)** | `python batch_generator.py -r campus --audit` | 캐릭터별 보유/기대 수량, 완비율, 백업 현황 표 출력 |
 | **ComfyUI 서버 헬스체크** | `Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" \| ConvertTo-Json -Depth 3` | GPU/VRAM JSON 응답 반환 |
 | **로스터 5단계 사전점검** | `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus` | `✔ [PASS] 위반 사항 0건!` |
 | **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
-| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `66 passed` |
+| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `78 passed` |
 
 
 ---
 
 ## 🚀 2. 에셋 생성 및 검열 실전 명령어 (`batch_generator.py`)
 
-### 2.1 단일/다중 캐릭터 배치 생성
+### 2.1 전 로스터 / 단일 / 다중 캐릭터 배치 생성
 ```powershell
-# 1) 캠퍼스 로스터 전체 캐릭터 V2 106종 일괄 생성 + 화이트 실루엣 자동 검열
+# 0) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 기준점 1장(000) 초고속 생성 (외형 전수 점검)
+python batch_generator.py -r all --all-chars -p 000 --censor
+
+# 1) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 10대 골든샘플(sample10) 일괄 생성
+python batch_generator.py -r all --all-chars -p sample10 --censor
+
+# 2) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 V2 108종 풀 에셋 일괄 생성
+python batch_generator.py -r all --all-chars -p all --censor
+
+# 3) 단일 로스터 전체 캐릭터 일괄 생성 + 화이트 실루엣 자동 검열
+python batch_generator.py -r sns --all-chars -p all --censor
 python batch_generator.py -r campus --all-chars -p all --censor
 
-# 2) 특정 캐릭터의 특정 포즈만 강제 덮어쓰기 재생성 (--overwrite / -f)
+# 4) 특정 캐릭터의 특정 포즈만 강제 덮어쓰기 재생성 (--overwrite / -f)
 python batch_generator.py -r campus -c aya -p 051,060,061 --overwrite --censor
 
-# 3) 오토코노코 캐릭터 생성 (여성 번호 080~130 입력 시 자동으로 +70 대칭 번호 150~200으로 변환)
+# 5) 오토코노코 캐릭터 생성 (여성 번호 080~130 입력 시 자동으로 +70 대칭 번호 150~200으로 변환)
 python batch_generator.py -r campus -c mio -p all --censor
 ```
 
