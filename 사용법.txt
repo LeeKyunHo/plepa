@@ -20,14 +20,23 @@
   1. 가장 많이 쓰는 명령어 (원클릭 치트시트)
 ==============================================================================
 
-  ── [0] ⚡ 실전 핵심 치트코드 원클릭 모음 (골든 시드 · 엄격 리롤 · 전수 감사 · 시스템 진단) ──
+  ── [0] ⚡ 실전 핵심 치트코드 원클릭 모음 (전 로스터 순회 · 골든 시드 · 엄격 리롤 · 전수 감사) ──
+  # 🌐 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 기준점 1장(000)만 초고속 생성 (외형/화풍 전수 점검)
+  python batch_generator.py -r all --all-chars -p 000 --censor
+
+  # 👑 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 10대 골든샘플(sample10) 일괄 생성
+  python batch_generator.py -r all --all-chars -p sample10 --censor
+
+  # 📊 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 에셋 완비율/누락 포즈 1초 전수 감사 리포트
+  python batch_generator.py -r all --audit
+
   # 🩺 시스템 10단계 통합 무결성 자가 진단 (포즈DB, 캐릭터, 파이프라인, 검열, Auto-QC, ComfyUI 등 전수 점검)
   python batch_generator.py --test
 
-  # 🎯 1초 에셋 전수 감사 (완비율, 누락 포즈, _origin 백업 현황 1초 출력)
+  # 🎯 단일 로스터 1초 에셋 전수 감사 (완비율, 누락 포즈, _origin 백업 현황 1초 출력)
   python batch_generator.py -r campus --audit
 
-  # 🌟 10대 대표 골든 샘플러 (핵심 10종만 고속 검증: 감정2, 일상2, 스킨십1, 이벤트2, 로맨스1, H씬2)
+  # 🌟 10대 대표 골든 샘플러 (핵심 10종만 고속 검증: 000, 020, 044, 052, 060, 080, 088, 102, 130, 131)
   python batch_generator.py -r campus -c aya -p sample10
 
   # 🔒 골든 시드 고정 재생성 (기존 매니페스트 시드를 고정해 동일 구도로 의상/프롬프트만 미세 재생성)
@@ -42,7 +51,9 @@
 
 
   ── [1] 작품(로스터) 전체 캐릭터 V2 표준 에셋 일괄 생성 + 자동 실루엣 검열 ──
-  python batch_generator.py -r campus --all-chars -p all --censor   # 캠퍼스 6인 전원 (1인당 106종)
+  python batch_generator.py -r all --all-chars -p all --censor      # 등록된 전 로스터(10개) 전원 일괄 생성
+  python batch_generator.py -r sns --all-chars -p all --censor      # SNS 인스타 인플루언서 4인 전원 (108종)
+  python batch_generator.py -r campus --all-chars -p all --censor   # 캠퍼스 6인 전원 (1인당 108종)
   python batch_generator.py -r spy --all-chars -p all --censor      # 스파이 살롱 10인 전원
   python batch_generator.py -r maid --all-chars -p all --censor     # 메이드 카페 전원
 
@@ -58,7 +69,7 @@
   python batch_generator.py -r campus -c aya -p "080..091" --censor # 정상위/후배위/기승위 구간만 생성
 
   ── [4] 섹션별 및 골든 샘플러 묶음 생성 ─────────────────────────────────────
-  python batch_generator.py -r campus -c aya -p sample10           # 10대 대표 골든 샘플러 (감정2, 일상2, 스킨십1, 이벤트2, 로맨스1, H씬2)
+  python batch_generator.py -r campus -c aya -p sample10           # 10대 대표 골든 샘플러 (000, 020, 044, 052, 060, 080, 088, 102, 130, 131)
   python batch_generator.py -r campus -c aya -p emotions            # 000~019 감정 20종
   python batch_generator.py -r campus -c aya -p poses               # 020~039 일상/스킨십 20종
   python batch_generator.py -r campus -c aya -p events              # 040~052 이벤트 씬

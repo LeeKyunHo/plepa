@@ -21,6 +21,17 @@ class CharacterService:
     def __init__(self, repo: Optional[Repository] = None):
         self.repo = repo or default_repo
 
+    def list_rosters(self) -> List[str]:
+        """등록된 캐릭터가 최소 1개 이상 존재하는 로스터 폴더 이름 목록을 정렬하여 반환합니다."""
+        rosters: List[str] = []
+        if not PROJECTS_DIR.exists():
+            return rosters
+        for p in sorted(PROJECTS_DIR.iterdir()):
+            if p.is_dir() and (p / "characters").is_dir():
+                if any((p / "characters").glob("*.json")):
+                    rosters.append(p.name)
+        return rosters
+
     def list_characters(self, roster: Optional[str] = None) -> List[Tuple[str, CharacterSchema, Path]]:
         """
         등록된 캐릭터 목록 반환.

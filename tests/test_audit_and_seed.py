@@ -16,10 +16,10 @@ from plepa_engine.services.pose_service import default_pose_service
 
 
 def test_sample10_pose_resolution():
-    """sample10 포즈 세트가 10개 대표 포즈 코드로 정상 해석되는지 검증."""
+    """sample10 포즈 세트가 10대 대표 골든샘플 포즈 코드로 정상 해석되는지 검증."""
     db = default_pose_service.load_pose_db(engine="sdxl")
     resolved = default_pose_service.resolve_pose_codes("sample10", db)
-    expected = ["000", "002", "020", "024", "034", "040", "044", "060", "080", "088"]
+    expected = ["000", "020", "044", "052", "060", "080", "088", "102", "130", "131"]
     assert resolved == expected, f"sample10 해석 실패: {resolved} != {expected}"
 
 
@@ -77,3 +77,13 @@ def test_manifest_seed_merge(tmp_path: Path):
     items_by_code = {it["code"]: it for it in data2["items"]}
     assert items_by_code["000"]["seed"] == 12345
     assert items_by_code["002"]["seed"] == 67890
+
+
+def test_list_rosters_and_all_flag():
+    """CharacterService.list_rosters()가 등록된 활성 로스터 목록을 정상 탐색하는지 검증."""
+    from plepa_engine.services.character_service import default_character_service
+    rosters = default_character_service.list_rosters()
+    assert isinstance(rosters, list)
+    assert len(rosters) >= 10
+    for expected in ["campus", "default", "don", "hey", "maid", "man", "murim", "sns", "spy", "ykn"]:
+        assert expected in rosters, f"로스터 '{expected}'가 탐색되지 않음: {rosters}"

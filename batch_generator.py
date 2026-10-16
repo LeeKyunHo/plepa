@@ -58,6 +58,11 @@ def load_pose_db(engine: str = "flux", path: Optional[Path] = None) -> Dict[str,
     return default_pose_service.load_pose_db(engine=engine, path=path)
 
 
+def get_available_rosters() -> List[str]:
+    """등록된 캐릭터가 존재하는 모든 로스터 폴더 목록 반환."""
+    return default_character_service.list_rosters()
+
+
 def find_character(char_name: str, roster: str = DEFAULT_ROSTER) -> tuple[CharacterConfig, str]:
     """캐릭터 JSON 설정 로드 및 로스터 자동 탐색."""
     return default_character_service.find_character(char_name=char_name, roster=roster)
@@ -235,13 +240,31 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     args = parser.parse_args(argv)
 
+    is_all_rosters = args.roster.strip().lower() in ("all", "전체", "*")
+
     if args.test:
         return run_self_test()
 
     if args.audit:
+        if is_all_rosters:
+            rosters = get_available_rosters()
+            print("=" * 95)
+            print(f"  [플에파 전 로스터 전수 감사 리포트] 총 {len(rosters)}개 로스터: {', '.join(rosters)}")
+            print("=" * 95)
+            for r in rosters:
+                print_roster_audit(roster=r)
+            return 0
         return print_roster_audit(roster=args.roster)
 
     if args.list:
+        if is_all_rosters:
+            rosters = get_available_rosters()
+            print("=" * 82)
+            print(f"  [플에파 전 로스터 캐릭터 목록] 총 {len(rosters)}개 로스터: {', '.join(rosters)}")
+            print("=" * 82)
+            for r in rosters:
+                print_roster_characters(roster=r)
+            return 0
         return print_roster_characters(roster=args.roster)
 
     if args.all_chars:
@@ -249,62 +272,91 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if not args.character:
         parser.print_help()
-        print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다 (캐릭터 목록 확인: -l / --list).")
+        if is_all_rosters:
+            print("\n[오류] 전 로스터(-r all) 실행 시 --all-chars (또는 -c all) 옵션으로 대상 캐릭터를 지정해야 합니다.")
+        else:
+            print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다 (캐릭터 목록 확인: -l / --list).")
         return 1
 
-    params = GenerationParams(
-        character_expr=args.character,
-        pose_expr=args.pose,
-        roster=args.roster,
-        profile=args.profile,
-        engine=args.engine,
-        ckpt=args.ckpt,
-        bg=args.bg,
-        bg_preset=args.bg_preset,
-        custom_pos=args.custom_pos,
-        custom_neg=args.custom_neg,
-        ref_image=args.ref_image,
-        ref_weight=args.ref_weight,
-        no_ref=args.no_ref,
-        mock=args.mock,
-        dry_run=args.dry_run,
-        overwrite=args.overwrite,
-        face_detailer=args.face_detailer,
-        upscale=args.upscale,
-        steps=args.steps,
-        cfg=args.cfg,
-        sampler=args.sampler,
-        scheduler=args.scheduler,
-        unet=args.unet,
-        lora=args.lora,
-        lora_weight=args.lora_weight,
-        width=args.width,
-        height=args.height,
-        naming=args.naming,
-        censor=(args.censor or args.censor_only),
-        censor_style=args.censor_style,
-        censor_targets=args.censor_targets,
-        censor_only=args.censor_only,
-        ckpt_tag=args.ckpt_tag,
-        auto_qc=(not args.no_qc),
-        max_retries=args.max_retries,
-        reuse_seed=args.reuse_seed,
-        strict_censor_qc=args.strict_censor_qc,
-    )
+    target_rosters = get_available_rosters() if is_all_rosters else [args.roster]
+    if not target_rosters:
+        print(f"\n[오류] 생성 대상 로스터를 찾을 수 없습니다: {args.roster}")
+        return 1
 
-    try:
-        results = default_generation_service.run_batch(params)
-    except ConnectionError as ce:
-        print(f"\n[오류] {ce}")
-        print("(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
-        return 1
-    except Exception as e:
-        print(f"\n[실행 오류] {e}")
-        return 1
+    total_rosters = len(target_rosters)
+    if is_all_rosters:
+        print("=" * 82)
+        print(f"  [플에파 전 로스터 일괄 순회] 대상 로스터: {', '.join(target_rosters)} (총 {total_rosters}개)")
+        print("=" * 82)
+
+    all_results: List[GenerationResult] = []
+
+    for r_idx, target_roster in enumerate(target_rosters, 1):
+        if is_all_rosters:
+            print(f"\n▶ [{r_idx}/{total_rosters}] 로스터 작업 시작: '{target_roster}'")
+
+        params = GenerationParams(
+            character_expr=args.character,
+            pose_expr=args.pose,
+            roster=target_roster,
+            profile=args.profile,
+            engine=args.engine,
+            ckpt=args.ckpt,
+            bg=args.bg,
+            bg_preset=args.bg_preset,
+            custom_pos=args.custom_pos,
+            custom_neg=args.custom_neg,
+            ref_image=args.ref_image,
+            ref_weight=args.ref_weight,
+            no_ref=args.no_ref,
+            mock=args.mock,
+            dry_run=args.dry_run,
+            overwrite=args.overwrite,
+            face_detailer=args.face_detailer,
+            upscale=args.upscale,
+            steps=args.steps,
+            cfg=args.cfg,
+            sampler=args.sampler,
+            scheduler=args.scheduler,
+            unet=args.unet,
+            lora=args.lora,
+            lora_weight=args.lora_weight,
+            width=args.width,
+            height=args.height,
+            naming=args.naming,
+            censor=(args.censor or args.censor_only),
+            censor_style=args.censor_style,
+            censor_targets=args.censor_targets,
+            censor_only=args.censor_only,
+            ckpt_tag=args.ckpt_tag,
+            auto_qc=(not args.no_qc),
+            max_retries=args.max_retries,
+            reuse_seed=args.reuse_seed,
+            strict_censor_qc=args.strict_censor_qc,
+        )
+
+        try:
+            results = default_generation_service.run_batch(params)
+            all_results.extend(results)
+        except ConnectionError as ce:
+            print(f"\n[오류] {ce}")
+            print("(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
+            return 1
+        except Exception as e:
+            if is_all_rosters:
+                print(f"  [경고] 로스터 '{target_roster}' 생성 중 오류 발생: {e}")
+            else:
+                print(f"\n[실행 오류] {e}")
+                return 1
+
+    if is_all_rosters:
+        print("\n" + "=" * 82)
+        print(f"  [플에파 전 로스터 일괄 순회 완료] 총 {len(all_results)}건 처리 완료")
+        print("=" * 82)
 
     # 마지막 에셋 폴더 탐색기 열기
-    if not args.dry_run and results:
-        for r in reversed(results):
+    if not args.dry_run and all_results:
+        for r in reversed(all_results):
             if r.image_path and r.image_path.parent.exists():
                 open_in_explorer(r.image_path.parent.parent)
                 break
