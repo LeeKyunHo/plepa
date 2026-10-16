@@ -286,12 +286,14 @@ class AssetService:
             present_codes = set(assets_by_code.keys())
             missing_codes = [c for c in char_expected_codes if c not in present_codes]
 
-            # 구버전 라벨 불일치 수 계산
+            # 구버전 라벨 불일치 수 계산 (공백 및 언더스코어 정규화 비교)
             outdated_labels = 0
             for code, a in assets_by_code.items():
                 if code in pose_db:
                     canonical_label = pose_db[code].label
-                    if a["label"] and canonical_label and a["label"] != canonical_label:
+                    clean_file_label = (a["label"] or "").replace("_", "").replace(" ", "")
+                    clean_canon_label = (canonical_label or "").replace("_", "").replace(" ", "")
+                    if clean_file_label and clean_canon_label and clean_file_label != clean_canon_label:
                         outdated_labels += 1
 
             # _origin 백업 보유 수 계산
