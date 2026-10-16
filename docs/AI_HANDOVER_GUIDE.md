@@ -1058,7 +1058,11 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   2. **리아(ria) 허리선 긴 생머리 롱헤어 영구 고정**:
      - `appearance.face_and_hair` 및 `sdxl_positive`/`sdxl_nude_positive`에 `((long sleek straight black hair, waist-length hair:1.25))` 주입.
      - 네거티브에 `((short hair, bob cut, pixie cut, medium hair, shoulder-length hair:1.45))` 차단벽을 구축하여 130번 층계참 롱헤어 스타일로 전 포즈 통일.
+  3. **특수 이벤트 H씬 장소 특화 구도 및 거의 탈의된 의상 디폴트 확립**:
+     - 130번(층계참): 단순 서 있는 구도를 배제하고 벽을 양손으로 짚고 상체를 숙인 후방 밀착 자세(`leaning forward with hands pressed flat against concrete wall, doggystyle from behind`)로 고정.
+     - 131번(차안): 조수석 대신 차량 뒷좌석에 누워 진행되는 백시트 결합 구도(`lying on back across car rear seat, missionary position on car backseat`)로 개편.
+     - 모든 특수 이벤트 H씬(130~135)에 대부분 탈의된 의상(`clothing mostly stripped, nearly naked`), 절정 표정, 체액 하이라이트를 필수 디폴트로 일원화.
 - **결과**:
   - SNS 로스터 4인 전원의 `_origin` 백업 완비율 100% 달성 (감사 리포트 정상 확인).
-  - 리아(`ria`)의 `000`, `020`, `034`, `044`, `060`, `131` 재생성을 통해 허리선 롱헤어 일관성 시각적 검증 완료.
+  - 리아(`ria`)의 `000`, `020`, `034`, `044`, `060`, `130`, `131` 재생성을 통해 허리선 롱헤어 및 장소 특화 구도 시각적 검증 완료.
 
