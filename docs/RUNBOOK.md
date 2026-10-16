@@ -1,209 +1,120 @@
-# 📘 [PLEPA Operations Runbook] 운영 및 긴급 조치 런북
+# 📘 [PLEPA Operations & Troubleshooting Runbook] 운영 및 장애 진단 통합 런북
 
-> **문서 목적**: ComfyUI 로컬 서버 관리, 이미지 에셋 배치 생성 파이프라인 가동, VRAM 부족(OOM) 대응 등 **실무 운영 명령어와 긴급 트러블슈팅 매뉴얼**을 제공합니다.  
-> **기반 사양**: Windows 11, Python 3.13, NVIDIA RTX 4060 Ti 8GB + 48GB System RAM, ComfyUI (포트 `8188`).
-
----
-
-## 🚀 1. ComfyUI 서버 기동 및 상태 확인
-
-### 1.1 서버 헬스체크 (PowerShell)
-ComfyUI 서버가 정상 응답하는지 확인합니다:
-```powershell
-# 서버 상태 및 VRAM 정보 확인
-Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" | ConvertTo-Json -Depth 3
-```
-
-### 1.2 서버 기동 (미실행 시)
-ComfyUI 설치 폴더에서 실행:
-```powershell
-# 기본 실행 커맨드 (LowVRAM / MedVRAM 자동 최적화 모드)
-python main.py --port 8188 --preview-method auto
-```
+> **문서 목적**: ComfyUI 로컬 서버 관리, 이미지 에셋 배치 생성 파이프라인(`batch_generator.py`) 가동, VRAM 부족(OOM) 대응 및 **6대 계층별 장애 진단 체크리스트**를 하나로 통합한 실무 운영 매뉴얼(SOP)입니다.  
+> **기반 사양**: Windows 11, Python, NVIDIA RTX 4060 Ti 8GB + 48GB System RAM, ComfyUI (`127.0.0.1:8188`).  
+> **표준 엔진**: **SDXL 단일 파이프라인** (`unholyDesireMixSinister_v90.safetensors`, CFG `5.0`, Steps `28`, `dpmpp_2m` + `karras`, `832x1216`).
 
 ---
 
-## ⚡ 2. 에셋 생성 실전 명령어 (flux_batch_generator.py)
+## ⚡ 1. 10초 원클릭 긴급 진단 명령어
 
-> 💡 **기본 엔진 안내 (Default: SDXL)**:  
-> 2026-10-05 부로 **SDXL (`meichiILIghtMIXV1_meichiILUstMIXV1.safetensors`)**이 기본 엔진으로 자동 적용됩니다.  
-> 별도의 `--engine` 옵션을 지정하지 않아도 장당 15초의 고속 2D 미소녀 애니 셀화 모드로 생성되며, FLUX 모드가 필요할 때만 `--engine flux`를 명시합니다.
+장애나 이상 징후 발생 시 터미널에서 아래 명령어들을 순서대로 실행하여 문제 지점을 즉시 격리합니다:
 
-### 2.1 단일 캐릭터 포즈 테스트 생성
-신규 캐릭터의 얼굴과 의상 무결성을 단 1장으로 빠르게 검증할 때 사용합니다:
+| 점검 목적 | CLI 명령어 | 정상 기대 결과 |
+| :--- | :--- | :--- |
+| **ComfyUI 서버 헬스체크** | `Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" \| ConvertTo-Json -Depth 3` | GPU/VRAM JSON 응답 반환 |
+| **시스템 자체 진단 (`--test`)** | `python batch_generator.py --test` | `[PASS] 모든 진단 검사 항목을 통과했습니다.` |
+| **로스터 5단계 사전점검** | `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus` | `✔ [PASS] 위반 사항 0건!` |
+| **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
+| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `57 passed` |
+
+---
+
+## 🚀 2. 에셋 생성 및 검열 실전 명령어 (`batch_generator.py`)
+
+### 2.1 단일/다중 캐릭터 배치 생성
 ```powershell
-# 1) man 로스터의 cyr 캐릭터 기본 포즈(000) 1장 생성
-python flux_batch_generator.py -r man -c cyr -p 000
+# 1) 캠퍼스 로스터 전체 캐릭터 V2 106종 일괄 생성 + 화이트 실루엣 자동 검열
+python batch_generator.py -r campus --all-chars -p all --censor
 
-# 2) maid 로스터의 hana 캐릭터 단일 생성
-python flux_batch_generator.py -r maid -c hana -p 000
+# 2) 특정 캐릭터의 특정 포즈만 강제 덮어쓰기 재생성 (--overwrite / -f)
+python batch_generator.py -r campus -c aya -p 051,060,061 --overwrite --censor
+
+# 3) 오토코노코 캐릭터 생성 (여성 번호 080~130 입력 시 자동으로 +70 대칭 번호 150~200으로 변환)
+python batch_generator.py -r campus -c mio -p all --censor
 ```
 
-### 2.2 특정 결함 포즈 강제 덮어쓰기 재생성 (`--overwrite`)
-프롬프트를 수정한 후 기존 파일을 교체할 때 사용합니다:
+### 2.2 정밀 외곽선 화이트 실루엣 자동 검열 (`--censor` & `--censor-only`)
+- **동작 원리**: `dghs-imgutils` 성기 감지(`penis` + `pussy`) + 고환 하단 35% 확장 + MobileSAM 외곽선 추출 + 멀티스케일 2x 타일 스캔 + `POSE_SAFE_ANCHORS` 안전 앵커 폴백.
+- **저장 구조**:
+  - 검열이 완료된 파일은 `projects/{roster}/assets/{char}/` 내의 해당 파일을 직접 교체합니다.
+  - 노출이 감지되어 검열된 파일의 **무검열 원본**은 `projects/{roster}/assets/{char}_origin/` 폴더에 동일한 파일명으로 안전하게 격리 백업됩니다.
 ```powershell
-# 포즈 014(유혹) 및 019(키스)만 지정하여 강제 재생성
-python flux_batch_generator.py -r man -c all -p 014,019 --overwrite
+# 1) 이미 생성된 에셋 폴더에 대해 ComfyUI 호출 없이 소급 검열만 단독 실행 (장당 0.2초)
+python batch_generator.py -r campus -c aya -p all --censor-only
+
+# 2) 검열 스타일 지정 (기본값: white_silhouette)
+python batch_generator.py -r campus -c aya -p 080 --censor --censor-style white_silhouette
 ```
 
-### 2.3 섹션별 배치 생성
+### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프
+- 생성 직후 [`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py)가 4대 결함(① 색감 과포화 Color Burn, ② 남성 모브 분신 2명 이상, ③ 단독/여운 씬 남성 난입, ④ 9~10등신 기형 장신)을 검사하여 불량 시 새 시드로 자동 재시도합니다(기본 3회):
 ```powershell
-# 1) 감정/표정 에셋 20종만 순차 생성 (000~019)
-python flux_batch_generator.py -r maid -c hana -p emotions
+# 최대 재시도 횟수 5회로 상향
+python batch_generator.py -r campus -c aya -p 034 --max-retries 5
 
-# 2) 일상 상호작용 포즈 20종 생성 (020~039)
-python flux_batch_generator.py -r maid -c hana -p poses
+# Auto-QC 비활성화 (1회 강제 생성)
+python batch_generator.py -r campus -c aya -p 034 --no-qc
 ```
 
-### 2.4 파이프라인 무결성 사전 검증 (Dry-Run / Mock)
-ComfyUI GPU를 쓰지 않고 프롬프트 조립 결과와 파일 I/O를 0.01초 만에 검증합니다:
+### 2.4 형제 프로젝트(`kiro`) 양방향 시너지 동기화
 ```powershell
-# 1) 프롬프트 조립 및 파일명 점검 (GPU 미사용)
-python flux_batch_generator.py -r maid -c hana -p 000..005 --dry-run
+# 1) 변경점 사전 시뮬레이션 (--dry-run)
+python scripts/sync_to_kiro.py --dry-run
 
-# 2) 가상 더미 WebP 생성으로 전체 I/O 무결성 검증
-python flux_batch_generator.py -r maid -c all -p 000 --mock
-```
-
-### 2.5 에셋 파일명 형식 선택 (`--naming`)
-- 기본값: `hybrid` (`prefix_000_라벨.webp` 형식으로 생성하여 탐색기 정렬 및 한글 직관성 동시 확보)
-```powershell
-# 1) 하이브리드 표준형 (기본 권장값)
-python flux_batch_generator.py -r maid -c han -p 000 --naming hybrid
-# 결과: han_000_평상.webp
-
-# 2) 순수 한글형 (간결성)
-python flux_batch_generator.py -r maid -c han -p 000 --naming label
-# 결과: han_평상.webp
-
-# 3) 기존 번호형 (Kiro 3자리 번호 하위 호환)
-python flux_batch_generator.py -r maid -c han -p 000 --naming code
-# 결과: han_000.webp
-```
-
-### 2.6 2D 일러스트 자동 검열 (`--censor`)
-- 나체/성인 씬 생성 시 무검열 원본(`assets/{prefix}/`)과 함께 대등한 위치의 독립 폴더(`censor_{prefix}/`)에 화이트 실루엣 검열본을 1:1 동일한 파일명으로 보존합니다.
-- H-씬(오토코노코 포함)에만 자동 적용되며, 일반 착의 일상 씬은 자동 스킵됩니다.
-```powershell
-# 1) 화이트 실루엣 (기본 표준값: MobileSAM 기반 외곽선 곡률 100% 보존 및 순백색 #FFFFFF 채우기)
-python batch_generator.py -c aya -p 055,065,068 --censor
-
-# 2) 블랙 실루엣 (순수 검은색 #000000 외곽선 실루엣)
-python batch_generator.py -c aya -p 065 --censor --censor-style silhouette
-
-# 3) 와이드 솔리드 바 (18% 적응형 캡슐 마진)
-python batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style bar
-
-# 4) 그림자 실루엣 (형태 윤곽선 보존 및 내부 선화 디테일 흑회색 음영 덮개)
-python batch_generator.py -r maid -c ren,han -p 144,052 --censor --censor-style shadow
-```
-
-### 2.7 기존 생성 에셋 초고속 소급 검열 (`--censor-only`)
-- ComfyUI GPU 호출 없이 이미 디스크에 생성된 이미지들을 0.2초 만에 스캔하여 `censor_{prefix}/` 폴더로 검열본만 일괄 생성합니다:
-```powershell
-# aya 캐릭터의 전체 에셋 중 H-씬만 선별하여 즉시 검열본 추출
-python batch_generator.py -c aya -p all --censor-only
-```
-
-### 2.8 Auto-QC 결함 자동 감지 및 리롤 루프
-- `imgutils.detect` 초고속 AI 감지기로 인원수 초과(1인 씬 2명 이상, 2인 씬 3명 이상), 손 증식(3개/5개 이상), 남성 얼굴 노출 등을 감지하여 자동으로 새 랜덤 시드로 재시도합니다 (기본 3회):
-```powershell
-# 1) 기본 생성 (Auto-QC 자동 가동, 최대 3회 재시도)
-python batch_generator.py -c aya -p 034,055
-
-# 2) 최대 재시도 횟수 상향
-python batch_generator.py -c aya -p 034 --max-retries 5
-
-# 3) Auto-QC 비활성화 (순수 1회 강제 생성)
-python batch_generator.py -c aya -p 034 --no-qc
-```
-
-### 2.9 레퍼런스(IP-Adapter) 동작 제어 (`--no_ref` / `--use-ref`)
-- **기본값**: **비활성화 (`no_ref=True`)**. ComfyUI IP-Adapter로 인한 형태 왜곡, 색상 번짐, 평면화(Flat)를 방지하고 순수 체크포인트 본연의 고화질 디테일을 보장합니다.
-```powershell
-# 1) 기본 생성 (IP-Adapter 없이 순수 고화질 프롬프트 생성 - 기본 동작)
-python flux_batch_generator.py -r hey -c mal -p 034
-
-# 2) 레퍼런스 강제 활성화가 필요할 때 (--use-ref)
-python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
-```
-
-### 2.10 Face Detailer 제어 (`--no-face-detailer`)
-- **기본 동작**: 자동 활성화 (SEGS Ordered Filter 훅을 통해 화면 내 면적 1위 얼굴만 단독 필터링하여 여주인공만 고속 보정).
-- 포즈 구도 테스트나 초고속 초안 생성(장당 10~11초)을 위해 Face Detailer를 끄고자 할 때 사용:
-```powershell
-python batch_generator.py -c aya -p 034 --no-face-detailer
-```
-
-### 2.9 사후 단독 4K AI 초해상화 (`plepa_upscaler.py`)
-- 이미 생성이 완료된 기존 WebP 이미지를 디퓨전 재연산 없이 순수 AI 초해상화 모델(`4x-UltraSharp.pth`)로 2~4초 만에 `4096x6144` 초고화질로 단독 업스케일합니다.
-- 구도, 표정, 손가락 왜곡 0% 무손실 보존.
-```powershell
-# 1) 특정 이미지 파일 단독 4K 업스케일 (기본: _4k.webp 접미사로 별도 생성)
-python plepa_upscaler.py -i "projects/hey/assets/mal/mal_034_가슴파묻힘.webp"
-
-# 2) 특정 캐릭터의 특정 포즈 에셋 업스케일
-python plepa_upscaler.py -r hey -c mal -p 034
-
-# 3) 기존 원본 파일을 4K 화질로 직접 덮어쓰기 교체 (-f / --overwrite)
-python plepa_upscaler.py -r hey -c mal -p 034 --overwrite
-
-# 4) 웹 GUI 라이트박스에서 원클릭 업스케일:
-#    http://localhost:8080/gallery ➔ 이미지 클릭 ➔ 상단 [✨ 4K AI 업스케일] 버튼 클릭
-```
-
-### 2.9 다이내믹 의상 스왑 및 확장 테마 팩 생성 (`-p D`, `-p swimsuit`)
-- 캐릭터의 외모(얼굴/헤어/체형)는 온전히 보존한 채, 기존 교복을 완전 박멸하고 수영복/바니걸 등 테마 의상으로 자동 갈아입혀 생성합니다.
-- `themes/` 또는 `projects/{roster}/themes/`의 JSON 테마 팩을 자동 로드합니다.
-```powershell
-# 1) 특정 캐릭터의 수영복 테마(D01~D07) 7종 일괄 생성
-python flux_batch_generator.py -r hey -c mal -p D
-
-# 2) 수영복 특정 포즈 단일 생성 (D01 수영복전신)
-python flux_batch_generator.py -r hey -c mal -p D01
-
-# 3) 사전 점검 (GPU 미사용 프롬프트 및 의상 스왑 확인)
-python flux_batch_generator.py -r hey -c mal -p D --dry-run
+# 2) 포즈 DB, 오버라이드, 배경 매핑, censor.py, qa_validator.py 전파 실행
+python scripts/sync_to_kiro.py
 ```
 
 ---
 
-## 🚨 3. 긴급 장애 조치 매뉴얼 (Emergency Troubleshooting)
+## 🛠️ 3. 6대 계층별 장애 진단 체크리스트 (Troubleshooting SOP)
 
-> 💡 **심층 계층별 진단 가이드**: 시스템 전체 6대 기능 계층별 세부 진단 트리 및 체크리스트는 **[`TROUBLESHOOTING_CHECKLIST.md`](TROUBLESHOOTING_CHECKLIST.md)**를 참조하십시오.
-
-### 3.0 원클릭 10초 긴급 무결성 점검
-```powershell
-# 1) 전체 시스템 무결성 자체 진단 (FLUX/SDXL 포즈 DB, 프롬프트 조립, 워크플로우 전수 검사)
-python flux_batch_generator.py --test
-
-# 2) ComfyUI 통신 포트 상태 점검
-Test-NetConnection -ComputerName 127.0.0.1 -Port 8188
-
-# 3) GPU 미사용 프롬프트 출력 점검
-python flux_batch_generator.py -r hey -c mal -p 034 --dry-run
+```mermaid
+flowchart TD
+    Start["⚠️ 이미지 생성 또는 품질 이상 발생"] --> Q1{"1. ComfyUI 연결/VRAM 에러인가?<br>(Port 8188 / CUDA OOM)"}
+    Q1 -->|"YES"| L1["[계층 1] 인프라 점검<br>• ComfyUI 재기동 / /free 호출<br>• 체크포인트 파일명 확인"]
+    Q1 -->|"NO"| Q2{"2. JSON 로드/포즈 누락인가?"}
+    Q2 -->|"YES"| L2["[계층 2] 데이터 점검<br>• precheck.py 실행<br>• .plepa_backup 복원"]
+    Q2 -->|"NO"| Q3{"3. 구도 파괴 / 의상 잔류 / 태그 충돌인가?"}
+    Q3 -->|"YES"| L3["[계층 3] 프롬프트 파이프라인 점검<br>• --dry-run 확인<br>• SanitizerMutator 충돌 로그 확인"]
+    Q3 -->|"NO"| Q4{"4. 색감 과포화(Color Burn) / 뷰파인더 테두리인가?"}
+    Q4 -->|"YES"| L4["[계층 4] 가중치 & 워크플로우 점검<br>• clamp_sdxl_weights (1.15/1.25)<br>• 단일 CLIPTextEncode 및 CFG 5.0 확인"]
+    Q4 -->|"NO"| L5["[계층 5~6] 검열(censor.py) & 웹 GUI(8080) 점검"]
 ```
 
-### 3.1 VRAM 부족 에러 (CUDA Out of Memory) 발생 시
-RTX 4060 Ti 8GB 환경에서 고해상도 생성 중 VRAM이 부족할 때 조치법:
-1. **해상도 강제 조정**: 기본 `896x1152`를 `--width 768 --height 1024`로 낮춰 실행.
-2. **LoRA 또는 업스케일러 일시 비활성화**:
-   ```powershell
-   python flux_batch_generator.py -r maid -c hana -p 000 --no_ref
-   ```
-3. **ComfyUI 모델 캐시 비우기 (메모리 해제)**:
-   ```powershell
-   Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8188/free" -Body '{"unload_models": true, "free_memory": true}' -ContentType "application/json"
-   ```
+### 🔌 [계층 1] 인프라 & ComfyUI 서버 (VRAM / 포트 8188)
+- **증상**: `ConnectionRefusedError` 또는 `CUDA out of memory`.
+- **조치**:
+  1. ComfyUI 메모리 즉시 반환:
+     ```powershell
+     Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8188/free" -Body '{"unload_models": true, "free_memory": true}' -ContentType "application/json"
+     ```
+  2. 좀비 프로세스 강제 종료:
+     ```powershell
+     Get-NetTCPConnection -LocalPort 8188 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+     ```
 
-### 3.2 포트 충돌 또는 프로세스 먹통 시
-8188 포트가 좀비 프로세스에 물려 있을 때 강제 종료:
-```powershell
-# 8188 포트를 점유 중인 프로세스 PID 확인 및 강제 종료
-Get-NetTCPConnection -LocalPort 8188 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
-```
+### 💾 [계층 2] 데이터 & 스키마 무결성 (`data/` & `projects/`)
+- **증상**: `JSONDecodeError`, 특정 포즈 번호 누락, 성별 프롬프트 오주입.
+- **조치**:
+  1. `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r {roster}` 실행하여 누락 필드 및 규칙 위반 코드 즉시 검출.
+  2. 파일 손상 시 `.plepa_backup/` 디렉토리의 직전 타임스탬프 백업본으로 복원.
 
-### 3.3 Face Detailer 얼굴 미검출 시
-`face_yolov8n.pt`가 인식을 못 하고 스킵될 때:
-- `projects/{roster}/characters/{prefix}.json`의 얼굴 묘사 태그가 너무 어둡거나 가려졌는지 확인.
-- `--face-detailer` 옵션 플래그가 켜져 있는지 확인.
+### 🧠 [계층 3] 프롬프트 파이프라인 (`plepa_engine/prompt_pipeline.py`)
+- **증상**: 탈의 씬에서 평상복이 안 벗겨지거나, 여주인공 네거티브 태그가 사라짐.
+- **조치**:
+  1. 포즈의 `required_outfit`이 `"nude"`로 지정되어 있는지, 캐릭터 JSON에 `sdxl_nude_positive`가 존재하는지 확인.
+  2. `SanitizerMutator`가 `[WARN] 프롬프트 태그 충돌 감지`를 출력할 경우, 긍정 프롬프트와 캐릭터 네거티브에 동일 단어가 중복 기입되었는지 점검 (모브 `BREAK` 블록 및 구조 제어 태그는 자동 보호됨).
+
+### 🎨 [계층 4] 색감 과포화(Color Burn) 및 뷰파인더(`⌜ ⌝`) 방어
+- **증상**: 피부가 붉게 타거나 화면 네 모서리에 카메라 뷰파인더(`⌜ ⌝`)가 찍힘.
+- **조치**:
+  1. `clamp_sdxl_weights()`가 긍정 가중치 `1.15`, 부정 가중치 `1.25` 상한선을 유지하는지 확인.
+  2. 포즈 프롬프트 내에 `camera` 단어가 있으면 `viewer`로 치환하고, 네거티브에 `camera frame, viewfinder, HUD`가 포함되었는지 확인.
+
+### 🛡️ [계층 5] 실루엣 검열 (`plepa_engine/censor.py`)
+- **증상**: 검열 후 입술/혀가 하얗게 지워지거나, 성인 결합 씬에서 성기가 미탐지됨.
+- **조치**:
+  1. `censor.py`의 상반신 얼굴/입술 보호 가드(`y < H * 0.42`) 및 적색/분홍색 입술·혀 HSV 마스킹 + Hole Filling이 활성화되어 있는지 확인.
+  2. 결합 씬(`080~130`, `150~200`)에서 1차+2차 멀티스케일 감지가 모두 실패할 경우 `POSE_SAFE_ANCHORS` 안전 앵커 보조 스캔이 동작하며, 콘솔의 `[WARN] 성인 결합 씬 성기 미탐지` 로그를 통해 확인 가능.

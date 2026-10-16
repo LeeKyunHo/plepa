@@ -13,14 +13,37 @@
 
 > [!IMPORTANT]
 > **🚨 AI 에이전트 불변 규칙: FLUX 완전 배제 및 토큰 최적화 (Token Optimization)**
-> - 플에파는 현재 **SDXL(NTR MIX XIII 등) 단일 파이프라인**으로 영구 일원화되었습니다 (ADR-53).
+> - 플에파는 현재 **SDXL(`unholyDesireMixSinister_v90.safetensors`) 단일 파이프라인**으로 영구 일원화되었습니다.
 > - FLUX 관련 파일은 `data/legacy/` 및 `plepa_engine/legacy/`로 완전히 격리·아카이브되었습니다.
 > - **포즈 추가/수정, 기능 수정 시 FLUX 관련 파일(`data/legacy/flux_pose_database.json`, `flux_*.py` 등)을 일체 열람하거나 수정·동기화하지 마십시오.**
 > - 모든 포즈의 단일 진실 공급원(SSOT)은 오직 **[`data/sdxl_pose_database.json`](../data/sdxl_pose_database.json)** 하나뿐입니다.
 
 ---
 
-## 1. 프로젝트 탄생 배경 및 계보
+## ⚡ 0. 현행 골든 스테이트 10대 핵심 불변식 (Golden State Quick Summary)
+
+> 새로 투입된 AI 에이전트는 과거 시행착오 이력(ADR 1~39)을 읽기 전에 반드시 아래 **현재 유효한 10대 표준 규격**을 기준으로 판단하십시오:
+
+1. **단일 메인 엔트리포인트**: [`batch_generator.py`](../batch_generator.py) (`flux_batch_generator.py`는 18줄 하위 호환 래퍼).
+2. **SDXL 단일 엔진 파라미터**: `unholyDesireMixSinister_v90.safetensors` | `832x1216` | `CFG 5.0` | `Steps 28` | `dpmpp_2m` + `karras` | 단일 `CLIPTextEncode` 노드 (이중 conditioning 결합 금지).
+3. **V2 포즈 아키텍처 (`000~200`)**: 감정(`000~019`) + 일상(`020~039`) + 이벤트(`040~052`) + 로맨스(`060~063`) + 여성 성인(`080~127`, `130`) + 오토코노코 성인(`150~197`, `200`).
+4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 매핑되며, `GenerationService`가 자동 변환함.
+5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
+   - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
+6. **정밀 외곽선 화이트 실루엣 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py))**:
+   - 기본 스타일 `white_silhouette` (`#FFFFFF`), `penis` + `pussy` 동시 감지 + 고환 하단 35% 확장 + MobileSAM 외곽선 추출 + 멀티스케일 2x 타일 스캔 + 입술/혀 HSV 보호 & Hole Filling + `POSE_SAFE_ANCHORS` 폴백.
+7. **검열 에셋 저장 및 원본 백업 구조**:
+   - 검열본은 `projects/{roster}/assets/{char}/`에 직접 교체 저장되며, 노출이 감지된 성인/탈의 씬의 무검열 원본은 `projects/{roster}/assets/{char}_origin/`에 자동 보존됨.
+8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
+   - ① 색감 과포화(Color Burn), ② 남성 모브 분신(2명 이상), ③ 여운/단독 씬 남성 난입, ④ 9~10등신 기형 장신 감지 시 시드를 바꿔 자동 리롤(기본 최대 3회).
+9. **배치 생산 전 5단계 사전 점검 ([`plepa_engine/precheck.py`](../plepa_engine/precheck.py))**:
+   - `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r {roster}` 실행 시 위반 0건(`PASS`) 유지 필수.
+10. **형제 프로젝트(`kiro`) 동기화 브릿지 ([`scripts/sync_to_kiro.py`](../scripts/sync_to_kiro.py))**:
+    - `plepa`에서 검증된 포즈 DB, 오버라이드, 배경 매핑, `censor.py`, `qa_validator.py`를 `C:\Users\rbsgh\kiro`로 즉시 전파.
+
+---
+
+## 1. 프로젝트 탄생 배경 및 계보 (초기 역사 기록)
 
 - **기존 키로(Kiro) 프로젝트**: Stable Diffusion XL(Unholy Nova AI 체크포인트) 기반의 Danbooru 태그, BREAK 2청크 문법, ControlNet IP-Adapter를 사용하던 80종 캐릭터 챗봇 에셋 배치 생성기.
 - **플에파(PLEPA)의 분리 신설**:
@@ -885,4 +908,19 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - `CharacterConfig.with_profile(profile_name)`을 신설하여 `copy.deepcopy` 기반의 안전한 불변 복제본을 반환. 기존 `apply_profile()`도 내부적으로 원본을 건드리지 않고 필드를 안전 갱신하도록 정비.
 - **결과**: Zero-Regression(기존 프롬프트 결과물 100% 일치)을 엄격히 검증 완료하였으며, 대규모 배치 생성 속도 향상, 노드/세계관 확장의 유연성 확보 및 메모리 안정성 극대화 달성.
 
-
+### ADR-55: V2 포즈 아키텍처 완성, `plepa`↔`kiro` 양방향 시너지 및 `SanitizerMutator` 모브 격리 불변식 (2026-10-16)
+- **배경**:
+  - V2 포즈 번호 체계(`000~200`, 오토코노코 `+70` 오프셋 대칭)와 정밀 외곽선 화이트 실루엣 검열(`white_silhouette` + `{char}_origin/` 원본 보존), Auto-QC 4대 감지기를 `plepa` 골든 스테이트로 확립하고 형제 프로젝트 `kiro`와 양방향으로 강점을 교환할 필요성 대두.
+  - 코드 리뷰 과정에서 `SanitizerMutator`가 남성 모브 `BREAK` 블록의 `(bare shoulders:1.1)`을 여주인공 본체와 충돌하는 태그로 오판해 여주인공 네거티브의 `bare shoulders`를 삭제하거나, 다중 태그 괄호 그룹(`((1boy, 2boys...:1.35))`)의 여는 괄호 조각을 잘라내어 괄호 구문이 깨지는 엣지 케이스가 발견됨.
+- **결정 사항**:
+  1. **`SanitizerMutator` 모브 `BREAK` 격리 및 보호 태그(`_PROTECTED_CONTROL_TAGS`) 불변식**:
+     - 긍정/부정 태그 충돌 검사 시 남성 모브 전용 `BREAK` 블록(`BREAK (single faceless male...`)을 제외한 피사체 본체 프롬프트만 기준으로 삼음.
+     - 파이프라인이 인원수·시선 제어를 위해 의도적으로 넣는 태그(`1boy`, `2boys`, `1girl`, `2girls`, `male`, `masculine`, `solo`, `looking at viewer`, `looking straight at camera`) 및 괄호 짝이 맞지 않는 다중 태그 그룹 조각(`chunk.count("(") != chunk.count(")")`)은 자동 제거 대상에서 영구 보호.
+     - `TwoPersonMobMutator`에서 오토코노코(`ctx.is_otokonoko`)의 단독/여운 씬 조립 시 네거티브에 `1boy, male`을 주입하지 않고 `2boys, partner, faceless male`만 차단하도록 분기.
+  2. **공용 포즈(`033`, `034`) 오토코노코 성별 분기 완비 및 `precheck.py` V2 단일화**:
+     - 공용 섹션(`emotions`, `poses`, `romance`) 내 `1girl`이 포함된 모든 포즈(`014`, `033`, `034`, `060`, `061`)에 `prompt_otokonoko` 분기를 의무화하고, `precheck.py`에서 레거시 FLUX 검사를 제거하여 SDXL V2 단일 기준으로 전수 검증.
+  3. **`scripts/sync_to_kiro.py` 자동 전파 브릿지 및 `POSE_SAFE_ANCHORS` 안전 앵커 폴백**:
+     - `plepa`의 V2 포즈 DB, 오버라이드, 배경 매핑, `censor.py`, `qa_validator.py`를 `kiro`에 1초 만에 동기화하는 브릿지 구축 및 성인 결합 씬 미탐지 시 체위별 안전 앵커(`POSE_SAFE_ANCHORS`) 보조 스캔 도입.
+  4. **현업 Diátaxis 4분할 문서 체계 및 9요소 AI 파이프라인 플레이북 개발일지 표준화**:
+     - 완료/중복 문서 12종과 구버전 스크립트 9종을 `docs/archive/`, `scripts/archive/`로 격리하고, 개발일지에 구동 환경 스냅샷·시각적 합격 판정 기준·부작용 주의사항·상위 지침 격상 상태를 필수 기입하도록 표준화.
+- **결과**: `pytest` 57개 테스트 및 `campus`/`spy` 사전점검(총 4,874조합) 위반 0건 100% 통과.

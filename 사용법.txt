@@ -1,230 +1,95 @@
 ==============================================================================
-  플에파 (batch_generator.py / flux_batch_generator.py) — 사용자 가이드 & 치트시트
-  사람이 읽고 바로 실행하는 간편 매뉴얼 (키로 100% 문법 호환, SDXL 단일 표준화)
+  플에파 (batch_generator.py) — 사용자 가이드 & 원클릭 실행 치트시트 (V2 표준)
+  사람이 읽고 바로 복사해 실행하는 간편 매뉴얼 (키로 100% 문법 호환, SDXL 단일 표준)
 ==============================================================================
-
 
   [이 문서의 성격과 목적]
-  • 목적: 사용자가 터미널에서 복사해 바로 실행할 수 있는 명령어와 최신 기능 치트시트 제공.
-  • 엔진: SDXL (Unholy Desire Mix Sinister v9.0) 기본 가동 (장당 15초, 검증된 정통 2D 미소녀 작화).
-  • 특징: 키로(Kiro) 명령어 문법(--char, --codes, --all-chars) 100% 동일하게 호환 지원!
-  • 다른 문서 안내:
-    - 🎨 프롬프트/태그/BREAK/캐릭터 제작법 → 캐릭터_포즈_제작_규칙.md
-    - 🤖 AI/도구용 전체 CLI/JSON/API 명세서 → 플에파_기능명세.md
-    - 📘 시스템 아키텍처 및 의사결정(ADR)  → AI_HANDOVER_GUIDE.md
-    - 📋 전체 80종 포즈 카탈로그          → POSE_CATALOG.md
+  • 목적: 터미널에서 복사해 바로 실행할 수 있는 실전 명령어와 최신 V2 기능 치트시트 제공.
+  • 엔진: SDXL (unholyDesireMixSinister_v90.safetensors) 단일 표준 가동 (CFG 5.0, 28 Steps, 장당 약 11.8초).
+  • 특징: 키로(Kiro) 명령어 문법(--char, --codes, --all-chars) 및 플에파 단축 문법(-c, -p) 100% 호환!
+  • 연계 핵심 문서 (Diátaxis 4분할 체계):
+    - 🛠️ 운영 및 장애 진단 런북          → docs/RUNBOOK.md
+    - 🎨 캐릭터/포즈 제작 & 사전점검 규칙 → docs/캐릭터_포즈_제작_규칙.md
+    - ⚙️ 파이프라인/엔진 기술 명세서      → docs/플에파_기능명세.md
+    - 📋 V2 포즈 카탈로그 (000~200)      → docs/POSE_CATALOG.md
+    - 📘 아키텍처 결정(ADR) & 인계서     → docs/AI_HANDOVER_GUIDE.md
 
 
 ==============================================================================
-  📑 목차 (Table of Contents)
+  1. 가장 많이 쓰는 명령어 (원클릭 치트시트)
 ==============================================================================
 
-  1. 가장 많이 쓰는 명령어 (치트시트)
-     - 원클릭 로스터 전체 생성, 단일 캐릭터, 특정 번호 생성
-     - [신규] 와이드 솔리드 바 자동 검열본 동시 생성 (--censor)
-     - [신규] 파일명 하이브리드 명명법 (--naming hybrid)
-     - 여러 캐릭터 / 여러 프로젝트 연달아 순차 생성 (세미콜론 및 ForEach)
-     - 배경 분위기 변경 및 특정 파일 강제 재생성 (--overwrite)
-     - 미리보기(dry-run) 및 시스템 자체 점검(test)
-  2. 주요 로스터 (작품 프로젝트) 안내
-     - maid(메이드 카페/저택), don(돈/럭셔리), man(오피스), default
-  3. ComfyUI 환경 및 모델 안내
-     - Unholy Desire Mix Sinister v9.0 (기본 메인, 정통 2D 미소녀 작화), Face Detailer, 4x Upscale
-  4. 배경 시스템과 이벤트 씬 활용법
-     - 감정 씬 배경 자동 치환 및 이벤트 씬 활용
-  5. 참조 이미지(IP-Adapter)로 캐릭터 일관성 유지하기
-  6. 젠잇(Genit)에 에셋 등록하기
-  7. 문제 해결 (FAQ & Troubleshooting)
+  ── [1] 작품(로스터) 전체 캐릭터 V2 표준 에셋 일괄 생성 + 자동 실루엣 검열 ──
+  python batch_generator.py -r campus --all-chars -p all --censor   # 캠퍼스 6인 전원 (1인당 106종)
+  python batch_generator.py -r spy --all-chars -p all --censor      # 스파이 살롱 10인 전원
+  python batch_generator.py -r maid --all-chars -p all --censor     # 메이드 카페 전원
 
+  ── [2] 단일 캐릭터 전체 에셋 생성 (성별에 맞춰 +70 오토코노코 자동 매핑) ──
+  python batch_generator.py -r campus -c aya -p all --censor        # 아야 (여성 106종: 000~052, 060~063, 080~127, 130)
+  python batch_generator.py -r campus -c mio -p all --censor        # 미오 (오토코노코 106종: 000~052, 060~063, 150~197, 200)
+  python batch_generator.py -r spy -c chl -p all --censor           # 클로에 전체 생성
 
-==============================================================================
-  1. 가장 많이 쓰는 명령어 (치트시트)
-==============================================================================
+  ── [3] 특정 포즈 번호만 골라서 생성 / 강제 덮어쓰기 (--overwrite / -f) ──
+  python batch_generator.py -r campus -c aya -p 000                 # 000번(평상) 단 1장 테스트
+  python batch_generator.py -r campus -c aya -p 051,060,061 -f      # 051(공부/연구), 060(딥키스), 061(알몸키스) 재생성
+  python batch_generator.py -r campus -c all -p 130 -f --censor     # 6인 전원 130번(오토코노코는 200번 자동변환) 재생성
+  python batch_generator.py -r campus -c aya -p "080..091" --censor # 정상위/후배위/기승위 구간만 생성
 
-  ★ 기본 엔진: 별도 옵션 없이 실행하면 자동으로 SDXL (Unholy Desire Mix Sinister v9.0) 모드로 초고속 생성됩니다.
-  ★ 화질 특화: 검증된 2D 애니 얼굴 미형 + Face Detailer 고해상도 안면 리터칭 지원.
-  ★ 키로 호환: --char, --codes, --all-chars 문법과 플에파 문법(-c, -p) 둘 다 완벽 지원합니다.
+  ── [4] 섹션별 묶음 생성 (V2 포즈 섹션 단축 키워드) ─────────────────────────
+  python batch_generator.py -r campus -c aya -p emotions            # 000~019 감정 20종
+  python batch_generator.py -r campus -c aya -p poses               # 020~039 일상/스킨십 20종
+  python batch_generator.py -r campus -c aya -p events              # 040~052 이벤트 씬
+  python batch_generator.py -r campus -c aya -p romance             # 060~063 로맨스 4종 (딥키스/알몸키스/허그/스푸닝)
+  python batch_generator.py -r campus -c aya -p h_scenes --censor   # 080~130 여성 성인 H씬
+  python batch_generator.py -r campus -c mio -p otokonoko --censor  # 150~200 오토코노코 성인 H씬
 
-  ── [원클릭] 작품 전체 캐릭터 생성 (공통 152종 + 로스터 전용 테마 10종 = 총 162종) ──
-  python flux_batch_generator.py -r spy --all-chars        # 스파이 로스터 10인 전원 (1인당 162종 일괄)
-  python flux_batch_generator.py -r maid --all-chars       # 메이드 전체 캐릭터 (162종)
-  python flux_batch_generator.py -r don --all-chars        # don 전체 캐릭터
-  python flux_batch_generator.py -r man --all-chars        # man 전체 캐릭터
+  ── [5] 특수 테마 의상 팩 개별 생성 (수영복 / 바니걸 / BDSM / 무협 / 첩보) ──
+  python batch_generator.py -r spy -c chl -p swimsuit               # 수영복 팩 7종 (D01~D07)
+  python batch_generator.py -r spy -c chl -p bunny                  # 바니걸 팩 7종 (F01~F07)
+  python batch_generator.py -r spy -c chl -p bdsm                   # BDSM 팩 8종 (E01~E08)
+  python batch_generator.py -r spy -c chl -p S01..S10               # 첩보 살롱 전용 10종
 
-  ── 단일 캐릭터 전체 에셋 생성 (로스터 테마 자동 결합) ────────────────────
-  python flux_batch_generator.py -r spy --char chl         # 클로에 (공통 152 + 첩보 10 = 162종)
-  python flux_batch_generator.py -r maid --char han        # 하나 전체 생성
-  python flux_batch_generator.py -r maid --char ren        # 렌(오토코노코) 전체 생성
-  python flux_batch_generator.py -r maid -c rub            # 루비 전체 생성 (-c 동일)
-
-  ── 특수 테마 팩 및 코스튬 팩 개별 생성 (기본 전체 생성에서 분리) ─────────
-  python flux_batch_generator.py -r spy -c chl -p swimsuit # 수영복 팩 7종 (D01~D07)
-  python flux_batch_generator.py -r spy -c chl -p bunny    # 바니걸 팩 7종 (F01~F07)
-  python flux_batch_generator.py -r spy -c chl -p bdsm     # BDSM 팩 8종 (E01~E08)
-
-  ── 특정 번호만 골라서 생성 ────────────────────────────────────────────────
-  python flux_batch_generator.py -r spy --char chl -p S01..S10          # 첩보 전용 액션 10종만
-  python flux_batch_generator.py -r spy --char chl -p N30,N34 -f        # 파일드라이버, 수유대딸 강제 덮어쓰기
-  python flux_batch_generator.py -r maid --char han --codes "0"         # 000번(평상) 단 1장
-  python flux_batch_generator.py -r ykn --char yua,serin,sia,hayul --codes "000..010" -f  # ykn 로스터 네쌍둥이 4인 표정 11종 일괄 생성
-  python flux_batch_generator.py -r maid --char han --codes "44,52"     # H씬 (기승위, 구강봉사)
-  python flux_batch_generator.py -r maid --char ren --codes "144,152"   # 오토코노코 H씬
-
-  ── [★강력추천] MobileSAM 외곽선 화이트 실루엣 자동 검열 (--censor) ──────
-  # 검열본은 assets/{prefix}/에 교체 배치되고, 무검열 원본은 assets/{prefix}_origin/에 안전하게 보존됩니다:
-  python batch_generator.py -r campus -c aya -p "060,061,080..090" --censor
-  python batch_generator.py -r campus --all-chars -p all --censor
-  # 자동 분기: 성인 씬(080~149, 150~219) 및 탈의 씬(030, 037~039, 043~045, 061~063)에 자동 적용!
-  # 검열 스타일: --censor-style {white_silhouette(화이트실루엣기본), silhouette(블랙실루엣), bar(와이드바), shadow(그림자), mosaic(모자이크)}
-
-  ── [★초고속 소급 적용] 이미 생성된 에셋 일괄 검열본 추출 (--censor-only) ────
-  # ComfyUI 호출 없이 기존 파일들을 0.2초 만에 스캔하여 검열본 교체 배치 및 원본 보존:
+  ── [6] 정밀 외곽선 화이트 실루엣 검열 (--censor & --censor-only) ──────────
+  # • 검열본은 assets/{char}/에 교체 배치되고, 무검열 원본은 assets/{char}_origin/에 무손실 백업됩니다.
+  # • 이미 생성된 에셋들을 ComfyUI 호출 없이 0.2초 만에 소급 검열할 때:
   python batch_generator.py -r campus -c aya -p all --censor-only
   python batch_generator.py -r campus --all-chars -p all --censor-only
+  # • 검열 스타일 변경(기본값: white_silhouette):
+  #   --censor-style {white_silhouette, silhouette, bar, shadow, mosaic}
 
-  ── [★자동화] Auto-QC 불량 감지 및 자동 재시도 루프 (기본 활성화) ────────────
-  # 0.05초 초고속 AI 감지기로 인원 초과, 머리 복제, 손 증식, 남성 얼굴 노출 시 새 시드로 자동 리롤(최대 3회):
-  python flux_batch_generator.py -r campus -c aya -p 034,055            # 기본 3회 자동 재시도
-  python flux_batch_generator.py -r campus -c aya -p 034 --max-retries 5 # 최대 5회까지 리롤
-  python flux_batch_generator.py -r campus -c aya -p 034 --no-qc         # 품질 검증 비활성화
+  ── [7] Auto-QC 자동 품질 검수 및 리롤 제어 (기본 활성화) ──────────────────
+  # • 색감 과포화, 남성 분신(2명 이상), 단독/여운 씬 남성 난입, 9등신 기형 감지 시 시드를 바꿔 자동 재생성(기본 3회):
+  python batch_generator.py -r campus -c aya -p 034 --max-retries 5 # 최대 5회까지 리롤 허용
+  python batch_generator.py -r campus -c aya -p 034 --no-qc         # Auto-QC 비활성화 (1회 강제 생성)
 
-  ── [★신규] 에셋 파일명 형식 선택 (--naming) ───────────────────────────────
-  # 1) 하이브리드 표준형 (기본값): 탐색기 정렬 + 한글 직관성 동시 확보
-  python flux_batch_generator.py -r maid -c han -p 000 --naming hybrid
-  # 결과: han_000_평상.webp (및 레거시 호환 han_000.webp 사본 보존)
-
-  # 2) 기존 키로 번호형:
-  python flux_batch_generator.py -r maid -c han -p 000 --naming code
-  # 결과: han_000.webp
-
-  ── [연달아 실행] 여러 캐릭터 순차 일괄 생성 (★ 작업 걸어두고 쉴 때) ───────
-  # 1. 같은 프로젝트에서 특정 캐릭터들만 연달아 생성 (세미콜론 ; 사용)
-  python flux_batch_generator.py -r maid --char han; python flux_batch_generator.py -r maid --char rub
-
-  # 2. 신규 캐릭터 000번(평상)만 연달아 뽑아서 빠르게 확인할 때
-  python flux_batch_generator.py -r maid --char han --codes 0; python flux_batch_generator.py -r maid --char ren --codes 0
-
-  # 3. [PowerShell 반복문] 이름 목록만 깔끔하게 돌릴 때
-  "han", "rub", "ren", "aoi" | ForEach-Object { python flux_batch_generator.py -r maid --char $_ --codes "0,44,52" --censor }
-
-  ── 섹션별 묶음 생성 ────────────────────────────────────────────────────────
-  python flux_batch_generator.py -r maid -c han -p emotions    # 000~019 감정 20종
-  python flux_batch_generator.py -r maid -c han -p poses       # 020~039 착의 스킨십 20종
-  python flux_batch_generator.py -r maid -c han -p h_scenes    # 040~059 여성 H씬 20종
-  python flux_batch_generator.py -r maid -c ren -p otokonoko   # 140~159 오토코노코 씬 20종
-
-  ── 특정 파일 강제 덮어쓰기 재생성 (--overwrite / -f) ──────────────────────
-  # 기존에 이미 파일이 있어도 프롬프트를 고친 후 다시 뽑을 때:
-  python flux_batch_generator.py -r maid --char han --codes 000 --overwrite
-  python flux_batch_generator.py -r maid -c ren -p 144 -f
-
-  ── 체크포인트 즉석 변경 (--ckpt) ──────────────────────────────────────────
-  # 기본값: ntrMIXIllustriousXL_xiii.safetensors (오토코노코/체위/결합 최적화)
-  # Meichi MIX로 뽑고 싶을 때:
-  python flux_batch_generator.py -r maid -c han -p 000 --ckpt meichiILIghtMIXV1_meichiILUstMIXV1.safetensors
-
-  ── 배경 분위기 변경 (감정 씬 000~019 대상) ────────────────────────────────
-  python flux_batch_generator.py -r maid -c han --bg-preset night
-  python flux_batch_generator.py -r maid -c han --bg "luxurious classic maid mansion lobby"
-
-  ── 레퍼런스(IP-Adapter) 동작 (기본: 완전 비활성화 고화질 모드) ──────────────
-  # 기본 상태: IP-Adapter 없이 순수 프롬프트 + 체크포인트 최고 화질로 생성됩니다.
-  python flux_batch_generator.py -r hey -c mal -p 034
-  # 레퍼런스 강제 주입이 필요한 경우만:
-  python flux_batch_generator.py -r hey -c mal -p 000 --use-ref --ref_weight 0.4
-
-  ── [신규] 사후 단독 4K AI 초해상화 (plepa_upscaler.py) ───────────────────
-  # 이미 생성된 이미지를 디퓨전 재연산 없이 순수 4x AI 모델로 4K(4096x6144) 초고화질 변환 (2~4초 소요)
-  python plepa_upscaler.py -i "projects/hey/assets/mal/mal_034_가슴파묻힘.webp"
-  python plepa_upscaler.py -r hey -c mal -p 034
-  # 원본 파일 직접 덮어쓰기:
-  python plepa_upscaler.py -r hey -c mal -p 034 -f
-  # 웹 GUI: 갤러리(/gallery)에서 이미지 클릭 후 [✨ 4K AI 업스케일] 원클릭 버튼 클릭!
-
-  ── [신규] 다이내믹 의상 스왑 & 테마 팩 (themes/swimsuit.json 등) ───────────
-  # 캐릭터 본체 외모는 유지하고 교복을 완전 박멸한 후 수영복/바니걸 등으로 자동 갈아입힘
-  python flux_batch_generator.py -r hey -c mal -p D            # 수영복 7종(D01~D07) 일괄 생성
-  python flux_batch_generator.py -r hey -c mal -p D01         # 수영복 전신 1장 생성
-  python flux_batch_generator.py -r hey -c mal -p D --dry-run # GPU 미사용 프롬프트 사전 점검
-
-  ── [신규] Face Detailer 초고속 제어 (--no-face-detailer) ───────────────────
-  # 기본 상태: SEGS 필터 훅으로 여주인공 얼굴 1개만 단독 고속 보정 (24~36초)
-  # 포즈 구도 테스트나 초고속 초안 생성을 위해 Face Detailer를 끄고자 할 때 (장당 10~11초):
-  python batch_generator.py -c aya -p 034 --no-face-detailer
-
-  ── 실행 전 미리보기 (GPU 호출 없이 프롬프트/파일명 점검) ───────────────────
-  python flux_batch_generator.py -r maid -c han -p all --dry-run
-
-  ── 시스템 무결성 자체 진단 ─────────────────────────────────────────────────
-  python flux_batch_generator.py --test
+  ── [8] 사전 무결성 점검(Precheck) 및 형제 프로젝트(kiro) 동기화 ───────────
+  .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus     # 캠퍼스 로스터 5단계 사전 점검
+  .\.venv\Scripts\python.exe -m plepa_engine.precheck -r spy        # 스파이 로스터 5단계 사전 점검
+  python scripts/sync_to_kiro.py --dry-run                          # kiro 동기화 시뮬레이션
+  python scripts/sync_to_kiro.py                                    # plepa 골든 스테이트를 kiro로 전파
 
 
 ==============================================================================
-  2. 주요 로스터 (작품 프로젝트) 안내
+  2. V2 포즈 번호 체계 요약 (오토코노코 +70 대칭 법칙)
 ==============================================================================
 
-  로스터는 `projects/` 폴더 안의 개별 작품입니다.
-  작품 폴더에 `characters/`가 있으면 `-r {로스터명}`으로 즉시 구동됩니다.
-
-  | 로스터명 | 폴더 위치          | 작품 설명 및 특징                                    |
-  |----------|--------------------|-------------------------------------------------------|
-  | `maid`   | `projects/maid/`   | 메이드 카페 & 저택 (오토코노코 메이드 3인 포함 10인) |
-  | `don`    | `projects/don/`    | 현대 럭셔리 & 도심 로맨스                            |
-  | `man`    | `projects/man/`    | 오피스 레이디 & 직장 로맨스                           |
-  | `default`| `projects/default/`| 기본 샘플 캐릭터 테스트용                            |
-
-
-==============================================================================
-  3. ComfyUI 환경 및 모델 안내
-==============================================================================
-
-  3-1. 서버 실행
-    - `ComfyUI_windows_portable/run_nvidia_gpu.bat` 실행 (포트: 8188 대기)
-
-  3-2. 장착된 핵심 모델
-    - 메인 체크포인트: `unholyDesireMixSinister_v90.safetensors` (Unholy Desire Mix Sinister v9.0)
-      • Step: 28, CFG: 6.5, Sampler: dpmpp_sde / karras, CLIP Skip: 2
-      • 검증된 고화질 정통 2D 미소녀 작화, 은은한 2D 광택(glossy skin), H씬 묘사력 탁월
-    - 보조 체크포인트: `ntrMIXIllustriousXL_xiii.safetensors`, `meichiILIghtMIXV1_meichiILUstMIXV1.safetensors`
-    - 얼굴 보정: `face_yolov8m.pt` (ComfyUI-Impact-Pack Face Detailer)
-    - 업스케일러: `4x-UltraSharp.pth`
+  • 000 ~ 019 : 공용 감정/표정 20종 (평상, 미소, 활짝웃음, 수줍은홍조, 토라짐 등)
+  • 020 ~ 039 : 공용 일상/스킨십/샤워 20종 (윙크브이, 손하트, 벽치기, 착의애무, 샤워뒤태 등)
+  • 040 ~ 047 : 공용 스토리 이벤트 8종 (덮쳐짐, 이끌기, 끌려감, 침대숙면, 목욕중, 결혼식 등)
+  • 048 ~ 052 : 로스터별 테마 이벤트 5종 (캠퍼스: 속옷차림, 해변비키니, 만취의존, 캠퍼스 공부/연구, 캠퍼스 축제)
+  • 060 ~ 063 : 공용 로맨스 4종 (060 딥키스, 061 알몸키스, 062 허그, 063 스푸닝)
+  • 080 ~ 127 : 여성 성인 H-씬 48종 (체위별 약/강/절정/사후, 착의 성교, 구강/가슴 봉사 등)
+  • 130       : 여성 NTR/스릴 밀회 확장 씬 (스릴만점밀회)
+  • 150 ~ 197 : 오토코노코 성인 H-씬 48종 (여성 080~127에 정확히 +70을 더한 1:1 대칭 번호)
+  • 200       : 오토코노코 NTR/스릴 밀회 확장 씬 (여성 130 + 70 = 200)
 
 
 ==============================================================================
-  4. 배경 시스템과 이벤트 씬 활용법
+  3. 에셋 파일명 및 폴더 구조
 ==============================================================================
 
-  4-1. 감정 씬(000~019) 배경 자동 치환
-    - 기본 상태에서는 단색 배경이지만, `projects/{roster}/background.json`이 있으면
-      작품의 고유 장소(메이드 카페 홀, 펜트하우스 등)로 자동 교체됩니다.
-    - 밤/노을 분위기: `--bg-preset night`
-    - 즉석 배경 주입: `--bg "candlelit vintage dining room"`
-    ★ 침대, 욕실, 벽 등 고유 장소가 지정된 포즈나 H씬은 배경이 절대 오염되지 않습니다.
-
-
-==============================================================================
-  5. 2D 성기 자동 검열 시스템 (--censor)
-==============================================================================
-
-  - 2D 일러스트 특화 YOLOv8 모델(`dghs-imgutils`)이 성기 노출 부위를 픽셀 단위로 정밀 검출.
-  - 18% 적응형 세이프 마진 + 캡슐형 둥근 모서리 가공(Corner Radius 25~35%) 적용.
-  - 단 1픽셀의 노출 누수도 없는 100% 완전 차단력(사후 재검증 detected: 0건 실증)과
-    허벅지/복부의 자연스러운 인체 곡선미 95% 이상 보존.
-  - 무검열 원본(`*_라벨.webp`)은 그대로 보존하고, 검열본(`*_라벨_censored.webp`)을 별도 생성.
-
-
-==============================================================================
-  6. 문제 해결 (FAQ & Troubleshooting)
-==============================================================================
-
-  Q1. "Port 8188 is already in use" 에러가 납니다.
-    ➔ 이미 백그라운드나 다른 창에서 ComfyUI가 실행 중입니다. 새로 켤 필요 없이 바로 생성 명령을 치시면 됩니다.
-    ➔ 완전히 먹통일 때 강제 재시작:
-       Get-NetTCPConnection -LocalPort 8188 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
-
-  Q2. 파일이 건너뛰어지고(skip) 생성이 안 됩니다.
-    ➔ 이미 대상 `.webp` 파일이 디스크에 존재하기 때문입니다. 새로 뽑으려면 명령어 뒤에 `--overwrite` (또는 `-f`)를 붙이세요.
-
-  Q3. 터미널 한글 깨짐 방지:
-    ➔ 파이프라인 내부에서 UTF-8 자동 처리가 적용되어 있으므로 안심하고 사용하시면 됩니다.
-==============================================================================
+  • 기본 저장 경로 : projects/{roster}/assets/{char}/{char}_{code}_{label}.webp
+    (예: projects/campus/assets/aya/aya_000_평상.webp, aya_060_딥키스.webp)
+  • 검열 원본 백업 : projects/{roster}/assets/{char}_origin/{char}_{code}_{label}.webp
+    (--censor 또는 --censor-only 실행 시 노출이 감지된 성인/탈의 씬의 무검열 원본만 분리 보관)
+  • 웹 GUI 실행   : run_gui.bat 더블클릭 (또는 python -m plepa_gui.app 실행 후 http://localhost:8080 접속)
