@@ -48,7 +48,7 @@ from plepa_engine.models import (
     PoseEntry,
 )
 from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
-from plepa_engine.reporter import asset_filename, print_batch_summary
+from plepa_engine.reporter import asset_filename, print_batch_summary, print_overall_batch_summary
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
@@ -354,6 +354,7 @@ class GenerationService:
             print("=" * 60)
 
         session_cm = client.session() if (not params.dry_run and not params.mock) else nullcontext()
+        total_batch_start = time.time()
         with session_cm:
             for char_idx, (char, actual_roster) in enumerate(target_chars, 1):
                 if is_cancelled and is_cancelled():
@@ -524,6 +525,8 @@ class GenerationService:
                         is_nude=is_nude,
                         output_filename=out_name,
                         seed=current_seed,
+                        character_prefix=char.prefix,
+                        character_name=char.name,
                     )
     
                     if not quiet:
@@ -704,7 +707,9 @@ class GenerationService:
                                     else:
                                         if not quiet:
                                             print(f" [Auto-QC 불량(최대 재시도 초과): {fail_reason}]", end="", flush=True)
+                                        break
                                 else:
+                                    final_qc_fail = None
                                     if not quiet and attempt > 0:
                                         print(f" [Auto-QC 통과(재시도 {attempt}회)]", end="", flush=True)
 
@@ -724,6 +729,9 @@ class GenerationService:
                                             else:
                                                 if not quiet:
                                                     print(f" [검열 QC 불량(최대 재시도 초과): 성기 미탐지]", end="", flush=True)
+                                                break
+                                        else:
+                                            final_qc_fail = None
                             break
 
                         duration = time.time() - item_start
@@ -750,7 +758,15 @@ class GenerationService:
                                     print(f" [검열 실패: {ce}]", end="")
                         if not quiet:
                             print()
-                        res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration)
+                        res = GenerationResult(
+                            target=target,
+                            success=True,
+                            image_path=out_path,
+                            duration_sec=duration,
+                            qc_passed=(final_qc_fail is None),
+                            qc_reason=final_qc_fail,
+                            retries=attempt,
+                        )
                     except ComfyClientError as ce:
                         duration = time.time() - item_start
                         if not quiet:
@@ -769,11 +785,15 @@ class GenerationService:
     
                 total_duration = time.time() - total_start
                 if not quiet:
-                    print_batch_summary(char.prefix, char_results, output_dir, total_duration)
+                    print_batch_summary(char.prefix, char_results, output_dir, total_duration, char_name=char.name)
 
                 # 배치 매니페스트 저널 원자적 기록 (_batch_manifest.json)
                 self._save_batch_manifest(output_dir, char, actual_roster, params, char_results)
     
+        if not quiet and all_results:
+            total_elapsed = time.time() - total_batch_start if "total_batch_start" in locals() else 0.0
+            print_overall_batch_summary(all_results, total_elapsed)
+
         return all_results
 
     def _save_batch_manifest(
@@ -816,6 +836,9 @@ class GenerationService:
                 "error_message": r.error_message,
                 "assembled_prompt": getattr(t, "assembled_prompt", ""),
                 "seed": getattr(t, "seed", None),
+                "qc_passed": getattr(r, "qc_passed", True),
+                "qc_reason": getattr(r, "qc_reason", None),
+                "retries": getattr(r, "retries", 0),
             }
             existing_items[code_key] = item_entry
 
@@ -838,6 +861,7 @@ class GenerationService:
             "total_count": len(items),
             "success_count": sum(1 for item in items if item.get("success")),
             "failed_count": sum(1 for item in items if not item.get("success")),
+            "qc_defect_count": sum(1 for item in items if not item.get("qc_passed", True)),
             "items": items,
         }
 

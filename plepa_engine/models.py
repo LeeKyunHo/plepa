@@ -219,6 +219,8 @@ class GenerationTarget:
     is_nude: bool
     output_filename: str
     seed: Optional[int] = None
+    character_prefix: Optional[str] = None
+    character_name: Optional[str] = None
 
 
 @dataclass
@@ -228,3 +230,6 @@ class GenerationResult:
     image_path: Optional[Path] = None
     duration_sec: float = 0.0
     error_message: Optional[str] = None
+    qc_passed: bool = True
+    qc_reason: Optional[str] = None
+    retries: int = 0
