@@ -120,6 +120,39 @@ def print_roster_characters(roster: str = DEFAULT_ROSTER) -> int:
     return 0
 
 
+def print_roster_audit(roster: str = DEFAULT_ROSTER) -> int:
+    """로스터 내 캐릭터들의 에셋 완비율, 누락 포즈, 검열 원본 백업 여부를 전수 감사하여 콘솔 테이블로 출력합니다."""
+    reports = default_asset_service.audit_roster_assets(roster=roster)
+    if not reports:
+        print(f"\n[안내] 로스터 '{roster}'에 감사할 캐릭터가 없습니다.")
+        return 0
+
+    print("=" * 95)
+    print(f"  [플에파 에셋 전수 감사 리포트] 로스터: {roster} (총 {len(reports)}명)")
+    print("=" * 95)
+    header = f"  {'식별자':<8} {'이름':<14} {'성별':<10} {'보유 / 기대':<14} {'완비율':<10} {'_origin 백업':<14} {'라벨불일치':<10} {'누락 코드'}"
+    print(header)
+    print("  " + "-" * 91)
+
+    for r in reports:
+        cnt_str = f"{r['present_count']} / {r['expected_count']}"
+        rate_str = f"{r['completion_rate']}%"
+        origin_str = f"{r['origin_count']}장"
+        outdated_str = f"{r['outdated_labels']}건" if r['outdated_labels'] > 0 else "0건"
+        missing = r['missing_codes']
+        if not missing:
+            missing_str = "완벽 (누락 없음)"
+        elif len(missing) <= 6:
+            missing_str = ",".join(missing)
+        else:
+            missing_str = f"{','.join(missing[:5])}.. (+{len(missing)-5}개)"
+
+        print(f"  {r['prefix']:<8} {r['name']:<14} {r['gender']:<10} {cnt_str:<14} {rate_str:<10} {origin_str:<14} {outdated_str:<10} {missing_str}")
+
+    print("=" * 95)
+    return 0
+
+
 def run_self_test() -> int:
     """파이프라인 무결성 자체 진단 테스트 (FLUX + SDXL 듀얼 엔진 점검)."""
     print("=" * 60)
@@ -322,6 +355,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="검열 대상 부위 (penis, pussy, all, 쉼표 구분 기본: penis,pussy)"
     )
     parser.add_argument("--censor-only", action="store_true", help="ComfyUI 호출 없이 기존 생성된 에셋들의 검열본만 초고속(0.2초) 일괄 갱신/생성")
+    parser.add_argument("--reuse-seed", action="store_true", help="_batch_manifest.json에 기록된 기존 골든 시드를 재사용하여 동일 구도로 의상/프롬프트 재생성")
+    parser.add_argument("--strict-censor-qc", action="store_true", help="필수 성인 결합/노출 씬에서 성기 미탐지 시 구도 불량으로 판정하여 자동 리롤")
+    parser.add_argument("--audit", action="store_true", help="지정된 로스터의 캐릭터별 에셋 완비율, 누락 포즈, 검열 원본 백업 여부 1초 전수 감사 리포트 출력")
     parser.add_argument("--no-qc", action="store_true", help="Auto-QC 품질 검증 및 불량 시 자동 재시도 비활성화")
     parser.add_argument("--max-retries", type=int, default=3, help="Auto-QC 불량 시 최대 재시도(리롤) 횟수 (기본: 3)")
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
@@ -330,6 +366,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.test:
         return run_self_test()
+
+    if args.audit:
+        return print_roster_audit(roster=args.roster)
 
     if args.list:
         return print_roster_characters(roster=args.roster)
@@ -378,6 +417,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ckpt_tag=args.ckpt_tag,
         auto_qc=(not args.no_qc),
         max_retries=args.max_retries,
+        reuse_seed=args.reuse_seed,
+        strict_censor_qc=args.strict_censor_qc,
     )
 
     try:

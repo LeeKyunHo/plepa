@@ -110,6 +110,8 @@ class GenerationParams:
     ckpt_tag: Optional[str] = None  # 체크포인트 비교용 서브폴더 태그 (예: "unholy", "wai")
     auto_qc: bool = True
     max_retries: int = 3
+    reuse_seed: bool = False  # _batch_manifest.json의 이전 골든 시드 고정 재생성
+    strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
 
 
 class GenerationService:
@@ -339,7 +341,19 @@ class GenerationService:
                 char_results: List[GenerationResult] = []
                 total_start = time.time()
                 char_codes = char_pose_map[char.prefix]
-    
+
+                existing_manifest_seeds = {}
+                manifest_file = output_dir / "_batch_manifest.json"
+                if manifest_file.exists():
+                    try:
+                        with open(manifest_file, "r", encoding="utf-8") as mf:
+                            m_data = json.load(mf)
+                            for itm in m_data.get("items", []):
+                                if "code" in itm and itm.get("seed") is not None:
+                                    existing_manifest_seeds[str(itm["code"]).strip()] = itm["seed"]
+                    except Exception:
+                        pass
+
                 for idx, code in enumerate(char_codes, 1):
                     if is_cancelled and is_cancelled():
                         if not quiet:
@@ -414,6 +428,30 @@ class GenerationService:
                             lora_weight=params.lora_weight,
                         )
     
+                    # 워크플로우 시드 추출 및 reuse_seed 처리
+                    current_seed = None
+                    for node_id, node_data in workflow.items():
+                        if isinstance(node_data, dict) and "inputs" in node_data:
+                            inp = node_data["inputs"]
+                            if "seed" in inp:
+                                current_seed = inp["seed"]
+                                break
+                            elif "noise_seed" in inp:
+                                current_seed = inp["noise_seed"]
+                                break
+
+                    code_key = str(code).strip()
+                    if params.reuse_seed and code_key in existing_manifest_seeds:
+                        reused = existing_manifest_seeds[code_key]
+                        for node_id, node_data in workflow.items():
+                            if isinstance(node_data, dict) and "inputs" in node_data:
+                                inp = node_data["inputs"]
+                                if "seed" in inp:
+                                    inp["seed"] = reused
+                                elif "noise_seed" in inp:
+                                    inp["noise_seed"] = reused
+                        current_seed = reused
+
                     target = GenerationTarget(
                         code=code,
                         section=pose.section,
@@ -421,6 +459,7 @@ class GenerationService:
                         assembled_prompt=display_prompt,
                         is_nude=is_nude,
                         output_filename=out_name,
+                        seed=current_seed,
                     )
     
                     if not quiet:
@@ -568,6 +607,7 @@ class GenerationService:
                         for attempt in range(max_attempts):
                             if attempt > 0:
                                 new_seed = random.randint(1, 2**63 - 1)
+                                target.seed = new_seed
                                 current_wf = copy.deepcopy(workflow)
                                 for node_id, node_data in current_wf.items():
                                     if isinstance(node_data, dict) and "inputs" in node_data:
@@ -589,6 +629,7 @@ class GenerationService:
                                     is_offscreen_partner=pose.is_offscreen_partner,
                                     is_kiss_scene=is_kiss,
                                     section=target.section,
+                                    prompt=pose.prompt,
                                 )
                                 if not passed:
                                     final_qc_fail = fail_reason
@@ -602,6 +643,23 @@ class GenerationService:
                                 else:
                                     if not quiet and attempt > 0:
                                         print(f" [Auto-QC 통과(재시도 {attempt}회)]", end="", flush=True)
+
+                                # Strict Censor QC: 성인 노출 필수 씬에서 성기 미탐지 시 리롤
+                                if should_censor and params.strict_censor_qc:
+                                    from plepa_engine.censor import POSE_SAFE_ANCHORS, detect_genitals
+                                    code_norm = str(target.code).strip()
+                                    if code_norm in POSE_SAFE_ANCHORS:
+                                        c_targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
+                                        boxes = detect_genitals(str(out_path), targets=c_targets, pose_code=code_norm)
+                                        if not boxes:
+                                            final_qc_fail = "필수 성인 씬 성기 미탐지(구도 불량)"
+                                            if attempt < params.max_retries:
+                                                if not quiet:
+                                                    print(f" [검열 QC 불량: 성기 미탐지 -> 재시도 {attempt+1}/{params.max_retries}]", end="", flush=True)
+                                                continue
+                                            else:
+                                                if not quiet:
+                                                    print(f" [검열 QC 불량(최대 재시도 초과): 성기 미탐지]", end="", flush=True)
                             break
 
                         duration = time.time() - item_start
@@ -669,10 +727,21 @@ class GenerationService:
         manifest_path = output_dir / "_batch_manifest.json"
         temp_path = output_dir / f"_batch_manifest_{uuid.uuid4().hex[:6]}.tmp.json"
 
-        items = []
+        existing_items = {}
+        if manifest_path.exists():
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    old_data = json.load(f)
+                    for item in old_data.get("items", []):
+                        if "code" in item:
+                            existing_items[str(item["code"]).strip()] = item
+            except Exception:
+                pass
+
         for r in results:
             t = r.target
-            items.append({
+            code_key = str(t.code).strip()
+            item_entry = {
                 "code": t.code,
                 "label": t.label,
                 "section": t.section,
@@ -682,7 +751,18 @@ class GenerationService:
                 "duration_sec": round(r.duration_sec, 2),
                 "error_message": r.error_message,
                 "assembled_prompt": getattr(t, "assembled_prompt", ""),
-            })
+                "seed": getattr(t, "seed", None),
+            }
+            existing_items[code_key] = item_entry
+
+        def sort_key(k: str):
+            try:
+                return (0, int(k), "")
+            except ValueError:
+                return (1, 0, k)
+
+        sorted_codes = sorted(existing_items.keys(), key=sort_key)
+        items = [existing_items[c] for c in sorted_codes]
 
         data = {
             "prefix": char.prefix,
@@ -691,10 +771,9 @@ class GenerationService:
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "engine": params.engine,
             "checkpoint": getattr(params, "ckpt", None) or getattr(params, "sdxl_ckpt", None) or "default",
-            "total_count": len(results),
-
-            "success_count": sum(1 for r in results if r.success),
-            "failed_count": sum(1 for r in results if not r.success),
+            "total_count": len(items),
+            "success_count": sum(1 for item in items if item.get("success")),
+            "failed_count": sum(1 for item in items if not item.get("success")),
             "items": items,
         }
 

@@ -218,6 +218,7 @@ class GenerationTarget:
     assembled_prompt: str
     is_nude: bool
     output_filename: str
+    seed: Optional[int] = None
 
 
 @dataclass
