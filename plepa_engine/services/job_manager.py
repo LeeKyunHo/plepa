@@ -30,6 +30,7 @@ class GlobalJobManager:
         self.current_msg: str = "대기 중"
         self.success_count: int = 0
         self.fail_count: int = 0
+        self.latest_result: Optional[Dict[str, Any]] = None
 
         self.logs: List[Dict[str, Any]] = []
         self._thread: Optional[threading.Thread] = None
@@ -49,6 +50,7 @@ class GlobalJobManager:
             self.current_msg = "배치 작업 시작 중..."
             self.success_count = 0
             self.fail_count = 0
+            self.latest_result = None
 
             # 런타임 적용 파라미터 요약 로그 생성
             conf = default_config_service.get_config()
@@ -84,6 +86,7 @@ class GlobalJobManager:
                 "success_count": self.success_count,
                 "fail_count": self.fail_count,
                 "logs": list(self.logs),
+                "latest_result": dict(self.latest_result) if self.latest_result else None,
             }
 
     def _run_worker(self, params: GenerationParams) -> None:
@@ -95,6 +98,16 @@ class GlobalJobManager:
                 self.percentage = (cur / tot) if tot > 0 else 0.0
                 if res.success:
                     self.success_count += 1
+                    if res.image_path and res.image_path.exists():
+                        self.latest_result = {
+                            "image_path": str(res.image_path),
+                            "code": res.target.code,
+                            "label": res.target.label,
+                            "filename": res.target.output_filename,
+                            "duration_sec": res.duration_sec,
+                            "seed": getattr(res.target, "seed", None),
+                            "timestamp": time.strftime("%H:%M:%S"),
+                        }
                 else:
                     self.fail_count += 1
 

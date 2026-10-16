@@ -114,6 +114,67 @@ class GenerationParams:
     strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
 
 
+# CLI와 GUI가 단일 진실 공급원(SSOT)으로 공유하는 생성 옵션 메타데이터 레지스트리
+GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
+    {
+        "field": "face_detailer",
+        "cli_flag": "--face-detailer",
+        "label": "Face Detailer",
+        "tooltip": "얼굴 디테일러(Face Detailer) 후처리 적용",
+        "default": True,
+    },
+    {
+        "field": "upscale",
+        "cli_flag": "--upscale",
+        "label": "4x AI 업스케일",
+        "tooltip": "4x-UltraSharp 모델을 통한 4K 초해상화",
+        "default": False,
+    },
+    {
+        "field": "censor",
+        "cli_flag": "--censor",
+        "label": "화이트 실루엣 검열",
+        "tooltip": "YOLO 자동 탐지 기반 화이트 실루엣 검열 (_origin 백업 유지)",
+        "default": True,
+    },
+    {
+        "field": "reuse_seed",
+        "cli_flag": "--reuse-seed",
+        "label": "🔒 골든 시드 고정",
+        "tooltip": "_batch_manifest.json의 이전 시드를 재사용하여 구도를 유지하고 의상/태그만 갱신",
+        "default": False,
+    },
+    {
+        "field": "strict_censor_qc",
+        "cli_flag": "--strict-censor-qc",
+        "label": "🛡️ 엄격 검열 리롤 (Auto-QC)",
+        "tooltip": "성인 H씬에서 성기 미탐지(구도 왜곡 등) 시 통과시키지 않고 자동 리롤",
+        "default": False,
+    },
+    {
+        "field": "censor_only",
+        "cli_flag": "--censor-only",
+        "label": "⚡ 0.2초 소급 검열 전용",
+        "tooltip": "신규 생성 없이 기존 에셋에 실루엣 검열만 즉시 일괄 적용",
+        "default": False,
+    },
+    {
+        "field": "overwrite",
+        "cli_flag": "--overwrite",
+        "label": "강제 덮어쓰기 (리롤)",
+        "tooltip": "기존에 완료된 에셋을 건너뛰지 않고 새로 생성하여 덮어씁니다",
+        "default": False,
+    },
+    {
+        "field": "mock",
+        "cli_flag": "--mock",
+        "label": "Mock 시뮬레이션",
+        "tooltip": "ComfyUI 서버 연동 없이 0.001초 가상 생성 테스트",
+        "default": False,
+    },
+]
+
+
 class GenerationService:
     """배치 이미지 생성 파이프라인 서비스."""
 
