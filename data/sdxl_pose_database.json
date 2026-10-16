@@ -190,9 +190,9 @@
     "034": {
       "label": "가슴에얼굴묻기",
       "description": "남성이 여자의 풍만한 가슴 위에 안면을 편안하게 얹고 기대며 여자가 그 머리를 포근하게 안아주는 따뜻하고 다정한 스킨십 포즈.",
-      "prompt": "1girl, 1boy, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.35)), ((female holding male head against chest with both hands:1.4)), ((male burying face deep in female's chest:1.45)), ((head resting on chest:1.35)), ((only back of male's head visible:1.35)), ((faceless male, short dark hair:1.3)), ((tender gentle smile, happy warm smile:1.35)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.3))",
-      "prompt_otokonoko": "2boys, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.35)), ((holding male head against chest with both hands:1.4)), ((male burying face deep against chest:1.45)), ((head resting on chest:1.35)), ((only back of male's head visible:1.35)), ((faceless male, short dark hair:1.3)), ((tender gentle smile, happy warm smile:1.35)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.3))",
-      "negative_add": "(crown, tiara, laurel, wreath, flower crown, hair wreath, halo, hair ornament, headwear:1.5), (facing each other:1.35), (eye contact:1.35), (male face visible:1.35), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (2boys:1.8), (multiple boys:1.8), (duplicate male:1.8)"
+      "prompt": "1girl, 1boy, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.35)), ((female holding male head against chest with both hands:1.4)), ((male burying face deep in female's chest, face completely hidden:1.45)), ((head resting on chest, only back of male head visible:1.4)), ((faceless male, short dark hair:1.35)), ((tender gentle smile, happy warm smile:1.35)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.3))",
+      "prompt_otokonoko": "2boys, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.35)), ((holding male head against chest with both hands:1.4)), ((male burying face deep against chest, face completely hidden:1.45)), ((head resting on chest, only back of male head visible:1.4)), ((faceless male, short dark hair:1.35)), ((tender gentle smile, happy warm smile:1.35)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.3))",
+      "negative_add": "(crown, tiara, laurel, wreath, flower crown, hair wreath, halo, hair ornament, headwear:1.5), (facing each other:1.35), (eye contact:1.35), (male face visible:1.5), (male eyes:1.5), (male nose:1.5), (male mouth:1.5), (male profile:1.5), (two faces visible:1.5), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (2boys:1.8), (multiple boys:1.8), (duplicate male:1.8)"
     },
     "035": {
       "label": "덮치기",
@@ -655,17 +655,17 @@
   },
   "special_h": {
     "130": {
-      "label": "비상계단 섹스",
-      "description": "비상계단 난간에 기대어 치마를 걷어올리고 신속하게 결합하는 스릴 씬",
+      "label": "층계참 섹스",
+      "description": "층계참 사이 은밀한 공간에서 난간 뒤에 숨어 치마를 걷어올리고 절정에 도달하는 밀착 섹스 씬",
       "required_outfit": "default",
-      "prompt": "1girl, 1boy, ((emergency staircase landing, metal handrail:1.3)), ((doggystyle against railing:1.35)), ((clothes half lifted, exposed hips:1.3)), looking back over shoulder with breathless moaning expression, heavy blush, thrilling secret encounter, cowboy shot, ((single male partner:1.3))",
+      "prompt": "1girl, 1boy, ((hidden in stair landing between staircase flights:1.4)), ((narrow space between stairs, concealing behind metal handrails:1.35)), ((doggystyle against handrail:1.35)), ((clothes disheveled, dress pulled up around waist, exposed rear and panties:1.35)), looking back over shoulder with intense ecstasy face, breathlessness, flushed cheeks, ((glistening messy bodily fluids:1.25)), thrilling secret intimacy in shadows, high contrast stairwell lighting, ((single male partner behind:1.3))",
       "section": "special_h"
     },
     "131": {
       "label": "차안 섹스",
       "description": "틴팅된 차량 내부 좌석에서 은밀하고 농밀하게 벌어지는 카섹스 씬",
       "required_outfit": "default",
-      "prompt": "1girl, 1boy, ((car sex, inside car interior:1.4)), ((straddling partner on passenger seat:1.35)), leather car seats, tinted car windows with night streetlights blurred outside, ((clothes disheveled, pulled aside:1.3)), arched back in pleasure, ecstatic flushed face, intimate close space, ((single male partner:1.3))",
+      "prompt": "1girl, 1boy, ((car sex, inside car interior:1.4)), ((straddling partner on passenger seat:1.35)), leather car seats, tinted car windows with night streetlights blurred outside, ((clothes disheveled, dress pulled aside, exposed breasts and body:1.35)), arched back in intense orgasm, ecstatic flushed face, open mouth moaning, tears of pleasure, ((splattered bodily fluids, glistening skin:1.25)), intimate close space, ((single male partner:1.3))",
       "section": "special_h"
     },
     "132": {
@@ -972,17 +972,17 @@
   },
   "special_otokonoko": {
     "133": {
-      "label": "비상계단 아날섹스",
-      "description": "비상계단 난간을 붙잡고 진행되는 오토코노코 전용 후방 아날 결합 씬",
+      "label": "층계참 아날섹스",
+      "description": "층계참 사이 은밀한 공간에서 난간 뒤에 숨어 옷을 걷어올리고 절정에 도달하는 오토코노코 밀착 아날 섹스 씬",
       "required_outfit": "default",
-      "prompt": "((2boys, otokonoko:1.4)), anal doggystyle, leaning on emergency staircase railing, slender body, heavy blush, breathless pleasure expression, clothes disheveled, intimate secret spot, ((single male partner:1.3))",
+      "prompt": "((2boys, otokonoko:1.4)), ((hidden in stair landing between staircase flights:1.4)), ((narrow space between stairs, concealing behind metal handrails:1.35)), ((anal doggystyle against handrail:1.35)), ((clothes disheveled, outfit pulled up around waist, exposed rear:1.35)), looking back over shoulder with intense ecstasy face, breathlessness, flushed cheeks, ((glistening messy bodily fluids:1.25)), thrilling secret intimacy in shadows, high contrast stairwell lighting, ((single male partner behind:1.3))",
       "section": "special_otokonoko"
     },
     "134": {
       "label": "차안 아날섹스",
       "description": "틴팅된 차량 내부 시트 위에서 진행되는 오토코노코 전용 카섹스 씬",
       "required_outfit": "default",
-      "prompt": "((2boys, otokonoko:1.4)), anal cowgirl, riding partner inside car, car interior, leather seats, tinted windows, night bokeh outside, breathless pleasure, ((single male partner:1.3))",
+      "prompt": "((2boys, otokonoko:1.4)), ((car sex, riding partner inside car interior:1.4)), ((straddling partner on passenger seat:1.35)), leather car seats, tinted windows, night bokeh outside, ((clothes disheveled, outfit pulled aside:1.35)), arched back in intense orgasm, ecstatic flushed face, open mouth moaning, ((splattered bodily fluids, glistening skin:1.25)), breathless pleasure, ((single male partner:1.3))",
       "section": "special_otokonoko"
     },
     "135": {

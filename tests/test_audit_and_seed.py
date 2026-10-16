@@ -19,7 +19,7 @@ def test_sample10_pose_resolution():
     """sample10 포즈 세트가 10대 대표 골든샘플 포즈 코드로 정상 해석되는지 검증."""
     db = default_pose_service.load_pose_db(engine="sdxl")
     resolved = default_pose_service.resolve_pose_codes("sample10", db)
-    expected = ["000", "020", "044", "052", "060", "080", "088", "102", "130", "131"]
+    expected = ["000", "020", "034", "044", "052", "060", "088", "102", "130", "131"]
     assert resolved == expected, f"sample10 해석 실패: {resolved} != {expected}"
 
 

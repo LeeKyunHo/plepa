@@ -36,7 +36,7 @@
   # 🎯 단일 로스터 1초 에셋 전수 감사 (완비율, 누락 포즈, _origin 백업 현황 1초 출력)
   python batch_generator.py -r campus --audit
 
-  # 🌟 10대 대표 골든 샘플러 (핵심 10종만 고속 검증: 000, 020, 044, 052, 060, 080, 088, 102, 130, 131)
+  # 🌟 10대 대표 골든 샘플러 (핵심 10종만 고속 검증: 000, 020, 034, 044, 052, 060, 088, 102, 130, 131)
   python batch_generator.py -r campus -c aya -p sample10
 
   # 🔒 골든 시드 고정 재생성 (기존 매니페스트 시드를 고정해 동일 구도로 의상/프롬프트만 미세 재생성)
@@ -69,7 +69,7 @@
   python batch_generator.py -r campus -c aya -p "080..091" --censor # 정상위/후배위/기승위 구간만 생성
 
   ── [4] 섹션별 및 골든 샘플러 묶음 생성 ─────────────────────────────────────
-  python batch_generator.py -r campus -c aya -p sample10           # 10대 대표 골든 샘플러 (000, 020, 044, 052, 060, 080, 088, 102, 130, 131)
+  python batch_generator.py -r campus -c aya -p sample10           # 10대 대표 골든 샘플러 (000, 020, 034, 044, 052, 060, 088, 102, 130, 131)
   python batch_generator.py -r campus -c aya -p emotions            # 000~019 감정 20종
   python batch_generator.py -r campus -c aya -p poses               # 020~039 일상/스킨십 20종
   python batch_generator.py -r campus -c aya -p events              # 040~052 이벤트 씬
