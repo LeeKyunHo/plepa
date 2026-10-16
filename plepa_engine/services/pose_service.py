@@ -151,6 +151,8 @@ class PoseService:
                         prompt_val = item.get(f"{engine.lower()}_prompt") or item.get("prompt", "")
                         prompt_f = item.get(f"{engine.lower()}_prompt_female") or item.get("prompt_female", "")
                         prompt_oto = item.get(f"{engine.lower()}_prompt_otokonoko") or item.get("prompt_otokonoko", "")
+                        target_g = item.get("target_gender")
+                        allowed_r = item.get("allowed_rosters") or ([roster] if roster and tf.name == "pose_overrides.json" else None)
                         entries[code_str] = PoseEntry(
                             code=code_str,
                             section=sec_name,
@@ -160,12 +162,16 @@ class PoseService:
                             required_outfit=item.get("required_outfit", ""),
                             prompt_female=prompt_f,
                             prompt_otokonoko=prompt_oto,
+                            target_gender=target_g,
+                            allowed_rosters=allowed_r,
                             negative_add=item.get("negative_add", ""),
                         )
+
             except Exception:
                 pass
 
         return entries
+
 
     ROSTER_THEME_MAP: Dict[str, List[str]] = {
         "spy": ["spy_actions"],

@@ -268,8 +268,11 @@ class GenerationService:
                 # 1. 로스터별 전용 포즈 필터링
                 if allowed_rosters and current_roster not in allowed_rosters:
                     continue
+                # 레거시 campus_only 제약: 타 로스터에서 자체 오버라이드 없이 캠퍼스 전용 코드가 유입되는 경우 방어
                 if code in campus_only_poses and current_roster != 'campus':
-                    continue
+                    if not allowed_rosters or current_roster not in allowed_rosters:
+                        continue
+
 
                 # 2. 메타데이터(target_gender / section) 기반 젠더 필터링
                 if target_gender:
