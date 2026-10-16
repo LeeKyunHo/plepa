@@ -541,14 +541,22 @@ class GenerationService:
                         src_path = origin_path if (origin_path.exists() and origin_path.stat().st_size > 0) else out_path
                         if src_path.exists() and src_path.stat().st_size > 0:
                             if should_censor:
+                                origin_dir.mkdir(parents=True, exist_ok=True)
+                                # 1. 무검열 원본을 _origin 폴더에 100% 무조건 선제 백업
+                                if not origin_path.exists():
+                                    shutil.copy2(src_path, origin_path)
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                                 tmp_censored = output_dir / f".tmp_{out_name}"
-                                c_res = censor_file(src_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
+                                c_res = censor_file(
+                                    origin_path,
+                                    dst_path=tmp_censored,
+                                    style=params.censor_style,
+                                    targets=targets,
+                                    pose_code=pose.code,
+                                    enable_anchor_fallback=True,
+                                    backup_dir=origin_dir,
+                                )
                                 if c_res and c_res.exists():
-                                    origin_dir.mkdir(parents=True, exist_ok=True)
-                                    # 1. 무검열 원본을 _origin 폴더에 안전하게 보존
-                                    if not origin_path.exists():
-                                        shutil.copy2(src_path, origin_path)
                                     # 2. 메인 에셋 경로(out_path)에 검열 완성본을 원자적으로 교체 배치
                                     if out_path.exists():
                                         out_path.unlink()
@@ -560,7 +568,7 @@ class GenerationService:
                                     if tmp_censored.exists():
                                         tmp_censored.unlink()
                                     if not quiet:
-                                        print(" [검열 대상 미감지(원본 유지)]")
+                                        print(" [검열 대상 미감지(원본 유지, _origin 백업 완비)]")
                                     res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
                             else:
                                 if not quiet:
@@ -582,20 +590,28 @@ class GenerationService:
                             print(" [기존 파일 보존: 건너뜀]", end="")
                         if should_censor:
                             origin_path = origin_dir / out_path.name
+                            origin_dir.mkdir(parents=True, exist_ok=True)
                             if not origin_path.exists():
-                                targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                tmp_censored = output_dir / f".tmp_{out_path.name}"
-                                c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
-                                if c_res and c_res.exists():
-                                    origin_dir.mkdir(parents=True, exist_ok=True)
-                                    shutil.copy2(out_path, origin_path)
-                                    if out_path.exists():
-                                        out_path.unlink()
-                                    tmp_censored.rename(out_path)
-                                    if not quiet:
-                                        print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                                elif tmp_censored.exists():
-                                    tmp_censored.unlink()
+                                shutil.copy2(out_path, origin_path)
+                            targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
+                            tmp_censored = output_dir / f".tmp_{out_path.name}"
+                            c_res = censor_file(
+                                origin_path,
+                                dst_path=tmp_censored,
+                                style=params.censor_style,
+                                targets=targets,
+                                pose_code=pose.code,
+                                enable_anchor_fallback=True,
+                                backup_dir=origin_dir,
+                            )
+                            if c_res and c_res.exists():
+                                if out_path.exists():
+                                    out_path.unlink()
+                                tmp_censored.rename(out_path)
+                                if not quiet:
+                                    print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
+                            elif tmp_censored.exists():
+                                tmp_censored.unlink()
                         if not quiet:
                             print()
                         res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -613,20 +629,28 @@ class GenerationService:
                                 print(" [기존 원본에서 하이브리드 사본 복제 완료]", end="")
                             if should_censor:
                                 origin_path = origin_dir / out_path.name
+                                origin_dir.mkdir(parents=True, exist_ok=True)
                                 if not origin_path.exists():
-                                    targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                    tmp_censored = output_dir / f".tmp_{out_path.name}"
-                                    c_res = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
-                                    if c_res and c_res.exists():
-                                        origin_dir.mkdir(parents=True, exist_ok=True)
-                                        shutil.copy2(out_path, origin_path)
-                                        if out_path.exists():
-                                            out_path.unlink()
-                                        tmp_censored.rename(out_path)
-                                        if not quiet:
-                                            print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                                    elif tmp_censored.exists():
-                                        tmp_censored.unlink()
+                                    shutil.copy2(out_path, origin_path)
+                                targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
+                                tmp_censored = output_dir / f".tmp_{out_path.name}"
+                                c_res = censor_file(
+                                    origin_path,
+                                    dst_path=tmp_censored,
+                                    style=params.censor_style,
+                                    targets=targets,
+                                    pose_code=pose.code,
+                                    enable_anchor_fallback=True,
+                                    backup_dir=origin_dir,
+                                )
+                                if c_res and c_res.exists():
+                                    if out_path.exists():
+                                        out_path.unlink()
+                                    tmp_censored.rename(out_path)
+                                    if not quiet:
+                                        print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
+                                elif tmp_censored.exists():
+                                    tmp_censored.unlink()
                             if not quiet:
                                 print()
                             res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -738,14 +762,23 @@ class GenerationService:
                         if not quiet:
                             print(f" [완료: {duration:.1f}초]", end="")
                         if should_censor:
+                            origin_dir.mkdir(parents=True, exist_ok=True)
+                            origin_path = origin_dir / out_path.name
+                            # 신규 생성된 무검열 원본을 100% 무조건 선제 백업
+                            shutil.copy2(out_path, origin_path)
                             targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                             try:
                                 tmp_censored = output_dir / f".tmp_{out_path.name}"
-                                c_path = censor_file(out_path, dst_path=tmp_censored, style=params.censor_style, targets=targets, pose_code=pose.code)
+                                c_path = censor_file(
+                                    origin_path,
+                                    dst_path=tmp_censored,
+                                    style=params.censor_style,
+                                    targets=targets,
+                                    pose_code=pose.code,
+                                    enable_anchor_fallback=True,
+                                    backup_dir=origin_dir,
+                                )
                                 if c_path and c_path.exists():
-                                    origin_dir.mkdir(parents=True, exist_ok=True)
-                                    origin_path = origin_dir / out_path.name
-                                    shutil.copy2(out_path, origin_path)
                                     if out_path.exists():
                                         out_path.unlink()
                                     tmp_censored.rename(out_path)

@@ -100,6 +100,10 @@ class AssetService:
                 # {prefix}_origin 폴더 내 동일 파일명의 무검열 원본 매핑
                 if origin_dir.is_dir():
                     origin_cand = origin_dir / f.name
+                    if not origin_cand.is_file():
+                        code_matches = list(origin_dir.glob(f"{prefix}_{code}*"))
+                        if code_matches:
+                            origin_cand = code_matches[0]
                     if origin_cand.is_file():
                         items_by_code[code]["origin_path"] = origin_cand
                         if not items_by_code[code]["censored_path"]:

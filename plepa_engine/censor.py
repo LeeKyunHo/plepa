@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import math
 from pathlib import Path
+import shutil
 from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import cv2
@@ -509,15 +510,24 @@ def censor_file(
     quality: int = 95,
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
+    backup_dir: Optional[Union[Path, str]] = None,
 ) -> Optional[Path]:
     """
     파일 경로를 입력받아 검열본을 생성하고 저장합니다.
     - dst_path 미지정 시 'stem_censored.webp'로 자동 저장.
+    - backup_dir 지정 시 감지 성공 여부와 무관하게 원본 파일을 해당 폴더로 안전하게 선제 복사 백업.
     - 감지된 검열 대상이 없는 경우 검열본을 생성하지 않고 None 반환.
     """
     src = Path(src_path)
     if not src.exists():
         return None
+
+    if backup_dir:
+        b_dir = Path(backup_dir)
+        b_dir.mkdir(parents=True, exist_ok=True)
+        b_path = b_dir / src.name
+        if not b_path.exists():
+            shutil.copy2(src, b_path)
 
     img = Image.open(src).convert("RGB")
     censored_img, count = censor_image(
