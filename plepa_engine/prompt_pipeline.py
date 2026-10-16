@@ -248,6 +248,15 @@ class PositiveAssemblyMutator(PromptMutator):
                     char_desc += f", {outfit_tag}"
 
             quality_tags = DEFAULT_SDXL_QUALITY_TAGS
+            if ctx.checkpoint_name:
+                try:
+                    from plepa_engine.checkpoint_service import CheckpointService
+                    ckpt_prof = CheckpointService().get_profile_for_checkpoint(ctx.checkpoint_name, engine="sdxl")
+                    if ckpt_prof and ckpt_prof.quality_positive:
+                        quality_tags = ckpt_prof.quality_positive
+                except Exception:
+                    pass
+
             if ctx.custom_pos and ctx.custom_pos.strip():
                 quality_tags = f"{ctx.custom_pos.strip()}, {quality_tags}"
             first_chunk = f"{quality_tags}, {pose_tag}" if pose_tag else quality_tags.strip()

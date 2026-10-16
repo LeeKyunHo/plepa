@@ -83,8 +83,8 @@ def test_quality_tag_injection():
     print(f"  테스트 결과: {passed}개 통과, {failed}개 실패")
     print("=" * 70)
     
-    return 0 if failed == 0 else 1
+    assert failed == 0, f"{failed}개 테스트 실패"
 
 
 if __name__ == "__main__":
-    sys.exit(test_quality_tag_injection())
+    test_quality_tag_injection()
