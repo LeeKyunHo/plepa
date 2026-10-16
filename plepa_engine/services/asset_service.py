@@ -246,10 +246,15 @@ class AssetService:
         pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
         expected_codes = default_pose_service.resolve_pose_codes("all", pose_db, roster=roster)
 
-        # 오토코노코 전용 오프셋 매핑 셋 (+70)
+        # 오토코노코 전용 오프셋 매핑 셋 (기본 성인 080~127: +70, 특수 성인 130~132: +3)
         otokonoko_offset_map = {
-            f"{i:03d}": f"{i+70:03d}" for i in range(80, 150)
+            f"{i:03d}": f"{i+70:03d}" for i in range(80, 128)
         }
+        otokonoko_offset_map.update({
+            "130": "133",
+            "131": "134",
+            "132": "135",
+        })
 
         results = []
         char_files = sorted(char_dir.glob("*.json"))

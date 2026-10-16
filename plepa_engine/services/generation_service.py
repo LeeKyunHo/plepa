@@ -288,11 +288,11 @@ class GenerationService:
                     # 하위 호환 및 숫자 대역 기반 젠더 필터링
                     try:
                         code_num = int(code)
-                        # 여성 성인/특수 대역 (080~149): 오토코노코 제외
-                        if char_obj.gender == "otokonoko" and (80 <= code_num <= 149 or 48 <= code_num <= 99):
+                        # 여성 성인/특수 대역 (080~132): 오토코노코 제외
+                        if char_obj.gender == "otokonoko" and (80 <= code_num <= 132 or 48 <= code_num <= 99):
                             continue
-                        # 오토코노코 성인/특수 대역 (150~219): 여성 제외
-                        elif char_obj.gender != "otokonoko" and 148 <= code_num <= 219:
+                        # 오토코노코 성인/특수 대역 (133~135, 150~219): 여성 제외
+                        elif char_obj.gender != "otokonoko" and ((133 <= code_num <= 135) or (148 <= code_num <= 219)):
                             continue
                     except ValueError:
                         pass
