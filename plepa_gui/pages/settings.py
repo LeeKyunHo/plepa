@@ -1,6 +1,7 @@
 """
 plepa_gui.pages.settings
-플에파 전역 환경 설정(ComfyUI, SDXL, FLUX, 해상도, 스텝, 업스케일러 등) 편집 및 저장 페이지.
+플에파 전역 환경 설정(ComfyUI, SDXL, 해상도, 스텝, 업스케일러 등) 편집 및 저장 페이지.
+
 """
 
 from __future__ import annotations

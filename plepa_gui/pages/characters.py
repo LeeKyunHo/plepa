@@ -188,12 +188,13 @@ def render_characters_page() -> None:
             with ui.row().classes("w-full gap-4 mb-4 items-center"):
                 ui.label("⚡ 기본 엔진 모드 (default_mode):").classes("text-xs font-semibold text-slate-400 w-48")
                 ui.select(
-                    options=["", "sdxl", "flux", "fast", "quality"],
+                    options=["", "sdxl", "fast"],
                     value=fields["default_mode"],
                     on_change=lambda e: fields.update({"default_mode": e.value})
                 ).props("outlined dark dense clearable").classes("flex-1").tooltip(
-                    "빈칸: 시스템 기본값 | sdxl/fast: 고속 2D 체크포인트 | flux/quality/q: FLUX.1 [dev] 고품질"
+                    "빈칸: 시스템 기본값 | sdxl/fast: SDXL 단일 파이프라인"
                 )
+
 
             # 2. 외형 묘사 (얼굴/헤어, 체형, 의상)
             ui.label("🎨 외형 묘사 (Appearance)").classes("text-sm font-bold text-amber-400 mt-4 mb-2")

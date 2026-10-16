@@ -206,7 +206,8 @@ def render_poses_page() -> None:
                 flux_prompt=fields["flux_prompt"],
                 sdxl_prompt=fields["sdxl_prompt"]
             )
-            ui.notify(f"#{code} '{new_label}' 포즈가 SDXL & FLUX DB에 안전하게 동기화 저장되었습니다.", type="positive")
+            ui.notify(f"#{code} '{new_label}' 포즈가 SDXL DB에 안전하게 저장되었습니다.", type="positive")
+
             refresh_items_list()
             load_and_render_detail()
         except Exception as ex:
