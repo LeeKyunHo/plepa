@@ -7,8 +7,30 @@ plepa_engine.qa_validator
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. CPU 스레드 자동 제한 (전체 스레드 수 - 2) & 2. 프로세스 우선순위 하향 (Below Normal)
+# 딥러닝 감지기 추론 중 CPU 100% 점유로 인한 윈도우 UI/마우스/브라우저 버벅임을 원천 방지합니다.
+# ──────────────────────────────────────────────────────────────────────────────
+usable_threads = max(2, (os.cpu_count() or 4) - 2)
+os.environ["OMP_NUM_THREADS"] = str(usable_threads)
+os.environ["MKL_NUM_THREADS"] = str(usable_threads)
+
+try:
+    import torch
+    torch.set_num_threads(usable_threads)
+except Exception:
+    pass
+
+try:
+    import psutil
+    p = psutil.Process(os.getpid())
+    p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+except Exception:
+    pass
 
 from PIL import Image
 

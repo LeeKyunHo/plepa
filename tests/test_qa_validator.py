@@ -24,6 +24,20 @@ class TestQAValidator(unittest.TestCase):
             self.assertFalse(reason)
             self.assertEqual(details["persons"], 0)
 
+    def test_cpu_thread_limit_and_priority(self):
+        import os
+        import torch
+        import psutil
+
+        expected_threads = max(2, (os.cpu_count() or 4) - 2)
+        self.assertEqual(os.environ.get("OMP_NUM_THREADS"), str(expected_threads))
+        self.assertEqual(os.environ.get("MKL_NUM_THREADS"), str(expected_threads))
+        self.assertEqual(torch.get_num_threads(), expected_threads)
+
+        if os.name == "nt":
+            p = psutil.Process(os.getpid())
+            self.assertEqual(p.nice(), psutil.BELOW_NORMAL_PRIORITY_CLASS)
+
 
 if __name__ == "__main__":
     unittest.main()
