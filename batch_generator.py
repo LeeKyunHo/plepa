@@ -40,8 +40,13 @@ from plepa_engine.services.generation_service import (
     default_generation_service,
     generate_mock_image,
 )
+from plepa_engine.services.health_service import (
+    default_health_service,
+    format_diagnostics_table,
+)
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
+
 
 
 # ==========================================
@@ -154,148 +159,14 @@ def print_roster_audit(roster: str = DEFAULT_ROSTER) -> int:
 
 
 def run_self_test() -> int:
-    """파이프라인 무결성 자체 진단 테스트 (FLUX + SDXL 듀얼 엔진 점검)."""
-    print("=" * 60)
-    print("  [플에파] 시스템 무결성 자체 진단 테스트 (Dual-Engine Self-Test)")
-    print("=" * 60)
-    errors: List[str] = []
+    """플에파 10단계 시스템 통합 무결성 진단 실행 (HealthService)."""
+    results = default_health_service.run_full_diagnostics(check_comfy=True)
+    table_str = format_diagnostics_table(results)
+    print(table_str)
 
-    # 1. FLUX 포즈 DB 로드 및 태그 순수성 검사
-    try:
-        flux_db = load_pose_db(engine="flux")
-        print(f"✔ FLUX 포즈 DB 로드 성공 (총 {len(flux_db)}개 항목)")
-        if len(flux_db) < 80:
-            errors.append(f"FLUX 포즈 DB 항목 수가 80개 미만입니다 (현재: {len(flux_db)}개)")
-        for code, entry in flux_db.items():
-            if "BREAK" in entry.prompt:
-                errors.append(f"FLUX 코드 [{code}] 프롬프트에 금지된 BREAK 문법 잔류")
-            if "((" in entry.prompt or ":1." in entry.prompt:
-                errors.append(f"FLUX 코드 [{code}] 프롬프트에 SDXL 괄호 가중치 잔류")
-            if not entry.label:
-                errors.append(f"FLUX 코드 [{code}] 라벨 누락")
-        print("✔ FLUX 서술형 프롬프트 순수성 검사 완료")
-    except Exception as e:
-        errors.append(f"FLUX 포즈 DB 검사 실패: {e}")
-        flux_db = {}
+    has_fail = any(r.status == "FAIL" for r in results)
+    return 1 if has_fail else 0
 
-    # 2. SDXL 포즈 DB 로드 검사
-    try:
-        sdxl_db = load_pose_db(engine="sdxl")
-        print(f"✔ SDXL 포즈 DB 로드 성공 (총 {len(sdxl_db)}개 항목)")
-        if len(sdxl_db) < 80:
-            errors.append(f"SDXL 포즈 DB 항목 수가 80개 미만입니다 (현재: {len(sdxl_db)}개)")
-        for code, entry in sdxl_db.items():
-            if not entry.label:
-                errors.append(f"SDXL 코드 [{code}] 라벨 누락")
-        print("✔ SDXL 80종 Danbooru 태그 포즈 검사 완료")
-    except Exception as e:
-        errors.append(f"SDXL 포즈 DB 검사 실패: {e}")
-        sdxl_db = {}
-
-    # 3. 샘플 캐릭터 로드 검사
-    try:
-        char = load_character("sample_character")
-        print(f"✔ 샘플 캐릭터({char.name}) 로드 성공")
-        if not char.appearance.face_and_hair or not char.appearance.physique:
-            errors.append("캐릭터 필수 외형 필드 누락")
-    except Exception as e:
-        errors.append(f"샘플 캐릭터 로드 실패: {e}")
-        char = None
-
-    # 4. FLUX 프롬프트 조립 및 탈의 로직 검사
-    if flux_db and char:
-        prompt_clothed, nude_flag = assemble_flux_prompt(char, flux_db["000"])
-        if nude_flag or char.appearance.outfit not in prompt_clothed:
-            errors.append("FLUX 평상 포즈(000)에서 의상 포함 누락 또는 잘못된 탈의 판정")
-
-        prompt_nude, nude_flag = assemble_flux_prompt(char, flux_db["050"])
-        if not nude_flag or char.appearance.outfit in prompt_nude:
-            errors.append("FLUX H-씬(050)에서 의상 탈의 자동 스트리핑 실패")
-        print("✔ FLUX 의상 착의/탈의 분기 조립 로직 검사 통과")
-
-    # 5. SDXL 프롬프트 조립 및 탈의 로직 검사
-    if sdxl_db and char:
-        pos_clothed, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["000"])
-        if nude_flag:
-            errors.append("SDXL 평상 포즈(000)에서 잘못된 탈의 판정")
-
-        pos_nude, _, nude_flag = assemble_sdxl_prompt(char, sdxl_db["050"])
-        if not nude_flag or "nude" not in pos_nude:
-            errors.append("SDXL H-씬(050)에서 nude 태그 주입 실패")
-        print("✔ SDXL 의상 착의/탈의 분기 조립 로직 검사 통과")
-
-    # 6. 워크플로우 템플릿 생성 검사 (FLUX & SDXL)
-    try:
-        wf_flux = build_flux_workflow("test prompt", "test_prefix", use_face_detailer=False)
-        if "1" not in wf_flux or "20" not in wf_flux:
-            errors.append("FLUX 기본 워크플로우 노드 생성 불완전")
-
-        wf_sdxl = build_sdxl_workflow("test pos", "test neg", "test_prefix", use_face_detailer=False)
-        wf_sdxl_classes = {n.get("class_type") for n in wf_sdxl.values()}
-        if not {"CheckpointLoaderSimple", "KSampler", "SaveImage"}.issubset(wf_sdxl_classes):
-            errors.append("SDXL 기본 워크플로우 노드 생성 불완전")
-
-        wf_ip = build_sdxl_workflow("test pos", "test neg", "test_prefix", ref_image_name="test_ref.webp")
-        wf_ip_classes = {n.get("class_type") for n in wf_ip.values()}
-        if not {"IPAdapterUnifiedLoader", "PrepImageForClipVision", "IPAdapterAdvanced"}.issubset(wf_ip_classes):
-            errors.append("SDXL IP-Adapter 워크플로우 노드 생성 불완전")
-        print("✔ FLUX 및 SDXL + IP-Adapter 워크플로우 템플릿 생성 검사 통과")
-    except Exception as e:
-        errors.append(f"워크플로우 생성 실패: {e}")
-
-    # 7. 프로필 스위칭 및 커스텀 네거티브 / 배경 검사
-    if char:
-        test_char = CharacterConfig.from_dict({
-            "prefix": "test",
-            "name": "Test",
-            "appearance": {"outfit": "default suit", "face_and_hair": "short hair", "physique": "fit"},
-            "profiles": {
-                "swimsuit": {"outfit": "blue swimsuit", "sdxl_positive": "blue bikini BREAK 1girl"}
-            }
-        })
-        test_char.apply_profile("swimsuit")
-        if test_char.appearance.outfit != "blue swimsuit":
-            errors.append("프로필 스위칭 의상 오버라이드 실패")
-        
-        _, neg, _ = assemble_sdxl_prompt(test_char, sdxl_db["000"], custom_neg="custom_tag, no_glasses")
-        if "custom_tag" not in neg:
-            errors.append("SDXL 커스텀 네거티브 주입 실패")
-        print("✔ 프로필 스위칭 및 커스텀 네거티브 결합 검사 통과")
-
-    # 8. 더미 Mock 생성 검사
-    try:
-        mock_test_path = PROJECTS_DIR / "_test_mock.webp"
-        generate_mock_image(mock_test_path)
-        if not mock_test_path.exists() or mock_test_path.stat().st_size == 0:
-            errors.append("더미 Mock WebP 파일 생성 실패")
-        else:
-            mock_test_path.unlink()
-        print("✔ 더미 Mock WebP 생성 파이프라인 검사 통과")
-    except Exception as e:
-        errors.append(f"더미 Mock 생성 테스트 예외: {e}")
-
-    # 9. 이미지 생산 사전 점검 (포즈 제작 규칙 · 착의 고정 · H씬 알몸 전환 · 테마 스왑 전수 시뮬레이션)
-    try:
-        from plepa_engine.precheck import run_pregeneration_check
-        pre_report = run_pregeneration_check("spy")
-        if not pre_report.passed:
-            errors.extend(pre_report.errors)
-        else:
-            print(
-                f"✔ 이미지 생산 사전 점검 통과 (캐릭터 {pre_report.total_characters}명 × 포즈 {pre_report.total_poses}종 = {pre_report.total_combinations_checked}개 조합 무결성 100%)"
-            )
-    except Exception as e:
-        errors.append(f"이미지 생산 사전 점검 예외: {e}")
-
-    print("-" * 60)
-    if errors:
-        print(f"[FAIL] 총 {len(errors)}개 결함 발견:")
-        for err in errors:
-            print(f"  ❌ {err}")
-        return 1
-    else:
-        print("[PASS] 모든 진단 검사 항목을 통과했습니다. FLUX / SDXL 듀얼 엔진 무결성 100% 보장.")
-        return 0
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

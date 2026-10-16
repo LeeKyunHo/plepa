@@ -82,3 +82,13 @@ def test_header_active_roster_sync():
         assert get_active_roster() == "campus"
     finally:
         set_active_roster(original)
+
+
+def test_system_health_diagnostics():
+    """10단계 시스템 통합 무결성 진단(HealthService)이 결함 없이 전수 통과하는지 검증."""
+    from plepa_engine.services.health_service import default_health_service
+    results = default_health_service.run_full_diagnostics(check_comfy=False)
+    assert len(results) == 9
+    fails = [r for r in results if r.status == "FAIL"]
+    assert not fails, f"시스템 무결성 진단 실패 항목 발견: {[f'{r.stage_index}. {r.name}: {r.message}' for r in fails]}"
+
