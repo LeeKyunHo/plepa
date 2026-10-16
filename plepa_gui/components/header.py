@@ -5,10 +5,36 @@ plepa_gui.components.header
 
 from __future__ import annotations
 
+from typing import List
 from nicegui import ui
 from plepa_engine.comfy_client import ComfyClient
-from plepa_engine.config import COMFY_HOST
+from plepa_engine.config import COMFY_HOST, DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.services.job_manager import global_job_manager
+
+_ACTIVE_ROSTER = {"value": "campus"}
+
+
+def get_available_rosters() -> List[str]:
+    """사용 가능한 로스터 폴더 목록을 반환합니다."""
+    rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
+    return rosters or [DEFAULT_ROSTER]
+
+
+def get_active_roster() -> str:
+    """현재 전역 활성 로스터를 반환합니다."""
+    available = get_available_rosters()
+    if _ACTIVE_ROSTER["value"] in available:
+        return _ACTIVE_ROSTER["value"]
+    if "campus" in available:
+        _ACTIVE_ROSTER["value"] = "campus"
+    elif available:
+        _ACTIVE_ROSTER["value"] = available[0]
+    return _ACTIVE_ROSTER["value"]
+
+
+def set_active_roster(roster: str) -> None:
+    """전역 활성 로스터를 설정합니다."""
+    _ACTIVE_ROSTER["value"] = roster
 
 
 def render_header(current_page: str = "") -> None:
@@ -32,15 +58,30 @@ def render_header(current_page: str = "") -> None:
                 ("환경 설정", "/settings", "settings"),
             ]
             for label, route, icon in nav_items:
-                is_active = (current_page == route) or (route == "/characters" and current_page in ("", "/"))
+                is_active = (current_page == route) or (route == "/gallery" and current_page in ("", "/"))
                 btn = ui.button(label, icon=icon, on_click=lambda r=route: ui.navigate.to(r))
                 if is_active:
                     btn.props("flat color=amber-400").classes("font-semibold text-amber-300 border-b-2 border-amber-400 text-xs py-1")
                 else:
                     btn.props("flat color=white").classes("hover:text-amber-200 text-xs py-1")
 
-        # 우측: 전역 백그라운드 생성 상태 및 ComfyUI 연결 뱃지
+        # 우측: 전역 로스터 셀렉터, 백그라운드 생성 상태 및 ComfyUI 연결 뱃지
         with ui.row().classes("items-center gap-3"):
+            # 전역 활성 로스터 셀렉터
+            available_rosters = get_available_rosters()
+            current_r = get_active_roster()
+
+            def on_roster_changed(e):
+                set_active_roster(e.value)
+                ui.notify(f"📁 활성 로스터가 '{e.value}'(으)로 변경되었습니다.", type="info")
+                ui.navigate.reload()
+
+            ui.label("📁").classes("text-sm text-slate-400")
+            ui.select(
+                options=available_rosters,
+                value=current_r,
+                on_change=on_roster_changed
+            ).props("dense outlined dark options-dense").classes("w-28 text-xs font-bold text-amber-300").tooltip("전역 활성 로스터 선택 (페이지 공통 적용)")
             # 전역 작업 진행 뱃지
             job_badge = ui.badge("", color="amber-600").props("rounded").classes("px-3 py-1 text-xs cursor-pointer").on(
                 "click", lambda: ui.navigate.to("/generate")

@@ -50,7 +50,7 @@ def setup_routes():
     @ui.page("/")
     def index():
         ui.dark_mode().enable()
-        render_characters_page()
+        render_gallery_page()
 
     @ui.page("/characters")
     def page_characters():

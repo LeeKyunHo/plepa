@@ -19,7 +19,7 @@ from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.genit_exporter import default_genit_exporter
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import get_active_roster, render_header
 
 import mimetypes
 mimetypes.add_type("image/webp", ".webp")
@@ -29,8 +29,11 @@ app.add_static_files("/projects_static", str(PROJECTS_DIR))
 
 
 def detect_best_default_roster() -> str:
-    """에셋이 가장 많이 존재하는 로스터를 기본값으로 자동 감지 (예: don). _origin 폴더는 제외."""
-    best_roster = "don"
+    """전역 활성 로스터를 기본값으로 사용하고 없을 시 자동 감지."""
+    active_r = get_active_roster()
+    if (PROJECTS_DIR / active_r).is_dir():
+        return active_r
+    best_roster = "campus"
     max_count = 0
     for p in PROJECTS_DIR.iterdir():
         if not p.is_dir() or p.name.startswith("."):
@@ -98,6 +101,9 @@ def render_gallery_page() -> None:
                     ).props("dense outlined dark options-dense").classes("w-36 text-sm")
 
                 with ui.row().classes("items-center gap-2"):
+                    ui.button("📊 에셋 전수 감사", icon="assessment", on_click=lambda: open_audit_dialog()).props(
+                        "unelevated color=emerald-600 text-color=white dense size=sm font-bold"
+                    ).tooltip("로스터 캐릭터별 에셋 완비율과 누락 포즈를 1초 만에 전수 감사하고 누락분을 즉시 생성합니다.")
                     ui.button("📦 Genit 내보내기", icon="cloud_download", on_click=lambda: open_genit_export_dialog()).props(
                         "unelevated color=indigo-500 text-color=white dense size=sm font-bold"
                     ).tooltip("Genit 상용 규격({{url}}캐릭터코드/상황코드.webp)으로 에셋을 자동 변환 및 패키징합니다.")
@@ -208,6 +214,84 @@ def render_gallery_page() -> None:
                         ui.notify(f"⚠️ 내보낼 수 있는 에셋이 없습니다: {c_prefix}", type="warning")
 
                 ui.button("내보내기 실행", icon="check", on_click=do_export).props("unelevated color=indigo-500 font-bold")
+        dlg.open()
+
+    def open_audit_dialog():
+        """로스터 내 에셋 완비율 및 누락 포즈 1초 전수 감사 모달 다이얼로그."""
+        reports = default_asset_service.audit_roster_assets(roster=state["roster"])
+        if not reports:
+            ui.notify(f"로스터 '{state['roster']}'에 감사할 캐릭터가 없습니다.", type="warning")
+            return
+
+        with ui.dialog() as dlg, ui.card().classes("w-[900px] max-w-[95vw] max-h-[85vh] p-6 bg-slate-900 border border-emerald-700/60 rounded-xl shadow-2xl overflow-y-auto"):
+            with ui.row().classes("w-full justify-between items-center mb-4 pb-2 border-b border-slate-800"):
+                with ui.row().classes("items-center gap-2"):
+                    ui.icon("assessment", size="26px").classes("text-emerald-400")
+                    ui.label(f"📊 '{state['roster']}' 에셋 전수 감사 리포트 (총 {len(reports)}명)").classes("text-lg font-bold text-slate-100")
+                ui.button(icon="close", on_click=dlg.close).props("flat dense round color=slate-400")
+
+            # 감사 테이블
+            with ui.element("table").classes("w-full border-collapse text-left text-xs mb-2"):
+                with ui.element("thead"):
+                    with ui.element("tr").classes("border-b border-slate-700 bg-slate-800/80"):
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold")._text = "식별자"
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold")._text = "이름"
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold")._text = "보유 / 기대"
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold")._text = "완비율"
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold")._text = "무검열 백업(_origin)"
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold")._text = "누락 포즈 코드"
+                        ui.element("th").classes("p-2.5 text-slate-300 font-bold text-right")._text = "원클릭 액션"
+
+                with ui.element("tbody"):
+                    for r in reports:
+                        with ui.element("tr").classes("border-b border-slate-800/70 hover:bg-slate-800/40"):
+                            ui.element("td").classes("p-2.5 font-mono font-bold text-amber-300")._text = r["prefix"]
+                            ui.element("td").classes("p-2.5 text-slate-200 font-semibold")._text = r["name"]
+                            ui.element("td").classes("p-2.5 font-mono text-slate-300")._text = f"{r['present_count']} / {r['expected_count']}"
+                            
+                            with ui.element("td").classes("p-2.5"):
+                                rate = r["completion_rate"]
+                                color = "emerald" if rate >= 100 else ("amber" if rate >= 50 else "rose")
+                                ui.badge(f"{rate}%", color=color).props("dense text-[10px]")
+
+                            with ui.element("td").classes("p-2.5"):
+                                orig_cnt = r["origin_count"]
+                                if orig_cnt > 0:
+                                    ui.badge(f"{orig_cnt}장 백업", color="cyan-800").props("dense text-[10px]")
+                                else:
+                                    ui.label("-").classes("text-slate-500")
+
+                            with ui.element("td").classes("p-2.5"):
+                                missing = r["missing_codes"]
+                                if not missing:
+                                    ui.label("✔ 완벽").classes("text-emerald-400 font-bold")
+                                else:
+                                    m_text = ",".join(missing[:4]) + (f".. (+{len(missing)-4})" if len(missing) > 4 else "")
+                                    ui.label(m_text).classes("font-mono text-rose-300 text-[11px]").tooltip(",".join(missing))
+
+                            with ui.element("td").classes("p-2.5 text-right"):
+                                missing = r["missing_codes"]
+                                if missing:
+                                    async def trigger_missing(char_p=r["prefix"], miss_codes=missing):
+                                        dlg.close()
+                                        ui.notify(f"⚡ {char_p} 누락 포즈 {len(miss_codes)}개 생성 시작...", type="info")
+                                        from plepa_engine.services.generation_service import GenerationParams, default_generation_service
+                                        m_params = GenerationParams(
+                                            character_expr=char_p,
+                                            pose_expr=",".join(miss_codes),
+                                            roster=state["roster"],
+                                            censor=True,
+                                        )
+                                        await run.io_bound(default_generation_service.run_batch, m_params)
+                                        ui.notify(f"🎉 {char_p} 결손 에셋 생성 완료!", type="positive")
+                                        render_content()
+
+                                    ui.button("⚡ 누락분 즉시 생성", on_click=trigger_missing).props(
+                                        "unelevated dense size=xs color=amber-500 text-color=slate-950 font-bold"
+                                    ).tooltip("누락된 포즈들만 묶어서 즉시 생성합니다")
+                                else:
+                                    ui.label("완비").classes("text-slate-500 text-[11px]")
+
         dlg.open()
 
     def update_control_bars():
@@ -493,9 +577,10 @@ def render_gallery_page() -> None:
             with ui.row().classes("w-full items-center justify-between mb-4 pb-2 border-b border-slate-800"):
                 ui.label(f"🖼️ {prefix} 생성 에셋 목록 (총 {len(assets)}장)").classes("text-base font-bold text-amber-300")
 
+            all_single_paths = [x["path"] for x in assets]
             # 4열 반응형 카드 그리드
             with ui.grid(columns=4).classes("w-full gap-4"):
-                for a in assets:
+                for idx, a in enumerate(assets):
                     img_path: Path = a["path"]
                     rel_path = img_path.relative_to(PROJECTS_DIR).as_posix()
                     web_url = f"/projects_static/{rel_path}"
@@ -506,7 +591,7 @@ def render_gallery_page() -> None:
                     with ui.card().classes("bg-slate-800/80 border border-slate-700/60 p-2 rounded-lg hover:border-amber-400 transition-all"):
                         ui.image(web_url).classes(
                             "w-full h-72 object-cover rounded shadow cursor-pointer hover:scale-[1.02] transition-transform"
-                        ).on("click", lambda u=web_url, p=img_path: open_lightbox(u, p))
+                        ).on("click", lambda u=web_url, p=img_path, i=idx: open_lightbox(u, p, all_single_paths, i))
 
                         with ui.row().classes("w-full items-center justify-between mt-2 px-1"):
                             with ui.column().classes("gap-0"):
@@ -562,6 +647,9 @@ def render_gallery_page() -> None:
                                 except Exception:
                                     ui.label(prefix).classes("text-sm text-slate-300")
 
+                            # 행(캐릭터)별 존재하는 이미지 목록
+                            row_paths = [matrix.get(prefix, {}).get(c) for c in codes if matrix.get(prefix, {}).get(c) and matrix.get(prefix, {}).get(c).exists()]
+
                             # 각 포즈별 이미지 셀
                             for code in codes:
                                 img_path: Optional[Path] = matrix.get(prefix, {}).get(code)
@@ -569,11 +657,12 @@ def render_gallery_page() -> None:
                                     if img_path and img_path.exists():
                                         rel_path = img_path.relative_to(PROJECTS_DIR).as_posix()
                                         web_url = f"/projects_static/{rel_path}"
+                                        c_idx = row_paths.index(img_path) if img_path in row_paths else 0
 
                                         with ui.column().classes("items-center justify-center gap-1 mx-auto"):
                                             ui.image(web_url).classes(
                                                 "w-28 h-40 object-cover rounded shadow cursor-pointer border border-slate-700 hover:border-amber-400 transition-all hover:scale-105"
-                                            ).on("click", lambda u=web_url, p=img_path: open_lightbox(u, p))
+                                            ).on("click", lambda u=web_url, p=img_path, paths=row_paths, idx=c_idx: open_lightbox(u, p, paths, idx))
                                     else:
                                         with ui.column().classes("items-center justify-center w-28 h-40 bg-slate-800/30 rounded border border-dashed border-slate-700/60 text-slate-600"):
                                             ui.icon("image_not_supported", size="24px")
@@ -600,9 +689,10 @@ def render_gallery_page() -> None:
                 ui.label(f"✨ 비포즈 / 기타 에셋 목록 (총 {len(assets)}장)").classes("text-base font-bold text-purple-300")
                 ui.label(f"현재 로스터: {state['roster']}").classes("text-xs text-slate-400 font-mono")
 
+            misc_paths = [x["path"] for x in assets]
             # 4열 반응형 카드 그리드
             with ui.grid(columns=4).classes("w-full gap-4"):
-                for a in assets:
+                for idx, a in enumerate(assets):
                     img_path: Path = a["path"]
                     rel_path = img_path.relative_to(PROJECTS_DIR).as_posix()
                     web_url = f"/projects_static/{rel_path}"
@@ -615,7 +705,7 @@ def render_gallery_page() -> None:
                     with ui.card().classes("bg-slate-800/80 border border-slate-700/60 p-2 rounded-lg hover:border-purple-400 transition-all"):
                         ui.image(web_url).classes(
                             "w-full h-72 object-cover rounded shadow cursor-pointer hover:scale-[1.02] transition-transform"
-                        ).on("click", lambda u=web_url, p=img_path: open_lightbox(u, p))
+                        ).on("click", lambda u=web_url, p=img_path, i=idx: open_lightbox(u, p, misc_paths, i))
 
                         with ui.column().classes("w-full mt-2 px-1 gap-1"):
                             with ui.row().classes("w-full justify-between items-center"):
@@ -625,21 +715,79 @@ def render_gallery_page() -> None:
                             ui.label(a["name"]).classes("text-xs font-bold text-slate-100 truncate w-full").tooltip(a["name"])
                             ui.label(f"📁 {folder_name}").classes("text-[10px] text-slate-500 font-mono truncate w-full")
 
-    def open_lightbox(img_url: str, file_path: Path):
+    def open_lightbox(img_url: str, file_path: Path, item_paths: Optional[List[Path]] = None, current_idx: int = -1):
+        items = [p for p in item_paths if p and p.exists()] if item_paths else [file_path]
+        if file_path not in items:
+            items.insert(0, file_path)
+        cur_idx = current_idx if (0 <= current_idx < len(items)) else items.index(file_path)
+        nav_state = {"idx": cur_idx}
         curr = {"url": img_url, "path": file_path}
         showing_origin = {"val": False}
+        toggle_origin_holder = {"fn": None}
 
         with ui.dialog() as dialog, ui.card().classes(
-            "max-w-6xl w-full md:w-[92vw] min-h-[450px] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"
+            "max-w-6xl w-full md:w-[92vw] min-h-[480px] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"
         ):
             header_box = ui.row().classes("w-full justify-between items-center mb-3 px-2 pb-2 border-b border-slate-800 flex-wrap gap-2")
             img_box = ui.column().classes("w-full flex-1 items-center justify-center py-2")
+            meta_box = ui.row().classes("w-full justify-between items-center mt-2 px-2 pt-2 border-t border-slate-800/80 text-xs text-slate-400 font-mono flex-wrap gap-2")
+
+            def go_to_index(idx: int):
+                if not items:
+                    return
+                nav_state["idx"] = idx % len(items)
+                new_path = items[nav_state["idx"]]
+                curr["path"] = new_path
+                rel = new_path.relative_to(PROJECTS_DIR).as_posix()
+                curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                showing_origin["val"] = False
+                refresh_header()
+                refresh_img()
+                refresh_meta()
+
+            def refresh_meta():
+                meta_box.clear()
+                p = curr["path"]
+                import json, re
+                m_code = re.match(r"^([a-zA-Z0-9]+)_([a-zA-Z0-9]+)", p.name)
+                prefix_val = m_code.group(1) if m_code else None
+                code_val = m_code.group(2) if m_code else None
+
+                manifest_p = p.parent.parent / "_batch_manifest.json"
+                manifest_item = {}
+                if manifest_p.is_file():
+                    try:
+                        with open(manifest_p, "r", encoding="utf-8") as f:
+                            m_json = json.load(f)
+                            manifest_item = m_json.get("items", {}).get(f"{prefix_val}_{code_val}", {})
+                    except Exception:
+                        pass
+
+                seed_val = manifest_item.get("seed") or "미기록"
+                ts_val = manifest_item.get("timestamp", "-")
+                with meta_box:
+                    with ui.row().classes("items-center gap-3"):
+                        ui.label(f"🔒 골든 시드: {seed_val}").classes("text-amber-300 font-bold")
+                        ui.label(f"🕒 생성시각: {ts_val}").classes("text-slate-400")
+                        ui.label(f"📁 {p.name}").classes("text-slate-500 truncate max-w-sm")
+                    with ui.row().classes("items-center gap-2"):
+                        ui.label("단축키: ← 이전 | → 다음 | Space 원본/검열 토글").classes("text-[11px] text-slate-500")
 
             def refresh_header():
                 header_box.clear()
                 p = curr["path"]
                 with header_box:
                     with ui.row().classes("items-center gap-2 flex-wrap"):
+                        # 이전/다음 네비게이션 버튼
+                        if len(items) > 1:
+                            ui.button(icon="arrow_back", on_click=lambda: go_to_index(nav_state["idx"] - 1)).props(
+                                "flat round dense size=sm color=amber-400"
+                            ).tooltip("이전 포즈 (단축키: ←)")
+                            ui.label(f"{nav_state['idx'] + 1}/{len(items)}").classes("text-xs font-mono text-amber-300 px-1 font-bold")
+                            ui.button(icon="arrow_forward", on_click=lambda: go_to_index(nav_state["idx"] + 1)).props(
+                                "flat round dense size=sm color=amber-400"
+                            ).tooltip("다음 포즈 (단축키: →)")
+
                         ui.icon("zoom_in", size="20px").classes("text-amber-400")
                         ui.label(p.name).classes("text-sm md:text-base font-bold text-slate-100 font-mono")
 
@@ -655,16 +803,14 @@ def render_gallery_page() -> None:
                         size_kb = p.stat().st_size / 1024 if p.exists() else 0
                         ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400 mr-2")
 
-                        # 1. 포즈/캐릭터 추출 및 1클릭 리롤 버튼
                         import re
                         m_code = re.match(r"^([a-zA-Z0-9]+)_([a-zA-Z0-9]+)", p.name)
                         prefix_val = m_code.group(1) if m_code else None
                         code_val = m_code.group(2) if m_code else None
 
                         if prefix_val and code_val:
-                            async def on_reroll_click():
-                                reroll_btn.props("loading")
-                                ui.notify(f"🔄 #{code_val} 새 시드로 리롤(재생성) 시작...", type="info")
+                            async def run_reroll(reuse_seed: bool):
+                                ui.notify(f"🔄 #{code_val} {'골든 시드 고정' if reuse_seed else '새 시드'} 리롤 시작...", type="info")
                                 try:
                                     from plepa_engine.services.generation_service import GenerationParams, default_generation_service
                                     r_params = GenerationParams(
@@ -673,6 +819,7 @@ def render_gallery_page() -> None:
                                         roster=state["roster"],
                                         overwrite=True,
                                         censor=True,
+                                        reuse_seed=reuse_seed,
                                     )
                                     results = await run.io_bound(default_generation_service.run_batch, r_params)
                                     if results and results[0].success:
@@ -683,19 +830,22 @@ def render_gallery_page() -> None:
                                         ui.notify(f"🎉 #{code_val} 리롤 완료!", type="positive")
                                         refresh_header()
                                         refresh_img()
+                                        refresh_meta()
                                         render_content()
                                     else:
                                         ui.notify("❌ 리롤 생성 실패", type="negative")
                                 except Exception as ex:
                                     ui.notify(f"❌ 리롤 오류: {ex}", type="negative")
-                                finally:
-                                    reroll_btn.props(remove="loading")
 
-                            reroll_btn = ui.button("🔄 리롤", icon="refresh", on_click=on_reroll_click).props(
-                                "unelevated dense size=sm color=blue-600 text-white"
-                            ).tooltip("현재 포즈를 새로운 시드로 다시 생성합니다")
+                            ui.button("🎲 새 시드 리롤", icon="casino", on_click=lambda: run_reroll(False)).props(
+                                "unelevated dense size=sm color=blue-600 text-white font-bold"
+                            ).tooltip("새로운 무작위 시드로 다시 생성합니다")
 
-                        # 2. _origin 무검열 원본 비교 및 복원 버튼
+                            ui.button("🔒 시드 고정 리롤", icon="lock_reset", on_click=lambda: run_reroll(True)).props(
+                                "unelevated dense size=sm color=amber-600 text-slate-950 font-bold"
+                            ).tooltip("기존 골든 시드를 고정하여 구도는 유지하고 의상/태그만 다시 생성합니다")
+
+                        # _origin 무검열 원본 비교 및 복원 버튼
                         origin_dir = p.parent.parent / f"{p.parent.name}_origin"
                         origin_cand = origin_dir / p.name
                         if origin_cand.is_file():
@@ -708,11 +858,13 @@ def render_gallery_page() -> None:
                                 toggle_btn.text = "🛡️ 검열본" if showing_origin["val"] else "👁️ 원본"
                                 refresh_img()
 
+                            toggle_origin_holder["fn"] = on_toggle_origin
+
                             toggle_btn = ui.button(
                                 "🛡️ 검열본" if showing_origin["val"] else "👁️ 원본",
                                 icon="visibility",
                                 on_click=on_toggle_origin
-                            ).props("unelevated dense size=sm color=slate-700 text-amber-300 border border-amber-500/40").tooltip("무검열 원본과 검열본을 번갈아 비교합니다")
+                            ).props("unelevated dense size=sm color=slate-700 text-amber-300 border border-amber-500/40").tooltip("무검열 원본과 검열본을 번갈아 비교합니다 (단축키: Space)")
 
                             async def on_restore_origin():
                                 ok = await run.io_bound(default_asset_service.restore_from_origin, prefix_val, code_val, state["roster"])
@@ -724,6 +876,7 @@ def render_gallery_page() -> None:
                                     curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
                                     refresh_header()
                                     refresh_img()
+                                    refresh_meta()
                                     render_content()
                                 else:
                                     ui.notify("복원 실패", type="negative")
@@ -731,6 +884,8 @@ def render_gallery_page() -> None:
                             ui.button("⏪ 원본 복원", icon="undo", on_click=on_restore_origin).props(
                                 "flat dense size=sm color=rose-400"
                             ).tooltip("assets/{char}_origin/의 무검열 원본을 본 폴더로 복사해 검열을 해제합니다")
+                        else:
+                            toggle_origin_holder["fn"] = None
 
                         # 4K AI 업스케일 버튼
                         is_already = default_upscale_service.is_already_4k(p)
@@ -747,6 +902,7 @@ def render_gallery_page() -> None:
                                     ui.notify(f"🎉 4K 업스케일 완료: {res_path.name}", type="positive")
                                     refresh_header()
                                     refresh_img()
+                                    refresh_meta()
                                     render_content()
                                 else:
                                     ui.notify("❌ 4K 업스케일 생성에 실패했습니다.", type="negative")
@@ -765,17 +921,16 @@ def render_gallery_page() -> None:
                             "이미 4K 초고화질입니다 (클릭 시 재연산)" if is_already else "4x-UltraSharp 초해상화 모델로 4K(4096x6144) 무손실 업스케일"
                         )
 
-                        # 새 탭에서 원본 전용 뷰어로 열기 (브라우저 다운로드 강제 튕김 방지 및 줌 확대)
+                        # 새 탭에서 원본 전용 뷰어로 열기
                         view_url = f"/view_image?src={curr['url']}&name={p.name}"
                         ui.button(
-                            "새 탭에서 원본 보기",
+                            "새 탭",
                             icon="open_in_new",
                             on_click=lambda u=view_url: ui.navigate.to(u, new_tab=True)
                         ).props(f'flat dense size=sm color=amber-400 href="{view_url}" target="_blank"').tooltip(
-                            "새 탭에서 고화질 뷰어로 보기 (다운로드 방지 및 줌 확대 지원)"
+                            "새 탭에서 고화질 뷰어로 보기"
                         )
 
-                        # PC 탐색기 열기 (해당 파일 하이라이트 선택)
                         def handle_open_folder():
                             open_in_explorer(curr["path"])
                             try:
@@ -783,7 +938,7 @@ def render_gallery_page() -> None:
                             except Exception:
                                 pass
 
-                        ui.button("PC 폴더 열기", icon="folder", on_click=handle_open_folder).props(
+                        ui.button(icon="folder", on_click=handle_open_folder).props(
                             "flat dense size=sm color=slate-300"
                         ).tooltip("호스트 PC 파일 탐색기에서 해당 파일 위치 열기")
                         ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
@@ -793,12 +948,26 @@ def render_gallery_page() -> None:
                 with img_box:
                     ui.html(
                         f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 400px;">'
-                        f'<img src="{curr["url"]}" alt="{curr["path"].name}" style="max-height: 80vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
+                        f'<img src="{curr["url"]}" alt="{curr["path"].name}" style="max-height: 75vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
                         f'</div>'
                     )
 
+            def handle_keyboard(e):
+                if not dialog.value:
+                    return
+                if e.key == "ArrowLeft":
+                    go_to_index(nav_state["idx"] - 1)
+                elif e.key == "ArrowRight":
+                    go_to_index(nav_state["idx"] + 1)
+                elif e.key == " ":
+                    if toggle_origin_holder.get("fn"):
+                        toggle_origin_holder["fn"]()
+
+            ui.keyboard(on_key=handle_keyboard)
+
             refresh_header()
             refresh_img()
+            refresh_meta()
 
         dialog.open()
 

@@ -44,7 +44,7 @@ def render_poses_page() -> None:
             ui.label("🧘 포즈 데이터베이스").classes("text-lg font-bold text-slate-100 mb-2")
 
             # DB에 존재하는 섹션들을 메타데이터 레지스트리 기반으로 자동 동적 생성
-            active_sections = default_pose_service.get_active_sections(engine="flux")
+            active_sections = default_pose_service.get_active_sections(engine="sdxl")
             default_sec = active_sections[0]["id"] if active_sections else "emotions"
             state["current_section"] = default_sec
 
@@ -63,7 +63,7 @@ def render_poses_page() -> None:
     def switch_section(sec_name: str):
         state["current_section"] = sec_name
         # 해당 섹션의 첫 번째 코드 자동 선택
-        db = default_pose_service.load_pose_db(engine="flux")
+        db = default_pose_service.load_pose_db(engine="sdxl")
         sec_codes = [c for c, e in db.items() if e.section == sec_name]
         if sec_codes:
             state["selected_code"] = sec_codes[0]
@@ -74,12 +74,12 @@ def render_poses_page() -> None:
 
     def refresh_items_list():
         items_container.clear()
-        flux_db = default_pose_service.load_pose_db(engine="flux")
-        sec_codes = sorted([c for c, e in flux_db.items() if e.section == state["current_section"]])
+        sdxl_db = default_pose_service.load_pose_db(engine="sdxl")
+        sec_codes = sorted([c for c, e in sdxl_db.items() if e.section == state["current_section"]])
 
         with items_container:
             for code in sec_codes:
-                entry = flux_db[code]
+                entry = sdxl_db[code]
                 is_selected = (code == state["selected_code"])
                 card_classes = "w-full p-2.5 rounded-lg cursor-pointer transition-all border "
                 if is_selected:
@@ -165,14 +165,8 @@ def render_poses_page() -> None:
                 ui.checkbox("소프트 삭제 (disabled)", value=fields["disabled"], on_change=lambda e: fields.update({"disabled": e.value})).props("dark dense")
 
             # 3. SDXL 프롬프트 편집
-            ui.label("🏷️ SDXL 프롬프트 (Unholy Mix, Danbooru 순수 태그)").classes("text-xs font-bold text-emerald-400 mt-3 mb-1")
+            ui.label("🏷️ SDXL 프롬프트 (Danbooru 순수 쉼표 태그)").classes("text-xs font-bold text-emerald-400 mt-3 mb-1")
             ui.textarea(value=fields["sdxl_prompt"], on_change=lambda e: fields.update({"sdxl_prompt": e.value})).props(
-                "outlined dark autogrow rows=3"
-            ).classes("w-full font-mono text-xs mb-3")
-
-            # 4. FLUX 프롬프트 편집
-            ui.label("📝 FLUX 프롬프트 (T5-XXL 서술형 영문 자연어)").classes("text-xs font-bold text-amber-400 mt-2 mb-1")
-            ui.textarea(value=fields["flux_prompt"], on_change=lambda e: fields.update({"flux_prompt": e.value})).props(
                 "outlined dark autogrow rows=4"
             ).classes("w-full font-mono text-xs mb-4")
 
@@ -181,7 +175,7 @@ def render_poses_page() -> None:
             code=code,
             section=state["current_section"],
             label=fields["label"],
-            prompt=fields["flux_prompt"],
+            prompt=fields["sdxl_prompt"] or fields["flux_prompt"],
             description=fields["description"]
         )
         open_prompt_inspector_dialog(sample_char, p_entry)

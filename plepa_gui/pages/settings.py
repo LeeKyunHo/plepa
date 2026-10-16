@@ -36,7 +36,6 @@ def render_settings_page() -> None:
     form = dict(config)
 
     ckpt_options = get_select_options(discovered_models.get("checkpoints", []), form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"))
-    unet_options = get_select_options(discovered_models.get("unets", []), form.get("flux_unet", "flux1-dev-Q6_K.gguf"))
     upscaler_options = get_select_options(discovered_models.get("upscalers", []), form.get("upscaler", "4x-UltraSharp.pth"))
 
     with ui.column().classes("w-full max-w-5xl mx-auto p-6 gap-6"):
@@ -65,26 +64,65 @@ def render_settings_page() -> None:
                 ).classes("flex-1")
 
                 ui.select(
-                    options=["sdxl", "flux"],
-                    value=form.get("default_engine", "sdxl"),
-                    label="기본 생성 엔진",
-                    on_change=lambda e: form.update({"default_engine": e.value})
-                ).props("outlined dark dense options-dense").classes("w-40")
+                    options=["sdxl"],
+                    value="sdxl",
+                    label="기본 생성 엔진 (SDXL 단일화)",
+                    on_change=lambda e: form.update({"default_engine": "sdxl"})
+                ).props("outlined dark dense options-dense").classes("w-48")
 
                 ui.select(
                     options=available_rosters,
-                    value=form.get("default_roster", "don"),
+                    value=form.get("default_roster", "campus"),
                     label="기본 로스터",
                     on_change=lambda e: form.update({"default_roster": e.value})
                 ).props("outlined dark dense options-dense").classes("w-40")
 
-            # 2. SDXL 엔진 파라미터 (Unholy Mix 등)
+            # 2. SDXL 엔진 파라미터 (Unholy Mix / WAI 등)
             with ui.row().classes("w-full items-center justify-between mt-4 mb-2"):
-                ui.label("🏷️ SDXL 엔진 파라미터").classes("text-sm font-bold text-emerald-400")
+                with ui.row().classes("items-center gap-2"):
+                    ui.label("🏷️ SDXL 엔진 파라미터").classes("text-sm font-bold text-emerald-400")
+                    ui.label("(플에파 단일 공식 엔진)").classes("text-xs text-slate-400")
                 if discovered_models.get("checkpoints"):
                     ui.label(f"✓ ComfyUI 체크포인트 {len(discovered_models['checkpoints'])}종 감지됨").classes("text-xs text-emerald-400/80")
                 else:
                     ui.label("⚠️ ComfyUI 미가동 (직접 입력 가능)").classes("text-xs text-amber-400/80")
+
+            # 빠른 체크포인트 프로필 프리셋 바
+            with ui.row().classes("w-full items-center gap-2 p-2 bg-emerald-950/30 border border-emerald-700/40 rounded-lg mb-3"):
+                ui.label("⚡ 원클릭 프로필 프리셋:").classes("text-xs font-bold text-emerald-300 mr-1")
+
+                def apply_unholy():
+                    form.update({
+                        "sdxl_ckpt": "unholyDesireMixSinister_v90.safetensors",
+                        "sdxl_width": 832,
+                        "sdxl_height": 1216,
+                        "sdxl_steps": 30,
+                        "sdxl_cfg": 5.0,
+                        "sdxl_sampler": "dpmpp_2m",
+                        "sdxl_scheduler": "karras",
+                    })
+                    ui.notify("🔥 Unholy Desire v9.0 프로필 적용 완료 (832x1216, CFG 5.0, 30스텝)", type="positive")
+                    ui.navigate.reload()
+
+                def apply_wai():
+                    form.update({
+                        "sdxl_ckpt": "waiIllustriousSDXL_v160.safetensors",
+                        "sdxl_width": 896,
+                        "sdxl_height": 1152,
+                        "sdxl_steps": 28,
+                        "sdxl_cfg": 6.0,
+                        "sdxl_sampler": "euler_ancestral",
+                        "sdxl_scheduler": "normal",
+                    })
+                    ui.notify("✨ WAI-Illustrious v16 프로필 적용 완료 (896x1152, CFG 6.0, 28스텝)", type="positive")
+                    ui.navigate.reload()
+
+                ui.button("🔥 Unholy Desire v9.0 (기본)", icon="bolt", on_click=apply_unholy).props(
+                    "unelevated dense size=xs color=emerald-600 text-white font-bold"
+                ).tooltip("832x1216 | 30스텝 | CFG 5.0 | dpmpp_2m karras")
+                ui.button("✨ WAI-Illustrious v16", icon="auto_awesome", on_click=apply_wai).props(
+                    "unelevated dense size=xs color=indigo-600 text-white font-bold"
+                ).tooltip("896x1152 | 28스텝 | CFG 6.0 | euler_ancestral normal")
 
             with ui.column().classes("w-full gap-3 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 mb-4"):
                 if ckpt_options:
@@ -110,37 +148,6 @@ def render_settings_page() -> None:
                 with ui.row().classes("w-full gap-4"):
                     ui.input("샘플러 (sampler)", value=form.get("sdxl_sampler", "dpmpp_2m"), on_change=lambda e: form.update({"sdxl_sampler": e.value})).props("outlined dark dense").classes("w-1/2")
                     ui.input("스케줄러 (scheduler)", value=form.get("sdxl_scheduler", "karras"), on_change=lambda e: form.update({"sdxl_scheduler": e.value})).props("outlined dark dense").classes("w-1/2")
-
-            # 3. FLUX 엔진 파라미터 (GGUF Q6_K 등)
-            with ui.row().classes("w-full items-center justify-between mt-4 mb-2"):
-                ui.label("📝 FLUX.1 [dev] GGUF 파라미터").classes("text-sm font-bold text-amber-400")
-                if discovered_models.get("unets"):
-                    ui.label(f"✓ GGUF UNet {len(discovered_models['unets'])}종 감지됨").classes("text-xs text-amber-400/80")
-
-            with ui.column().classes("w-full gap-3 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 mb-4"):
-                if unet_options:
-                    ui.select(
-                        options=unet_options,
-                        value=form.get("flux_unet", "flux1-dev-Q6_K.gguf"),
-                        label="FLUX GGUF UNet 파일 선택 (models/unet)",
-                        on_change=lambda e: form.update({"flux_unet": e.value})
-                    ).props("outlined dark dense options-dense use-input new-value-mode=add-unique").classes("w-full").tooltip("드롭다운에서 선택하거나 직접 입력할 수 있습니다.")
-                else:
-                    ui.input(
-                        "FLUX GGUF UNet 파일명",
-                        value=form.get("flux_unet", "flux1-dev-Q6_K.gguf"),
-                        on_change=lambda e: form.update({"flux_unet": e.value})
-                    ).props("outlined dark dense").classes("w-full")
-
-                with ui.row().classes("w-full gap-4"):
-                    ui.number("FLUX 가로 해상도", value=form.get("flux_width", 896), on_change=lambda e: form.update({"flux_width": int(e.value) if e.value is not None else 896})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("FLUX 세로 해상도", value=form.get("flux_height", 1152), on_change=lambda e: form.update({"flux_height": int(e.value) if e.value is not None else 1152})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("FLUX 스텝 수", value=form.get("flux_steps", 20), on_change=lambda e: form.update({"flux_steps": int(e.value) if e.value is not None else 20})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("Guidance 스케일", value=form.get("flux_guidance", 3.5), step=0.1, on_change=lambda e: form.update({"flux_guidance": float(e.value) if e.value is not None else 3.5})).props("outlined dark dense").classes("w-1/4")
-
-                with ui.row().classes("w-full gap-4"):
-                    ui.input("FLUX LoRA 파일명", value=form.get("flux_lora", "modern-anime-lora.safetensors"), on_change=lambda e: form.update({"flux_lora": e.value})).props("outlined dark dense").classes("flex-1")
-                    ui.number("LoRA 가중치", value=form.get("flux_lora_weight", 0.9), step=0.05, on_change=lambda e: form.update({"flux_lora_weight": float(e.value) if e.value is not None else 0.9})).props("outlined dark dense").classes("w-40")
 
             # 4. 보정 및 업스케일러
             ui.label("✨ AI 보정 및 업스케일러").classes("text-sm font-bold text-indigo-400 mt-4 mb-2")

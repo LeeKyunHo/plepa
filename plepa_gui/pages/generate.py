@@ -6,6 +6,8 @@ plepa_gui.pages.generate
 from __future__ import annotations
 
 import asyncio
+import time
+from pathlib import Path
 from typing import List, Optional
 
 from nicegui import run, ui
@@ -15,11 +17,15 @@ from plepa_engine.models import GenerationResult
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.config_service import default_config_service
-from plepa_engine.services.generation_service import GenerationParams, default_generation_service
+from plepa_engine.services.generation_service import (
+    GENERATION_OPTION_SPECS,
+    GenerationParams,
+    default_generation_service,
+)
 from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_background_service import default_pose_bg_service
 from plepa_engine.services.pose_service import default_pose_service
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import get_active_roster, render_header
 
 
 def render_generate_page() -> None:
@@ -37,9 +43,8 @@ def render_generate_page() -> None:
         return opts
 
     ckpt_options = get_select_options(discovered_models.get("checkpoints", []), conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"))
-    unet_options = get_select_options(discovered_models.get("unets", []), conf.get("flux_unet", "flux1-dev-Q6_K.gguf"))
 
-    def get_bg_options(r: str, eng: str) -> dict:
+    def get_bg_options(r: str, eng: str = "sdxl") -> dict:
         bgs = default_background_service.get_backgrounds(r, engine=eng)
         opts = {}
         
@@ -74,25 +79,24 @@ def render_generate_page() -> None:
                     opts[k] = k
         return opts
 
+    active_r = get_active_roster()
+
     # 반응형 폼 상태
     state = {
-        "roster": DEFAULT_ROSTER,
+        "roster": active_r,
         "selected_chars": [],
         "pose_selection_mode": "set",  # 'set' or 'custom'
-        "selected_pose_set": "unified_100",
+        "selected_pose_set": "sample10",
         "custom_pose_expr": "000..019",
-        "engine": DEFAULT_ENGINE,
+        "engine": "sdxl",
         "sdxl_ckpt": conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
-        "flux_unet": conf.get("flux_unet", "flux1-dev-Q6_K.gguf"),
         "bg_preset": "none",
-        "face_detailer": False,
-        "upscale": False,
-        "censor": False,
-        "overwrite": False,
-        "mock": False,
         "is_running": False,
         "cancel_requested": False,
     }
+    # GENERATION_OPTION_SPECS 레지스트리 기반 옵션 자동 바인딩
+    for spec in GENERATION_OPTION_SPECS:
+        state[spec["field"]] = spec["default"]
 
     available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
     if not available_rosters:
@@ -126,10 +130,14 @@ def render_generate_page() -> None:
 
             # 2. 포즈 선택 (세트 또는 표현식)
             with ui.row().classes("w-full items-center justify-between mb-1"):
-                ui.label("2. 포즈 선택 (V2 규격)").classes("text-xs font-bold text-amber-400")
-                ui.button("🏫 캠퍼스 106종", icon="school", on_click=lambda: select_genit_set("campus_106", "캠퍼스 표준 106종")).props(
-                    "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
-                ).tooltip("000~052, 060~063, 080~127, 130 (오토코노코 자동 +70 매핑)")
+                ui.label("2. 포즈 선택").classes("text-xs font-bold text-amber-400")
+                with ui.row().classes("gap-1"):
+                    ui.button("🌟 10대 골든 (sample10)", icon="star", on_click=lambda: select_genit_set("sample10", "10대 대표 골든 샘플러")).props(
+                        "unelevated dense size=xs color=amber-500 text-color=slate-950 font-bold"
+                    ).tooltip("000, 002, 020, 024, 034, 040, 044, 060, 080, 088 (1분 고속 검증)")
+                    ui.button("🏫 캠퍼스 106종", icon="school", on_click=lambda: select_genit_set("campus_106", "캠퍼스 표준 106종")).props(
+                        "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
+                    ).tooltip("000~052, 060~063, 080~127, 130 (오토코노코 자동 +70 매핑)")
 
             # V2 상용 표준 퀵 셀렉트 버튼 바
             with ui.row().classes("w-full items-center gap-1.5 p-1.5 bg-indigo-950/40 border border-indigo-700/50 rounded-lg mb-2 flex-wrap"):
@@ -171,18 +179,13 @@ def render_generate_page() -> None:
                 ui.icon("check_circle", size="18px").classes("text-emerald-400")
                 ui.label("기본 동작: 이미 있는 이미지는 자동 건너뛰고 누락된 포즈만 채웁니다.").classes("text-[11px] text-emerald-200")
 
-            # 3. 엔진 및 옵션
+            # 3. 모델 및 보정 옵션
             with ui.row().classes("w-full items-center justify-between mb-1"):
-                ui.label("3. 엔진 및 보정 옵션").classes("text-xs font-bold text-amber-400")
+                ui.label("3. 모델 및 보정 옵션").classes("text-xs font-bold text-amber-400")
                 config_badge = ui.label("").classes("text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30")
 
-            with ui.row().classes("w-full gap-4 mb-2"):
-                ui.select(
-                    options={"sdxl": "SDXL (표준)", "flux": "FLUX [레거시]"},
-                    value=state["engine"],
-                    label="생성 엔진",
-                    on_change=lambda e: on_engine_changed(e.value)
-                ).props("dense outlined dark options-dense").classes("w-40")
+            with ui.row().classes("w-full gap-4 mb-2 items-center"):
+                ui.badge("SDXL 공식 엔진", color="emerald-700").props("dense text-xs")
 
                 bg_sel = ui.select(
                     options=bg_options,
@@ -199,12 +202,15 @@ def render_generate_page() -> None:
 
             model_select_container = ui.column().classes("w-full mb-3")
 
-            with ui.row().classes("w-full items-center gap-4 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 mb-6"):
-                ui.checkbox("Face Detailer", value=state["face_detailer"], on_change=lambda e: state.update({"face_detailer": e.value})).props("dark dense")
-                ui.checkbox("4x Upscale", value=state["upscale"], on_change=lambda e: state.update({"upscale": e.value})).props("dark dense")
-                ui.checkbox("자동 검열", value=state["censor"], on_change=lambda e: state.update({"censor": e.value})).props("dark dense")
-                ui.checkbox("강제 덮어쓰기 (리롤)", value=state["overwrite"], on_change=lambda e: state.update({"overwrite": e.value})).props("dark dense").tooltip("기존 이미지를 무시하고 새로 생성하여 덮어씁니다.")
-                ui.checkbox("Mock 시뮬레이션", value=state["mock"], on_change=lambda e: state.update({"mock": e.value})).props("dark dense").tooltip("ComfyUI 없이 0.001초 가상 생성")
+            # 레지스트리 기반 옵션 체크박스 동적 렌더링
+            with ui.row().classes("w-full items-center gap-3 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 mb-6 flex-wrap"):
+                for spec in GENERATION_OPTION_SPECS:
+                    f = spec["field"]
+                    ui.checkbox(
+                        spec["label"],
+                        value=state[f],
+                        on_change=lambda e, field=f: state.update({field: e.value})
+                    ).props("dark dense").tooltip(spec["tooltip"])
 
             # 생성 시작 및 취소 버튼
             with ui.row().classes("w-full justify-between items-center"):
@@ -216,18 +222,28 @@ def render_generate_page() -> None:
                 )
                 cancel_btn.disable()
 
-        # 우측: 실시간 진행 현황 및 콘솔 로그 카드
+        # 우측: 실시간 진행 현황, 라이브 프리뷰어 및 콘솔 로그 카드
         with ui.card().classes("flex-1 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg min-h-[600px]"):
-            ui.label("📊 실시간 생성 현황").classes("text-xl font-bold text-slate-100 mb-4")
+            ui.label("📊 실시간 생성 현황 & 라이브 프리뷰").classes("text-xl font-bold text-slate-100 mb-3")
 
             with ui.row().classes("w-full items-center justify-between mb-2"):
                 status_label = ui.label("대기 중").classes("text-sm font-semibold text-slate-400")
                 progress_text = ui.label("0 / 0 (0%)").classes("text-sm font-mono text-amber-400")
 
-            progress_bar = ui.linear_progress(value=0.0).props("color=amber-400 size=10px stripe").classes("rounded mb-6")
+            progress_bar = ui.linear_progress(value=0.0).props("color=amber-400 size=10px stripe").classes("rounded mb-4")
+
+            # 실시간 최신 생성 이미지 라이브 프리뷰 카드
+            preview_container = ui.card().classes("w-full bg-slate-950/70 border border-slate-800 p-3 rounded-lg mb-4 flex flex-row items-center gap-4")
+            preview_img = ui.image().classes("w-28 h-40 object-cover rounded shadow border border-slate-700")
+            with ui.column().classes("flex-1 gap-1 text-xs"):
+                preview_title = ui.label("생성 대기 중").classes("text-sm font-bold text-amber-300")
+                preview_seed = ui.label("Seed: -").classes("font-mono text-slate-400")
+                preview_file = ui.label("파일명: -").classes("font-mono text-slate-400 truncate max-w-[280px]")
+                preview_time = ui.label("소요 시간: -").classes("text-emerald-400")
+            preview_container.set_visibility(False)
 
             ui.label("생성 로그:").classes("text-xs font-semibold text-slate-400 mb-1")
-            log_box = ui.column().classes("w-full h-96 overflow-y-auto bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 gap-1")
+            log_box = ui.column().classes("w-full h-80 overflow-y-auto bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 gap-1")
 
     def select_all_chars(select: bool):
         chars = default_character_service.list_characters(roster=state["roster"])
@@ -311,47 +327,22 @@ def render_generate_page() -> None:
 
     def update_config_badge():
         conf = default_config_service.get_config()
-        if state["engine"] == "sdxl":
-            cfg_v = conf.get("sdxl_cfg", 5.0)
-            steps_v = conf.get("sdxl_steps", 30)
-            w_v = conf.get("sdxl_width", 832)
-            h_v = conf.get("sdxl_height", 1216)
-            config_badge.set_text(f"⚙️ SDXL 설정: CFG {cfg_v} | {steps_v}스텝 | {w_v}x{h_v}")
-        else:
-            guidance_v = conf.get("flux_guidance", 3.5)
-            steps_v = conf.get("flux_steps", 20)
-            w_v = conf.get("flux_width", 896)
-            h_v = conf.get("flux_height", 1152)
-            config_badge.set_text(f"⚙️ FLUX 설정: Guidance {guidance_v} | {steps_v}스텝 | {w_v}x{h_v}")
+        cfg_v = conf.get("sdxl_cfg", 5.0)
+        steps_v = conf.get("sdxl_steps", 30)
+        w_v = conf.get("sdxl_width", 832)
+        h_v = conf.get("sdxl_height", 1216)
+        config_badge.set_text(f"⚙️ SDXL 설정: CFG {cfg_v} | {steps_v}스텝 | {w_v}x{h_v}")
 
     def render_model_selector():
         model_select_container.clear()
         with model_select_container:
-            if state["engine"] == "sdxl":
-                label_text = f"SDXL 체크포인트 ({len(discovered_models.get('checkpoints', []))}종 감지됨)" if discovered_models.get("checkpoints") else "SDXL 체크포인트 모델명"
-                ui.select(
-                    options=ckpt_options,
-                    value=state["sdxl_ckpt"],
-                    label=label_text,
-                    on_change=lambda e: state.update({"sdxl_ckpt": e.value})
-                ).props("dense outlined dark options-dense use-input new-value-mode=add-unique").classes("w-full text-xs").tooltip("ComfyUI models/checkpoints 폴더 내 모델을 선택하거나 직접 입력합니다.")
-            else:
-                label_text = f"FLUX GGUF UNet ({len(discovered_models.get('unets', []))}종 감지됨)" if discovered_models.get("unets") else "FLUX GGUF UNet 모델명"
-                ui.select(
-                    options=unet_options,
-                    value=state["flux_unet"],
-                    label=label_text,
-                    on_change=lambda e: state.update({"flux_unet": e.value})
-                ).props("dense outlined dark options-dense use-input new-value-mode=add-unique").classes("w-full text-xs").tooltip("ComfyUI models/unet 폴더 내 모델을 선택하거나 직접 입력합니다.")
-
-    def on_engine_changed(new_eng: str):
-        state["engine"] = new_eng
-        new_opts = get_bg_options(state["roster"], new_eng)
-        bg_sel.options = new_opts
-        if state["bg_preset"] not in new_opts:
-            state["bg_preset"] = "none" if "none" in new_opts else list(new_opts.keys())[0]
-            bg_sel.value = state["bg_preset"]
-        render_model_selector()
+            label_text = f"SDXL 체크포인트 ({len(discovered_models.get('checkpoints', []))}종 감지됨)" if discovered_models.get("checkpoints") else "SDXL 체크포인트 모델명"
+            ui.select(
+                options=ckpt_options,
+                value=state["sdxl_ckpt"],
+                label=label_text,
+                on_change=lambda e: state.update({"sdxl_ckpt": e.value})
+            ).props("dense outlined dark options-dense use-input new-value-mode=add-unique").classes("w-full text-xs").tooltip("ComfyUI models/checkpoints 폴더 내 모델을 선택하거나 직접 입력합니다.")
         update_config_badge()
 
     def refresh_char_checkboxes(keep_selection: bool = False):
@@ -441,19 +432,15 @@ def render_generate_page() -> None:
 
         char_expr = ",".join(state["selected_chars"])
 
+        option_kwargs = {spec["field"]: state.get(spec["field"], spec["default"]) for spec in GENERATION_OPTION_SPECS}
         params = GenerationParams(
             character_expr=char_expr,
             pose_expr=pose_expr,
             roster=state["roster"],
-            engine=state["engine"],
-            ckpt=state["sdxl_ckpt"] if state["engine"] == "sdxl" else None,
-            unet=state["flux_unet"] if state["engine"] == "flux" else None,
+            engine="sdxl",
+            ckpt=state["sdxl_ckpt"],
             bg_preset=state["bg_preset"],
-            face_detailer=state["face_detailer"],
-            upscale=state["upscale"],
-            censor=state["censor"],
-            overwrite=state["overwrite"],
-            mock=state["mock"],
+            **option_kwargs,
         )
 
         log_box.clear()
@@ -488,6 +475,22 @@ def render_generate_page() -> None:
             if status["total"] > 0:
                 progress_bar.value = status["percentage"]
                 progress_text.set_text(f"{status['current']} / {status['total']} ({int(status['percentage'] * 100)}%)")
+
+        # 실시간 최신 생성 이미지 프리뷰 카드 업데이트
+        latest = status.get("latest_result")
+        if latest and latest.get("image_path"):
+            try:
+                p_obj = Path(latest["image_path"])
+                if p_obj.exists():
+                    rel_p = p_obj.relative_to(PROJECTS_DIR).as_posix()
+                    preview_img.set_source(f"/projects_static/{rel_p}?t={int(time.time())}")
+                    preview_title.set_text(f"✨ #{latest['code']} {latest['label']}")
+                    preview_seed.set_text(f"🔒 Seed: {latest.get('seed') or '미기록'}")
+                    preview_file.set_text(f"📁 {latest['filename']}")
+                    preview_time.set_text(f"⏱️ {latest['duration_sec']:.1f}초 완료 ({latest['timestamp']})")
+                    preview_container.set_visibility(True)
+            except Exception:
+                pass
 
         logs = status["logs"]
         if len(logs) > rendered_log_count:
