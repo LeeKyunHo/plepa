@@ -67,3 +67,5 @@ logs/
 *.code-workspace
 .vscode/
 
+# AI Context Snapshots (Local export only)
+context_snapshot/
