@@ -35,7 +35,8 @@
   python batch_generator.py -r campus -c all -p 130 -f --censor     # 6인 전원 130번(오토코노코는 200번 자동변환) 재생성
   python batch_generator.py -r campus -c aya -p "080..091" --censor # 정상위/후배위/기승위 구간만 생성
 
-  ── [4] 섹션별 묶음 생성 (V2 포즈 섹션 단축 키워드) ─────────────────────────
+  ── [4] 섹션별 및 골든 샘플러 묶음 생성 ─────────────────────────────────────
+  python batch_generator.py -r campus -c aya -p sample10           # 10대 대표 골든 샘플러 (감정2, 일상2, 스킨십1, 이벤트2, 로맨스1, H씬2)
   python batch_generator.py -r campus -c aya -p emotions            # 000~019 감정 20종
   python batch_generator.py -r campus -c aya -p poses               # 020~039 일상/스킨십 20종
   python batch_generator.py -r campus -c aya -p events              # 040~052 이벤트 씬
@@ -57,12 +58,17 @@
   # • 검열 스타일 변경(기본값: white_silhouette):
   #   --censor-style {white_silhouette, silhouette, bar, shadow, mosaic}
 
-  ── [7] Auto-QC 자동 품질 검수 및 리롤 제어 (기본 활성화) ──────────────────
-  # • 색감 과포화, 남성 분신(2명 이상), 단독/여운 씬 남성 난입, 9등신 기형 감지 시 시드를 바꿔 자동 재생성(기본 3회):
+  ── [7] Auto-QC 자동 품질 검수, 골든 시드 고정 재생성 & 엄격 검열 리롤 ───────
+  # • 색감 과포화, 남성 분신, 단독 씬 남성 난입 감지 시 시드를 바꿔 자동 재생성(기본 3회):
   python batch_generator.py -r campus -c aya -p 034 --max-retries 5 # 최대 5회까지 리롤 허용
   python batch_generator.py -r campus -c aya -p 034 --no-qc         # Auto-QC 비활성화 (1회 강제 생성)
+  # • _batch_manifest.json의 이전 골든 시드를 고정 재사용하여 구도 유지 채색/재생성:
+  python batch_generator.py -r campus -c aya -p 000..019 --reuse-seed
+  # • 필수 성인 노출/결합 씬에서 성기 미탐지(구도 이탈) 시 자동 리롤:
+  python batch_generator.py -r campus -c aya -p h_scenes --censor --strict-censor-qc
 
-  ── [8] 사전 무결성 점검(Precheck) 및 형제 프로젝트(kiro) 동기화 ───────────
+  ── [8] 1초 에셋 전수 감사, 사전 점검(Precheck) 및 kiro 동기화 ───────────────
+  python batch_generator.py -r campus --audit                       # 캠퍼스 로스터 전원 완비율, 누락 포즈, _origin 백업 1초 감사
   .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus     # 캠퍼스 로스터 5단계 사전 점검
   .\.venv\Scripts\python.exe -m plepa_engine.precheck -r spy        # 스파이 로스터 5단계 사전 점검
   python scripts/sync_to_kiro.py --dry-run                          # kiro 동기화 시뮬레이션
@@ -92,4 +98,6 @@
     (예: projects/campus/assets/aya/aya_000_평상.webp, aya_060_딥키스.webp)
   • 검열 원본 백업 : projects/{roster}/assets/{char}_origin/{char}_{code}_{label}.webp
     (--censor 또는 --censor-only 실행 시 노출이 감지된 성인/탈의 씬의 무검열 원본만 분리 보관)
-  • 웹 GUI 실행   : run_gui.bat 더블클릭 (또는 python -m plepa_gui.app 실행 후 http://localhost:8080 접속)
+  • 웹 GUI 갤러리 : run_gui.bat 더블클릭 (http://localhost:8080)
+    - 라이트박스 뷰어에서 [🔄 리롤], [👁️ 원본/검열본 토글], [⏪ 무검열 복원] 1클릭 지원
+    - Genit 상용 규격 원클릭 패키징 및 _genit_prompt_sheet.md 프롬프트 매핑 시트 자동 생성
