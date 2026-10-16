@@ -1066,3 +1066,20 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   - SNS 로스터 4인 전원의 `_origin` 백업 완비율 100% 달성 (감사 리포트 정상 확인).
   - 리아(`ria`)의 `000`, `020`, `034`, `044`, `060`, `130`, `131` 재생성을 통해 허리선 롱헤어 및 장소 특화 구도 시각적 검증 완료.
 
+### ADR-58: SNS 인플루언서 신규 캐릭터 2종(funi, nana) 구축 및 이벤트 포즈 구도 혁신(051 탑다운 미러셀카, 049 서킷 캔음료 스냅) (2026-10-16)
+- **배경**:
+  - 사용자 피드백으로 실제 인스타그램 인플루언서 레퍼런스 스타일 2종(바디체크 하이앵글 미러셀카 및 야외 캡모자 캔음료 스트릿 스냅)의 추가 요청이 접수됨.
+  - 단순 포즈 변경에 그치지 않고, 해당 스타일(오픈 후드집업+스포츠 브라탑+로우라이즈 밴드 노출, 체크 캡모자+슬리브 타투+크롭탑)을 완벽하게 소화할 수 있는 신규 SNS 캐릭터 2종과 전용 포즈 구도의 전면 업그레이드를 결정.
+- **결정 사항**:
+  1. **SNS 전용 이벤트 포즈 2종 구도 혁신 (`projects/sns/pose_overrides.json`)**:
+     - `051` (**`탑다운 미러셀카`**): 스마트폰을 머리 위로 높이 들어 거울에 비친 가슴골과 잘록한 허리, 언더웨어 밴드를 위에서 내려다보는 탑다운/하이앵글 시점(`taking mirror selfie from high angle`, `smartphone held high overhead`, `top-down angle, view from above`)으로 전면 개편.
+     - `049` (**`캔음료 스냅`**): 야간 서킷 철조망 펜스 앞, 체크 캡모자를 쓰고 머리 위에 빨간 음료 캔을 얹어 균형을 잡는 포즈와 장난스러운 혀 내민 표정(`standing in front of metal chainlink fence, outdoor night`, `holding red aluminum drink can on top of head with one hand`, `playful mischievous expression, slight tongue out`)으로 개편.
+     - 오토코노코 대칭 슬롯(`prompt_otokonoko`)도 1:1 완벽 지원.
+  2. **신규 SNS 캐릭터 2인 구축 (`projects/sns/characters/`)**:
+     - **`funi` (푸니)**: 긴 흑발 일자뱅 + 앙큼한 고양이 눈매 + 개미허리 폭발적 글래머 + 오픈 지퍼 후드집업 + 그레이 코튼 스포츠 브라탑 + 로우라이즈 조거 팬츠 + 밴드 노출 + 아랫배 자궁 타투 (`funi.json`).
+     - **`nana` (나나)**: 긴 흑갈색 웨이브 헤어 + 체크 캡모자 + 양팔 슬리브 타투 + 블랙 크롭 캐미솔 나시탑 + 루즈핏 트레이닝 팬츠 + 언더웨어 밴드 노출 (`nana.json`).
+- **결과**:
+  - `python -m plepa_engine.precheck -r sns` 6명 1,878개 조합 100% 무결점 통과 (`PASS`).
+  - `pytest -q` 78 passed 및 시스템 10단계 통합 진단 10 PASS 유지.
+  - `funi_000`, `funi_051`, `nana_000`, `nana_049` 실전 생성 결과 레퍼런스 스타일 100% 일치 시각적 합격.
+
