@@ -56,6 +56,8 @@ def validate_generated_image(
     is_kiss_scene: bool = False,
     section: Optional[str] = None,
     conf_threshold: float = 0.55,
+    prompt: Optional[str] = None,
+    **kwargs: Any,
 ) -> Tuple[bool, str, Dict[str, Any]]:
     """
     생성된 이미지를 정밀 분석하여 불량(Reject) 여부와 사유를 판정합니다.
