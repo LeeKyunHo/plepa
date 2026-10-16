@@ -21,6 +21,8 @@
   - FLUX는 `data/legacy/` 및 `plepa_engine/legacy/`로 완전 격리·아카이브되었습니다.
   - **포즈 추가/수정, 캐릭터 프롬프트 튜닝, 기능 수정 시 FLUX 관련 파일(`data/legacy/flux_pose_database.json`, `flux_*.py`)을 일체 열람·수정하거나 동기화하지 마십시오.** (토큰 낭비 및 불필요한 이중 작업 엄격 금지)
   - 모든 포즈 작업의 단일 진실 공급원(SSOT)은 오직 **`data/sdxl_pose_database.json`** 하나입니다.
+- **CLI · Engine · GUI 삼위일체 동기화 원칙 (Trinity Sync Rule)**:
+  - `plepa_engine/services/`에 새로운 파라미터나 생성 옵션을 추가·수정할 때는 반드시 **① `plepa_engine` (`GENERATION_OPTION_SPECS` / `GenerationParams`) ➔ ② `batch_generator.py` (CLI 옵션) ➔ ③ `plepa_gui` (Web UI 자동 렌더링) ➔ ④ `tests/test_cli_gui_sync.py`** 4곳을 한 세트로 묶어 동기화하며, 어느 한쪽에만 기능을 방치하지 않습니다.
 
 ## 4. 인계 및 지식 연속성 (Handover & Continuity)
 - 새로운 세션이나 다른 컴퓨터의 Antigravity 에이전트가 투입되었을 때:

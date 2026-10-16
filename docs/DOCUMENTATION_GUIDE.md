@@ -64,7 +64,10 @@ flowchart TD
    - `POSE_CATALOG.md`: 라벨명 및 `description` 동기화.
    - `캐릭터_포즈_제작_규칙.md`: 프롬프트 조립 규칙 및 불변식 동기화.
    - `개발일지.md`: 포즈 개선 내역 및 대상 에셋 기록.
-4. **모든 일반 작업 완료 및 푸시 시**:
+4. **생성 옵션 및 GUI 기능 추가/수정 시 (Trinity Sync 원칙)**:
+   - `GENERATION_OPTION_SPECS` 레지스트리 ➔ `batch_generator.py` CLI ➔ `plepa_gui/pages/generate.py` ➔ `tests/test_cli_gui_sync.py` 4각 동기화 검증 (`pytest tests/test_cli_gui_sync.py`).
+   - `docs/GUI_GUIDE.md`: 신규 UI 기능 및 조작법 동기화.
+5. **모든 일반 작업 완료 및 푸시 시**:
    - **`개발일지.md` (필수)**: 당일 일자에 작업 내역 4단 템플릿으로 작성.
 
 ---
