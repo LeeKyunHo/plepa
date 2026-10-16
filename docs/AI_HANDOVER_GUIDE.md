@@ -614,6 +614,21 @@
       - **전수 검증**:
         - `tests/test_qc_summary.py` 신규 4개 테스트 케이스 작성 및 전체 `pytest` 70 passed.
         - `python -m plepa_engine.precheck -r campus`: 1,878조합 100% PASS.
+52. **Auto-QC 딥러닝 추론 CPU 스레드 동적 제한 및 프로세스 우선순위 하향 (`BELOW_NORMAL_PRIORITY_CLASS`) (ADR 2026-10-16)**
+    - **배경 및 증상**:
+      - `qa_validator.py`의 Auto-QC 딥러닝 검사(`imgutils.detect` / PyTorch / ONNX) 진행 시 CPU 사용률이 100%까지 치솟아 마우스 조작, 웹서핑 등 윈도우 UI 전체가 버벅이고 프리징되는 현상 발생.
+      - 20스레드 전량을 단일 배치 프로세스가 독점하여 윈도우 스레드 스케줄러가 데스크톱 렌더링에 필요한 자원을 즉시 할당받지 못함.
+    - **해결 조치 및 기술 불변식**:
+      - **CPU 스레드 자동 제한 (`전체 스레드 수 - 2`)**:
+        - `usable_threads = max(2, (os.cpu_count() or 4) - 2)` 동적 계산식 적용.
+        - 전체 스레드를 무작정 반토막 내지 않고, 정확히 2개 스레드만 윈도우 OS 및 브라우저 전용으로 보존하고 나머지(18스레드 등)는 검사에 풀가동하여 검사 속도와 데스크톱 부드러움을 동시 확보.
+        - `OMP_NUM_THREADS`, `MKL_NUM_THREADS` 환경변수 세팅 및 `torch.set_num_threads(usable_threads)`를 라이브러리 임포트 전에 구성.
+      - **프로세스 우선순위 하향 (`BELOW_NORMAL_PRIORITY_CLASS`)**:
+        - `psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)` 적용.
+        - 백그라운드에서 CPU를 높게 쓰더라도 마우스 조작이나 브라우저 탭 전환 시 윈도우가 즉시 자원을 양보하여 체감 렉 0% 달성.
+      - **키로(kiro) 전파 동기화**: `scripts/sync_to_kiro.py --modules-only`를 통해 `kiro/generator/qa_validator.py`에도 최신 최적화 코드 즉시 반영 완료.
+    - **전수 검증**:
+      - `tests/test_qa_validator.py`에 `test_cpu_thread_limit_and_priority` 신설, 전체 `pytest` 71 passed.
 
 ---
 
