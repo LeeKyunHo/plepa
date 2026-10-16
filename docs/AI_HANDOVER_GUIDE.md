@@ -1044,3 +1044,21 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - `batch_generator.py`에서 `args.roster in ("all", "전체", "*")` 시 등록된 10개 로스터를 순차 순회하며 감사(`--audit`), 프로필(`-l`), 배치 생성(`000`, `sample10`, `all`)을 일괄 실행하도록 구조화.
 - **결과**: `pytest` 78개 단위 테스트 100% PASS, 10단계 시스템 통합 무결성 10 PASS 달성 및 사용자 원클릭 치트코드 탑재 완료.
 
+### ADR-57: 검열 파이프라인 무조건 100% 무검열 원본 선제 백업(_origin) 및 리아 롱헤어 길이 고정 (2026-10-16)
+- **배경**:
+  - 기존 검열 시스템(`censor_file`)은 YOLO 모델이 성기를 실제로 탐지(`count > 0`)했을 때만 `_origin` 폴더에 원본을 저장하였음.
+  - 이로 인해 성인 H씬/탈의 씬임에도 불구하고 미탐지된 파일은 원본 백업이 누락되어 에셋 전수 감사(`--audit`)에서 `_origin 백업` 수량이 현저히 부족하게 집계되는 결함 발생.
+  - 또한 신규 SNS 캐릭터 리아(`ria`)의 헤어스타일 프롬프트에 기장 한정자가 누락되어 시드에 따라 단발(`000`) ➔ 세미롱(`020`) ➔ 롱헤어(`130`)로 들쑥날쑥 변하는 헤어 길이 불일치 파동 발생.
+- **결정 사항**:
+  1. **검열 파이프라인 100% 무조건 선제 백업(Proactive Origin Backup) 의무화**:
+     - `should_censor` 조건 충족 시, 검열 모델 추론 및 감지 결과와 무관하게 ComfyUI가 생성한 무검열 원본을 `assets/{prefix}_origin/`에 **먼저 복사(선제 백업)**한 뒤 검열본 치환을 진행함.
+     - `censor_only` 및 `overwrite=False` 스킵 경로에도 동일하게 `backup_dir` 선제 복사를 보장하여 원본 유실률 0% 달성.
+     - `censor_file` 호출 시 `enable_anchor_fallback=True`를 명시하여 성기 미탐지 결합 씬에 대한 안전 앵커 자동 마스킹 연동.
+     - `AssetService.list_character_assets()`에서 파일명 라벨 변경 시에도 `prefix_code*` 글로브 패턴으로 무검열 원본을 자동 매핑하도록 보강.
+  2. **리아(ria) 허리선 긴 생머리 롱헤어 영구 고정**:
+     - `appearance.face_and_hair` 및 `sdxl_positive`/`sdxl_nude_positive`에 `((long sleek straight black hair, waist-length hair:1.25))` 주입.
+     - 네거티브에 `((short hair, bob cut, pixie cut, medium hair, shoulder-length hair:1.45))` 차단벽을 구축하여 130번 층계참 롱헤어 스타일로 전 포즈 통일.
+- **결과**:
+  - SNS 로스터 4인 전원의 `_origin` 백업 완비율 100% 달성 (감사 리포트 정상 확인).
+  - 리아(`ria`)의 `000`, `020`, `034`, `044`, `060`, `131` 재생성을 통해 허리선 롱헤어 일관성 시각적 검증 완료.
+
