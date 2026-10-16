@@ -53,13 +53,15 @@ class AssetService:
     def list_character_assets(self, prefix: str, roster: str = DEFAULT_ROSTER) -> List[Dict[str, Any]]:
         """
         해당 캐릭터의 에셋 파일들을 검색하여 메타데이터 리스트를 반환합니다.
-        반환: List[{ code, label, path, censored_path, size_bytes, mtime }]
+        반환: List[{ code, label, path, censored_path, origin_path, size_bytes, mtime }]
         """
         asset_dir = self.get_character_asset_dir(prefix, roster)
         if not asset_dir.is_dir():
             return []
 
-        # { "000": { "path": ..., "censored_path": ... } }
+        origin_dir = PROJECTS_DIR / roster / "assets" / f"{prefix}_origin"
+
+        # { "000": { "path": ..., "censored_path": ..., "origin_path": ... } }
         items_by_code: Dict[str, Dict[str, Any]] = {}
 
         # 영숫자 포즈 코드 규격 지원 (예: 000, A00, C01, N01, N28 등)
@@ -82,6 +84,7 @@ class AssetService:
                     "label": raw_label,
                     "path": None,
                     "censored_path": None,
+                    "origin_path": None,
                     "size_bytes": 0,
                     "mtime": 0.0,
                 }
@@ -93,6 +96,15 @@ class AssetService:
                 items_by_code[code]["label"] = raw_label or items_by_code[code]["label"]
                 items_by_code[code]["size_bytes"] = f.stat().st_size
                 items_by_code[code]["mtime"] = f.stat().st_mtime
+
+                # {prefix}_origin 폴더 내 동일 파일명의 무검열 원본 매핑
+                if origin_dir.is_dir():
+                    origin_cand = origin_dir / f.name
+                    if origin_cand.is_file():
+                        items_by_code[code]["origin_path"] = origin_cand
+                        if not items_by_code[code]["censored_path"]:
+                            # 본 폴더의 파일이 검열본으로 교체 배치된 경우
+                            items_by_code[code]["censored_path"] = f
 
         # 정렬 키: 숫자 단독(000) -> 영문+숫자(A00, C01, N01) -> 일반 문자열
         def _code_sort_key(k: str) -> Tuple[int, Any, Any]:
@@ -194,6 +206,105 @@ class AssetService:
 
         # 최신 수정 순 정렬
         results.sort(key=lambda x: x["mtime"], reverse=True)
+        return results
+
+    def restore_from_origin(self, prefix: str, code: str, roster: str = DEFAULT_ROSTER) -> bool:
+        """
+        assets/{prefix}_origin/ 폴더의 원본 파일을 assets/{prefix}/로 덮어써서 무검열 원본으로 복원합니다.
+        성공 시 True, 원본 파일이 없으면 False 반환.
+        """
+        import shutil
+        from plepa_engine.services.pose_service import default_pose_service
+
+        origin_dir = PROJECTS_DIR / roster / "assets" / f"{prefix}_origin"
+        asset_dir = self.get_character_asset_dir(prefix, roster)
+        if not origin_dir.is_dir() or not asset_dir.is_dir():
+            return False
+
+        code_str = default_pose_service.normalize_code(code)
+        matches = list(origin_dir.glob(f"{prefix}_{code_str}*"))
+        if not matches:
+            return False
+
+        src_file = matches[0]
+        dst_file = asset_dir / src_file.name
+        shutil.copy2(src_file, dst_file)
+        return True
+
+    def audit_roster_assets(self, roster: str = DEFAULT_ROSTER) -> List[Dict[str, Any]]:
+        """
+        지정된 로스터 내 모든 캐릭터의 에셋 완비 상태, 누락 포즈, 구버전 라벨 불일치,
+        _origin 무검열 백업 보유 여부를 1초 전수 감사하여 리스트로 반환합니다.
+        """
+        from plepa_engine.services.character_service import default_character_service
+        from plepa_engine.services.pose_service import default_pose_service
+
+        char_dir = PROJECTS_DIR / roster / "characters"
+        if not char_dir.is_dir():
+            return []
+
+        pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
+        expected_codes = default_pose_service.resolve_pose_codes("all", pose_db, roster=roster)
+
+        # 오토코노코 전용 오프셋 매핑 셋 (+70)
+        otokonoko_offset_map = {
+            f"{i:03d}": f"{i+70:03d}" for i in range(80, 150)
+        }
+
+        results = []
+        char_files = sorted(char_dir.glob("*.json"))
+
+        for cf in char_files:
+            try:
+                char_obj, _ = default_character_service.find_character(cf.stem, roster=roster)
+            except Exception:
+                continue
+
+            prefix = char_obj.prefix
+            is_otokonoko = (getattr(char_obj, "gender", "") or "").lower() == "otokonoko"
+
+            # 캐릭터별 맞춤 기대 코드 계산
+            if is_otokonoko:
+                char_expected_codes = [
+                    otokonoko_offset_map.get(c, c) for c in expected_codes
+                ]
+            else:
+                char_expected_codes = list(expected_codes)
+
+            assets = self.list_character_assets(prefix, roster=roster)
+            assets_by_code = {a["code"]: a for a in assets}
+
+            present_codes = set(assets_by_code.keys())
+            missing_codes = [c for c in char_expected_codes if c not in present_codes]
+
+            # 구버전 라벨 불일치 수 계산
+            outdated_labels = 0
+            for code, a in assets_by_code.items():
+                if code in pose_db:
+                    canonical_label = pose_db[code].label
+                    if a["label"] and canonical_label and a["label"] != canonical_label:
+                        outdated_labels += 1
+
+            # _origin 백업 보유 수 계산
+            origin_count = sum(1 for a in assets if a.get("origin_path") is not None)
+
+            expected_count = len(char_expected_codes)
+            present_count = len(present_codes)
+            rate = round((present_count / expected_count * 100), 1) if expected_count > 0 else 0.0
+
+            results.append({
+                "prefix": prefix,
+                "name": char_obj.name,
+                "gender": char_obj.gender,
+                "expected_count": expected_count,
+                "present_count": present_count,
+                "missing_codes": missing_codes,
+                "missing_count": len(missing_codes),
+                "completion_rate": rate,
+                "outdated_labels": outdated_labels,
+                "origin_count": origin_count,
+            })
+
         return results
 
 

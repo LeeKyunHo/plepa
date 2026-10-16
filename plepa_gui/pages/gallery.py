@@ -29,7 +29,7 @@ app.add_static_files("/projects_static", str(PROJECTS_DIR))
 
 
 def detect_best_default_roster() -> str:
-    """에셋이 가장 많이 존재하는 로스터를 기본값으로 자동 감지 (예: don)."""
+    """에셋이 가장 많이 존재하는 로스터를 기본값으로 자동 감지 (예: don). _origin 폴더는 제외."""
     best_roster = "don"
     max_count = 0
     for p in PROJECTS_DIR.iterdir():
@@ -38,7 +38,7 @@ def detect_best_default_roster() -> str:
         assets_dir = p / "assets"
         if not assets_dir.is_dir():
             continue
-        webp_count = len(list(assets_dir.glob("*/*.webp")))
+        webp_count = len([f for f in assets_dir.glob("*/*.webp") if not f.parent.name.endswith("_origin")])
         if webp_count > max_count:
             max_count = webp_count
             best_roster = p.name
@@ -627,6 +627,7 @@ def render_gallery_page() -> None:
 
     def open_lightbox(img_url: str, file_path: Path):
         curr = {"url": img_url, "path": file_path}
+        showing_origin = {"val": False}
 
         with ui.dialog() as dialog, ui.card().classes(
             "max-w-6xl w-full md:w-[92vw] min-h-[450px] p-4 bg-slate-950 border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto"
@@ -653,6 +654,83 @@ def render_gallery_page() -> None:
                     with ui.row().classes("items-center gap-2 flex-wrap"):
                         size_kb = p.stat().st_size / 1024 if p.exists() else 0
                         ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-400 mr-2")
+
+                        # 1. 포즈/캐릭터 추출 및 1클릭 리롤 버튼
+                        import re
+                        m_code = re.match(r"^([a-zA-Z0-9]+)_([a-zA-Z0-9]+)", p.name)
+                        prefix_val = m_code.group(1) if m_code else None
+                        code_val = m_code.group(2) if m_code else None
+
+                        if prefix_val and code_val:
+                            async def on_reroll_click():
+                                reroll_btn.props("loading")
+                                ui.notify(f"🔄 #{code_val} 새 시드로 리롤(재생성) 시작...", type="info")
+                                try:
+                                    from plepa_engine.services.generation_service import GenerationParams, default_generation_service
+                                    r_params = GenerationParams(
+                                        character_expr=prefix_val,
+                                        pose_expr=code_val,
+                                        roster=state["roster"],
+                                        overwrite=True,
+                                        censor=True,
+                                    )
+                                    results = await run.io_bound(default_generation_service.run_batch, r_params)
+                                    if results and results[0].success:
+                                        res_img = results[0].image_path
+                                        curr["path"] = res_img
+                                        rel = res_img.relative_to(PROJECTS_DIR).as_posix()
+                                        curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                        ui.notify(f"🎉 #{code_val} 리롤 완료!", type="positive")
+                                        refresh_header()
+                                        refresh_img()
+                                        render_content()
+                                    else:
+                                        ui.notify("❌ 리롤 생성 실패", type="negative")
+                                except Exception as ex:
+                                    ui.notify(f"❌ 리롤 오류: {ex}", type="negative")
+                                finally:
+                                    reroll_btn.props(remove="loading")
+
+                            reroll_btn = ui.button("🔄 리롤", icon="refresh", on_click=on_reroll_click).props(
+                                "unelevated dense size=sm color=blue-600 text-white"
+                            ).tooltip("현재 포즈를 새로운 시드로 다시 생성합니다")
+
+                        # 2. _origin 무검열 원본 비교 및 복원 버튼
+                        origin_dir = p.parent.parent / f"{p.parent.name}_origin"
+                        origin_cand = origin_dir / p.name
+                        if origin_cand.is_file():
+                            def on_toggle_origin():
+                                showing_origin["val"] = not showing_origin["val"]
+                                target_f = origin_cand if showing_origin["val"] else p
+                                curr["path"] = target_f
+                                rel = target_f.relative_to(PROJECTS_DIR).as_posix()
+                                curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                toggle_btn.text = "🛡️ 검열본" if showing_origin["val"] else "👁️ 원본"
+                                refresh_img()
+
+                            toggle_btn = ui.button(
+                                "🛡️ 검열본" if showing_origin["val"] else "👁️ 원본",
+                                icon="visibility",
+                                on_click=on_toggle_origin
+                            ).props("unelevated dense size=sm color=slate-700 text-amber-300 border border-amber-500/40").tooltip("무검열 원본과 검열본을 번갈아 비교합니다")
+
+                            async def on_restore_origin():
+                                ok = await run.io_bound(default_asset_service.restore_from_origin, prefix_val, code_val, state["roster"])
+                                if ok:
+                                    ui.notify("⏪ 무검열 원본으로 복원되었습니다!", type="positive")
+                                    showing_origin["val"] = False
+                                    curr["path"] = p
+                                    rel = p.relative_to(PROJECTS_DIR).as_posix()
+                                    curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                    refresh_header()
+                                    refresh_img()
+                                    render_content()
+                                else:
+                                    ui.notify("복원 실패", type="negative")
+
+                            ui.button("⏪ 원본 복원", icon="undo", on_click=on_restore_origin).props(
+                                "flat dense size=sm color=rose-400"
+                            ).tooltip("assets/{char}_origin/의 무검열 원본을 본 폴더로 복사해 검열을 해제합니다")
 
                         # 4K AI 업스케일 버튼
                         is_already = default_upscale_service.is_already_4k(p)

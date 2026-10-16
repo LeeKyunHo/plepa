@@ -93,8 +93,11 @@ class GenitExporter:
     ) -> Tuple[int, Path, str]:
         """
         단일 캐릭터의 생성된 에셋들을 Genit 규격(output_dir/{export_code}/{상황코드}.webp)으로 복사/내보냅니다.
+        내보내기 완료 시 해당 폴더에 [포즈코드 | 파일명 | 한글상황설명] 매핑 시트(_genit_prompt_sheet.md)를 자동 생성합니다.
         반환값: (내보낸 파일 수, 대상 폴더 경로, 결정된 캐릭터 코드)
         """
+        from plepa_engine.services.pose_service import default_pose_service
+
         export_code = self.resolve_export_code(char_name, char_prefix, custom_export_code)
         target_root = output_dir or (ROOT_DIR / "dist" / "genit")
         target_dir = target_root / export_code
@@ -104,8 +107,11 @@ class GenitExporter:
         if not assets_dir.is_dir():
             return 0, target_dir, export_code
 
+        pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
         exported_count = 0
-        for webp_file in assets_dir.glob("*.webp"):
+        sheet_rows = []
+
+        for webp_file in sorted(assets_dir.glob("*.webp")):
             internal_code = extract_pose_code_from_filename(webp_file.name)
             if not internal_code:
                 continue
@@ -115,6 +121,32 @@ class GenitExporter:
 
             shutil.copy2(webp_file, dest_file)
             exported_count += 1
+
+            # 프롬프트 시트용 정보 추출
+            label = "미상"
+            desc = ""
+            norm_code = default_pose_service.normalize_code(internal_code)
+            if norm_code in pose_db:
+                p_entry = pose_db[norm_code]
+                label = p_entry.label
+                desc = p_entry.description or p_entry.section
+            sheet_rows.append(f"| `{genit_code}` | `{dest_file.name}` | **{label}** | {desc} |")
+
+        # _genit_prompt_sheet.md 마크다운 시트 생성
+        sheet_path = target_dir / "_genit_prompt_sheet.md"
+        sheet_content = [
+            f"# 젠잇(Genit) 프롬프트 매핑 시트 - {char_name} (`{export_code}`)",
+            f"",
+            f"- **캐릭터 식별자**: `{char_prefix}`",
+            f"- **젠잇 코드**: `{export_code}`",
+            f"- **내보낸 에셋 수**: {exported_count}개",
+            f"- **원본 로스터**: `{roster}`",
+            f"",
+            f"| 젠잇 포즈코드 | 출력 파일명 | 한글 라벨 | 상황 및 연출 설명 |",
+            f"| :---: | :--- | :--- | :--- |",
+        ] + sheet_rows
+        with open(sheet_path, "w", encoding="utf-8") as sf:
+            sf.write("\n".join(sheet_content) + "\n")
 
         return exported_count, target_dir, export_code
 
