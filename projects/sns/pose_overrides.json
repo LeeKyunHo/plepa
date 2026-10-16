@@ -11,10 +11,11 @@
       "section": "events"
     },
     "049": {
-      "label": "스트릿 스냅샷",
-      "description": "SNS 전용: 트렌디한 골목길에서 음료수를 들고 자연스럽게 걷는 파파라치 감성 스냅",
-      "prompt": "1girl, solo, ((walking on trendy urban street:1.25)), holding takeout coffee cup with straw, casual candid snap, looking at viewer over shoulder, natural day street bokeh, fashionable atmosphere",
-      "prompt_otokonoko": "1boy, otokonoko, solo, ((walking on trendy urban street:1.25)), holding takeout coffee cup with straw, casual candid snap, looking at viewer over shoulder, natural day street bokeh, fashionable atmosphere",
+      "label": "캔음료 스냅",
+      "description": "SNS 전용: 야간 서킷 펜스 앞에서 캡모자를 쓰고 머리 위에 캔 음료를 얹어 균형을 잡는 장난기 가득한 스트릿 스냅",
+      "prompt": "1girl, solo, ((standing in front of metal chainlink fence, outdoor night:1.3)), blurred stadium track lights, ((plaid checked baseball cap:1.25)), ((holding red aluminum drink can on top of head with one hand:1.35)), (balancing drink can on cap:1.25), other arm raised behind head, ((playful mischievous expression, slight tongue out, cheerful wink:1.25)), trendy street snap, medium shot",
+      "prompt_otokonoko": "1boy, otokonoko, solo, ((standing in front of metal chainlink fence, outdoor night:1.3)), blurred stadium track lights, ((plaid checked baseball cap:1.25)), ((holding red aluminum drink can on top of head with one hand:1.35)), (balancing drink can on cap:1.25), other arm raised behind head, ((playful mischievous expression, slight tongue out, cheerful wink:1.25)), trendy street snap, medium shot",
+      "negative_add": "(camera frame, viewfinder, border, HUD:1.4)",
       "required_outfit": "default",
       "section": "events"
     },
@@ -27,10 +28,11 @@
       "section": "events"
     },
     "051": {
-      "label": "룸 미러 셀카",
-      "description": "SNS 전용: 전신 거울 앞에서 스마트폰을 들고 바디라인과 굴곡을 강조하는 셀카 포즈",
-      "prompt": "1girl, solo, ((taking mirror selfie in bedroom:1.3)), holding smartphone with phone case, looking into mirror, arched back, emphasizing body curves, aesthetic room lighting, shallow depth of field",
-      "prompt_otokonoko": "1boy, otokonoko, solo, ((taking mirror selfie in bedroom:1.3)), holding smartphone with phone case, looking into mirror, arched back, emphasizing body curves, aesthetic room lighting, shallow depth of field",
+      "label": "탑다운 미러셀카",
+      "description": "SNS 전용: 거울 앞에서 스마트폰을 높이 들어 가슴골과 잘록한 허리, 언더웨어 밴드를 내려다보는 하이앵글 바디체크 미러 셀카",
+      "prompt": "1girl, solo, ((taking mirror selfie from high angle:1.35)), ((smartphone held high overhead, looking down into mirror:1.3)), ((top-down angle, view from above:1.3)), deep cleavage seen from above, ((emphasizing extremely narrow waist and curvy hips:1.25)), (jacket loosely slipping off shoulders:1.15), (exposed underwear waistband above low-rise pants:1.15), hotel hallway mirror, warm indoor ambient lighting, aesthetic reflection, cowboy shot",
+      "prompt_otokonoko": "1boy, otokonoko, solo, ((taking mirror selfie from high angle:1.35)), ((smartphone held high overhead, looking down into mirror:1.3)), ((top-down angle, view from above:1.3)), ((emphasizing flat chest and narrow feminine waist:1.25)), (jacket loosely slipping off shoulders:1.15), (exposed underwear waistband above low-rise pants:1.15), hotel hallway mirror, warm indoor ambient lighting, aesthetic reflection, cowboy shot",
+      "negative_add": "(camera frame, viewfinder, border, HUD, screen corners:1.4)",
       "required_outfit": "default",
       "section": "events"
     },

@@ -1,0 +1,27 @@
+{
+  "prefix": "nana",
+  "name": "Nana (나나 / 서킷 스트릿 힙스터 - 체크 캡모자 & 슬리브 타투 크롭탑)",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.55,
+  "faction": "sns_influencer_town",
+  "role": "야간 모터 서킷 레이싱 경기장과 힙합 페스티벌을 무대로 활약하는 스트릿 패션 인플루언서. 체크 캡모자와 양팔 가득한 감각적인 슬리브 타투, 타이트한 블랙 크롭탑과 로우라이즈 조거 팬츠로 자유분방하고 앙큼한 매력을 발산하는 힙스터 아이콘",
+  "appearance": {
+    "face_and_hair": "long flowing dark brown hair, playful mischievous eyes, sweet cheeky expression, natural fair skin with warm blush",
+    "physique": "slender hourglass figure, generous perky breasts, narrow waist, flat toned stomach, defined collarbones, balanced body proportions",
+    "outfit": "plaid checked baseball cap worn frontwards, black cropped spaghetti strap camisole top with thin white trim, deep scoop neckline, sleeve tattoos on both arms, loose black low-rise track pants, exposed branded underwear waistband, white sneakers"
+  },
+  "sdxl_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, slender hourglass figure, generous perky breasts, narrow waist, flat toned stomach, (long flowing dark brown hair:1.15), mischievous dark eyes, natural fair skin, healthy peach skin tone, soft warm blush, ((plaid checked baseball cap:1.25)), ((black cropped camisole top, white trim, spaghetti straps:1.2)), deep scoop neckline, ((detailed sleeve tattoos on both arms:1.2)), ((loose black track pants, low-rise:1.15)), ((exposed underwear waistband:1.2)), white sneakers",
+  "sdxl_negative": "lowres, worst quality, bad quality, bad anatomy, bad proportions, bad hands, extra fingers, missing fingers, mutated hands, extra limbs, deformed, jpeg artifacts, signature, watermark, username, artist name, text, blurry, ((cat ears, animal ears, horns:1.6)), furry, 1boy, male, muscular, photorealistic, realistic, 3d, render, cgi, (comic:1.2), (multiple views:1.2), (speech bubble:1.2), ((chalky white skin, paper white skin, grey skin, blue skin, albino:1.35)), blonde hair, dress, skirt, swimsuit, suit, heavy coat",
+  "sdxl_nude_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes, balanced body proportions BREAK 1girl, solo, slender hourglass figure, generous perky breasts, narrow waist, flat toned stomach, (long flowing dark brown hair:1.15), mischievous dark eyes, natural fair skin, healthy peach skin tone, soft warm blush, ((detailed sleeve tattoos on both arms:1.2)), smooth skin",
+  "outfits": {
+    "underwear": "black sporty ribbed bralette, matching black thong with white elastic band",
+    "swimsuit": "white sporty racerback one-piece swimsuit, high-cut legs"
+  },
+  "pose_restrictions": {
+    "sns_only": [
+      "048", "049", "050", "051", "052",
+      "130", "131", "132", "133", "134", "135"
+    ]
+  }
+}
