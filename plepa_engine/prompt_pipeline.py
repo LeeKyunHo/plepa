@@ -330,13 +330,15 @@ class DefectDefenseMutator(PromptMutator):
             if furnitures:
                 neg = f"{neg}, ({', '.join(furnitures)}:1.2)"
 
-        # [패치 0-1] 상시 공통 결함 방어
+        # [패치 0-1] 상시 공통 결함 방어 (얼굴 소실/앞머리 눈가림 차단, 다중 다리/손발 왜곡 원천 차단)
         neg = (
             f"{neg}, "
             f"(text:1.4), (speech bubble:1.4), (dialogue:1.4), (dialogue box:1.4), (subtitles:1.4), (comic panel:1.4), (sound effects:1.4), (watermark:1.3), (signature:1.3), "
-            f"(mask:1.4), (white mask:1.4), (face mask:1.4), (noh mask:1.4), (porcelain mask:1.4), (paper mask:1.4), (theatrical mask:1.4), (blindfold:1.4), (covered eyes:1.35), "
+            f"(mask:1.4), (white mask:1.4), (face mask:1.4), (noh mask:1.4), (porcelain mask:1.4), (paper mask:1.4), (theatrical mask:1.4), (blindfold:1.4), (covered eyes:1.4), "
+            f"(eyes covered by hair:1.45), (bangs over eyes:1.45), (hair over eyes:1.45), (faceless:1.45), (shadow over eyes:1.4), (shadow over face:1.4), (no eyes:1.45), (hidden eyes:1.4), (obscured face:1.4), "
             f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
-            f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35)"
+            f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35), "
+            f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45)"
         )
 
         # [패치 0-2] 무협 시대착오 차단
@@ -383,6 +385,30 @@ class DefectDefenseMutator(PromptMutator):
         # [패치 B] 턱올리기 손 꼬임 차단
         if "chin lift" in pose_tag.lower():
             neg = f"{neg}, (extra hands:1.35), (two hands on chin:1.35), (multiple hands:1.35), (extra arms:1.35), (four hands:1.35), (three hands:1.35)"
+
+        # [패치 B-2] 풋잡(125/195) 다리 증식 특화 차단
+        if "footjob" in pose_tag.lower() or ctx.pose.code in ("125", "195"):
+            neg = f"{neg}, (extra legs:1.5), (four legs:1.5), (three legs:1.5), (multiple legs:1.5), (extra feet:1.5), (multiple feet:1.5), (fused legs:1.45), (mutated feet:1.45), (bad foot anatomy:1.4)"
+
+        # [패치 D] 뒷태/후방 구도 및 착의 씬 자궁문신/복부문신 방어
+        p_low = pose_tag.lower()
+        is_back_view = any(kw in p_low for kw in (
+            "back view", "from behind", "facing away", "rear view", "doggystyle", "lying on stomach",
+            "on stomach", "butt focus", "ass focus", "from back", "behind"
+        )) or ctx.pose.code in ("024", "084", "088", "089", "090", "118", "121", "130")
+
+        has_tattoo_in_pos = any(kw in ctx.positive_prompt.lower() for kw in ("womb tattoo", "stomach tattoo", "belly tattoo", "navel tattoo"))
+        if has_tattoo_in_pos:
+            if is_back_view:
+                # 후방 구도에서는 복부 문신이 등/허리(tramp stamp)로 잘못 새겨지는 현상을 원천 차단
+                ctx.positive_prompt = re.sub(r",?\s*\(?womb tattoo( on lower belly)?(:[0-9\.]+)?\)?", "", ctx.positive_prompt, flags=re.IGNORECASE)
+                ctx.positive_prompt = re.sub(r",?\s*\(?(stomach|belly|navel) tattoo(:[0-9\.]+)?\)?", "", ctx.positive_prompt, flags=re.IGNORECASE)
+                neg = f"{neg}, (tattoo on back:1.45), (tramp stamp:1.45), (lower back tattoo:1.45), (back tattoo:1.45), (spine tattoo:1.45)"
+            elif ctx.slot in ("wedding", "office", "doctor", "hanfu", "coat", "suit") or (ctx.slot not in ("default", "nude", "underwear", "swimsuit", "") and "bare stomach" not in p_low and "exposed stomach" not in p_low):
+                # 배가 가려지는 의상에서는 옷감 위에 문신이 투시/인쇄되는 현상 차단
+                ctx.positive_prompt = re.sub(r",?\s*\(?womb tattoo( on lower belly)?(:[0-9\.]+)?\)?", "", ctx.positive_prompt, flags=re.IGNORECASE)
+                ctx.positive_prompt = re.sub(r",?\s*\(?(stomach|belly|navel) tattoo(:[0-9\.]+)?\)?", "", ctx.positive_prompt, flags=re.IGNORECASE)
+                neg = f"{neg}, (tattoo on clothes:1.45), (tattoo through clothes:1.45), (printed tattoo:1.45)"
 
         # [패치 C] 오토코노코 성기 분기
         char_gender_str = (ctx.char.gender or getattr(ctx.char, "default_mode", "") or "female").lower()

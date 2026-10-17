@@ -64,12 +64,13 @@ def apply_silhouette(
 
     sam = get_sam_model()
 
-    # 0. 손(Hands) 및 얼굴(Faces) 보호 마스크 추출
+    # 0. 손(Hands), 얼굴(Faces), 머리/헤어(Heads) 보호 마스크 추출
     protection_mask = np.zeros((h, w), dtype=np.uint8)
     try:
-        from imgutils.detect import detect_hands, detect_faces
+        from imgutils.detect import detect_hands, detect_faces, detect_heads
         detected_hands = detect_hands(img, conf_threshold=0.25)
-        detected_faces = detect_faces(img, conf_threshold=0.30)
+        detected_faces = detect_faces(img, conf_threshold=0.25)
+        detected_heads = detect_heads(img, conf_threshold=0.25)
 
         overlapping_protect_boxes = []
         for box, _ in boxes_with_labels:
@@ -80,6 +81,9 @@ def apply_silhouette(
             for (fx1, fy1, fx2, fy2), _, _ in detected_faces:
                 if max(bx1, fx1) < min(bx2, fx2) and max(by1, fy1) < min(by2, fy2):
                     overlapping_protect_boxes.append([fx1, fy1, fx2, fy2])
+            for (head_x1, head_y1, head_x2, head_y2), _, _ in detected_heads:
+                if max(bx1, head_x1) < min(bx2, head_x2) and max(by1, head_y1) < min(by2, head_y2):
+                    overlapping_protect_boxes.append([head_x1, head_y1, head_x2, head_y2])
 
         if sam is not None and overlapping_protect_boxes:
             for p_box in overlapping_protect_boxes:

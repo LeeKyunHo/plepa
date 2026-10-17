@@ -1083,3 +1083,24 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   - `pytest -q` 78 passed 및 시스템 10단계 통합 진단 10 PASS 유지.
   - `funi_000`, `funi_051`, `nana_000`, `nana_049` 실전 생성 결과 레퍼런스 스타일 100% 일치 시각적 합격.
 
+### ADR-59: 검열 오작동 방지(맹목적 앵커 폴백 제거 및 머리/얼굴 보호), 후방/착의 구도 문신 스마트 필터링, 및 해부학적 결함(다리 증식/얼굴 소실) 방어선 구축 (2026-10-17)
+- **배경**:
+  - 성기 미탐지 시 작동하던 `enable_anchor_fallback=True`가 계단(130)이나 엎드린 구도(090, 084)에서 다리나 머리카락/정수리, 엉덩이에 화이트 실루엣이나 사각형을 씌우는 오작동 발생.
+  - 푸니(`funi`)의 고정 복부 문신 태그가 후방 구도(등/허리)나 전신 의상(웨딩드레스 등) 표면에 튀어나오는 현상 발생.
+  - 일자 앞머리(`blunt bangs`) 캐릭터의 얼굴/눈이 앞머리에 가려지는 현상 및 풋잡(125) 등 특정 포즈에서 다리가 3~4개로 증식하는 해부학적 결함 발생.
+- **결정 사항**:
+  1. **검열 앵커 폴백 비활성화 및 안면/머리 보호 마스크 강화 (`censor.py`, `generation_service.py`)**:
+     - `enable_anchor_fallback=False`로 전면 전환. 실제 성기 검출 시에만 MobileSAM 외곽선 검열을 적용하고, 미탐지 시 정상 신체 부위를 훼손하지 않고 원본 유지 (`_origin` 선제 백업 완비).
+     - `detect_heads`를 추가하여 안면뿐 아니라 머리 전체와 헤어를 보호 마스크에 포함.
+  2. **프롬프트 파이프라인 스마트 문신 필터링 (`prompt_pipeline.py`)**:
+     - 후방 구도(Back view) 감지 시 복부 문신 태그를 자동 제외하고, `(tattoo on back, tramp stamp, lower back tattoo:1.45)` 차단벽 주입.
+     - 전신 의상(웨딩드레스 등) 착용 시 복부 문신 태그를 자동 제외하고, `(tattoo on clothes:1.45)` 차단벽 주입.
+  3. **결함 방어선(Defect Defense) 해부학 및 안면 가림 차단벽 증강 (`prompt_pipeline.py`, `funi.json`, `sdxl_pose_database.json`)**:
+     - `DefectDefenseMutator`에 `(extra legs:1.45), (multiple legs:1.45), (extra feet:1.45)` 및 `(eyes covered by hair:1.45), (bangs over eyes:1.45), (faceless:1.45)` 상시 방어벽 구축.
+     - 풋잡(125/195) 포즈에 `single pair of legs` 단일화 명시.
+     - 푸니 앞머리 프롬프트 `cut above eyes` 및 선명한 눈/얼굴 보존 태그 강화.
+- **결과**:
+  - `pytest -q` 78 passed 유지.
+  - 푸니 전체 108장 에셋 재검열 완료 (다리/머리 검열 오작동 0건 정제 달성).
+  - 푸니 5종 결함 포즈(`024`, `046`, `125`, `130`, `131`) 정상 생성 완료.
+
