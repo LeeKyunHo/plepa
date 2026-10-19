@@ -111,8 +111,14 @@ def validate_generated_image(
                 reason = f"1인 씬 인원/머리 초과 감지 (인원: {metrics['persons']}명, 머리: {metrics['heads']}개)"
                 return False, reason, metrics
 
-            if metrics["hands"] > 2:
-                reason = f"1인 씬 손 증식(3개 이상) 감지 (손: {metrics['hands']}개)"
+            # 1인칭 손 개입 씬(쓰다듬기 047, 덮쳐짐 040 등 유저 손 개입) 허용치 완화
+            p_text = (prompt or "").lower()
+            pov_hand_keywords = ("headpat", "patting head", "hand on head", "hands pressed on mattress", "pov")
+            is_pov_hand_scene = any(kw in p_text for kw in pov_hand_keywords)
+            max_hands = 4 if is_pov_hand_scene else 2
+
+            if metrics["hands"] > max_hands:
+                reason = f"1인 씬 손 증식({max_hands + 1}개 이상) 감지 (손: {metrics['hands']}개)"
                 return False, reason, metrics
 
         # ── 2인 상호작용 씬 판정 규칙 (오프스크린 제외) ──
@@ -125,11 +131,10 @@ def validate_generated_image(
                 reason = f"2인 씬 손 증식(5개 이상) 감지 (손: {metrics['hands']}개)"
                 return False, reason, metrics
 
-            # 2인 씬에서 모브 남성의 얼굴이 완전히 드러나 얼굴이 2개 이상 잡힌 경우
-            # (단, 060, 061 등 키스 씬은 두 사람의 얼굴이 접촉하므로 faces <= 2 허용)
-            max_faces = 2 if (is_kiss_scene or section == "romance") else 1
+            # 2인 씬에서 제3자의 얼굴까지 노출되는 것을 방지 (2명 씬이므로 faces <= 2 허용)
+            max_faces = 2
             if metrics["faces"] > max_faces:
-                reason = f"모브 남성 얼굴 노출 감지 (얼굴: {metrics['faces']}개, faceless 위반)"
+                reason = f"2인 씬 얼굴 과다 노출 감지 (얼굴: {metrics['faces']}개, 3인 이상 위반)"
                 return False, reason, metrics
 
         return True, "", metrics

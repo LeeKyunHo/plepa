@@ -43,8 +43,8 @@ _SPY_SIGNATURE_OUTFIT_TOKENS: Dict[str, Tuple[str, ...]] = {
     "evl": ("nurse cap", "nurse uniform mini dress", "white thighhighs"),
     "srh": ("bunny suit", "bolero jacket", "black bunny ears"),
     "vic": ("white silk blouse", "navy corset vest", "black pencil skirt"),
-    "cla": ("snow-white unbuttoned collared blouse", "slate-navy blue corset vest", "micro pencil skirt"),
-    "viv": ("unbuttoned collared blouse", "leather shoulder holster", "garter straps"),
+    "cla": ("collared blouse", "slate-navy blue corset vest", "micro pencil skirt"),
+    "viv": ("collared blouse", "leather shoulder holster", "garter straps"),
     "scl": ("cropped leather jacket", "buckle strap across chest", "leather micro shorts"),
 }
 

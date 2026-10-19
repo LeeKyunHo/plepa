@@ -331,11 +331,16 @@ class DefectDefenseMutator(PromptMutator):
                 neg = f"{neg}, ({', '.join(furnitures)}:1.2)"
 
         # [패치 0-1] 상시 공통 결함 방어 (얼굴 소실/앞머리 눈가림 차단, 다중 다리/손발 왜곡 원천 차단)
+        if ctx.is_two_person:
+            face_obscure_guard = "(faceless female:1.45), (shadow over eyes:1.4), (shadow over face:1.4), (no eyes:1.45), (hidden female eyes:1.4), (obscured female face:1.4)"
+        else:
+            face_obscure_guard = "(faceless:1.45), (shadow over eyes:1.4), (shadow over face:1.4), (no eyes:1.45), (hidden eyes:1.4), (obscured face:1.4)"
+
         neg = (
             f"{neg}, "
             f"(text:1.4), (speech bubble:1.4), (dialogue:1.4), (dialogue box:1.4), (subtitles:1.4), (comic panel:1.4), (sound effects:1.4), (watermark:1.3), (signature:1.3), "
             f"(mask:1.4), (white mask:1.4), (face mask:1.4), (noh mask:1.4), (porcelain mask:1.4), (paper mask:1.4), (theatrical mask:1.4), (blindfold:1.4), (covered eyes:1.4), "
-            f"(eyes covered by hair:1.45), (bangs over eyes:1.45), (hair over eyes:1.45), (faceless:1.45), (shadow over eyes:1.4), (shadow over face:1.4), (no eyes:1.45), (hidden eyes:1.4), (obscured face:1.4), "
+            f"(eyes covered by hair:1.45), (bangs over eyes:1.45), (hair over eyes:1.45), {face_obscure_guard}, "
             f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
             f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35), "
             f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45)"
@@ -418,6 +423,27 @@ class DefectDefenseMutator(PromptMutator):
             if "penis" not in ctx.positive_prompt.lower():
                 ctx.positive_prompt = f"{ctx.positive_prompt}, (penis:1.2), (small erect penis:1.15), (testicles:1.15), male genitalia"
 
+        # [패치 E] 착의 H-씬 탈의/가슴 노출 원천 차단 네거티브벽 및 상의 보존
+        is_clothed_h_scene = (not ctx.nude) and (
+            any(kw in pose_tag.lower() for kw in ("clothed sex", "clothed fellatio", "fully clothed except bottom", "skirt lifted", "panties aside", "underwear aside", "clothes half removed"))
+            or ctx.pose.code in ("033", "112", "113", "115", "126", "127", "130", "131", "132", "133", "134", "135")
+        )
+        if is_clothed_h_scene:
+            # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
+            ctx.positive_prompt = re.sub(r",?\s*\b(unbuttoned top button|unbuttoned|shirt unbuttoned|open shirt|clothes open)\b", "", ctx.positive_prompt, flags=re.IGNORECASE)
+            if "fully clothed" not in ctx.positive_prompt.lower():
+                ctx.positive_prompt = f"{ctx.positive_prompt}, ((fully clothed except bottom, wearing clothes, top on, fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
+            else:
+                ctx.positive_prompt = f"{ctx.positive_prompt}, ((fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
+
+            neg = (
+                f"{neg}, "
+                f"((nude, completely nude, naked, topless, bare breasts, exposed breasts, nipples, exposed nipples, "
+                f"open shirt, unbuttoned, unbuttoned shirt, shirt pulled up, shirt lift, lifted shirt, clothes lift, open clothes, "
+                f"breast out, breasts out, areola, cleavage, exposed cleavage, deep cleavage, underboob, bare stomach, stripped, "
+                f"undressed, bare torso, no shirt, flashing, exposed chest, bare chest:1.55))"
+            )
+
         ctx.negative_prompt = neg
 
 
@@ -492,10 +518,10 @@ class TwoPersonMobMutator(PromptMutator):
                 elif is_multi_partner:
                     neg = re.sub(r",?\s*\b(2boys|multiple boys|multiple males|two men|extra male|group|threesome|group sex)\b(:[0-9\.]+)?", "", neg, flags=re.IGNORECASE)
                     if ctx.nude:
-                        mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (shadow over male eyes:1.1), (from behind:1.1), (naked males:1.15), (bottomless males:1.15), muscular builds"
+                        mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (unseen male eyes:1.15), (male head turned away:1.15), (from behind:1.1), (naked males:1.15), (bottomless males:1.15), muscular builds"
                         mob_negative = f"{male_face_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear"
                     else:
-                        mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (shadow over male eyes:1.1), (from behind:1.1), (solid black pants:1.2), muscular builds"
+                        mob_positive = "BREAK (multiple faceless males:1.15), (group of faceless men surrounding:1.15), (obscured male faces:1.15), (unseen male eyes:1.15), (male head turned away:1.15), (from behind:1.1), (solid black pants:1.2), muscular builds"
                         mob_negative = f"{male_face_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants"
                 else:
                     is_head_hug_scene = any(
@@ -503,9 +529,9 @@ class TwoPersonMobMutator(PromptMutator):
                         for kw in (
                             "head on chest", "burying face", "face buried", "holding head",
                             "hugging head", "patting head", "kissing head", "hair from behind",
-                            "back of male", "back of head"
+                            "back of male", "back of head", "pillow talk", "lying side by side"
                         )
-                    )
+                    ) or (getattr(ctx.pose, "code", None) in ("105", "175"))
                     is_rear_scene = (
                         any(kw in pose_tag.lower() for kw in ("back hug", "doggystyle", "sumata", "rear", "prone", "grabbed from behind", "hugging from behind"))
                         or ("behind" in pose_tag.lower() and not any(f in pose_tag.lower() for f in ("head from behind", "hair from behind", "face buried", "cleavage", "buried between breasts", "nestled in cleavage")))
@@ -515,17 +541,17 @@ class TwoPersonMobMutator(PromptMutator):
                     if is_head_hug_scene:
                         # 이미 포즈 자체에 남성의 밀착 위치/뒤통수가 완전히 정의되어 있으므로 추가 모브 BREAK 블록을 주입하지 않음 (남성 분신 2명 방지)
                         mob_positive = ""
-                        mob_negative = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), (2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)"
+                        mob_negative = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), (2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8), (extra head:1.6), (three heads:1.6), (multiple heads:1.6)"
                     else:
                         head_cue = "(male head out of frame:1.15), "
                         head_suppression = male_face_suppression
                         lower_body = "(bottomless male:1.15), muscular build" if ctx.nude else "(solid black pants:1.2), muscular build"
 
                         if ctx.nude:
-                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(shadow over male eyes:1.1), {rear_direction}(naked male:1.15), {lower_body}"
+                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15), {lower_body}"
                             mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45)"
                         else:
-                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(shadow over male eyes:1.1), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), {lower_body}"
+                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), {lower_body}"
                             mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45)"
 
                 if mob_positive:
