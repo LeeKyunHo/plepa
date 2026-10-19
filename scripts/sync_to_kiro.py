@@ -273,9 +273,9 @@ def rename_kiro_assets(kiro_root: Path, dry_run: bool = False) -> int:
         src.rename(tmp_path)
         pass1_list.append((tmp_path, dst))
 
-    # Pass 2: 최종 확정 이름으로 변경
+    # Pass 2: 최종 확정 이름으로 변경 (기존 파일 존재 시 안전하게 원자적 덮어쓰기)
     for tmp_path, dst in pass1_list:
-        tmp_path.rename(dst)
+        os.replace(tmp_path, dst)
 
     logger.info(f"[Rename Assets] 2-Pass 리네임 성공! 총 {len(rename_plan)}개 파일 이름 변경 완료.")
     return len(rename_plan)

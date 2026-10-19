@@ -30,7 +30,7 @@ COMFY_WS_URL = f"ws://{COMFY_HOST}/ws"
 # ── SDXL 메인 엔진 기본 식별자 및 파라미터 (ADR 4, ADR 19 확정) ──
 DEFAULT_ENGINE = os.environ.get("PLEPA_DEFAULT_ENGINE", "sdxl")
 DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "unholyDesireMixSinister_v90.safetensors")
-DEFAULT_SDXL_STEPS = 30
+DEFAULT_SDXL_STEPS = 24
 DEFAULT_SDXL_CFG = 5.0
 DEFAULT_SDXL_SAMPLER = "dpmpp_2m"
 DEFAULT_SDXL_SCHEDULER = "karras"
@@ -41,7 +41,7 @@ DEFAULT_REF_WEIGHT = 0.0
 
 # ── 웹포맷(WebP) 저장 품질 ──
 WEBP_QUALITY = 95
-WEBP_METHOD = 6
+WEBP_METHOD = 4
 
 # ── 공용 후처리 모델 (Face Detailer & Upscaler) ──
 DEFAULT_UPSCALER = os.environ.get("PLEPA_UPSCALER", "4x-UltraSharp.pth")

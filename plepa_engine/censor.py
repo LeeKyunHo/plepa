@@ -120,10 +120,14 @@ def apply_silhouette(
             ex2 = min(w, int(x2 + bw * m_x))
             ey2 = min(h, int(y2 + bh * m_bot))
         else:
-            ex1 = max(0, int(x1 - bw * 0.03))
-            ey1 = max(0, int(y1 - bh * 0.03))
-            ex2 = min(w, int(x2 + bw * 0.03))
-            ey2 = min(h, int(y2 + bh * 0.03))
+            # pussy 등 여성기: 상단(하복부/자궁문신)으로는 확장하지 않고 하단/측면만 미세 마진 적용
+            m_x = 0.02
+            m_top = 0.0
+            m_bot = 0.03
+            ex1 = max(0, int(x1 - bw * m_x))
+            ey1 = max(0, y1)  # 상단 확장 원천 차단으로 자궁문신 완벽 보존
+            ex2 = min(w, int(x2 + bw * m_x))
+            ey2 = min(h, int(y2 + bh * m_bot))
 
         expanded_bbox = [ex1, ey1, ex2, ey2]
         mask_obtained = False
@@ -457,9 +461,27 @@ def censor_image(
     if HAS_IMGUTILS:
         try:
             results = detect_censors(img)
+            img_w, img_h = img.size
             for box, label, score in results:
                 if label in normalized_targets and score >= min_confidence:
                     x1, y1, x2, y2 = [int(v) for v in box]
+                    bw = max(1, x2 - x1)
+                    bh = max(1, y2 - y1)
+
+                    # ── 자궁문신(Womb Tattoo) 및 복부 오탐지 보호 필터 ──
+                    if label == "pussy":
+                        # 1) 만약 박스가 하복부(배꼽 부근)에만 고립되어 있고 치골/음부 기저부까지 내려가지 않는 경우,
+                        #    자궁문신 문양 자체를 성기로 오인식한 것이므로 검열에서 완전 제외
+                        if y2 < img_h * 0.48 and bh < img_h * 0.15:
+                            logger.info(f"[Censor] 하복부 자궁문신 오인식 박스 제외: ({x1},{y1},{x2},{y2})")
+                            continue
+
+                        # 2) 만약 세로로 길게 잡혀 하복부와 음부가 한꺼번에 묶인 경우 (자궁문신 침범 방지),
+                        #    문신이 위치하는 상단 25%를 보호 세이프존으로 남겨두고 y1을 하향 조정
+                        if bh > bw * 1.25 and bh > 60:
+                            safe_cut = int(bh * 0.25)
+                            y1 = min(y2 - 20, y1 + safe_cut)
+
                     detected_boxes_with_labels.append(((x1, y1, x2, y2), label))
         except Exception as e:
             logger.warning(f"[Censor] 감지 모델 추론 예외: {e}")
@@ -554,3 +576,83 @@ def censor_file(
     target_dst.parent.mkdir(parents=True, exist_ok=True)
     censored_img.save(target_dst, "WEBP", quality=quality)
     return target_dst
+
+
+def detect_genitals(
+    image: Union[Path, str, Image.Image],
+    targets: Sequence[str] = ("penis", "pussy"),
+    min_confidence: float = 0.15,
+) -> List[Tuple[Tuple[int, int, int, int], str, float]]:
+    """이미지에서 검열 대상 부위(성기 등)를 감지하여 [(box, label, score), ...] 형태로 반환합니다."""
+    if not HAS_IMGUTILS:
+        return []
+    try:
+        if isinstance(image, (str, Path)):
+            img = Image.open(str(image)).convert("RGB")
+        else:
+            img = image.convert("RGB")
+        results = detect_censors(img)
+        filtered = []
+        normalized = set(t.lower() for t in targets)
+        for box, label, score in results:
+            if label.lower() in normalized and score >= min_confidence:
+                filtered.append((box, label, score))
+        return filtered
+    except Exception as e:
+        logger.warning(f"[Censor] detect_genitals 감지 예외: {e}")
+        return []
+
+
+def run_batch_censor(
+    folder_path: Union[Path, str],
+    style: str = "white_silhouette",
+    overwrite: bool = True,
+    recursive: bool = True,
+    targets: Sequence[str] = ("penis", "pussy"),
+    min_confidence: float = 0.15,
+    enable_anchor_fallback: bool = True,
+) -> int:
+    """폴더 내의 모든 일러스트 에셋을 스캔하여 일괄 검열을 수행합니다."""
+    base_dir = Path(folder_path).resolve()
+    if not base_dir.exists():
+        logger.error(f"[오류] 대상 폴더를 찾을 수 없습니다: {base_dir}")
+        return 0
+
+    extensions = ["*.webp", "*.png", "*.jpg", "*.jpeg"]
+    image_files: List[Path] = []
+    for ext in extensions:
+        if recursive:
+            image_files.extend(base_dir.rglob(ext))
+        else:
+            image_files.extend(base_dir.glob(ext))
+
+    target_files = [f for f in image_files if not f.stem.endswith("_censored")]
+    total = len(target_files)
+    processed_count = 0
+
+    for idx, file_path in enumerate(target_files, 1):
+        match = re.search(r"_(\d{3})\.", file_path.name)
+        pose_code = int(match.group(1)) if match else None
+
+        if pose_code is not None and get_pose_category(pose_code) is None:
+            continue
+
+        try:
+            dst = file_path if overwrite else file_path.with_name(f"{file_path.stem}_censored{file_path.suffix}")
+            saved = censor_file(
+                src_path=file_path,
+                dst_path=dst,
+                style=style,
+                targets=targets,
+                min_confidence=min_confidence,
+                pose_code=pose_code,
+                enable_anchor_fallback=enable_anchor_fallback,
+            )
+            if saved is not None:
+                processed_count += 1
+        except Exception as e:
+            logger.warning(f"[Censor] 배치 검열 실패: {file_path.name} ({e})")
+
+    return processed_count
+
+
