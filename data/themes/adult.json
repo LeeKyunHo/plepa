@@ -482,18 +482,18 @@
       "description": "매트리스에 짓눌린 채 바짝 결합되는 프론본 절정 (강: N69)"
     },
     "N70": {
-      "label": "착의섹스약",
+      "label": "착의섹스 전",
       "required_outfit": "default",
       "flux_prompt": "Clothed sex with clothes half removed, skirt pushed up and blouse unbuttoned, underwear shifted aside, partner embracing her waist, disheveled clothes, furtive thrilling intimacy.",
       "sdxl_prompt": "1girl, 1boy, clothed sex, ((clothes half removed, disheveled clothes:1.2)), ((skirt lifted, shirt unbuttoned:1.2)), underwear aside, partially clothed, thrilling, blushing, heavy blush, secret room",
-      "description": "옷을 반쯤 벗은 채 치마를 걷어올리고 블라우스를 풀어헤친 착의 씬 (약: N70)"
+      "description": "옷을 반쯤 벗은 채 치마를 걷어올리고 블라우스를 풀어헤친 착의 씬 (전: N70)"
     },
     "N71": {
-      "label": "착의섹스강",
+      "label": "착의섹스 본편",
       "required_outfit": "default",
       "flux_prompt": "Intense clothed sex with disheveled clothing, blouse unbuttoned and hanging off shoulders, skirt hitched high around waist, panting heavily against wall or desk, clothes messy, intense passion.",
       "sdxl_prompt": "1girl, 1boy, clothed sex, intense, ((disheveled clothes, clothes half off:1.25)), ((unbuttoned shirt hanging off shoulders, skirt hiked up around waist:1.2)), partially undressed, desk or wall, panting, heavy blush, messy clothes",
-      "description": "옷깃이 완전히 흐트러져 어깨에서 벗겨진 채 책상이나 벽에서 진행되는 격렬한 착의 씬 (강: N71)"
+      "description": "옷깃이 완전히 흐트러져 어깨에서 벗겨진 채 책상이나 벽에서 진행되는 격렬한 착의 씬 (중: N71)"
     },
     "N72": {
       "label": "착의펠라약",
