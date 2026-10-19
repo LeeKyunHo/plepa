@@ -1104,3 +1104,25 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   - 푸니 전체 108장 에셋 재검열 완료 (다리/머리 검열 오작동 0건 정제 달성).
   - 푸니 5종 결함 포즈(`024`, `046`, `125`, `130`, `131`) 정상 생성 완료.
 
+### ADR-60: 모브 앵커 보호를 위한 네거티브 성별 분리, 1인칭 손 개입 Auto-QC 완화, V2 3단계 착의 체계 확립 및 KIRO 브릿지 전파 (2026-10-19)
+- **배경**:
+  - `DefectDefenseMutator`의 범용 `(faceless:1.45), (obscured face:1.4)` 태그가 2인 상호작용 씬에서 5단계 모브 긍정 태그 `(single faceless male partner:1.15)`를 상쇄하여 모브 얼굴이 또렷하게 노출되는 문제 발생.
+  - 모브 블록의 `(shadow over male eyes)`가 손으로 눈을 가리는 제스처를 유발하고, `105`(필로우토크) 등 침대 밀착 씬에서 모브 블록 중복 주입으로 머리가 3개 감지되는 결함 발생.
+  - `047`(쓰다듬기), `040`(덮쳐짐) 등 1인칭 유저 손 개입 씬에서 여주인공 손(2개) + 유저 손(1~2개) = 3~4개가 정상임에도 Auto-QC가 손 > 2개를 불량으로 판정해 3회 리롤 실패 발생.
+  - 112번(`착의섹스약`)과 113번(`착의섹스강`)의 명칭이 직관적이지 못하여 112(`착의섹스 전`), 113(`착의섹스 본편`), 115(`착의섹스후`) 3단계 체계로 개편 요구.
+- **결정 사항**:
+  1. **네거티브 얼굴 가림 태그의 성별 분리 (`prompt_pipeline.py`)**:
+     - `ctx.is_two_person == True`일 때 네거티브 태그를 `(faceless female:1.45), (hidden female eyes:1.4), (obscured female face:1.4)`로 분기하여 모브의 `faceless male` 긍정 앵커 차단을 원천 방지.
+  2. **모브 태그 정제 및 105 침대 밀착 머리 복제 차단 (`prompt_pipeline.py`)**:
+     - `(shadow over male eyes)`를 `(unseen male eyes:1.15), (male head turned away:1.15)`로 정제.
+     - `is_head_hug_scene`에 `"pillow talk"`, `"lying side by side"`, 포즈 코드 `105`/`175`를 포함하여 모브 블록 중복 생성을 방지하고 `(extra head:1.6), (three heads:1.6)` 방어선 강화.
+  3. **Auto-QC 1인칭 손 개입 씬 허용치 동적 완화 (`qa_validator.py`)**:
+     - 프롬프트에 `headpat`, `patting head`, `hand on head`, `hands pressed on mattress`, `pov` 포함 시 단독 씬 `max_hands`를 기본 2개에서 4개로 동적 완화.
+  4. **3단계 착의 포즈 체계 및 KIRO 브릿지 전파 (`sdxl_pose_database.json`, `sync_to_kiro.py`, `precheck.py`)**:
+     - 112(`착의섹스 전`), 113(`착의섹스 본편`), 115(`착의섹스후`) 체계 확립 및 에셋/매니페스트 동기화.
+     - `sync_to_kiro.py`를 통해 V2 포즈 DB, 오버라이드, `censor.py`, `qa_validator.py`를 `kiro`로 전파 완료.
+- **결과**:
+  - `precheck.py` campus, sns, spy 로스터 전수 `PASS` (위반 0건).
+  - `pytest` 78 passed 유지 및 `kiro` 자체 검증 `PASS 61 / FAIL 0` 100% 통과.
+
+
