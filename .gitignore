@@ -69,3 +69,6 @@ logs/
 
 # AI Context Snapshots (Local export only)
 context_snapshot/
+
+# Temporary user notes
+pose_mapping.txt
