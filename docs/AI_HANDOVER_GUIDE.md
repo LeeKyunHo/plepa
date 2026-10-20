@@ -708,7 +708,7 @@ plepa/
 - `130~149` (**`special_h`**): 여성 특수 이벤트 성인 씬 1종 (`130` 캠퍼스 빈강의실).
 - `150~199` (**`scenes_otokonoko`**): 오토코노코 기본 성인 씬 48종 (여성 080~127과 완벽한 `+70` 오프셋 1:1 대칭).
 - `200~219` (**`special_otokonoko`**): 오토코노코 특수 이벤트 성인 씬 1종 (`200` 오토코노코 빈강의실, 여성 130과 대칭).
-- **표준 라벨 및 카탈로그**: 모든 포즈의 1:1 매핑 명세서는 [`docs/POSE_MAPPING_V2.md`](POSE_MAPPING_V2.md)에 보존되며, 전체 카탈로그는 [`POSE_CATALOG.md`](POSE_CATALOG.md)에서 열람 가능. 상세 프롬프트 조립 규칙은 [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)를 준수.
+- **표준 라벨 및 카탈로그**: 사용자 1순위 열람 전체 포즈 요약 매핑표는 루트의 [`POSE_MAPPING.md`](../POSE_MAPPING.md)이며, 상세 1:1 매핑 명세서는 [`docs/POSE_MAPPING_V2.md`](POSE_MAPPING_V2.md), 전체 카탈로그는 [`POSE_CATALOG.md`](POSE_CATALOG.md)에서 열람 가능. 포즈 데이터가 추가·수정될 때 이들 매핑 문서를 반드시 100% 동기화. 상세 프롬프트 조립 규칙은 [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)를 준수.
 
 ---
 
@@ -718,7 +718,8 @@ plepa/
 2. 이미 합의된 ComfyUI 로컬 API 백엔드와 Face Detailer 통합 방향을 준수할 것.
 3. 포즈 수정 및 캐릭터 제작 시 [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)와 [`POSE_CATALOG.md`](POSE_CATALOG.md)를 최우선 참조할 것.
 4. 포즈 DB의 모든 명칭은 2~6글자(`label`), 상세 연출 설명(`description`) 필드를 필수 유지할 것.
-5. Git 커밋 메시지는 민감 표현을 완전히 배제하고 기술적·사무적 한국어로 작성할 것.
+5. 포즈 DB(`data/sdxl_pose_database.json`)가 추가되거나 수정되면 반드시 루트의 [`POSE_MAPPING.md`](../POSE_MAPPING.md)와 [`docs/POSE_MAPPING_V2.md`](docs/POSE_MAPPING_V2.md)를 함께 갱신할 것.
+6. Git 커밋 메시지는 민감 표현을 완전히 배제하고 기술적·사무적 한국어로 작성할 것.
 
 ---
 

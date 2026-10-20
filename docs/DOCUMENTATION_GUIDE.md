@@ -17,7 +17,7 @@
 | **1. 실행 & 운영**<br>*(How-To)* | **[`RUNBOOK.md`](RUNBOOK.md)** | 실무 운영 명령어 + 6대 계층별 장애 진단 체크리스트 통합 런북 | 서버/검열/QC 운영 절차 및 트러블슈팅 변경 시 |
 | **1. 실행 & 운영**<br>*(How-To)* | **[`GUI_GUIDE.md`](GUI_GUIDE.md)** | 웹 GUI 대시보드 7대 페이지별 기능 명세, 데이터 흐름, 컴포넌트 구조도 및 조작 매뉴얼 | 웹 GUI 페이지 및 1클릭 액션 기능 추가/수정 시 |
 | **2. 기술/포즈 규격**<br>*(Reference)* | **[`플에파_기능명세.md`](플에파_기능명세.md)** | 3계층 아키텍처, 코어 모듈, 서비스 레이어, 스키마 기술 명세서 | 신규 엔진 모듈, Mutator, 서비스 클래스 추가/변경 시 |
-| **2. 기술/포즈 규격**<br>*(Reference)* | **[`POSE_CATALOG.md`](POSE_CATALOG.md)** / **[`POSE_MAPPING_V2.md`](POSE_MAPPING_V2.md)** | V2 표준 포즈(`000~200`, `+70` 대칭) 카탈로그 및 V1↔V2 매핑 사전 | 포즈 라벨명, 설명, 번호 매핑 변경 시 |
+| **2. 기술/포즈 규격**<br>*(Reference)* | **[`POSE_MAPPING.md`](../POSE_MAPPING.md)** (루트 SSOT) / **[`POSE_MAPPING_V2.md`](POSE_MAPPING_V2.md)** / **[`POSE_CATALOG.md`](POSE_CATALOG.md)** | 사용자 1순위 열람 전체 포즈 요약 매핑표, V2 상세 카탈로그 및 V1↔V2 매핑 사전 | **포즈 라벨명, 프롬프트, 번호 매핑 추가/수정 시 (필수 세트 갱신)** |
 | **3. 제작/검증 표준**<br>*(Standard)* | **[`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)** | 캐릭터 JSON, V2 포즈 프롬프트, 테마 슬롯 제작 및 `precheck.py` 5단계 사전점검 통합 규칙서 | 프롬프트 공식, 금지어, 사전점검 규칙 변경 시 |
 | **4. 결정 & 이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 상단 골든 스테이트 10대 불변식 요약 + 역대 아키텍처 의사결정(ADR 1~48) | 핵심 설계 변경, 새 ADR 번호 부여 시 |
 | **4. 결정 & 이력**<br>*(ADR & Log)* | **[`개발일지.md`](개발일지.md)** / **[`KIRO_SYNC_REPORT.md`](KIRO_SYNC_REPORT.md)** | 일자별 작업 로그·트러블슈팅 및 형제 프로젝트(`kiro`) 전파 리포트 | **모든 작업 세션 마무리 및 푸시 직전 (필수)** |
@@ -36,7 +36,7 @@ flowchart TD
     
     CheckType -->|"엔진/설정/ADR 변경"| ADR["AI_HANDOVER_GUIDE.md (ADR 번호 부여)"]
     CheckType -->|"CLI 옵션/실행법 변경"| CLI["사용법.txt + RUNBOOK.md"]
-    CheckType -->|"포즈/프롬프트 DB 수정"| Pose["POSE_CATALOG.md + 캐릭터_포즈_제작_규칙.md"]
+    CheckType -->|"포즈/프롬프트 DB 수정"| Pose["POSE_MAPPING.md (루트) + POSE_MAPPING_V2.md + POSE_CATALOG.md"]
     CheckType -->|"심각한 결함/장애 회고"| PM["POST_MORTEM.md (필요시)"]
     
     ADR --> DevLog["2. 개발일지.md (필수 작성)"]
@@ -59,11 +59,12 @@ flowchart TD
    - `사용법.txt`: 사용자가 바로 복사해 터미널에 붙여넣을 수 있는 원클릭 명령어 예시 반영.
    - `RUNBOOK.md`: 2절에 상세 옵션 설명 추가.
    - `개발일지.md`: 사용법 변경 사항 기록.
-3. **포즈 및 프롬프트 DB 변경 시**:
+3. **포즈 및 프롬프트 DB 변경 시 (★ 필수 세트 동기화)**:
    - `data/sdxl_pose_database.json` 단일 수정 (※ `data/legacy/flux_pose_database.json` 수정 금지 - 토큰 절약).
-   - `POSE_CATALOG.md`: 라벨명 및 `description` 동기화.
-   - `캐릭터_포즈_제작_규칙.md`: 프롬프트 조립 규칙 및 불변식 동기화.
-   - `개발일지.md`: 포즈 개선 내역 및 대상 에셋 기록.
+   - **`POSE_MAPPING.md` (루트)**: 사용자 1순위 열람 전체 포즈 요약 매핑표의 라벨명·섹션·통계 즉시 갱신 (★ 최우선 필수).
+   - `docs/POSE_MAPPING_V2.md` & `docs/POSE_CATALOG.md`: 라벨명, 설명, 상세 매핑 동기화.
+   - `docs/캐릭터_포즈_제작_규칙.md`: 프롬프트 조립 규칙 및 불변식 동기화.
+   - `docs/개발일지.md`: 포즈 개선 내역 및 대상 에셋 기록.
 4. **생성 옵션 및 GUI 기능 추가/수정 시 (Trinity Sync 원칙)**:
    - `GENERATION_OPTION_SPECS` 레지스트리 ➔ `batch_generator.py` CLI ➔ `plepa_gui/pages/generate.py` ➔ `tests/test_cli_gui_sync.py` 4각 동기화 검증 (`pytest tests/test_cli_gui_sync.py`).
    - `docs/GUI_GUIDE.md`: 신규 UI 기능 및 조작법 동기화.
@@ -122,7 +123,7 @@ flowchart TD
 - 본 [`DOCUMENTATION_GUIDE.md`](DOCUMENTATION_GUIDE.md)를 확인하여 금번 작업에서 변경된 코드/설정에 대응하는 문서 목록을 확정합니다.
 
 ### [2단계] 문서 최신화
-- 매핑된 기술 문서([`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md), [`RUNBOOK.md`](RUNBOOK.md), [`사용법.txt`](사용법.txt) 등)를 수정합니다.
+- 매핑된 기술 문서([`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md), [`RUNBOOK.md`](RUNBOOK.md), [`사용법.txt`](사용법.txt), [`POSE_MAPPING.md`](../POSE_MAPPING.md) 등)를 수정합니다.
 - [`개발일지.md`](개발일지.md)에 당일 작업 내역을 4단 규격에 맞추어 작성합니다.
 
 ### [3단계] `git status` 점검 및 민감어 필터링

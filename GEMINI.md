@@ -23,6 +23,8 @@
   - 모든 포즈 작업의 단일 진실 공급원(SSOT)은 오직 **`data/sdxl_pose_database.json`** 하나입니다.
 - **CLI · Engine · GUI 삼위일체 동기화 원칙 (Trinity Sync Rule)**:
   - `plepa_engine/services/`에 새로운 파라미터나 생성 옵션을 추가·수정할 때는 반드시 **① `plepa_engine` (`GENERATION_OPTION_SPECS` / `GenerationParams`) ➔ ② `batch_generator.py` (CLI 옵션) ➔ ③ `plepa_gui` (Web UI 자동 렌더링) ➔ ④ `tests/test_cli_gui_sync.py`** 4곳을 한 세트로 묶어 동기화하며, 어느 한쪽에만 기능을 방치하지 않습니다.
+- **포즈 매핑 문서 실시간 동기화 원칙 (Pose Mapping Sync Rule)**:
+  - 포즈가 신규 추가되거나 라벨·프롬프트가 수정될 때는 단일 진실 공급원(SSOT)인 `data/sdxl_pose_database.json`뿐만 아니라, **루트의 [`POSE_MAPPING.md`](POSE_MAPPING.md) 및 [`docs/POSE_MAPPING_V2.md`](docs/POSE_MAPPING_V2.md)를 반드시 세트로 함께 업데이트**하여 포즈 매핑 현황의 단일 정합성을 유지합니다.
 
 ## 4. 인계 및 지식 연속성 (Handover & Continuity)
 - 새로운 세션이나 다른 컴퓨터의 Antigravity 에이전트가 투입되었을 때:
