@@ -1238,3 +1238,25 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
 - **결과**:
   - `GEMINI.md` 제6조 신설 및 `docs/AI_HANDOVER_GUIDE.md` 11대 핵심 불변식 등재 완료.
   - 향후 모든 개발과 리팩토링의 최우선 불변 기준으로 확립.
+
+### ADR-65: 착의 포즈 고도화(112 초밀착 전희 및 115 사후 의상 개방 연출) 및 무손실 가드레일 유연 확장 규격화 (2026-10-22)
+- **배경**:
+  - 사용자 피드백: 포즈 112번(착의섹스 전)이 기존 결합 동작 프롬프트와 혼재되어 있었으므로 행위 직전의 뜨거운 초밀착 전희 자세로 차별화 요구.
+  - 사용자 피드백: 포즈 115번(착의섹스후)의 경우 단순 다리 사이 흐름에서 나아가, 옷을 벌려 속옷 안쪽에 가득 고인 사후 분비흔을 확인시켜주는 도발적 구도로 연출 강화 요구.
+  - 가드레일 검증 시 발생한 교훈: 	est_grounding_production_asset_lossless_guardrail에서 에셋 수량을 고정값 108로 단언하고 있어, 사용자가 신규 에셋을 추가 생성(112장, 117장 등 확장)했을 때 테스트가 깨지는 하드코딩 부작용 발생.
+- **결정 사항**:
+  1. **단일 진실 공급원(data/sdxl_pose_database.json) 정제**:
+     - 112: 라벨 착의섹스 전 유지 (기존 에셋 무손실 보존). 행위 직전 긴장감과 열기를 극대화한 초밀착 전희 자세 프롬프트(passionate foreplay before clothed sex, intensely leaning close, face-to-face, hands gripping clothes, intensely flushed face, breathless longing gaze)로 전면 개편.
+     - 115: 라벨 착의섹스후 유지. 옷과 스커트를 벌리고 속옷 앞밴드를 살짝 당겨 내부의 고인 분비흔을 보여주는 사후 도발 구도(lifting skirt, holding clothes open to reveal inner, pulling front waistband of panties down slightly, showing underwear inside filled with excessive thick white fluid, cum pool in panties)로 전면 개편.
+  2. **에셋 무손실 가드레일 규격 유연화 (Extensibility 준수)**:
+     - 	ests/test_cli_gui_sync.py: 기존 완성본 108장 무손실 보존을 검증하되, 새 콘텐츠 유입으로 에셋이 추가되는 것은 정상적인 확장이므로 len(main_files) >= 108로 규격 계약 전환.
+- **결과**:
+  - pytest tests/: 86개 전수 통과 (100% ALL PASS).
+  - 기존 캠퍼스 648장 에셋 100% 무손실 보존 유지 및 신규 에셋 확장 완벽 수용.
+  3. **보건실 씬(131) 및 로맨스 대역(060, 064~071) 노출도 및 하의 탈의 정합성 개선**:
+     - `131` (보건실 침대섹스): 상의 구속 태그를 해제하고 의상이 대부분 벗겨진 채 한창 역동적으로 진행 중인 상위 결합 구도(`clothes mostly stripped off, nearly naked`, `actively engaged, intense intimacy in full swing`)로 전면 개편.
+     - `060` (딥키스): 흐트러진 옷깃과 쇄골/어깨 노출 태그 주입으로 농밀감 강화.
+     - `064~071` (공용 구강/핸드 씬): 파트너의 하의가 내려가지 않아 바지 원단에 얼굴을 대는 결함을 원천 차단하기 위해 `partner pants pulled down, exposed bare lower body, bare skin` 명시 및 네거티브 차단 주입. `prompt_female`과 `prompt_otokonoko` 양방향 완비로 precheck 무결성 100% 보장.
+  4. **HealthService 순환 참조 격리 및 CLI 테스트 경량화**:
+     - `health_service.py` 상단의 `run_pregeneration_check` 임포트를 4단계 내부 지연 임포트로 전환하여 모듈 로딩 순환 참조 원천 차단.
+     - `test_checkpoint_cli.py`에서 레거시 FLUX 제너레이터 대신 공식 SDXL 파이프라인 `batch_generator.py`를 호출하도록 전환 (실행 시간 29초 ➔ 8초 대폭 단축).

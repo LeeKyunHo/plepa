@@ -170,8 +170,9 @@ def test_grounding_production_asset_lossless_guardrail():
         char_dir = campus_assets_dir / char
         assert char_dir.exists(), f"캐릭터 '{char}' 에셋 디렉토리가 존재하지 않습니다."
         main_files = list(char_dir.rglob("*.webp"))
-        assert len(main_files) == 108, (
-            f"캐릭터 '{char}' 에셋 수량은 정확히 108장이어야 합니다 (현재: {len(main_files)}장)."
+        # 최소 108장 이상의 프로덕션 에셋이 무손실 보존되어야 하며, 새 콘텐츠 유입으로 확장될 수 있음
+        assert len(main_files) >= 108, (
+            f"캐릭터 '{char}' 에셋 수량이 비정상적으로 적습니다 (최소 108장 필요, 현재: {len(main_files)}장)."
         )
 
         origin_dir = campus_assets_dir / f"{char}_origin"

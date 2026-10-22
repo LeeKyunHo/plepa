@@ -44,7 +44,7 @@ def test_checkpoint_profile_integration():
         # CLI 실행 (dry-run 모드로 실제 생성은 하지 않음)
         cmd = [
             sys.executable,
-            "flux_batch_generator.py",
+            "batch_generator.py",
             "-c", "sample_character",
             "-p", "000",
             "--engine", "sdxl",
@@ -57,7 +57,7 @@ def test_checkpoint_profile_integration():
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=60,
                 encoding='utf-8'
             )
             

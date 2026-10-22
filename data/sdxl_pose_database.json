@@ -304,8 +304,8 @@
   "romance": {
     "060": {
       "label": "딥키스",
-      "description": "파트너와 입술을 격렬하게 포개고 타액을 흘리며 열정적으로 나누는 농밀한 딥키스 씬 (옷 입은 상태, 키로 037 - poses에서 이동)",
-      "prompt": "1girl, 1boy, kiss, french kiss, faceless male, deep passionate kiss, messy saliva trail, parted lips, heavy blush, flushed skin, trembling with pleasure, upper body",
+      "description": "파트너와 옷깃을 흐트러뜨리고 맨살을 닿으며 열정적으로 나누는 농밀한 딥키스 씬",
+      "prompt": "1girl, 1boy, kiss, french kiss, faceless male, ((disheveled clothing, unbuttoned shirt, exposed collarbone, bare shoulders:1.3)), deep passionate kiss, messy saliva trail, parted lips, heavy blush, flushed skin, trembling with pleasure, upper body close-up, intimate bedroom lighting",
       "prompt_female": "1girl, 1boy, kiss, french kiss, faceless male, deep passionate kiss, messy saliva trail, parted lips, heavy blush, flushed skin, trembling with pleasure, upper body",
       "prompt_otokonoko": "2boys, kiss, french kiss, faceless male, deep passionate kiss, messy saliva trail, parted lips, heavy blush, flushed skin, trembling with pleasure, upper body",
       "negative_add": "(fellatio, blowjob, oral, oral sex, penis, cunnilingus, penetration, genitals:1.4), (separated faces, distant faces:1.3)",
@@ -342,45 +342,63 @@
     },
     "064": {
       "label": "남근핥기",
-      "description": "공용 구강: 성기 끝을 혀로 조심스럽게 핥으며 올려다보는 봉사 포즈 (여캐/오토 공용)",
-      "prompt": "solo, kneeling, looking up at partner, mouth open, licking shaft tip, tongue out, blushing, saliva trail, intimate view",
+      "description": "공용 구강: 파트너의 하의를 내린 상태에서 맨살 중심부를 혀로 핥으며 올려다보는 봉사 포즈",
+      "prompt": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down to thighs, exposed bare lower body, bare skin:1.4)), ((disheveled clothing, off-shoulder collar, exposed cleavage and collarbone:1.25)), mouth open, ((licking shaft tip with tongue:1.35)), tongue extended, looking up at partner with flushed bedroom eyes, heavy blush, saliva trail glistening, intimate close-up",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (fully clothed male lower body:1.4)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down to thighs, exposed bare lower body, bare skin:1.4)), ((disheveled clothing, off-shoulder collar, exposed cleavage and collarbone:1.25)), mouth open, ((licking shaft tip with tongue:1.35)), tongue extended, looking up at partner with flushed bedroom eyes, heavy blush, saliva trail glistening, intimate close-up",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling between partner legs, ((partner pants pulled down to thighs, exposed bare lower body, bare skin:1.4)), ((disheveled clothing, loose collar, exposed slender neck and collarbone:1.25)), mouth open, ((licking shaft tip with tongue:1.35)), tongue extended, looking up at partner with flushed bedroom eyes, heavy blush, saliva trail glistening, intimate close-up"
     },
     "065": {
       "label": "펠라치오약",
-      "description": "공용 구강: 무릎 꿇고 성기를 입에 머금고 상냥하게 봉사하는 구강 씬 (여캐/오토 공용)",
-      "prompt": "solo, kneeling, fellatio, blowjob, taking shaft into mouth, cheeks flushed, looking up with loving eyes, saliva trail",
+      "description": "공용 구강: 파트너 하의 탈의 상태에서 부드럽게 감싸쥐고 입에 머금는 구강 봉사 (약)",
+      "prompt": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down, exposed bare crotch, bare skin:1.4)), ((disheveled clothes, bare shoulders:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, looking up with loving moist eyes, saliva trail, intimate close-up",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (denim:1.3)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down, exposed bare crotch, bare skin:1.4)), ((disheveled clothes, bare shoulders:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, looking up with loving moist eyes, saliva trail, intimate close-up",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling between partner legs, ((partner pants pulled down, exposed bare crotch, bare skin:1.4)), ((disheveled clothes, bare shoulders:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, looking up with loving moist eyes, saliva trail, intimate close-up"
     },
     "066": {
       "label": "펠라치오강",
-      "description": "공용 구강: 깊숙이 물고 격렬하게 삼키며 타액을 흘리는 진한 펠라 씬 (여캐/오토 공용)",
-      "prompt": "solo, kneeling, deep fellatio, mouth wide open stretched around shaft, throat bulging, saliva dripping, messy face, teary bedroom eyes",
+      "description": "공용 구강: 파트너 하의가 완전히 내려간 채 깊숙이 물고 타액을 흘리는 격렬한 펠라 씬",
+      "prompt": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down completely, exposed bare lower body:1.4)), ((disheveled clothing, exposed cleavage, bare skin:1.3)), deep fellatio, mouth wide open taking shaft, throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate upper body shot",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (pants:1.3)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down completely, exposed bare lower body:1.4)), ((disheveled clothing, exposed cleavage, bare skin:1.3)), deep fellatio, mouth wide open taking shaft, throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate upper body shot",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling between partner legs, ((partner pants pulled down completely, exposed bare lower body:1.4)), ((disheveled clothing, exposed slender chest, bare skin:1.3)), deep fellatio, mouth wide open taking shaft, throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate upper body shot"
     },
     "067": {
       "label": "딥스로트",
-      "description": "공용 구강: 목구멍 끝까지 삼키며 벅찬 쾌감과 눈물을 흘리는 딥스로트 씬 (여캐/오토 공용)",
-      "prompt": "solo, deep throat, swallowing completely, gag reflex, crying with pleasure, tears in eyes, saliva dripping, flushed cheeks, intense climax",
+      "description": "공용 구강: 파트너 하의 탈의 상태에서 목구멍 끝까지 삼키며 눈물을 흘리는 딥스로트 씬",
+      "prompt": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down, exposed bare groin, bare skin:1.4)), ((loosened clothing, exposed bare shoulders and chest:1.3)), deep throat, swallowing shaft deeply, gag reflex, crying with intense pleasure, streaming tears in eyes, saliva dripping, heavily flushed cheeks, intimate close-up",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (clothes covering crotch:1.4)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling between partner legs, ((partner pants pulled down, exposed bare groin, bare skin:1.4)), ((loosened clothing, exposed bare shoulders and chest:1.3)), deep throat, swallowing shaft deeply, gag reflex, crying with intense pleasure, streaming tears in eyes, saliva dripping, heavily flushed cheeks, intimate close-up",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling between partner legs, ((partner pants pulled down, exposed bare groin, bare skin:1.4)), ((loosened clothing, exposed bare shoulders and chest:1.3)), deep throat, swallowing shaft deeply, gag reflex, crying with intense pleasure, streaming tears in eyes, saliva dripping, heavily flushed cheeks, intimate close-up"
     },
     "068": {
       "label": "착의펠라약",
-      "description": "공용 구강: 상의를 입은 채 옷깃을 흐트러뜨리고 무릎 꿇어 봉사하는 스릴 펠라 씬 (여캐/오토 공용)",
-      "prompt": "solo, fully clothed except bottom, top on, kneeling, clothed fellatio, blowjob, looking up devotedly, mouth around shaft, slight blush",
+      "description": "공용 구강: 상의는 흐트러뜨려 쇄골을 노출하고 파트너 하의는 완전히 내린 채 올려다보는 봉사 씬",
+      "prompt": "1girl, 1boy, solo focus, kneeling, ((partner pants pulled down, exposed bare lower body:1.4)), ((disheveled top, shirt pulled aside, exposed collarbone and cleavage:1.3)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, slight blush, saliva trail, intimate bedroom angle",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling, ((partner pants pulled down, exposed bare lower body:1.4)), ((disheveled top, shirt pulled aside, exposed collarbone and cleavage:1.3)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, slight blush, saliva trail, intimate bedroom angle",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling, ((partner pants pulled down, exposed bare lower body:1.4)), ((disheveled top, shirt pulled aside, exposed collarbone and slender chest:1.3)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, slight blush, saliva trail, intimate bedroom angle"
     },
     "069": {
       "label": "착의펠라강",
-      "description": "공용 구강: 헝클어진 옷매무새로 격렬하게 구강 봉사하며 절정에 달하는 씬 (여캐/오토 공용)",
-      "prompt": "solo, fully clothed, disheveled collar, kneeling, intense clothed blowjob, head moving back and forth, saliva dripping, flushed face, ecstatic eyes",
+      "description": "공용 구강: 흐트러진 옷매무새와 파트너의 완전한 하의 노출 속에서 격렬하게 봉사하는 씬",
+      "prompt": "1girl, 1boy, solo focus, kneeling, ((partner pants pulled down to floor, exposed bare groin:1.4)), ((disheveled unbuttoned shirt, bare shoulders:1.3)), intense blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling, ((partner pants pulled down to floor, exposed bare groin:1.4)), ((disheveled unbuttoned shirt, bare shoulders:1.3)), intense blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling, ((partner pants pulled down to floor, exposed bare groin:1.4)), ((disheveled unbuttoned shirt, bare shoulders:1.3)), intense blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body"
     },
     "070": {
       "label": "펠라사후",
@@ -391,10 +409,13 @@
     },
     "071": {
       "label": "대딸",
-      "description": "공용 핸드잡: 두 손으로 성기를 감싸쥐고 위아래로 쓸어올리며 올려다보는 손 봉사 씬 (여캐/오토 공용)",
-      "prompt": "solo, handjob, two hands gripping shaft, stroking, looking up at partner, loving smile, blush, pre-cum glistening",
+      "description": "공용 핸드잡: 파트너 하의를 완전히 내린 상태에서 맨살을 양손으로 감싸쥐고 위아래로 쓸어올리는 손 봉사 씬",
+      "prompt": "1girl, 1boy, solo focus, kneeling beside partner, ((partner pants pulled down, exposed bare crotch, bare skin:1.4)), ((disheveled clothing, off-shoulder top, bare skin:1.25)), handjob, two hands gripping shaft directly, stroking, looking up at partner with loving blush, pre-cum glistening, intimate bedroom lighting",
       "required_outfit": "default",
-      "section": "romance"
+      "section": "romance",
+      "negative_add": "(wearing pants over crotch:1.4), (handjob over fabric:1.4), (pants:1.3)",
+      "prompt_female": "1girl, 1boy, solo focus, kneeling beside partner, ((partner pants pulled down, exposed bare crotch, bare skin:1.4)), ((disheveled clothing, off-shoulder top, bare skin:1.25)), handjob, two hands gripping shaft directly, stroking, looking up at partner with loving blush, pre-cum glistening, intimate bedroom lighting",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, solo focus, kneeling beside partner, ((partner pants pulled down, exposed bare crotch, bare skin:1.4)), ((disheveled clothing, off-shoulder top, bare skin:1.25)), handjob, two hands gripping shaft directly, stroking, looking up at partner with loving blush, pre-cum glistening, intimate bedroom lighting"
     }
   },
   "h_scenes": {
@@ -594,8 +615,8 @@
     },
     "112": {
       "label": "착의섹스 전",
-      "description": "옷을 입은 채 치마만 걷어올리고 마주하는 착의 단계 씬 (전)",
-      "prompt": "1girl, 1boy, ((clothed sex:1.35)), ((fully clothed except bottom, wearing clothes, top on:1.35)), skirt lifted, underwear aside, standing or sitting, gentle rhythm, thrilling secret encounter, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, anticipation expression, expectant look, seductive lustful face, sweet moaning:1.25)), soft lighting",
+      "description": "옷을 입은 채 벽이나 책상에 밀착되어 행위 직전 서로를 갈망하며 열띤 숨결과 긴장감을 나누는 초밀착 전희 씬",
+      "prompt": "1girl, 1boy, ((passionate foreplay before clothed sex:1.35)), ((intensely leaning close, face-to-face:1.3)), ((fully clothed top, wearing shirt, skirt lifted, underwear aside:1.35)), ((steamy heavy breathing, whispering into ear, parted lips gasping softly:1.25)), (hands gripping clothes, pinned against wall or desk:1.25), ((intensely flushed face, wet glossy parted lips, half-closed lustful eyes, breathless longing gaze, anticipation expression:1.3)), trembling with sweet tension, disheveled clothing, thrilling secret encounter, heated intimate atmosphere, dramatic warm rim lighting, cowboy shot",
       "required_outfit": "default",
       "section": "h_scenes"
     },
@@ -614,8 +635,8 @@
     },
     "115": {
       "label": "착의섹스후",
-      "description": "착의 섹스 후 치마를 걷어올린 채 다리 사이에서 정액이 흐르는 사후 씬",
-      "prompt": "1girl, 1boy, ((clothed sex aftermath:1.35)), ((fully clothed except bottom, wearing clothes, top on:1.35)), ((skirt lifted, disheveled clothing:1.25)), standing or sitting, underwear aside or removed, ((excessive cum dripping between thighs:1.35)), ((thick white fluid visibly running down inner thighs:1.3)), legs slightly trembling, (heavy body blush:1.2), (intensely flushed face:1.2), breathless dazed expression, parted lips, messy hair, satisfied exhausted smile, looking at viewer with half-closed eyes, leaning against wall or desk for support, aftersex glow, warm intimate lighting, cowboy shot",
+      "description": "착의 행위 후 옷과 치마를 벌리고 속옷을 살짝 당겨 내부에 가득 고인 분비흔을 확인시켜주는 도발적 사후 씬",
+      "prompt": "1girl, ((clothed sex aftermath:1.35)), ((lifting skirt, holding clothes open to reveal inner:1.35)), ((pulling front waistband of panties down slightly:1.35)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.4)), ((white liquid dripping and running down inner thighs:1.35)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting, cowboy shot",
       "required_outfit": "default",
       "section": "h_scenes"
     },

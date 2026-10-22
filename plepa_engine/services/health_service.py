@@ -21,7 +21,6 @@ from plepa_engine.checkpoint_service import CheckpointService
 from plepa_engine.comfy_client import ComfyClient
 from plepa_engine.config import DEFAULT_ROSTER, DEFAULT_SDXL_CKPT, PROJECTS_DIR
 from plepa_engine.models import CharacterConfig, GenerationTarget, PoseEntry
-from plepa_engine.precheck import run_pregeneration_check
 from plepa_engine.prompt_builder import assemble_sdxl_prompt, clamp_sdxl_weights
 
 from plepa_engine.qa_validator import validate_generated_image
@@ -241,6 +240,7 @@ class HealthService:
         t0 = time.perf_counter()
         details: List[str] = []
         try:
+            from plepa_engine.precheck import run_pregeneration_check
             report = run_pregeneration_check("campus")
             details.append(
                 f"사전 점검 완료: 캐릭터 {report.total_characters}명 × 포즈 {report.total_poses}종 = {report.total_combinations_checked}개 조합"
