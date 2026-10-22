@@ -1214,6 +1214,7 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   1. **삼위일체 기본값 E2E 단언 테스트**: `batch_generator.py`에 `create_parser()` SSOT 함수를 분리하고, 빈 인자 CLI 기본 파싱값과 `GENERATION_OPTION_SPECS` 및 `build_sdxl_workflow`의 기본 동작이 일치하는지 자동 검증(`test_generation_option_specs_default_values_sync_with_cli`, `test_workflow_templates_detailer_default_behavior`).
   2. **648장 프로덕션 에셋 영구 불변 가드레일**: `tests/test_cli_gui_sync.py`에 캠퍼스 6인 전원의 108종 에셋 수량(총 648장) 및 원본 백업(`_origin`) 보존 상태를 상시 단언(`test_grounding_production_asset_lossless_guardrail`).
   3. **사전점검(precheck.py) 6단계 확장**: 포즈 DB, `pose_background_mapping.json`, `background.json` 간의 참조 무결성을 자동 전수 검증하는 6단계 검사 탑재.
+  4. **Gen-IT 완성본 생애주기 격리(docs/genit/) 및 스마트 캐시 검증기**: `docs/genit/`(현역 active)과 `docs/archive/genit/`(봉인 frozen) 디렉토리를 분리 신설하고, SHA-256 해시 스마트 캐시 기반으로 변경 없는 문서를 0.001초 만에 패스하는 연쇄 검증기를 구축하여 `pytest` 스위트에 영구 편입(`tests/test_genit_work_integrity.py`).
 - **결과**:
-  - `pytest tests/`: 85개 전수 통과 (100% ALL PASS).
+  - `pytest tests/`: 86개 전수 통과 (100% ALL PASS, 젠잇 연쇄 정합성 테스트 포함).
   - `validate_genit_work.py`: 108종 에셋 정합성 및 6대 변수 100% 무결성 검증 완료.
