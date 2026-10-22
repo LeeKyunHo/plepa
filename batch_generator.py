@@ -174,7 +174,8 @@ def run_self_test() -> int:
 
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def create_parser() -> argparse.ArgumentParser:
+    """배치 생성기 CLI ArgumentParser 생성 (단일 진실 공급원)."""
     parser = argparse.ArgumentParser(
         prog="flux_batch_generator",
         description="플럭스(FLUX.1 [dev]) 및 SDXL(Unholy Desire Mix) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
@@ -240,6 +241,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--max-retries", type=int, default=3, help="Auto-QC 불량 시 최대 재시도(리롤) 횟수 (기본: 3)")
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
 
+    return parser
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = create_parser()
     args = parser.parse_args(argv)
 
     is_all_rosters = args.roster.strip().lower() in ("all", "전체", "*")

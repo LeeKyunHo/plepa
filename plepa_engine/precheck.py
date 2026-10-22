@@ -234,6 +234,36 @@ def run_pregeneration_check(roster: str = "spy") -> PrecheckReport:
                                 f"[테마스왑] {pfx}:{code} ({slot}) 프롬프트에 기본 의상 잔류 ({leak!r})"
                             )
 
+    # -------------------------------------------------------------------------
+    # [6단계] 로스터별 포즈 배경 매핑(pose_background_mapping.json) 무결성 검사
+    # -------------------------------------------------------------------------
+    mapping_file = PROJECTS_DIR / roster / "pose_background_mapping.json"
+    if mapping_file.exists():
+        try:
+            map_data = json.loads(mapping_file.read_text(encoding="utf-8"))
+            default_bg_key = map_data.get("default_background", "default")
+
+            valid_bg_keys = set()
+            if bg_file.exists():
+                bg_raw = json.loads(bg_file.read_text(encoding="utf-8"))
+                valid_bg_keys = set(bg_raw.keys())
+                if "presets" in bg_raw:
+                    valid_bg_keys.update(bg_raw["presets"].keys())
+
+            if valid_bg_keys and default_bg_key not in valid_bg_keys:
+                report.errors.append(
+                    f"[배경매핑규칙] {roster}/pose_background_mapping.json의 default_background '{default_bg_key}'가 background.json에 정의되어 있지 않습니다."
+                )
+
+            pose_maps = map_data.get("pose_mappings", {})
+            for code_pattern, mapped_bg in pose_maps.items():
+                if mapped_bg not in ("none", "auto") and valid_bg_keys and mapped_bg not in valid_bg_keys:
+                    report.errors.append(
+                        f"[배경매핑규칙] {roster} 포즈 대역 '{code_pattern}'에 매핑된 배경 '{mapped_bg}'가 background.json에 실존하지 않습니다."
+                    )
+        except Exception as e:
+            report.errors.append(f"[배경매핑규칙] {roster}/pose_background_mapping.json 파싱 실패: {e}")
+
     return report
 
 
@@ -251,7 +281,7 @@ if __name__ == "__main__":
 
     rep = run_pregeneration_check(args.roster)
     print("=" * 68)
-    print(f"  [플에파] 이미지 생산 5단계 사전 점검 보고서 (로스터: {rep.roster})")
+    print(f"  [플에파] 이미지 생산 6단계 사전 점검 보고서 (로스터: {rep.roster})")
     print("=" * 68)
     print(f"• 점검 캐릭터 수 : {rep.total_characters}명")
     print(f"• 점검 포즈 DB 수: {rep.total_poses}종 (SDXL V2)")
