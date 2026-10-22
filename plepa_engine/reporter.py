@@ -13,6 +13,37 @@ from plepa_engine.models import GenerationResult, PoseEntry
 SEPARATOR = "═" * 70
 
 
+
+def get_subfolder_for_code(code: str | int) -> str:
+    """
+    포즈 코드에 따른 V3 에셋 대역별 서브폴더명을 반환합니다:
+    - 000~019 -> '01_emotions' (감정표현)
+    - 020~050 -> '02_daily' (범용 일상)
+    - 051~059 -> '03_events' (로스터 이벤트)
+    - 060~079 -> '04_romance' (로맨스 & 공용 구강)
+    - 080~129, 150~199 -> '05_h_scenes' (범용 H씬 체위)
+    - 130~139, 200~209 -> '06_special_h' (로스터 특색 이벤트 H씬)
+    """
+    try:
+        c = int(str(code).strip())
+    except (ValueError, TypeError):
+        return "02_daily"
+
+    if 0 <= c <= 19:
+        return "01_emotions"
+    elif 20 <= c <= 50:
+        return "02_daily"
+    elif 51 <= c <= 59:
+        return "03_events"
+    elif 60 <= c <= 79:
+        return "04_romance"
+    elif (80 <= c <= 129) or (150 <= c <= 199):
+        return "05_h_scenes"
+    elif (130 <= c <= 139) or (200 <= c <= 209):
+        return "06_special_h"
+    else:
+        return "05_h_scenes" if c >= 80 else "02_daily"
+
 def asset_filename(
     prefix: str,
     code: str | int,

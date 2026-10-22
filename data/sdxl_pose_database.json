@@ -4,13 +4,13 @@
   "_total_poses": 148,
   "_structure": {
     "emotions": "000~019 (20종, 기본 감정 및 표정)",
-    "poses": "020~039 (20종, 전신 및 일상 포즈)",
     "events": "040~059 (13종, 일상 및 스토리 이벤트)",
-    "romance": "060~079 (4종, 소프트 로맨스 및 애정 표현)",
     "h_scenes": "080~129 (48종, 여성 기본 성인 H-씬)",
+    "poses": "020~039 (20종, 전신 및 일상 포즈)",
+    "romance": "060~079 (4종, 소프트 로맨스 및 애정 표현)",
+    "scenes_otokonoko": "150~199 (48종, 오토코노코 기본 성인 씬)",
     "special_h": "130~132 (3종, 여성 특수 이벤트 성인 씬)",
-    "special_otokonoko": "133~135 (3종, 오토코노코 특수 이벤트 성인 씬)",
-    "scenes_otokonoko": "150~199 (48종, 오토코노코 기본 성인 씬)"
+    "special_otokonoko": "133~135 (3종, 오토코노코 특수 이벤트 성인 씬)"
   },
   "emotions": {
     "000": {
@@ -221,15 +221,13 @@
       "description": "샤워실 투명 유리벽에 맨가슴과 맨몸을 밀착시키며 밖을 도발적으로 바라보는 섹슈얼 씬.",
       "prompt": "completely nude, full nudity, bare skin, breasts pressed against glass, hands pressed on glass, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), dripping water, water running down body, (steam:1.1), steamy, looking at viewer through glass, seductive gaze, heavy blush, breathless expression, biting lip, condensation on glass, clear glass shower stall, intimate close-up, upper body focus",
       "required_outfit": "nude"
-    }
-  },
-  "events": {
+    },
     "040": {
       "label": "덮쳐짐",
       "description": "침대 위에서 유저를 내려다보며 다가오는 씬 (B08)",
       "required_outfit": "default",
       "prompt": "((kneeling on bed, looking down at viewer:1.25)), ((leaning forward with seductive confident smile:1.2)), hands on sheets, bed",
-      "section": "events",
+      "section": "poses",
       "negative_add": "(camera frame, viewfinder, border, HUD, screen corners:1.4)"
     },
     "041": {
@@ -237,84 +235,70 @@
       "description": "신나서 유저의 손을 잡고 앞장서서 이끄는 씬 (원래 042, 능동적)",
       "required_outfit": "default",
       "prompt": "((pov holding viewer's hand:1.25)), ((looking back over shoulder with bright cheerful smile:1.25)), follow me angle, walking",
-      "section": "events"
+      "section": "poses"
     },
     "042": {
       "label": "끌려감",
       "description": "유저에게 손을 잡힌 채 이끌려가는 씬 (원래 041, 수동적)",
       "required_outfit": "default",
       "prompt": "((pov holding viewer's hand:1.25)), looking back flustered, being pulled forward, dynamic walking angle, light blush",
-      "section": "events"
+      "section": "poses"
     },
     "043": {
       "label": "침대숙면",
       "description": "침대에서 알몸으로 이불을 덮고 곤히 잠들어 있는 평온한 모습 (B11)",
       "required_outfit": "nude",
       "prompt": "((sleeping peacefully in bed:1.25)), ((nude under white duvet blanket:1.25)), ((bare shoulders, soft sheets covering body:1.2)), head resting on white pillow, closed eyes, calm gentle expression, soft morning light",
-      "section": "events"
+      "section": "poses"
     },
     "044": {
       "label": "목욕중",
       "description": "넓은 욕조 안 따뜻한 물에 몸을 담그고 뒤쪽 턱에 여유롭게 기대어 휴식하는 씬 (B16)",
       "required_outfit": "nude",
       "prompt": "solo, completely nude, full nudity, bare skin, ((relaxing in wide spacious luxury sunken bath pool:1.3)), ((leaning back against wide horizontal bath ledge behind shoulders, both arms spread wide resting on horizontal ledge:1.25)), clear warm water up to chest, gentle water ripples, rising steam, peaceful contented smile, wet hair, warm lighting, indoor luxury bath, cowboy shot",
-      "section": "events"
+      "section": "poses"
     },
     "045": {
       "label": "목욕들켜부끄러움",
       "description": "목욕 도중 인기척에 놀라 웅크리는 씬 (B17)",
       "required_outfit": "nude",
       "prompt": "solo, completely nude, full nudity, bare skin, ((hugging knees in wide spacious sunken bath pool:1.25)), ((splashing clear water, screaming blush:1.25)), startled wide eyes, wet hair, rising steam, caught in bath, cowboy shot",
-      "section": "events"
+      "section": "poses"
     },
     "046": {
       "label": "결혼식",
       "description": "고급스럽고 세련된 순백의 웨딩드레스를 입고 부케를 든 행복한 결혼식 (B20)",
       "required_outfit": "wedding",
       "prompt": "solo, cowboy shot, ((wearing luxurious haute couture pure white bridal wedding dress, elegant high-neck sheer floral lace illusion neckline, intricate pearl and lace embroidered satin bodice, modest covered chest, sheer floral lace long sleeves, flowing A-line layered tulle bridal gown:1.25)), ((holding bridal bouquet of white roses with both hands in front of waist:1.25)), sheer white bridal veil, delicate pearl tiara, radiant joyful smile, happy loving eyes, warm blush, sunlit cathedral stained glass background, soft romantic lighting, wedding day",
-      "section": "events"
+      "section": "poses"
     },
     "047": {
       "label": "쓰다듬기",
       "description": "머리를 쓰다듬받으며 기분 좋아하는 1인칭 씬 (B21)",
       "required_outfit": "default",
       "prompt": "((pov hand patting head:1.25)), ((leaning into hand, blissful smiling face:1.25)), closed eyes in contentment",
-      "section": "events"
+      "section": "poses"
     },
     "048": {
-      "label": "카페휴식",
-      "description": "테이블에 앉아 커피를 마시며 여유를 즐기는 일상 씬",
+      "label": "테이블휴식",
+      "description": "범용 일상: 테이블에 앉아 음료 잔이나 머그를 들고 편안하게 휴식하는 포즈 (로스터 background.json과 자동 결합)",
+      "prompt": "1girl, solo, sitting at table, holding mug, relaxed posture, looking at viewer, gentle smile, upper body, cowboy shot",
       "required_outfit": "default",
-      "prompt": "1girl, solo, sitting at cafe table, holding coffee cup with both hands, looking at viewer, gentle warm smile, outdoor cafe terrace background, soft daylight, cowboy shot",
-      "section": "events"
+      "section": "poses"
     },
     "049": {
       "label": "스트릿스냅",
-      "description": "도심 골목길에서 테이크아웃 음료를 들고 자연스럽게 걷는 스냅 씬",
+      "description": "범용 일상: 야외 거리를 걸어가며 자연스럽게 뒤돌아보는 일상 스냅 포즈",
+      "prompt": "1girl, solo, walking, looking back over shoulder at viewer, casual natural posture, slight smile, full body",
       "required_outfit": "default",
-      "prompt": "1girl, solo, walking on urban street, holding takeout drink with straw, casual candid snap, looking back over shoulder at viewer, street bokeh, cowboy shot",
-      "section": "events"
+      "section": "poses"
     },
     "050": {
       "label": "야경테라스",
-      "description": "도시 야경이 내려다보이는 고급 테라스에서 뒤돌아보는 럭셔리 씬",
+      "description": "범용 일상: 발코니 난간에 기대어 부드러운 바람을 맞으며 먼 곳을 바라보는 감성 포즈",
+      "prompt": "1girl, solo, leaning on balcony railing, hair fluttering, gentle breeze, looking away softly, upper body, night lighting",
       "required_outfit": "default",
-      "prompt": "1girl, solo, glamorous night city terrace, looking back over shoulder at viewer, alluring gaze, warm ambient streetlights, glowing night bokeh, cowboy shot",
-      "section": "events"
-    },
-    "051": {
-      "label": "룸미러셀카",
-      "description": "전신 거울 앞에서 스마트폰을 들고 바디라인을 찍는 셀카 씬",
-      "required_outfit": "default",
-      "prompt": "1girl, solo, taking mirror selfie in room, holding smartphone, looking into mirror, arched back, emphasizing body curves, aesthetic room lighting, cowboy shot",
-      "section": "events"
-    },
-    "052": {
-      "label": "바이럴더블피스",
-      "description": "양손 브이와 장난스럽고 과감한 표정으로 렌즈에 다가선 클로즈업 셀카",
-      "required_outfit": "default",
-      "prompt": "1girl, solo, ((extreme close-up portrait, upper body zoom:1.35)), ((double peace, two peace signs near face:1.3)), ((ahegao, tongue out, rolling eyes slightly:1.25)), heavy blush on cheeks, tilted head, playful chaotic influencer selfie, ring light reflection in eyes, smartphone camera angle",
-      "section": "events"
+      "section": "poses"
     }
   },
   "romance": {
@@ -354,6 +338,62 @@
       "prompt_female": "1girl, 1boy, completely nude, full nudity, bare skin, lying on side on bed, spooning position, partner arm around waist, intimate embrace, heavy body blush, intensely flushed face and neck, head tilted back, parted lips soft moaning, heavy-lidded eyes half-closed in bliss, trembling with arousal, sensual pleasure expression, breathless, cowboy shot",
       "prompt_otokonoko": "2boys, completely nude, full nudity, bare skin, lying on side on bed, spooning position, partner arm around waist, intimate embrace, heavy body blush, intensely flushed face and neck, head tilted back, parted lips soft moaning, heavy-lidded eyes half-closed in bliss, trembling with arousal, sensual pleasure expression, breathless, cowboy shot",
       "required_outfit": "nude",
+      "section": "romance"
+    },
+    "064": {
+      "label": "남근핥기",
+      "description": "공용 구강: 성기 끝을 혀로 조심스럽게 핥으며 올려다보는 봉사 포즈 (여캐/오토 공용)",
+      "prompt": "solo, kneeling, looking up at partner, mouth open, licking shaft tip, tongue out, blushing, saliva trail, intimate view",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "065": {
+      "label": "펠라치오약",
+      "description": "공용 구강: 무릎 꿇고 성기를 입에 머금고 상냥하게 봉사하는 구강 씬 (여캐/오토 공용)",
+      "prompt": "solo, kneeling, fellatio, blowjob, taking shaft into mouth, cheeks flushed, looking up with loving eyes, saliva trail",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "066": {
+      "label": "펠라치오강",
+      "description": "공용 구강: 깊숙이 물고 격렬하게 삼키며 타액을 흘리는 진한 펠라 씬 (여캐/오토 공용)",
+      "prompt": "solo, kneeling, deep fellatio, mouth wide open stretched around shaft, throat bulging, saliva dripping, messy face, teary bedroom eyes",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "067": {
+      "label": "딥스로트",
+      "description": "공용 구강: 목구멍 끝까지 삼키며 벅찬 쾌감과 눈물을 흘리는 딥스로트 씬 (여캐/오토 공용)",
+      "prompt": "solo, deep throat, swallowing completely, gag reflex, crying with pleasure, tears in eyes, saliva dripping, flushed cheeks, intense climax",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "068": {
+      "label": "착의펠라약",
+      "description": "공용 구강: 상의를 입은 채 옷깃을 흐트러뜨리고 무릎 꿇어 봉사하는 스릴 펠라 씬 (여캐/오토 공용)",
+      "prompt": "solo, fully clothed except bottom, top on, kneeling, clothed fellatio, blowjob, looking up devotedly, mouth around shaft, slight blush",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "069": {
+      "label": "착의펠라강",
+      "description": "공용 구강: 헝클어진 옷매무새로 격렬하게 구강 봉사하며 절정에 달하는 씬 (여캐/오토 공용)",
+      "prompt": "solo, fully clothed, disheveled collar, kneeling, intense clothed blowjob, head moving back and forth, saliva dripping, flushed face, ecstatic eyes",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "070": {
+      "label": "펠라사후",
+      "description": "공용 구강: 입가를 손가락으로 닦아내며 만족스럽게 미소 짓는 사후 여운 씬 (여캐/오토 공용)",
+      "prompt": "solo, after fellatio, wiping mouth with index finger, semen on lips, tongue out, sweet smile, blushing cheeks, breathless",
+      "required_outfit": "default",
+      "section": "romance"
+    },
+    "071": {
+      "label": "대딸",
+      "description": "공용 핸드잡: 두 손으로 성기를 감싸쥐고 위아래로 쓸어올리며 올려다보는 손 봉사 씬 (여캐/오토 공용)",
+      "prompt": "solo, handjob, two hands gripping shaft, stroking, looking up at partner, loving smile, blush, pre-cum glistening",
+      "required_outfit": "default",
       "section": "romance"
     }
   },

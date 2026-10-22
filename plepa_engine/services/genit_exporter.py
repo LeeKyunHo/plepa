@@ -111,7 +111,9 @@ class GenitExporter:
         exported_count = 0
         sheet_rows = []
 
-        for webp_file in sorted(assets_dir.glob("*.webp")):
+        for webp_file in sorted(assets_dir.rglob("*.webp")):
+            if "_origin" in webp_file.parts or webp_file.name.startswith("."):
+                continue
             internal_code = extract_pose_code_from_filename(webp_file.name)
             if not internal_code:
                 continue

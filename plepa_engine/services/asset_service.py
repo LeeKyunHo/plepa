@@ -67,7 +67,7 @@ class AssetService:
         # 영숫자 포즈 코드 규격 지원 (예: 000, A00, C01, N01, N28 등)
         pattern = re.compile(rf"^{re.escape(prefix)}_([A-Za-z0-9]+)(?:_(.*?))?(?:_censored)?\.(webp|png)$")
 
-        for f in sorted(asset_dir.glob(f"{prefix}_*")):
+        for f in sorted(asset_dir.rglob(f"{prefix}_*")):
             if not f.is_file():
                 continue
             m = pattern.match(f.name)
@@ -101,7 +101,7 @@ class AssetService:
                 if origin_dir.is_dir():
                     origin_cand = origin_dir / f.name
                     if not origin_cand.is_file():
-                        code_matches = list(origin_dir.glob(f"{prefix}_{code}*"))
+                        code_matches = list(origin_dir.rglob(f"{prefix}_{code}*"))
                         if code_matches:
                             origin_cand = code_matches[0]
                     if origin_cand.is_file():
@@ -215,10 +215,11 @@ class AssetService:
     def restore_from_origin(self, prefix: str, code: str, roster: str = DEFAULT_ROSTER) -> bool:
         """
         assets/{prefix}_origin/ 폴더의 원본 파일을 assets/{prefix}/로 덮어써서 무검열 원본으로 복원합니다.
-        성공 시 True, 원본 파일이 없으면 False 반환.
+        성공 시 True, 원본 파일이 없으면 False 반환. (V3 서브폴더 및 플랫 구조 동시 지원)
         """
         import shutil
         from plepa_engine.services.pose_service import default_pose_service
+        from plepa_engine.reporter import get_subfolder_for_code
 
         origin_dir = PROJECTS_DIR / roster / "assets" / f"{prefix}_origin"
         asset_dir = self.get_character_asset_dir(prefix, roster)
@@ -226,12 +227,21 @@ class AssetService:
             return False
 
         code_str = default_pose_service.normalize_code(code)
-        matches = list(origin_dir.glob(f"{prefix}_{code_str}*"))
+        matches = list(origin_dir.rglob(f"{prefix}_{code_str}*"))
         if not matches:
             return False
 
         src_file = matches[0]
-        dst_file = asset_dir / src_file.name
+        subfolder = get_subfolder_for_code(code_str)
+        sub_asset_dir = asset_dir / subfolder
+
+        existing_targets = list(asset_dir.rglob(f"{prefix}_{code_str}*"))
+        if existing_targets:
+            dst_file = existing_targets[0]
+        else:
+            sub_asset_dir.mkdir(parents=True, exist_ok=True)
+            dst_file = sub_asset_dir / src_file.name
+
         shutil.copy2(src_file, dst_file)
         return True
 
@@ -250,14 +260,15 @@ class AssetService:
         pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
         expected_codes = default_pose_service.resolve_pose_codes("all", pose_db, roster=roster)
 
-        # 오토코노코 전용 오프셋 매핑 셋 (기본 성인 080~127: +70, 특수 성인 130~132: +3)
+        # 오토코노코 전용 V3 오프셋 매핑 셋 (기본 성인 080~139: +70 -> 150~209)
         otokonoko_offset_map = {
-            f"{i:03d}": f"{i+70:03d}" for i in range(80, 128)
+            f"{i:03d}": f"{i+70:03d}" for i in range(80, 140)
         }
+        # 레거시 하위 호환
         otokonoko_offset_map.update({
-            "130": "133",
-            "131": "134",
-            "132": "135",
+            "130": "200",
+            "131": "201",
+            "132": "202",
         })
 
         results = []

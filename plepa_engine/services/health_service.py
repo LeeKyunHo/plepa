@@ -73,7 +73,8 @@ class HealthService:
         t0 = time.perf_counter()
         details: List[str] = []
         try:
-            db = default_pose_service.load_pose_db(engine="sdxl")
+            # V3 규격: 코어 DB 및 기본 로스터(campus) 이벤트 오버레이를 함께 로드하여 검증
+            db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
             total_poses = len(db)
             details.append(f"SDXL 포즈 데이터베이스 총 {total_poses}종 로드 완료")
 
@@ -179,7 +180,8 @@ class HealthService:
         details: List[str] = []
         try:
             char, _ = default_character_service.find_character("sample_character", roster="campus")
-            db = default_pose_service.load_pose_db(engine="sdxl")
+            # V3 규격: 코어 DB 및 기본 로스터(campus) 이벤트 오버레이를 함께 로드하여 검증
+            db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
 
             # 1. 평상복(000) 착의 검증
             pos_clothed, _, nude_flag = assemble_sdxl_prompt(char, db["000"])
