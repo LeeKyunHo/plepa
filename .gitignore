@@ -72,3 +72,4 @@ context_snapshot/
 
 # Temporary user notes
 pose_mapping.txt
+.cache/
