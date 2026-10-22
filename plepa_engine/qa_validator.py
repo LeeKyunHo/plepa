@@ -45,6 +45,18 @@ try:
 except ImportError:
     HAS_IMGUTILS = False
 
+try:
+    from imgutils.metrics import laplacian_score
+    HAS_LAPLACIAN = True
+except ImportError:
+    HAS_LAPLACIAN = False
+
+try:
+    from imgutils.metrics import anime_dbaesthetic
+    HAS_AESTHETIC = True
+except ImportError:
+    HAS_AESTHETIC = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +69,10 @@ def validate_generated_image(
     section: Optional[str] = None,
     conf_threshold: float = 0.55,
     prompt: Optional[str] = None,
+    check_blur: bool = False,
+    min_blur_score: float = 60.0,
+    check_aesthetic: bool = False,
+    min_aesthetic_score: float = 4.0,
     **kwargs: Any,
 ) -> Tuple[bool, str, Dict[str, Any]]:
     """
@@ -73,6 +89,7 @@ def validate_generated_image(
         "heads": 0,
         "hands": 0,
         "faces": 0,
+        "blur_score": 0.0,
     }
 
     if not HAS_IMGUTILS:
@@ -84,6 +101,27 @@ def validate_generated_image(
             img = Image.open(str(image)).convert("RGB")
         else:
             img = image.convert("RGB")
+
+        # 0. 선명도(Laplacian) 및 미적 점수(Aesthetic) 측정
+        if HAS_LAPLACIAN:
+            try:
+                b_score = float(laplacian_score(img))
+                metrics["blur_score"] = round(b_score, 2)
+                if check_blur and b_score < min_blur_score:
+                    reason = f"이미지 블러/초점 이탈 감지 (선명도: {b_score:.1f} < 임계치 {min_blur_score})"
+                    return False, reason, metrics
+            except Exception as e:
+                logger.debug(f"[Auto-QC] 선명도 계산 예외: {e}")
+
+        if check_aesthetic and HAS_AESTHETIC:
+            try:
+                a_score = float(anime_dbaesthetic(img))
+                metrics["aesthetic_score"] = round(a_score, 2)
+                if a_score < min_aesthetic_score:
+                    reason = f"이미지 미적 완성도 미달 감지 (점수: {a_score:.2f} < 임계치 {min_aesthetic_score})"
+                    return False, reason, metrics
+            except Exception as e:
+                logger.debug(f"[Auto-QC] 미적 점수 계산 예외: {e}")
 
         # 1. 인원수 검출 (Person Detection)
         raw_persons = detect_person(img)
@@ -141,4 +179,6 @@ def validate_generated_image(
 
     except Exception as e:
         logger.warning(f"[Auto-QC 판정 예외] {e}")
+        metrics["error"] = str(e)
+        metrics["qc_bypassed"] = True
         return True, "", metrics

@@ -23,6 +23,23 @@ class TestQAValidator(unittest.TestCase):
             self.assertTrue(passed)
             self.assertFalse(reason)
             self.assertEqual(details["persons"], 0)
+            self.assertIn("blur_score", details)
+
+    def test_validate_generated_image_blur_detection(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            test_img = Path(tmp_dir) / "flat_test.webp"
+            # 단색 이미지는 엣지가 없으므로 Laplacian 점수가 0.0
+            img = Image.new("RGB", (256, 256), color=(128, 128, 128))
+            img.save(test_img, "WEBP")
+
+            passed, reason, details = validate_generated_image(
+                test_img,
+                check_blur=True,
+                min_blur_score=50.0,
+            )
+            self.assertFalse(passed)
+            self.assertIn("블러/초점 이탈 감지", reason)
+            self.assertLess(details["blur_score"], 50.0)
 
     def test_cpu_thread_limit_and_priority(self):
         import os
