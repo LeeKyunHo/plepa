@@ -3,7 +3,10 @@ scripts/export_context.py 스냅샷 생성기 무결성 및 정상 생성 단위
 """
 
 from pathlib import Path
-import pytest
+try:
+    import pytest
+except ImportError:
+    pytest = None
 
 from scripts.export_context import (
     sha,

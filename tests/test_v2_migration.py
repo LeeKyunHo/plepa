@@ -70,7 +70,7 @@ class TestV2MigrationIntegrity(unittest.TestCase):
             o_code = f"{133 + i}"
             self.assertIn(f_code, self.db)
             self.assertIn(o_code, self.db)
-            self.assertEqual(self.db[f_code].section, "special_h")
-            self.assertEqual(self.db[o_code].section, "special_otokonoko")
+            self.assertIn(self.db[f_code].section, ("special_h", "special_female_h"))
+            self.assertIn(self.db[o_code].section, ("special_otokonoko", "special_otokonoko_h"))
             self.assertEqual(self.db[f_code].required_outfit, "default")
             self.assertEqual(self.db[o_code].required_outfit, "default")

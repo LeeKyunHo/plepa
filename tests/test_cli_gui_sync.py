@@ -9,7 +9,10 @@ CLI, Engine, GUI 삼위일체(Trinity Sync) 동기화 계약 자동 검증 테�
 import dataclasses
 from pathlib import Path
 
-import pytest
+try:
+    import pytest
+except ImportError:
+    pytest = None
 from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.services.generation_service import (
     GENERATION_OPTION_SPECS,
