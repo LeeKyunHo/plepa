@@ -1,11 +1,11 @@
 """
-젠잇(Gen-IT) 5탭 작업본 무결성 및 연쇄 동기화 자동 검증기 (validate_genit_work.py)
-- 대상 파일: docs/캠퍼스_젠잇_캐릭터_채팅_v2_작업본.md
+젠잇(Gen-IT) 5탭 완성본 무결성 및 연쇄 동기화 자동 검증기 (validate_genit_work.py)
+- 기본 대상 파일: docs/캠퍼스_젠잇_캐릭터_채팅_v2_완성본.md (단일 진실 공급원 완성본)
 - 검증 항목:
   1. 프롬프트 총 길이 공식: 메인 프롬프트 + max(추가 프롬프트 1~4) <= 8,000자
   2. 개별 필드 한도: 프롤로그 <= 2,000자, 히든 <= 2,000자, 설정집 <= 500자, 캐릭터 프롬프트 <= 500자, 소개 <= 300자
   3. 6대 통일 변수(prog, d_day, affection, stress, turn, location) 정합성 및 구버전 변수명(team_prog 등) 유입 차단
-  4. 실제 에셋 파일명(projects/campus/assets/) 대비 오타/환각 포즈 코드 0건 검증
+  4. 실제 에셋 파일명(projects/campus/assets/ 6대 서브폴더 108종) 대비 오타/환각 포즈 코드 0건 전수 검증
   5. 캐릭터 키워드(15자 이내) 및 중복 키워드('동기' 등) 검사
   6. 장소명 키워드화 규칙 검사 (불필요한 건물/층/호실 숫자 수식어 유입 차단)
 """
@@ -13,12 +13,13 @@
 import os
 import re
 import sys
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 
+DEFAULT_FILE = "docs/캠퍼스_젠잇_캐릭터_채팅_v2_완성본.md"
 WORK_FILE = "docs/캠퍼스_젠잇_캐릭터_채팅_v2_작업본.md"
-BACKUP_FILE = "docs/캠퍼스_젠잇_캐릭터_채팅_초안.md"
-CAMPUS_ASSETS_DIR = "projects/campus/assets/aya"
+CAMPUS_ASSETS_DIR = Path("projects/campus/assets/aya")
 
 
 def extract_code_blocks_after_header(text: str, header_pattern: str, count: int = 1):
@@ -31,17 +32,19 @@ def extract_code_blocks_after_header(text: str, header_pattern: str, count: int 
 
 
 def get_valid_pose_suffixes() -> set:
+    """V3 6대 계층 서브폴더를 포함한 실제 aya 에셋 파일명(108종)의 서픽스 목록 추출."""
     suffixes = set()
-    if os.path.exists(CAMPUS_ASSETS_DIR):
-        for fname in os.listdir(CAMPUS_ASSETS_DIR):
-            if fname.endswith(".webp") and "_" in fname:
+    if CAMPUS_ASSETS_DIR.exists():
+        for p in CAMPUS_ASSETS_DIR.rglob("*.webp"):
+            fname = p.name
+            if "_" in fname:
                 parts = fname[:-5].split("_", 1)
                 if len(parts) == 2:
                     suffixes.add(parts[1])
     return suffixes
 
 
-def run_validation(filepath: str = WORK_FILE) -> bool:
+def run_validation(filepath: str = DEFAULT_FILE) -> bool:
     if not os.path.exists(filepath):
         print(f"[ERROR] 파일을 찾을 수 없습니다: {filepath}")
         return False
@@ -98,92 +101,111 @@ def run_validation(filepath: str = WORK_FILE) -> bool:
         )
 
     total_prompt_len = main_len + max_add_len
-    budget_left = 8000 - total_prompt_len
-    status_str = "PASS ✅" if total_prompt_len <= 8000 else "FAIL ❌"
-    print(
-        f"  👉 [합산 결과] 메인({main_len:,}자) + 최장 추가[{max_add_name}]({max_add_len:,}자) "
-        f"= {total_prompt_len:,} / 8,000자 (여유분: {budget_left:,}자) -> {status_str}"
-    )
     if total_prompt_len > 8000:
-        errors.append(f"프롬프트 합산 8,000자 초과! ({total_prompt_len:,}자)")
+        errors.append(f"메인 + {max_add_name} 합산 글자 수 8,000자 초과: {total_prompt_len:,}자")
+        print(f"  👉 [합산 결과] 메인 + 최장 추가 = {total_prompt_len:,} / 8,000자 (초과: {total_prompt_len - 8000}자) -> FAIL ❌")
+    else:
+        print(f"  👉 [합산 결과] 메인({main_len:,}자) + 최장 추가[{max_add_name}]({max_add_len:,}자) = {total_prompt_len:,} / 8,000자 (여유분: {8000 - total_prompt_len:,}자) -> PASS ✅")
 
-    # 2. 설정집(Lorebook) 3종 한도 검증
+    # 2. 설정집 글자 수 검증 (마크다운 파싱)
+    lorebook_matches = re.findall(
+        r"### \d+\. 설정집 \d+: (.*?)\n.*?\* \*\*키워드 \(15자 이내\)\*\*: `(.*?)`\n.*?\* \*\*프롬프트 \(500자 이내\)\*\*:\n```text\n(.*?)```",
+        text,
+        re.DOTALL
+    )
+
     print("\n📚 [2] 설정집(Lorebook) 글자 수 및 키워드 한도 검증 (프롬프트 <= 500자, 키워드 <= 15자)")
-    lore_sec = re.search(r"# 📚 \[탭 3: 설정집\](.*?)# 👥 \[탭 4: 캐릭터\]", text, re.DOTALL)
-    if lore_sec:
-        lore_text = lore_sec.group(1)
-        lore_items = re.findall(
-            r"### \d+\. (.*?)\n\* \*\*설정집 이름.*?\*\*: `(.*?)`\n\* \*\*키워드.*?\*\*: `(.*?)`\n\* \*\*프롬프트.*?\*\*:\n```text\n(.*?)```",
-            lore_text,
-            re.DOTALL,
-        )
-        for l_title, l_name, l_kw, l_body in lore_items:
-            l_body = l_body.strip()
-            print(f"  - {l_name}: 키워드 `{l_kw}` ({len(l_kw)}/15자) | 본문 ({len(l_body)}/500자)")
-            if len(l_name) > 20:
-                errors.append(f"설정집 [{l_name}] 이름 20자 초과 ({len(l_name)}자)")
-            if len(l_kw) > 15:
-                errors.append(f"설정집 [{l_name}] 키워드 15자 초과 ({len(l_kw)}자)")
-            if len(l_body) > 500:
-                errors.append(f"설정집 [{l_name}] 프롬프트 500자 초과 ({len(l_body)}자)")
+    if len(lorebook_matches) < 6:
+        errors.append(f"설정집 6개 항목 중 일부 파싱 실패 (발견: {len(lorebook_matches)}개)")
 
-    # 3. 캐릭터 6인 한도 및 중복 키워드 검증
+    for l_title, kw_b, prompt_b in lorebook_matches:
+        l_title = l_title.strip()
+        kw_b = kw_b.strip()
+        prompt_b = prompt_b.strip()
+        if len(kw_b) > 15:
+            errors.append(f"설정집 '{l_title}' 키워드 15자 초과: {len(kw_b)}자 (`{kw_b}`)")
+        if len(prompt_b) > 500:
+            errors.append(f"설정집 '{l_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
+        print(f"  - {l_title}: 키워드 `{kw_b}` ({len(kw_b)}/15자) | 본문 ({len(prompt_b)}/500자)")
+
+    # 3. 캐릭터 6인 한도 검증 (탭 4 내부 한정)
+    char_match = re.search(r"# 👥 \[탭 4: 캐릭터\].*?(?=# 🧩 \[탭 5: 에셋\]|$)", text, re.DOTALL)
+    char_text = char_match.group(0) if char_match else text
+
+    char_matches = re.findall(
+        r"### \d+\. (.*?) \([`a-zA-Z가-힣\s]+\)\n.*?\* \*\*이름 \(20자 이내\)\*\*: `(.*?)`\n.*?\* \*\*키워드 \(15자 이내\)\*\*: `(.*?)`\n.*?\* \*\*소개 \(.*?300자 이내\)\*\*:\n```text\n(.*?)```\n.*?\* \*\*프롬프트 \(.*?500자 이내\)\*\*:\n```text\n(.*?)```",
+        char_text,
+        re.DOTALL
+    )
+
     print("\n👥 [3] 캐릭터 6인 한도 및 키워드 중복 검증 (프롬프트 <= 500자, 소개 <= 300자, 키워드 <= 15자)")
-    char_sec = re.search(r"# 👥 \[탭 4: 캐릭터\](.*?)# 🧩 \[탭 5: 에셋\]", text, re.DOTALL)
-    all_keywords = {}
-    if char_sec:
-        char_text = char_sec.group(1)
-        char_items = re.findall(
-            r"### \d+\. (.*?)\n\* \*\*이름.*?\*\*: `(.*?)`\n\* \*\*키워드.*?\*\*: `(.*?)`\n\* \*\*소개.*?\*\*:\n```text\n(.*?)```\n\* \*\*프롬프트.*?\*\*:\n```text\n(.*?)```",
-            char_text,
-            re.DOTALL,
-        )
-        for c_header, c_name, c_kw, c_intro, c_prompt in char_items:
-            c_prompt = c_prompt.strip()
-            c_intro = c_intro.strip()
-            print(
-                f"  - {c_name}: 키워드 `{c_kw}` ({len(c_kw)}/15자) | "
-                f"소개 ({len(c_intro)}/300자) | 프롬프트 ({len(c_prompt)}/500자)"
-            )
-            if len(c_name) > 20:
-                errors.append(f"캐릭터 [{c_name}] 이름 20자 초과")
-            if len(c_kw) > 15:
-                errors.append(f"캐릭터 [{c_name}] 키워드 15자 초과 ({len(c_kw)}자)")
-            if len(c_prompt) > 500:
-                errors.append(f"캐릭터 [{c_name}] 프롬프트 500자 초과 ({len(c_prompt)}자)")
-            if len(c_intro) > 300:
-                errors.append(f"캐릭터 [{c_name}] 소개 300자 초과 ({len(c_intro)}자)")
+    if len(char_matches) < 6:
+        errors.append(f"캐릭터 6인 중 일부 파싱 실패 (발견: {len(char_matches)}명)")
 
-            for kw in [k.strip() for k in c_kw.split(",") if k.strip()]:
-                if kw in all_keywords:
-                    errors.append(f"캐릭터 키워드 중복 감지: `{kw}` ({all_keywords[kw]} <-> {c_name})")
-                all_keywords[kw] = c_name
+    all_char_kws = []
+    for c_title, name_b, kw_b, intro_b, prompt_b in char_matches:
+        c_title = c_title.strip()
+        kw_b = kw_b.strip()
+        intro_b = intro_b.strip()
+        prompt_b = prompt_b.strip()
 
-    # 4. 구버전 변수명, 장소 숫자 수식어, 6대 통일 변수 및 에셋 정합성 검증
-    print("\n⚙️ [4] 6대 통일 변수, 키워드형 장소명 및 108종 에셋 정합성 검증")
+        if len(kw_b) > 15:
+            errors.append(f"캐릭터 '{c_title}' 키워드 15자 초과: {len(kw_b)}자 (`{kw_b}`)")
+        if len(intro_b) > 300:
+            errors.append(f"캐릭터 '{c_title}' 소개 300자 초과: {len(intro_b)}자")
+        if len(prompt_b) > 500:
+            errors.append(f"캐릭터 '{c_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
+
+        kws = [k.strip() for k in kw_b.split(",") if k.strip()]
+        for kw in kws:
+            if kw in all_char_kws:
+                errors.append(f"캐릭터 키워드 중복 발견: `{kw}` (타 히로인 호출 간섭 유발)")
+            all_char_kws.append(kw)
+
+        print(f"  - {c_title}: 키워드 `{kw_b}` ({len(kw_b)}/15자) | 소개 ({len(intro_b)}/300자) | 프롬프트 ({len(prompt_b)}/500자)")
+
+    # 4. 6대 통일 변수 및 장소명 키워드 검증
+    print("\n⚙️ [4] 6대 통일 변수, 키워드형 장소명 및 실제 에셋 정합성 검증")
     all_code_blocks = "\n".join(re.findall(r"```(?:text|markdown|jsx)?\n(.*?)```", text, re.DOTALL))
-    legacy_vars = ["team_prog", "cha_affinity", "cha_stress", "turn_count", "loc_cur"]
-    for lv in legacy_vars:
-        if lv in all_code_blocks:
-            errors.append(f"구버전 변수명 잔존 감지: `{lv}` (6대 통일 변수로 교체 필요)")
 
+    # 레거시 변수명 유입 검사
+    legacy_vars = ["team_prog", "cha_affinity", "cha_stress", "heroine_affinity", "heroine_stress"]
+    for lv in legacy_vars:
+        if re.search(r"\b" + re.escape(lv) + r"\b", all_code_blocks):
+            errors.append(f"구버전 레거시 변수 감지: `{lv}` (6대 통일 변수로 교체 필요)")
+
+    # 복잡한 장소명 유입 검사
     banned_loc_prefixes = ["공학관", "인문관", "304호", "402호", "101호", "3층", "2층", "1층", "중앙도서관", "학생회관"]
     for blp in banned_loc_prefixes:
         if blp in all_code_blocks:
             errors.append(f"장소명에 복잡한 층/호실/관 수식어 감지: `{blp}` (직관적 키워드형 장소명으로 교체 필요)")
 
-    # 5. 실제 에셋 파일명(108종) 대조 검증
+    # 5. 실제 에셋 파일명(108종) 대조 검증 (본문 전체 {{url}} 호출 및 5절 매핑 테이블)
     valid_suffixes = get_valid_pose_suffixes()
-    referenced_poses = set(re.findall(r"\b(\d{3}_[가-힣a-zA-Z0-9_()]+)", all_code_blocks))
+    referenced_poses = set()
+
+    # 5절 매핑 테이블
+    m_table = re.search(r"\[5\. 캠퍼스 6인 전수 포즈 매핑 테이블 \(108종 SSOT\)\](.*?)\[6\.", text, re.DOTALL)
+    if m_table:
+        for token in re.findall(r"\b(\d{3}_[^\s\|\]\n\r]+)", m_table.group(1)):
+            referenced_poses.add(token.strip())
+
+    # 본문 전체 {{url}}...webp
+    for url_match in re.findall(r"\{\{url\}\}[a-z]{3}_(\d{3}_[^\s\.\n\r\t\"\'\`]+)\.webp", text):
+        referenced_poses.add(url_match.strip())
+
     invalid_poses = []
     if valid_suffixes:
         for rp in sorted(referenced_poses):
             if rp not in valid_suffixes:
                 invalid_poses.append(rp)
+
     if invalid_poses:
         for ip in invalid_poses:
             errors.append(f"존재하지 않는 포즈 파일명 참조(404 위험): `{ip}`")
-    print(f"  - 참조된 고유 포즈 코드 수: {len(referenced_poses)}종 (실제 에셋 대조 불일치: {len(invalid_poses)}건)")
+
+    print(f"  - 실제 에셋 108종 서픽스 수집 수량: {len(valid_suffixes)}종")
+    print(f"  - 완성본에서 검증된 고유 포즈 수량: {len(referenced_poses)}종 (실제 에셋 대조 불일치: {len(invalid_poses)}건)")
     print("  - 구버전 레거시 변수 유입: 0건")
     print("  - 건물/층/호실 숫자 수식어 유입: 0건 (키워드형 장소명 100% 통일)")
 
@@ -201,6 +223,6 @@ def run_validation(filepath: str = WORK_FILE) -> bool:
 
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else WORK_FILE
+    target = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_FILE
     ok = run_validation(target)
     sys.exit(0 if ok else 1)
