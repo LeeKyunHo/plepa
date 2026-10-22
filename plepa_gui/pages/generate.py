@@ -297,7 +297,7 @@ def render_generate_page() -> None:
                 expr = state["custom_pose_expr"].strip()
                 if expr:
                     db = default_pose_service.load_pose_db(engine=state["engine"], roster=state["roster"])
-                    return default_pose_service.resolve_pose_codes(expr, db)
+                    return default_pose_service.resolve_pose_codes(expr, db, roster=state["roster"])
         except Exception:
             pass
         return []

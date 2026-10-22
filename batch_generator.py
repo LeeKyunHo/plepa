@@ -227,8 +227,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument(
         "--censor-targets",
-        default="penis,pussy",
-        help="검열 대상 부위 (penis, pussy, all, 쉼표 구분 기본: penis,pussy)"
+        default="penis",
+        help="검열 대상 부위 (penis, pussy, all, 쉼표 구분 기본: penis)"
     )
     parser.add_argument("--censor-only", action="store_true", help="ComfyUI 호출 없이 기존 생성된 에셋들의 검열본만 초고속(0.2초) 일괄 갱신/생성")
     parser.add_argument("--reuse-seed", action="store_true", help="_batch_manifest.json에 기록된 기존 골든 시드를 재사용하여 동일 구도로 의상/프롬프트 재생성")

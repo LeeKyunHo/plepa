@@ -19,7 +19,7 @@ from pathlib import Path
 
 from typing import Callable, Dict, List, Optional, Tuple
 
-from plepa_engine.censor import censor_file
+from plepa_engine.censor import censor_file, is_pose_censor_required
 from plepa_engine.checkpoint_service import CheckpointService
 from plepa_engine.comfy_client import ComfyClient, ComfyClientError
 from plepa_engine.qa_validator import validate_generated_image
@@ -48,11 +48,12 @@ from plepa_engine.models import (
     PoseEntry,
 )
 from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
-from plepa_engine.reporter import asset_filename, print_batch_summary, print_overall_batch_summary
+from plepa_engine.reporter import asset_filename, get_subfolder_for_code, print_batch_summary, print_overall_batch_summary
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.config_service import default_config_service
+from plepa_engine.services.pose_background_service import default_pose_bg_service
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
 
@@ -184,11 +185,13 @@ class GenerationService:
         pose_svc=default_pose_service,
         bg_svc=default_background_service,
         asset_svc=default_asset_service,
+        pose_bg_svc=default_pose_bg_service,
     ):
         self.char_svc = character_svc
         self.pose_svc = pose_svc
         self.bg_svc = bg_svc
         self.asset_svc = asset_svc
+        self.pose_bg_svc = pose_bg_svc
 
     def run_batch(
         self,
@@ -378,8 +381,10 @@ class GenerationService:
                         print(f"  저장 위치: assets/{char.prefix}/ckpt_{params.ckpt_tag}/")
                     if params.bg:
                         print(f"  즉석 배경: '{params.bg}' 적용")
-                    elif bg_prompt:
-                        print(f"  배경 프리셋: '{params.bg_preset}' 적용")
+                    elif params.bg_preset and params.bg_preset not in ("default", "auto", ""):
+                        print(f"  배경 프리셋: '{params.bg_preset}' 고정 적용")
+                    else:
+                        print("  배경 프리셋: 포즈별 자동 매핑(Auto) 적용")
     
                 # IP-Adapter 참조 이미지 탐색 및 업로드
                 ref_file_name = None
@@ -427,14 +432,35 @@ class GenerationService:
     
                     current_item_index += 1
                     pose = db[code]
+                    subfolder = get_subfolder_for_code(code)
+                    sub_out_dir = output_dir / subfolder
+                    sub_origin_dir = origin_dir / subfolder
                     out_name = asset_filename(char.prefix, code, label=pose.label, naming=params.naming)
-                    out_path = output_dir / out_name
                     legacy_name = asset_filename(char.prefix, code, naming="code")
-                    legacy_path = output_dir / legacy_name
+
+                    # 2-Track 탐색기: 대역별 서브폴더 우선, 기존 플랫 디렉토리 폴백
+                    if (sub_out_dir / out_name).exists():
+                        out_path = sub_out_dir / out_name
+                    elif (output_dir / out_name).exists():
+                        out_path = output_dir / out_name
+                    else:
+                        sub_out_dir.mkdir(parents=True, exist_ok=True)
+                        out_path = sub_out_dir / out_name
+
+                    legacy_path = (sub_out_dir / legacy_name) if (sub_out_dir / legacy_name).exists() else (output_dir / legacy_name)
     
+                    # 포즈별 동적 배경 프롬프트 결정
+                    if params.bg:
+                        effective_bg_prompt = params.bg.strip()
+                    elif params.bg_preset and params.bg_preset not in ("default", "auto", ""):
+                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine=params.engine)
+                    else:
+                        pose_bg_key = self.pose_bg_svc.get_background_for_pose(actual_roster, code)
+                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=pose_bg_key, engine=params.engine)
+
                     if params.engine == "sdxl":
                         pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
-                            char, pose, bg_prompt=bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg,
+                            char, pose, bg_prompt=effective_bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg,
                             checkpoint_name=ckpt_name
                         )
                         display_prompt = pos_prompt
@@ -473,7 +499,7 @@ class GenerationService:
                             ref_mode=ref_mode,
                         )
                     else:
-                        prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=bg_prompt)
+                        prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=effective_bg_prompt)
                         display_prompt = prompt
                         final_prompt = prompt
                         if params.lora and params.lora.lower() != "none" and "modern-anime" in params.lora.lower():
@@ -533,20 +559,25 @@ class GenerationService:
                         track_info = f" [IP-A: {ref_mode}]" if (params.engine == "sdxl" and ref_file_name) else ""
                         print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}){track_info} -> {out_name}", end="", flush=True)
     
-                    should_censor = params.censor and (getattr(pose, "is_h_scene", False) or is_nude)
+                    should_censor = params.censor and is_pose_censor_required(pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path)
 
                     # 0. CENSOR-ONLY (기존 이미지 소급 검열 모드: 검열본은 assets/{prefix}/에 교체 배치, 원본은 assets/{prefix}_origin/에 보존)
                     if params.censor_only:
-                        origin_path = origin_dir / out_name
+                        if (sub_origin_dir / out_name).exists():
+                            origin_path = sub_origin_dir / out_name
+                        elif (origin_dir / out_name).exists():
+                            origin_path = origin_dir / out_name
+                        else:
+                            origin_path = sub_origin_dir / out_name
                         src_path = origin_path if (origin_path.exists() and origin_path.stat().st_size > 0) else out_path
                         if src_path.exists() and src_path.stat().st_size > 0:
                             if should_censor:
-                                origin_dir.mkdir(parents=True, exist_ok=True)
+                                sub_origin_dir.mkdir(parents=True, exist_ok=True)
                                 # 1. 무검열 원본을 _origin 폴더에 100% 무조건 선제 백업
                                 if not origin_path.exists():
                                     shutil.copy2(src_path, origin_path)
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                tmp_censored = output_dir / f".tmp_{out_name}"
+                                tmp_censored = out_path.parent / f".tmp_{out_name}"
                                 c_res = censor_file(
                                     origin_path,
                                     dst_path=tmp_censored,
@@ -554,7 +585,7 @@ class GenerationService:
                                     targets=targets,
                                     pose_code=pose.code,
                                     enable_anchor_fallback=False,
-                                    backup_dir=origin_dir,
+                                    backup_dir=sub_origin_dir,
                                 )
                                 if c_res and c_res.exists():
                                     # 2. 메인 에셋 경로(out_path)에 검열 완성본을 원자적으로 교체 배치
@@ -589,12 +620,17 @@ class GenerationService:
                         if not quiet:
                             print(" [기존 파일 보존: 건너뜀]", end="")
                         if should_censor:
-                            origin_path = origin_dir / out_path.name
-                            origin_dir.mkdir(parents=True, exist_ok=True)
+                            if (sub_origin_dir / out_path.name).exists():
+                                origin_path = sub_origin_dir / out_path.name
+                            elif (origin_dir / out_path.name).exists():
+                                origin_path = origin_dir / out_path.name
+                            else:
+                                origin_path = sub_origin_dir / out_path.name
+                            sub_origin_dir.mkdir(parents=True, exist_ok=True)
                             if not origin_path.exists():
                                 shutil.copy2(out_path, origin_path)
                             targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                            tmp_censored = output_dir / f".tmp_{out_path.name}"
+                            tmp_censored = out_path.parent / f".tmp_{out_path.name}"
                             c_res = censor_file(
                                 origin_path,
                                 dst_path=tmp_censored,
@@ -602,7 +638,7 @@ class GenerationService:
                                 targets=targets,
                                 pose_code=pose.code,
                                 enable_anchor_fallback=False,
-                                backup_dir=origin_dir,
+                                backup_dir=sub_origin_dir,
                             )
                             if c_res and c_res.exists():
                                 if out_path.exists():
@@ -624,16 +660,22 @@ class GenerationService:
                     # 2. 스마트 사본 보존
                     if not params.overwrite and not out_path.exists() and legacy_path.exists() and legacy_path.stat().st_size > 0:
                         try:
+                            out_path.parent.mkdir(parents=True, exist_ok=True)
                             shutil.copy2(legacy_path, out_path)
                             if not quiet:
                                 print(" [기존 원본에서 하이브리드 사본 복제 완료]", end="")
                             if should_censor:
-                                origin_path = origin_dir / out_path.name
-                                origin_dir.mkdir(parents=True, exist_ok=True)
+                                if (sub_origin_dir / out_path.name).exists():
+                                    origin_path = sub_origin_dir / out_path.name
+                                elif (origin_dir / out_path.name).exists():
+                                    origin_path = origin_dir / out_path.name
+                                else:
+                                    origin_path = sub_origin_dir / out_path.name
+                                sub_origin_dir.mkdir(parents=True, exist_ok=True)
                                 if not origin_path.exists():
                                     shutil.copy2(out_path, origin_path)
                                 targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                tmp_censored = output_dir / f".tmp_{out_path.name}"
+                                tmp_censored = out_path.parent / f".tmp_{out_path.name}"
                                 c_res = censor_file(
                                     origin_path,
                                     dst_path=tmp_censored,
@@ -641,7 +683,7 @@ class GenerationService:
                                     targets=targets,
                                     pose_code=pose.code,
                                     enable_anchor_fallback=False,
-                                    backup_dir=origin_dir,
+                                    backup_dir=sub_origin_dir,
                                 )
                                 if c_res and c_res.exists():
                                     if out_path.exists():
@@ -762,13 +804,13 @@ class GenerationService:
                         if not quiet:
                             print(f" [완료: {duration:.1f}초]", end="")
                         if should_censor:
-                            origin_dir.mkdir(parents=True, exist_ok=True)
-                            origin_path = origin_dir / out_path.name
+                            sub_origin_dir.mkdir(parents=True, exist_ok=True)
+                            origin_path = sub_origin_dir / out_path.name
                             # 신규 생성된 무검열 원본을 100% 무조건 선제 백업
                             shutil.copy2(out_path, origin_path)
                             targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                             try:
-                                tmp_censored = output_dir / f".tmp_{out_path.name}"
+                                tmp_censored = out_path.parent / f".tmp_{out_path.name}"
                                 c_path = censor_file(
                                     origin_path,
                                     dst_path=tmp_censored,
@@ -776,7 +818,7 @@ class GenerationService:
                                     targets=targets,
                                     pose_code=pose.code,
                                     enable_anchor_fallback=False,
-                                    backup_dir=origin_dir,
+                                    backup_dir=sub_origin_dir,
                                 )
                                 if c_path and c_path.exists():
                                     if out_path.exists():

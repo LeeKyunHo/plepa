@@ -41,7 +41,7 @@ def detect_best_default_roster() -> str:
         assets_dir = p / "assets"
         if not assets_dir.is_dir():
             continue
-        webp_count = len([f for f in assets_dir.glob("*/*.webp") if not f.parent.name.endswith("_origin")])
+        webp_count = len([f for f in assets_dir.rglob("*.webp") if "_origin" not in f.parts])
         if webp_count > max_count:
             max_count = webp_count
             best_roster = p.name
@@ -753,7 +753,8 @@ def render_gallery_page() -> None:
                 prefix_val = m_code.group(1) if m_code else None
                 code_val = m_code.group(2) if m_code else None
 
-                manifest_p = p.parent.parent / "_batch_manifest.json"
+                # 매니페스트 경로: 서브폴더(p.parent.parent) 및 플랫(p.parent) 동시 지원
+                manifest_p = (p.parent.parent / "_batch_manifest.json") if (p.parent.parent / "_batch_manifest.json").is_file() else (p.parent / "_batch_manifest.json")
                 manifest_item = {}
                 if manifest_p.is_file():
                     try:
@@ -845,9 +846,11 @@ def render_gallery_page() -> None:
                                 "unelevated dense size=sm color=amber-600 text-slate-950 font-bold"
                             ).tooltip("기존 골든 시드를 고정하여 구도는 유지하고 의상/태그만 다시 생성합니다")
 
-                        # _origin 무검열 원본 비교 및 복원 버튼
-                        origin_dir = p.parent.parent / f"{p.parent.name}_origin"
-                        origin_cand = origin_dir / p.name
+                        # _origin 무검열 원본 비교 및 복원 버튼 (2-Track 서브폴더/플랫 동시 지원)
+                        char_pfx = prefix_val or p.name.split("_")[0]
+                        cand_sub = PROJECTS_DIR / state["roster"] / "assets" / f"{char_pfx}_origin" / p.parent.name / p.name
+                        cand_flat = PROJECTS_DIR / state["roster"] / "assets" / f"{char_pfx}_origin" / p.name
+                        origin_cand = cand_sub if cand_sub.is_file() else cand_flat
                         if origin_cand.is_file():
                             def on_toggle_origin():
                                 showing_origin["val"] = not showing_origin["val"]

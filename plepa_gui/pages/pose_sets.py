@@ -6,9 +6,9 @@ plepa_gui.pages.pose_sets
 from __future__ import annotations
 
 from nicegui import ui
-from plepa_engine.services.pose_service import SECTION_NAMES, default_pose_service
+from plepa_engine.services.pose_service import SECTION_METADATA, SECTION_NAMES, default_pose_service
 from plepa_engine.services.schemas import PoseSetSchema
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import get_active_roster, render_header
 
 
 def render_pose_sets_page() -> None:
@@ -20,7 +20,7 @@ def render_pose_sets_page() -> None:
         "current_set": None,
     }
 
-    all_poses = default_pose_service.load_pose_db(engine="flux")
+    all_poses = default_pose_service.load_pose_db(engine="sdxl", roster=get_active_roster())
 
     with ui.row().classes("w-full max-w-7xl mx-auto p-6 gap-6 items-start"):
         # 좌측: 포즈 세트 목록
@@ -107,7 +107,7 @@ def render_pose_sets_page() -> None:
                 ui.label("포즈 선택:").classes("text-xs font-semibold text-slate-400 mr-2")
                 ui.button("전체 선택", on_click=lambda: select_all(True)).props("flat dense size=sm color=slate-300")
                 ui.button("전체 해제", on_click=lambda: select_all(False)).props("flat dense size=sm color=slate-300")
-                ui.button("H-씬만 (40~59)", on_click=lambda: select_range(40, 59)).props("flat dense size=sm color=amber-400")
+                ui.button("H-씬만 (080~129)", on_click=lambda: select_range(80, 129)).props("flat dense size=sm color=amber-400")
 
             # 4대 섹션별 포즈 체크박스 그리드
             with ui.column().classes("w-full gap-4 max-h-[480px] overflow-y-auto pr-2"):
@@ -116,7 +116,8 @@ def render_pose_sets_page() -> None:
                     if not sec_items:
                         continue
                     with ui.card().classes("w-full bg-slate-800/40 border border-slate-700/50 p-3 rounded-lg"):
-                        ui.label(f"📌 {sec.upper()} ({len(sec_items)}개)").classes("text-xs font-bold text-amber-400 mb-2")
+                        sec_title = SECTION_METADATA.get(sec, {}).get("name", sec.upper())
+                        ui.label(f"📌 {sec_title} ({len(sec_items)}개)").classes("text-xs font-bold text-amber-400 mb-2")
                         with ui.grid(columns=4).classes("w-full gap-2"):
                             for p in sec_items:
                                 is_checked = p.code in selected_codes

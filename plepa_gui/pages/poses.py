@@ -16,7 +16,7 @@ from plepa_engine.services.pose_service import (
     SECTION_NAMES,
     default_pose_service,
 )
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import get_active_roster, render_header
 from plepa_gui.components.prompt_inspector import open_prompt_inspector_dialog
 
 # SSOT 메타데이터 레지스트리 기반 동적 레이블 프록시
@@ -44,7 +44,8 @@ def render_poses_page() -> None:
             ui.label("🧘 포즈 데이터베이스").classes("text-lg font-bold text-slate-100 mb-2")
 
             # DB에 존재하는 섹션들을 메타데이터 레지스트리 기반으로 자동 동적 생성
-            active_sections = default_pose_service.get_active_sections(engine="sdxl")
+            active_roster = get_active_roster()
+            active_sections = default_pose_service.get_active_sections(engine="sdxl", roster=active_roster)
             default_sec = active_sections[0]["id"] if active_sections else "emotions"
             state["current_section"] = default_sec
 
@@ -63,7 +64,7 @@ def render_poses_page() -> None:
     def switch_section(sec_name: str):
         state["current_section"] = sec_name
         # 해당 섹션의 첫 번째 코드 자동 선택
-        db = default_pose_service.load_pose_db(engine="sdxl")
+        db = default_pose_service.load_pose_db(engine="sdxl", roster=get_active_roster())
         sec_codes = [c for c, e in db.items() if e.section == sec_name]
         if sec_codes:
             state["selected_code"] = sec_codes[0]
@@ -74,7 +75,7 @@ def render_poses_page() -> None:
 
     def refresh_items_list():
         items_container.clear()
-        sdxl_db = default_pose_service.load_pose_db(engine="sdxl")
+        sdxl_db = default_pose_service.load_pose_db(engine="sdxl", roster=get_active_roster())
         sec_codes = sorted([c for c, e in sdxl_db.items() if e.section == state["current_section"]])
 
         with items_container:

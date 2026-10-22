@@ -27,22 +27,27 @@ POSE_SETS_FILE = POSE_SETS_PATH
 # 업계 표준: 단일 진실 공급원(SSOT) 섹션 메타데이터 레지스트리
 # id: {name, short_label, icon, order}
 SECTION_METADATA: Dict[str, Dict[str, Any]] = {
-    "wuxia_actions": {"name": "무협 액션 (C01~C10)", "short_label": "무협(C)", "icon": "⚔️", "order": 1},
-    "genit_emotions": {"name": "Genit 감정 (A00~A23)", "short_label": "감정(A)", "icon": "😊", "order": 2},
-    "events": {"name": "스토리 이벤트 (040~059)", "short_label": "이벤트", "icon": "🎬", "order": 3},
-    "genit_actions": {"name": "Genit 행동 (040~047 / B01~B22)", "short_label": "행동(B)", "icon": "🎬", "order": 4},
-    "adult": {"name": "Genit 성인 (N01~N74)", "short_label": "성인(N)", "icon": "🔞", "order": 5},
-    "emotions": {"name": "기본 표정 (000~019)", "short_label": "기본표정", "icon": "😊", "order": 6},
-    "poses": {"name": "전신·일상 포즈 (020~039)", "short_label": "기본포즈", "icon": "🧍", "order": 7},
-    "romance": {"name": "소프트 로맨스 (060~079)", "short_label": "로맨스", "icon": "💖", "order": 8},
-    "h_scenes": {"name": "여성 성인 H-씬 (080~129)", "short_label": "성인(H)", "icon": "🔞", "order": 9},
-    "special_h": {"name": "여성 특수 성인씬 (130~132)", "short_label": "특수(H)", "icon": "🏫", "order": 10},
-    "scenes_otokonoko": {"name": "오토코노코 성인 (150~199)", "short_label": "오토코노코", "icon": "🎀", "order": 11},
-    "special_otokonoko": {"name": "오토코노코 특수 (133~135)", "short_label": "특수(오토)", "icon": "🏫", "order": 12},
-    "swimsuit": {"name": "수영복 (D01~D08)", "short_label": "수영복", "icon": "👙", "order": 13},
-    "bunny": {"name": "바니걸 (F01~F07)", "short_label": "바니걸", "icon": "🐰", "order": 14},
-    "bdsm": {"name": "BDSM (E01~E08)", "short_label": "BDSM", "icon": "⛓️", "order": 15},
-    "spy_actions": {"name": "첩보 액션 (S01~S10)", "short_label": "첩보(S)", "icon": "🕵️", "order": 16},
+    # ── V3 핵심 대역 체계 ──
+    "emotions": {"name": "감정 표현 (000~019)", "short_label": "감정", "icon": "😊", "order": 1},
+    "poses": {"name": "범용 일상 포즈 (020~050)", "short_label": "일상", "icon": "🧍", "order": 2},
+    "daily_events": {"name": "로스터 일상 이벤트 (051~059)", "short_label": "이벤트", "icon": "🎬", "order": 3},
+    "romance": {"name": "로맨스 & 공용 씬 (060~079)", "short_label": "로맨스", "icon": "💖", "order": 4},
+    "h_scenes": {"name": "여성 성인 H-씬 (080~129)", "short_label": "성인(H)", "icon": "🔞", "order": 5},
+    "special_female_h": {"name": "여성 특수 이벤트 H-씬 (130~139)", "short_label": "특수(H)", "icon": "🏫", "order": 6},
+    "scenes_otokonoko": {"name": "오토코노코 성인 (150~199)", "short_label": "오토코노코", "icon": "🎀", "order": 7},
+    "special_otokonoko_h": {"name": "오토코노코 특수 이벤트 (200~209)", "short_label": "특수(오토)", "icon": "🏫", "order": 8},
+    # ── 레거시 및 테마 하위 호환 섹션 ──
+    "events": {"name": "스토리 이벤트 (040~059)", "short_label": "레거시이벤트", "icon": "🎬", "order": 10},
+    "special_h": {"name": "여성 특수 성인씬 (130~132)", "short_label": "레거시특수H", "icon": "🏫", "order": 11},
+    "special_otokonoko": {"name": "오토코노코 특수 (133~135)", "short_label": "레거시특수오토", "icon": "🏫", "order": 12},
+    "wuxia_actions": {"name": "무협 액션 (C01~C10)", "short_label": "무협(C)", "icon": "⚔️", "order": 13},
+    "swimsuit": {"name": "수영복 (D01~D08)", "short_label": "수영복", "icon": "👙", "order": 14},
+    "bunny": {"name": "바니걸 (F01~F07)", "short_label": "바니걸", "icon": "🐰", "order": 15},
+    "bdsm": {"name": "BDSM (E01~E08)", "short_label": "BDSM", "icon": "⛓️", "order": 16},
+    "spy_actions": {"name": "첩보 액션 (S01~S10)", "short_label": "첩보(S)", "icon": "🕵️", "order": 17},
+    "adult": {"name": "레거시 성인 (adult)", "short_label": "성인(레거시)", "icon": "🔞", "order": 18},
+    "genit_actions": {"name": "레거시 이벤트 (genit_actions)", "short_label": "액션(레거시)", "icon": "🎬", "order": 19},
+    "genit_emotions": {"name": "레거시 표정 (genit_emotions)", "short_label": "감정(레거시)", "icon": "😊", "order": 20},
 }
 
 SECTION_NAMES = tuple(SECTION_METADATA.keys())
@@ -124,9 +129,12 @@ class PoseService:
         theme_files: List[Path] = []
         if roster:
             r_dir = PROJECTS_DIR / roster
-            # pose_overrides.json: 로스터 전용 포즈 (캠퍼스 200-205 등)
+            # 1순위: 레거시 pose_overrides.json
             if (r_dir / "pose_overrides.json").exists():
                 theme_files.append(r_dir / "pose_overrides.json")
+            # 2순위(최우선): V3 events.json (로스터 특색 일상 이벤트 및 특수 H씬이 최종 덮어씀)
+            if (r_dir / "events.json").exists():
+                theme_files.append(r_dir / "events.json")
             # 레거시: custom_poses.json
             if (r_dir / "custom_poses.json").exists():
                 theme_files.append(r_dir / "custom_poses.json")
@@ -152,7 +160,7 @@ class PoseService:
                         prompt_f = item.get(f"{engine.lower()}_prompt_female") or item.get("prompt_female", "")
                         prompt_oto = item.get(f"{engine.lower()}_prompt_otokonoko") or item.get("prompt_otokonoko", "")
                         target_g = item.get("target_gender")
-                        allowed_r = item.get("allowed_rosters") or ([roster] if roster and tf.name == "pose_overrides.json" else None)
+                        allowed_r = item.get("allowed_rosters") or ([roster] if roster and tf.name in ("pose_overrides.json", "events.json") else None)
                         entries[code_str] = PoseEntry(
                             code=code_str,
                             section=sec_name,
@@ -218,18 +226,18 @@ class PoseService:
             return [c for c, e in db.items() if e.section == "emotions" or c.startswith("A")]
         if expr_lower in ("poses", "pose", "b"):
             return [c for c, e in db.items() if e.section == "poses" or c.startswith("B")]
-        if expr_lower in ("events", "event", "genit_actions"):
-            return [c for c, e in db.items() if e.section in ("events", "genit_actions") or c.startswith("B")]
+        if expr_lower in ("events", "event", "genit_actions", "daily_events"):
+            return [c for c, e in db.items() if e.section in ("events", "genit_actions", "daily_events") or c.startswith("B")]
         if expr_lower in ("romance", "rom"):
             return [c for c, e in db.items() if e.section == "romance"]
         if expr_lower in ("h_scenes", "h", "scenes", "n"):
-            return [c for c, e in db.items() if e.section in ("h_scenes", "special_h") or c.startswith("N")]
-        if expr_lower in ("special_h", "special", "sph"):
-            return [c for c, e in db.items() if e.section == "special_h"]
+            return [c for c, e in db.items() if e.section in ("h_scenes", "special_h", "special_female_h") or c.startswith("N")]
+        if expr_lower in ("special_h", "special", "sph", "special_female_h"):
+            return [c for c, e in db.items() if e.section in ("special_h", "special_female_h")]
         if expr_lower in ("otokonoko", "scenes_otokonoko", "oto"):
-            return [c for c, e in db.items() if e.section in ("scenes_otokonoko", "special_otokonoko")]
-        if expr_lower in ("special_otokonoko", "sp_oto"):
-            return [c for c, e in db.items() if e.section == "special_otokonoko"]
+            return [c for c, e in db.items() if e.section in ("scenes_otokonoko", "special_otokonoko", "special_otokonoko_h")]
+        if expr_lower in ("special_otokonoko", "sp_oto", "special_otokonoko_h"):
+            return [c for c, e in db.items() if e.section in ("special_otokonoko", "special_otokonoko_h")]
         if expr_lower in ("swimsuit", "swim", "d"):
             return [c for c, e in db.items() if e.section == "swimsuit" or c.startswith("D")]
         if expr_lower in ("bunny", "f"):

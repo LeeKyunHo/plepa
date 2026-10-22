@@ -1,11 +1,23 @@
 {
-  "_schema": "campus 로스터 포즈별 추천 배경 매핑 (V2)",
+  "_schema": "campus 로스터 포즈별 추천 배경 매핑 (V3)",
   "default_background": "default",
   "pose_mappings": {
-    "000-059": "default",
+    "000-019": "default",
+    "020-047": "default",
+    "048": "aya_tea",
+    "049": "campus_street",
+    "050": "night_terrace",
+    "051": "mai_office",
+    "052": "yur_hall",
+    "053": "shz_izakaya",
+    "054": "har_club",
+    "055": "aya_tea",
+    "056-059": "default",
     "060-079": "bedroom",
-    "080-149": "bedroom",
-    "150-219": "bedroom",
+    "080-129": "bedroom",
+    "130-132": "bedroom",
+    "133-135": "bedroom",
+    "150-199": "bedroom",
     "A00-A32": "default",
     "B01-B28": "default"
   }
