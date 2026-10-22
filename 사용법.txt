@@ -104,6 +104,12 @@
   #   캐릭터별 및 전체 최종 종합 보고서에 결함 포즈 목록과 사유를 정리하고,
   #   포즈 프롬프트 수정을 권장하는 안내 메시지를 자동 출력합니다.
 
+  ── [7.1] 얼굴 및 손 보정 디테일러 옵션 (Face Detailer & Hand Detailer) ───────
+  # • Face Detailer는 기본 활성화되어 얼굴을 자동 보정합니다 (비활성화 시 --no-face-detailer):
+  python batch_generator.py -r campus -c aya -p 000 --no-face-detailer
+  # • Hand Detailer 체이닝 활성화 (손 모델이 있을 때 손가락/손 형태를 자동 추론하여 보정):
+  python batch_generator.py -r campus -c aya -p 000..019 --hand-detailer
+
   ── [8] 1초 에셋 전수 감사, 사전 점검(Precheck), kiro 동기화 및 AI 스냅샷 ────
   python batch_generator.py -r campus --audit                       # 캠퍼스 로스터 전원 완비율, 누락 포즈, _origin 백업 1초 감사
   .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus     # 캠퍼스 로스터 5단계 사전 점검
@@ -138,7 +144,7 @@
   • 검열 원본 백업  : projects/{roster}/assets/{char}_origin/{대역폴더}/{char}_{code}_{label}.webp
     (--censor 실행 시 노출이 감지된 성인/탈의 씬의 무검열 원본만 선제 자동 보관)
   • 동적 배경 주입  : 기본 생성 시 각 포즈마다 pose_background_mapping.json을 참조하여 최적 배경 자동 주입
-    (048 -> 카페 테라스, 049 -> 캠퍼스 거리, 050 -> 야경 테라스, 060/080 -> 침실)
+    (048 -> 카페 테라스, 049 -> 도서관 서가, 050 -> 캠퍼스 벤치/거리, 051 -> 연구실, 060/080 -> 침실)
   • 웹 GUI 갤러리 : run_gui.bat 더블클릭 (http://localhost:8080)
     - 라이트박스 뷰어에서 [🔄 리롤], [👁️ 원본/검열본 토글], [⏪ 무검열 복원] 1클릭 지원
     - Genit 상용 규격 원클릭 패키징 및 _genit_prompt_sheet.md 프롬프트 매핑 시트 자동 생성

@@ -1189,3 +1189,27 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
 - **결과**:
   - `batch_generator.py --audit -r campus`: 6인 전원 108장 보유, 원본 백업 73~76장, 라벨 불일치 0건 검증 완료.
   - `tests/test_cli_gui_sync.py`: 삼위일체 계약 및 9단계 시스템 헬스 진단 100% ALL PASS.
+
+
+### ADR-63: 생성 품질 및 자동 배경 체계 고도화 — CLI Face Detailer 활성화 보장, Hand Detailer 체이닝 지원, 포즈별 자동 배경 GUI 연동 및 Laplacian Auto-QC 탑재 (2026-10-22)
+- **배경**:
+  - CLI(`batch_generator.py`)에서 순수 프롬프트 생성 시 `--face-detailer`가 기본값 `None`으로 전달되어 `workflow_templates.py`에서 Face Detailer가 비활성화되던 결함 확인 (얼굴 디테일 저하).
+  - Web GUI에서 배경 선택 시 `auto_match_background()`가 포즈 세트의 복수 포즈를 고려하지 않고 단일 프리셋으로 고정 덮어써, 일괄 생성 시 일상 포즈에 침실 배경이 주입되거나 엔진의 포즈별 동적 배경 매핑이 무력화되던 결함.
+  - 캠퍼스 `pose_background_mapping.json`의 일부 포즈(049 도서관, 050 벤치 등)가 실제 장소 맥락과 불일치하던 문제.
+  - `qa_validator.py`에서 감지기 예외 발생 시 원인 로깅 없이 침묵하여 디버깅이 어려웠고, 이미지 선명도(블러) 감지 지표가 부재했음.
+- **결정 사항**:
+  1. **CLI & 엔진 Face Detailer 활성화 기본값 보장**:
+     - `workflow_templates.py`: `use_face_detailer is None`일 때 기본 `True`로 처리하여 CLI/순수 프롬프트 생성 시에도 얼굴 보정 자동 수행. 사용자가 명시적으로 `--no-face-detailer`를 지정할 때만 비활성화.
+  2. **Hand Detailer 체이닝 파이프라인 추가 (Trinity Sync 준수)**:
+     - `build_sdxl_workflow`: `use_hand_detailer: bool = False` 파라미터 및 `FaceDetailer` 직후 손 검출기 체이닝 구현.
+     - `GENERATION_OPTION_SPECS` ➔ `batch_generator.py` CLI ➔ `GenerationParams` ➔ GUI 자동 바인딩 삼위일체 동기화 (`--hand-detailer` / `--no-hand-detailer`).
+  3. **Web GUI [Auto] 포즈별 자동 매핑 지원 및 배경 정합성 교정**:
+     - GUI 배경 선택에 `auto` ("🎯 [Auto] 포즈별 자동 매핑 (권장)")를 기본값으로 추가. 단일 포즈 선택 시 해당 포즈 맞춤 배경 추천, 복수 포즈 일괄 생성 시 [Auto] 모드로 엔진이 각 포즈마다 최적의 배경(일상/카페/캠퍼스거리/침실 등)을 동적으로 자동 주입.
+     - `projects/campus/pose_background_mapping.json`: 048(카페 `aya_tea`), 049(도서관 `har_club`), 050(벤치 `campus_street`), 051(연구실 `mai_office`), 052~055(캠퍼스 산책로 `campus_street`), 130~135(특수H `none` - 고유 배경 존중), 200~209(오토 특수H) 정합성 교정.
+  4. **Auto-QC 심화 (imgutils 0.19.0 메트릭스 결합)**:
+     - `qa_validator.py`에 `laplacian_score`(라플라시안 분산 기반 블러 점수) 산출 및 `check_blur` 필터링 지원.
+     - `anime_dbaesthetic` 미적 점수 측정 지표 결합.
+     - 예외 발생 시 `metrics["error"]`, `metrics["qc_bypassed"]`를 투명하게 기록.
+- **결과**:
+  - `pytest tests/`: 82개 전수 통과 (100% ALL PASS).
+  - `validate_genit_work.py`: 108종 에셋 정합성 및 6대 변수 100% 무결성 검증 완료.

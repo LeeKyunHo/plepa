@@ -70,7 +70,19 @@ python batch_generator.py -r campus -c aya -p 034 --max-retries 5
 python batch_generator.py -r campus -c aya -p 034 --no-qc
 ```
 
-### 2.4 형제 프로젝트(`kiro`) 양방향 시너지 동기화
+### 2.4 보정 디테일러(Face & Hand Detailer) 및 동적 배경 운영
+- **Face Detailer (얼굴 보정)**: 기본 활성화되어 이목구비 뭉개짐을 자동 보정합니다. 비활성화 시 `--no-face-detailer` 플래그를 사용합니다.
+- **Hand Detailer (손 보정)**: 손가락 왜곡이 잦은 복합 씬에서 손 디테일러를 체이닝합니다 (`--hand-detailer`).
+- **포즈별 동적 배경**: `projects/{roster}/pose_background_mapping.json`을 통해 각 포즈의 맥락에 맞는 최적 배경(카페, 도서관, 캠퍼스거리, 연구실, 침실 등)이 자동 주입됩니다.
+```powershell
+# Face Detailer 끄기 (순수 체크포인트 렌더링)
+python batch_generator.py -r campus -c aya -p 000 --no-face-detailer
+
+# Hand Detailer 체이닝 활성화 (손 보정)
+python batch_generator.py -r campus -c aya -p 000..019 --hand-detailer
+```
+
+### 2.5 형제 프로젝트(`kiro`) 양방향 시너지 동기화
 ```powershell
 # 1) 변경점 사전 시뮬레이션 (--dry-run)
 python scripts/sync_to_kiro.py --dry-run
