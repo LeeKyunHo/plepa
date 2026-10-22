@@ -26,14 +26,14 @@
 
 1. **단일 메인 엔트리포인트**: [`batch_generator.py`](../batch_generator.py) (`flux_batch_generator.py`는 18줄 하위 호환 래퍼).
 2. **SDXL 단일 엔진 파라미터**: `unholyDesireMixSinister_v90.safetensors` | `832x1216` | `CFG 5.0` | `Steps 28` | `dpmpp_2m` + `karras` | 단일 `CLIPTextEncode` 노드 (이중 conditioning 결합 금지).
-3. **V2 포즈 아키텍처 (`000~200`)**: 감정(`000~019`) + 일상(`020~039`) + 이벤트(`040~052`) + 로맨스(`060~063`) + 여성 성인(`080~127`, `130`) + 오토코노코 성인(`150~197`, `200`).
-4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 매핑되며, `GenerationService`가 자동 변환함.
+3. **V3 포즈 아키텍처 (`000~209`)**: 코어 범용 DB(`sdxl_pose_database.json`)와 로스터 고유 이벤트(`events.json`)의 물리적 격리. 감정(`000~019`) + 일상(`020~050`) + 로스터이벤트(`051~059`, 격리) + 로맨스/공용구강(`060~079`) + 여성성인(`080~129`) + 여성특색H(`130~139`, 격리) + 오토성인(`150~199`) + 오토특색H(`200~209`, 격리).
+4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
 6. **정밀 외곽선 화이트 실루엣 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py))**:
-   - 기본 스타일 `white_silhouette` (`#FFFFFF`), `penis` + `pussy` 동시 감지 + 고환 하단 35% 확장 + MobileSAM 외곽선 추출 + 멀티스케일 2x 타일 스캔 + 입술/혀 HSV 보호 & Hole Filling + `POSE_SAFE_ANCHORS` 폴백.
-7. **검열 에셋 저장 및 원본 백업 구조**:
-   - 검열본은 `projects/{roster}/assets/{char}/`에 직접 교체 저장되며, 노출이 감지된 성인/탈의 씬의 무검열 원본은 `projects/{roster}/assets/{char}_origin/`에 자동 보존됨.
+   - 기본 스타일 `white_silhouette` (`#FFFFFF`), `penis` 단일 타겟 기본(여캐 신체 오검열 원천 방지) + 인공 타원 코어 배제 순수 MobileSAM 외곽선 렌더링 + 입술/혀 HSV 보호 & Hole Filling + `POSE_SAFE_ANCHORS` 폴백.
+7. **검열 에셋 저장 및 6대 대역별 계층 서브폴더 구조**:
+   - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 6개 서브폴더(`01_emotions`, `02_daily`, `03_events`, `04_romance`, `05_h_scenes`, `06_special_h`)로 자동 분류 저장되며 2-Track 탐색기로 플랫 폴백 지원. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
 8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
    - ① 색감 과포화(Color Burn), ② 남성 모브 분신(2명 이상), ③ 여운/단독 씬 남성 난입, ④ 9~10등신 기형 장신 감지 시 시드를 바꿔 자동 리롤(기본 최대 3회).
 9. **배치 생산 전 5단계 사전 점검 ([`plepa_engine/precheck.py`](../plepa_engine/precheck.py))**:
@@ -648,6 +648,24 @@
     - **전수 검증**:
       - `tests/test_export_context.py` 신설 (AST 파싱, 데이터클래스 필드 추출, Tier 1/2/3 및 README 렌더링 무결성 등 6개 케이스 100% PASS).
       - `.gitignore`에 `context_snapshot/` 등록하여 로컬 추출물이 깃에 불필요하게 커밋되는 현상 방지.
+54. **포즈 아키텍처 V3 전면 개편 및 6대 대역별 서브폴더(`01_emotions` ~ `06_special_h`) 격리 체계 확정 (ADR 2026-10-22)**
+    - **배경 및 원인**:
+      - 단일 포즈 DB(`sdxl_pose_database.json`)에 범용 포즈와 특정 로스터(캠퍼스 등)의 고유 이벤트 씬이 혼재되어 다른 세계관(무협, 메이드, 첩보 등) 확장 시 포즈 번호 충돌 및 불필요한 태그 간섭 발생.
+      - 수백 장의 에셋이 단일 플랫 디렉토리에 저장되어 검열 대상 선별 및 육안 QC 효율이 저하됨.
+    - **해결 조치 및 기술 불변식**:
+      - **범용 코어와 로스터 이벤트 물리적 격리**: 범용 포즈는 `data/sdxl_pose_database.json`(코어)에 유지하고, 로스터 고유 일상 이벤트(051~059) 및 특색 H씬(130~139 / 200~209)은 `projects/{roster}/events.json`으로 완전히 분리 격리.
+      - **6대 대역 서브폴더 체계**: `01_emotions`(000~019), `02_daily`(020~050), `03_events`(051~059), `04_romance`(060~079), `05_h_scenes`(080~129 / 150~199), `06_special_h`(130~139 / 200~209).
+      - **2-Track 하이브리드 탐색기**: `reporter.py`, `generation_service.py`, `gallery.py`, `asset_service.py`, `genit_exporter.py` 전반에 서브폴더 우선 탐색 + 루트 플랫 디렉토리 폴백 지원을 탑재하여 기존 에셋 손상/재생성 0건 보장.
+      - **4중 오검열 방어벽**: `censor.py`의 `is_pose_censor_required`를 통해 착의 일상(000~059) 및 소프트 로맨스 스킨십 포즈를 실루엣 검열 대상에서 100% 원천 면제.
+55. **포즈별 1:1 동적 배경 주입 파이프라인 탑재 및 배경 프리셋 선화 뭉개짐 태그 정제 (ADR 2026-10-22)**
+    - **배경 및 원인**:
+      - 기존 `projects/campus/background.json`에 선화와 배경 디테일을 뭉개는 비추천 태그(`depth of field`, `heavily blurred background`, `bokeh`)가 다수 포함되어 린터 경고 및 2D 셀화 질감 저하 발생.
+      - `GenerationService`에서 캐릭터 생성 시작 시 캐릭터 단위 배경(`params.bg_preset`)만 고정 주입되어, 포즈 루프에서 포즈별 추천 배경(`pose_background_mapping.json`)을 동적으로 반영하지 못함.
+    - **해결 조치 및 기술 불변식**:
+      - **비추천 태그 전면 제거 & 2D 화풍 정제**: `clean background`, `soft natural lighting` 중심 태그로 교정하여 11종 프리셋 린터 경고 0건(`[OK]`) 달성.
+      - **신규 프리셋 신설**: `050_야경테라스` 전용 `night_terrace` 및 `049_스트릿스냅` 전용 `campus_street` 추가.
+      - **엔진 실시간 동적 주입**: `GenerationService` 포즈 순회 루프 내부에서 사용자 `--bg` > 명시 `--bg-preset` > 기본 상태(포즈별 자동 매핑 실시간 조회)의 3계층 우선순위 주입 파이프라인 탑재.
+      - **전수 검증**: `tests/test_pose_background_integration.py` 신설 및 전체 81개 테스트 100% ALL PASS.
 
 ---
 
@@ -1146,4 +1164,28 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
 - **결과**:
   - 젠잇 프롬프트 총 길이 합산 7,813자(8,000자 한도 이내 안전 통과).
   - `docs/젠잇_캐릭터채팅_제작법.md` 마스터 프레임워크에 실전 트러블슈팅 8선(TS-1~TS-8) 및 사후 무중단 라이브 패치 플레이북 수록 완료.
-
+### ADR-62: V3 포즈 아키텍처 확립 — 코어 범용 DB와 로스터 이벤트(events.json) 물리적 격리, 남녀 공용 구강 씬 통합, 오토코노코 1:1 완벽 거울 대칭(+70) 및 에셋 6대 서브폴더 계층화 (2026-10-22)
+- **배경**:
+  - 기존 V2에서는 캠퍼스 로스터 특화 포즈(도서관, 축제, 빈강의실 섹스 등)가 중앙 포즈 데이터베이스(`data/sdxl_pose_database.json`)에 혼재되어 있어, 타 로스터 확장 시 원치 않는 캠퍼스 특화 씬이 유입되거나 프롬프트 오염이 발생함.
+  - 카페휴식, 스트릿스냅 등 일상 포즈에 특정 배경(커피 잔 등)이 하드코딩되어 있어 범용성이 저해됨.
+  - 펠라치오/구강/핸드잡 계열은 상대 남성 파트너 대상의 행위로서 여캐와 오토코노코의 구분 필요성이 없는데도 성인 대역에 분산되어 관리 비효율 초래.
+  - 에셋이 단일 플랫 폴더(`assets/{prefix}/`)에 108장씩 누적되어 수작업 검열 점검 및 탐색이 극도로 불편함.
+- **결정 사항**:
+  1. **코어 범용 포즈 DB와 로스터 이벤트의 철저한 물리적 격리**:
+     - 중앙 DB(`data/sdxl_pose_database.json`): 전 작품 공용 감정(`000~019`), 일상 포즈(`020~050`), 로맨스(`060~079`), 순수 체위 H씬(`080~129`, `150~199`)만 유지. 일상 포즈 배경/소품 하드코딩 완전 제거.
+     - 로스터 격리(`projects/{roster}/events.json`): 로스터 고유 일상 이벤트(`051~059`), 로스터 특색 여성 이벤트 H씬(`130~139`), 오토 대칭 이벤트 H씬(`200~209`)을 각 로스터 폴더 내부로 격리 보관.
+  2. **남녀 공용 구강/핸드잡 씬 로맨스 대역 통합 (`064~071`)**:
+     - 무릎펠라, 아이컨택펠라, 딥스로트, 양손핸드잡, 귀두핥기 등 8종을 `064~071` 공용 대역으로 일원화.
+  3. **여성 H씬 ↔ 오토코노코 H씬 1:1 완벽 거울 대칭 (+70 오프셋)**:
+     - 범용 체위: `080~129` ↔ `150~199` (각 37종 일치).
+     - 특색 체위: `130~139` ↔ `200~209` (캠퍼스 3종: 빈강의실섹스, 보건실침대섹스, 화장실펠라 완벽 일치).
+     - 오토코노코 프롬프트 무결성 보장(`1otokonoko, 1boy, crossdressing, male partner` 교정).
+  4. **에셋 대역별 6대 계층 서브폴더 체계 및 2-Track 탐색기 도입**:
+     - `01_emotions`, `02_daily`, `03_events`, `04_romance`, `05_h_scenes`, `06_special_h` 6개 서브폴더로 저장 및 관리.
+     - `generation_service.py`에 서브폴더 1순위, 플랫 2순위 폴백 2-Track 탐색기 구현.
+     - `scripts/migrate_campus_to_v3.py`를 통해 캠퍼스 6인 메인 에셋 648장 및 원본 백업 442장을 단 1장의 누락/재생성 없이 무손실 마이그레이션 완료.
+  5. **검열 튜닝 반영**:
+     - 인공 타원 코어 보강(Core Capsule) 완전 배제, 슬림 타이트 마진 및 순수 MobileSAM 외곽선 렌더링 유지.
+- **결과**:
+  - `batch_generator.py --audit -r campus`: 6인 전원 108장 보유, 원본 백업 73~76장, 라벨 불일치 0건 검증 완료.
+  - `tests/test_cli_gui_sync.py`: 삼위일체 계약 및 9단계 시스템 헬스 진단 100% ALL PASS.
