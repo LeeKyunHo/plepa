@@ -36,3 +36,15 @@
   - **가장 먼저 [`docs/DOCUMENTATION_GUIDE.md`](docs/DOCUMENTATION_GUIDE.md)를 열람**합니다.
   - 변경된 작업 유형(ADR/아키텍처, CLI 옵션, 포즈/프롬프트 DB, 일반 생성 등)에 따라 해당하는 문서들([`docs/AI_HANDOVER_GUIDE.md`](docs/AI_HANDOVER_GUIDE.md), [`docs/RUNBOOK.md`](docs/RUNBOOK.md), [`사용법.txt`](사용법.txt), [`docs/개발일지.md`](docs/개발일지.md) 등)을 누락 없이 순서대로 업데이트합니다.
   - `docs/DOCUMENTATION_GUIDE.md`의 5단계 프로토콜(가이드 확인 ➔ 서류 갱신 ➔ git status 점검 및 민감어 배제 ➔ 분할 커밋 ➔ git push)을 철저히 준수합니다.
+
+## 6. 유연한 확장과 지속적 콘텐츠 유입 원칙 (Extensibility & Content Evolution)
+- **콘텐츠 진화 기본 전제**: 플에파는 고정된 정적 소프트웨어가 아니라, **새로운 캐릭터, 포즈, 로스터(세계관), 챗봇 시나리오, 최신 AI 생성 기술이 지속적으로 추가·수정·유입되는 '살아있는 콘텐츠 파이프라인'**임을 항상 기본 전제로 삼고 개발을 진행합니다.
+- **하드코딩 금지 및 데이터 주도형 아키텍처 (Data-Driven & Contract over Hardcoding)**:
+  - 파이썬 엔진 코드 내부에 특정 포즈 번호, 파일명, 로스터 이름을 하드코딩하지 않습니다.
+  - 새 포즈나 로스터는 데이터(JSON/MD) 파일 추가만으로 엔진 수정 없이 즉시 작동해야 합니다.
+  - 테스트 코드는 특정 시점의 임시 '값'을 고정 단언하는 대신, 상위 규격과 계약(Contract: 모든 포즈는 실존 배경에 매핑될 것 등)을 검증하여 콘텐츠 확장이 테스트를 깨뜨리지 않도록 방어합니다.
+- **기존 완성 에셋 영구 무손실 보존 원칙 (Lossless Asset Preservation)**:
+  - 이미 대규모로 완성되어 서비스 중인 프로덕션 에셋(예: 캠퍼스 648장 등)은 새로운 기획이나 기능이 도입되더라도 **파일명 변경·임의 삭제·불필요한 재생성을 일체 금지하며 100% 무손실 보존**합니다.
+  - 새로운 구조가 도입될 때는 반드시 2-Track 탐색기(신규 우선 + 구버전 폴백)로 하위 호환성을 영구 보장합니다.
+- **메타데이터 기반 스마트 생애주기 관리 (Metadata-Driven Lifecycle)**:
+  - 문서나 데이터 스스로가 Frontmatter(`status: active / frozen / draft`)를 통해 자신의 상태를 선언하고, 검증기(`validate_genit_work.py` 등)는 스마트 해시 캐시를 통해 과거 완성본의 불필요한 누적 재검사나 버전 충돌을 0.001초 만에 스킵하도록 설계합니다.
