@@ -1210,6 +1210,10 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - `qa_validator.py`에 `laplacian_score`(라플라시안 분산 기반 블러 점수) 산출 및 `check_blur` 필터링 지원.
      - `anime_dbaesthetic` 미적 점수 측정 지표 결합.
      - 예외 발생 시 `metrics["error"]`, `metrics["qc_bypassed"]`를 투명하게 기록.
+- **원천 방지 안전장치(Guardrail) 영구 구축**:
+  1. **삼위일체 기본값 E2E 단언 테스트**: `batch_generator.py`에 `create_parser()` SSOT 함수를 분리하고, 빈 인자 CLI 기본 파싱값과 `GENERATION_OPTION_SPECS` 및 `build_sdxl_workflow`의 기본 동작이 일치하는지 자동 검증(`test_generation_option_specs_default_values_sync_with_cli`, `test_workflow_templates_detailer_default_behavior`).
+  2. **648장 프로덕션 에셋 영구 불변 가드레일**: `tests/test_cli_gui_sync.py`에 캠퍼스 6인 전원의 108종 에셋 수량(총 648장) 및 원본 백업(`_origin`) 보존 상태를 상시 단언(`test_grounding_production_asset_lossless_guardrail`).
+  3. **사전점검(precheck.py) 6단계 확장**: 포즈 DB, `pose_background_mapping.json`, `background.json` 간의 참조 무결성을 자동 전수 검증하는 6단계 검사 탑재.
 - **결과**:
-  - `pytest tests/`: 82개 전수 통과 (100% ALL PASS).
+  - `pytest tests/`: 85개 전수 통과 (100% ALL PASS).
   - `validate_genit_work.py`: 108종 에셋 정합성 및 6대 변수 100% 무결성 검증 완료.
