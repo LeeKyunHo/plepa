@@ -1,6 +1,11 @@
 # 플에파(PLEPA) 및 키로(Kiro) 공식 포즈 카탈로그 (Pose Catalog V2)
 
-> - **단일 진실 공급원(SSOT)**: [`data/sdxl_pose_database.json`](../data/sdxl_pose_database.json) (+ 로스터별 `pose_overrides.json`)
+> [!NOTE]
+> **V3 전면 개편 포즈 체계 안내 (2026-10-22 기준)**:  
+> 플에파는 코어 범용 DB와 로스터 이벤트 물리적 격리 체계(V3)로 전면 개편되었습니다.  
+> 최신 V3 대역 체계(`000~209`), 6대 계층 서브폴더 구조 및 포즈별 추천 배경 매핑은 루트의 **[`POSE_MAPPING.md`](../POSE_MAPPING.md)** 및 **[`POSE_MAPPING_V2.md`](POSE_MAPPING_V2.md)**를 최우선 단일 진실 공급원(SSOT)으로 참조하십시오.
+
+> - **단일 진실 공급원(SSOT)**: [`data/sdxl_pose_database.json`](../data/sdxl_pose_database.json) (+ 로스터별 `events.json`)
 > - **V2 표준 규격**:
 >   - **여성 100종 표준(`unified_100`)**: 감정 20(`000~019`) + 일상포즈 20(`020~039`) + 이벤트 8(`040~047`) + 로맨스 4(`060~063`) + 성인 H씬 48(`080~127`)
 >   - **캠퍼스 108종 표준(`campus_108`)**: 공용 100종 + 로스터 일상 5(`048~052`) + 특수 성인 3(`130~132` / 오토코노코 `133~135`)

@@ -19,7 +19,7 @@
 | **2. 기술/포즈 규격**<br>*(Reference)* | **[`플에파_기능명세.md`](플에파_기능명세.md)** | 3계층 아키텍처, 코어 모듈, 서비스 레이어, 스키마 기술 명세서 | 신규 엔진 모듈, Mutator, 서비스 클래스 추가/변경 시 |
 | **2. 기술/포즈 규격**<br>*(Reference)* | **[`POSE_MAPPING.md`](../POSE_MAPPING.md)** (루트 SSOT) / **[`POSE_MAPPING_V2.md`](POSE_MAPPING_V2.md)** / **[`POSE_CATALOG.md`](POSE_CATALOG.md)** | 사용자 1순위 열람 전체 포즈 요약 매핑표, V2 상세 카탈로그 및 V1↔V2 매핑 사전 | **포즈 라벨명, 프롬프트, 번호 매핑 추가/수정 시 (필수 세트 갱신)** |
 | **3. 제작/검증 표준**<br>*(Standard)* | **[`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)** | 캐릭터 JSON, V2 포즈 프롬프트, 테마 슬롯 제작 및 `precheck.py` 5단계 사전점검 통합 규칙서 | 프롬프트 공식, 금지어, 사전점검 규칙 변경 시 |
-| **4. 결정 & 이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 상단 골든 스테이트 10대 불변식 요약 + 역대 아키텍처 의사결정(ADR 1~48) | 핵심 설계 변경, 새 ADR 번호 부여 시 |
+| **4. 결정 & 이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 상단 골든 스테이트 10대 불변식 요약 + 역대 아키텍처 의사결정(ADR 1~55) | 핵심 설계 변경, 새 ADR 번호 부여 시 |
 | **4. 결정 & 이력**<br>*(ADR & Log)* | **[`개발일지.md`](개발일지.md)** / **[`KIRO_SYNC_REPORT.md`](KIRO_SYNC_REPORT.md)** | 일자별 작업 로그·트러블슈팅 및 형제 프로젝트(`kiro`) 전파 리포트 | **모든 작업 세션 마무리 및 푸시 직전 (필수)** |
 | **보관소**<br>*(Archive)* | **`docs/archive/`** & **`scripts/archive/`** | 역할이 다했거나 상위 문서로 통합된 구버전 문서(12종) 및 V1 스크립트(9종) | 현역 열람/수정 불필요 (히스토리 보존용) |
 
