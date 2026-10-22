@@ -53,12 +53,14 @@ def build_sdxl_workflow(
     ckpt_name: str = DEFAULT_SDXL_CKPT,
     clip_skip: int = DEFAULT_CLIP_SKIP,
     use_face_detailer: Optional[bool] = None,
+    use_hand_detailer: bool = False,
     use_upscale: bool = False,
     ref_image_name: Optional[str] = None,
     ref_weight: float = DEFAULT_REF_WEIGHT,
     ref_mode: str = "full",
     ipadapter_model: str = "ip-adapter-plus_sdxl_vit-h.safetensors",
     clip_vision_model: str = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+    hand_detector_model: str = "bbox/hand_yolov8s.pt",
 ) -> Dict[str, Any]:
     """
     ComfyUI 로컬 API 전송용 SDXL(Illustrious-XL / NTR MIX XIII 등) 단독 체크포인트 워크플로우 템플릿.
@@ -152,11 +154,11 @@ def build_sdxl_workflow(
     decode_id = graph.add_node("VAEDecode", samples=graph.out(ksampler_id, 0), vae=vae_ref)
     current_image_output = graph.out(decode_id, 0)
 
-    # 8. (선택 / face_only 시 기본 활성화, 명시적 False 시 비활성화) Face Detailer 노드
+    # 8. (기본 활성화: None이거나 True이면 Face Detailer 활성화, 명시적 False 시 비활성화)
     if use_face_detailer is None:
-        should_use_face_detailer = bool(ref_image_name) and (ref_mode == "face_only")
+        should_use_face_detailer = True
     else:
-        should_use_face_detailer = use_face_detailer
+        should_use_face_detailer = bool(use_face_detailer)
     if should_use_face_detailer:
         detector_id = graph.add_node("UltralyticsDetectorProvider", model_name="bbox/face_yolov8m.pt")
         fd_model = ipa_model if ref_image_name else base_model
@@ -204,6 +206,46 @@ def build_sdxl_workflow(
             detailer_hook=graph.out(hook_id, 0),
         )
         current_image_output = graph.out(fd_id, 0)
+
+    # 8.1. (선택) Hand Detailer 체이닝 (Face Detailer 직후 손 보정)
+    if use_hand_detailer:
+        hand_detector_id = graph.add_node("UltralyticsDetectorProvider", model_name=hand_detector_model)
+        hd_model = ipa_model if ref_image_name else base_model
+        hd_id = graph.add_node(
+            "FaceDetailer",
+            image=current_image_output,
+            model=hd_model,
+            clip=clip_ref,
+            vae=vae_ref,
+            guide_size=512,
+            guide_size_for=True,
+            max_size=1024,
+            seed=seed + 2,
+            steps=steps,
+            cfg=min(cfg, 4.5),
+            sampler_name=sampler,
+            scheduler=scheduler,
+            positive=graph.out(pos_id, 0),
+            negative=graph.out(neg_id, 0),
+            denoise=0.35,
+            feather=5,
+            noise_mask=True,
+            force_inpaint=True,
+            bbox_threshold=0.60,
+            bbox_dilation=10,
+            bbox_crop_factor=2.0,
+            sam_detection_hint="center-1",
+            sam_dilation=0,
+            sam_threshold=0.90,
+            sam_bbox_expansion=0,
+            sam_mask_hint_threshold=0.7,
+            sam_mask_hint_use_negative="False",
+            drop_size=10,
+            wildcard="",
+            cycle=1,
+            bbox_detector=graph.out(hand_detector_id, 0),
+        )
+        current_image_output = graph.out(hd_id, 0)
 
     # 9. (선택) AI 업스케일 노드
     if use_upscale:

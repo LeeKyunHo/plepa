@@ -93,6 +93,7 @@ class GenerationParams:
     dry_run: bool = False
     overwrite: bool = False
     face_detailer: Optional[bool] = None
+    hand_detailer: bool = False
     upscale: bool = False
     steps: Optional[int] = None
     cfg: Optional[float] = None
@@ -121,8 +122,15 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "field": "face_detailer",
         "cli_flag": "--face-detailer",
         "label": "Face Detailer",
-        "tooltip": "얼굴 디테일러(Face Detailer) 후처리 적용",
+        "tooltip": "얼굴 디테일러(Face Detailer) 후처리 적용 (기본 권장)",
         "default": True,
+    },
+    {
+        "field": "hand_detailer",
+        "cli_flag": "--hand-detailer",
+        "label": "Hand Detailer",
+        "tooltip": "손 디테일러(Hand Detailer) 체이닝으로 손가락 왜곡 자동 보정",
+        "default": False,
     },
     {
         "field": "upscale",
@@ -351,7 +359,8 @@ class GenerationService:
                 print(f"  LoRA: {params.lora} (강도: {params.lora_weight})")
             print(f"  작업 모드: {'강제 덮어쓰기 (--overwrite / -f)' if params.overwrite else '빈칸 채우기 (기본: 기존 파일 보존)'}")
             print(f"  파일명 형식: {params.naming}")
-            print(f"  보정 옵션: Face Detailer={'활성' if params.face_detailer else '비활성'}, Upscale={'활성' if params.upscale else '비활성'}")
+            fd_active = True if params.face_detailer is None else params.face_detailer
+            print(f"  보정 옵션: Face Detailer={'활성' if fd_active else '비활성'}, Hand Detailer={'활성' if params.hand_detailer else '비활성'}, Upscale={'활성' if params.upscale else '비활성'}")
             if params.censor:
                 print(f"  자동 검열: 활성 (스타일: {params.censor_style}, 대상: {params.censor_targets})")
             print("=" * 60)
@@ -493,6 +502,7 @@ class GenerationService:
                             scheduler=scheduler,
                             ckpt_name=ckpt_name,
                             use_face_detailer=params.face_detailer,
+                            use_hand_detailer=params.hand_detailer,
                             use_upscale=params.upscale,
                             ref_image_name=ref_file_name,
                             ref_weight=ref_weight,

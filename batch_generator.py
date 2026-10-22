@@ -200,8 +200,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="ComfyUI 호출 없이 프롬프트 및 파일명 점검")
     parser.add_argument("--overwrite", "-f", "--force", action="store_true", help="기존 파일이 있어도 강제로 덮어쓰기 (교체/리롤용)")
     parser.add_argument("--skip-existing", action="store_true", help="기존 파일 건너뛰기 (기본값으로 항상 활성화됨)")
-    parser.add_argument("--face-detailer", dest="face_detailer", action="store_true", default=None, help="Face Detailer 얼굴 보정 강제 활성화")
-    parser.add_argument("--no-face-detailer", dest="face_detailer", action="store_false", help="Face Detailer 얼굴 보정 강제 비활성화")
+    parser.add_argument("--face-detailer", dest="face_detailer", action="store_true", default=None, help="Face Detailer 얼굴 보정 워크플로우 활성화 (기본: 활성화)")
+    parser.add_argument("--no-face-detailer", dest="face_detailer", action="store_false", help="Face Detailer 얼굴 보정 워크플로우 비활성화")
+    parser.add_argument("--hand-detailer", dest="hand_detailer", action="store_true", default=False, help="Hand Detailer 손 보정 워크플로우 체이닝 활성화")
+    parser.add_argument("--no-hand-detailer", dest="hand_detailer", action="store_false", help="Hand Detailer 손 보정 비활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
     parser.add_argument("--cfg", type=float, default=None, help="CFG 스케일 (기본: flux=3.5, sdxl=6.0)")
@@ -313,6 +315,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             dry_run=args.dry_run,
             overwrite=args.overwrite,
             face_detailer=args.face_detailer,
+            hand_detailer=args.hand_detailer,
             upscale=args.upscale,
             steps=args.steps,
             cfg=args.cfg,

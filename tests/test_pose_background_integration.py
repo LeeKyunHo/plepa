@@ -14,11 +14,13 @@ def test_campus_pose_background_mappings():
     assert default_pose_bg_service.get_background_for_pose("campus", "000") == "default"
     assert default_pose_bg_service.get_background_for_pose("campus", "010") == "default"
     assert default_pose_bg_service.get_background_for_pose("campus", "048") == "aya_tea"
-    assert default_pose_bg_service.get_background_for_pose("campus", "049") == "campus_street"
-    assert default_pose_bg_service.get_background_for_pose("campus", "050") == "night_terrace"
+    assert default_pose_bg_service.get_background_for_pose("campus", "049") == "har_club"
+    assert default_pose_bg_service.get_background_for_pose("campus", "050") == "campus_street"
     assert default_pose_bg_service.get_background_for_pose("campus", "051") == "mai_office"
-    assert default_pose_bg_service.get_background_for_pose("campus", "054") == "har_club"
-    assert default_pose_bg_service.get_background_for_pose("campus", "055") == "aya_tea"
+    assert default_pose_bg_service.get_background_for_pose("campus", "052") == "campus_street"
+    assert default_pose_bg_service.get_background_for_pose("campus", "053") == "campus_street"
+    assert default_pose_bg_service.get_background_for_pose("campus", "054") == "campus_street"
+    assert default_pose_bg_service.get_background_for_pose("campus", "055") == "campus_street"
     assert default_pose_bg_service.get_background_for_pose("campus", "060") == "bedroom"
     assert default_pose_bg_service.get_background_for_pose("campus", "080") == "bedroom"
 
@@ -29,7 +31,7 @@ def test_assembled_prompt_contains_dynamic_background():
     assert res is not None
     char = res[0]
     
-    # 048 (테이블휴식) -> aya_tea
+    # 048 (캠퍼스 카페/테이블휴식) -> aya_tea
     bg_key_048 = default_pose_bg_service.get_background_for_pose("campus", "048")
     assert bg_key_048 == "aya_tea"
     bg_prompt_048 = default_background_service.get_preset("campus", bg_key_048)
@@ -42,19 +44,18 @@ def test_assembled_prompt_contains_dynamic_background():
     pos_048, _, _ = assemble_sdxl_prompt(char, pose_048, bg_prompt=bg_prompt_048)
     assert "modern minimalist campus cafe terrace" in pos_048
 
-    # 050 (야경테라스) -> night_terrace
+    # 050 (캠퍼스 벤치) -> campus_street
     bg_key_050 = default_pose_bg_service.get_background_for_pose("campus", "050")
-    assert bg_key_050 == "night_terrace"
+    assert bg_key_050 == "campus_street"
     bg_prompt_050 = default_background_service.get_preset("campus", bg_key_050)
     pose_050 = PoseEntry(
         code="050",
-        label="야경테라스",
-        prompt="1girl, solo, leaning on balcony railing, hair fluttering, gentle breeze",
+        label="캠퍼스 벤치",
+        prompt="1girl, solo, sitting on outdoor bench, relaxed pose, looking at viewer",
         section="poses"
     )
     pos_050, _, _ = assemble_sdxl_prompt(char, pose_050, bg_prompt=bg_prompt_050)
-    assert "balcony terrace" in pos_050
-    assert "city night view" in pos_050
+    assert "outdoor university campus walkway" in pos_050
 
 
 def test_generation_service_dynamic_background_batch():

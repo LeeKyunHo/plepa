@@ -46,7 +46,9 @@ def render_generate_page() -> None:
 
     def get_bg_options(r: str, eng: str = "sdxl") -> dict:
         bgs = default_background_service.get_backgrounds(r, engine=eng)
-        opts = {}
+        opts = {
+            "auto": "🎯 [Auto] 포즈별 자동 매핑 (권장)",
+        }
         
         # 프로젝트별 특수 라벨 정의
         special_labels = {
@@ -90,7 +92,7 @@ def render_generate_page() -> None:
         "custom_pose_expr": "000..019",
         "engine": "sdxl",
         "sdxl_ckpt": conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
-        "bg_preset": "none",
+        "bg_preset": "auto",
         "is_running": False,
         "cancel_requested": False,
     }
@@ -306,22 +308,27 @@ def render_generate_page() -> None:
         """선택된 로스터와 포즈(세트/표현식)에 맞는 배경을 자동으로 매칭합니다."""
         try:
             codes = _get_current_pose_codes()
-            recommended_bg = default_pose_bg_service.get_recommended_background_for_poses(
-                state["roster"], codes
-            )
-
             bg_options_list = get_bg_options(state["roster"], state["engine"])
-            if recommended_bg in bg_options_list:
-                state["bg_preset"] = recommended_bg
-                bg_sel.value = recommended_bg
-                ui.notify(
-                    f"🎯 {state['roster']} 포즈 맞춤 배경 자동 적용: {bg_options_list[recommended_bg]}",
-                    type="positive",
-                )
-            elif "default" in bg_options_list:
-                state["bg_preset"] = "default"
-                bg_sel.value = "default"
-                ui.notify(f"🎯 기본 배경 적용: {bg_options_list['default']}", type="info")
+
+            # 포즈가 단 1개인 경우 해당 포즈 고유의 맞춤 배경 프리셋으로 즉시 지정
+            if len(codes) == 1:
+                single_bg = default_pose_bg_service.get_background_for_pose(state["roster"], codes[0])
+                if single_bg in bg_options_list:
+                    state["bg_preset"] = single_bg
+                    bg_sel.value = single_bg
+                    ui.notify(
+                        f"🎯 단일 포즈({codes[0]}) 맞춤 배경 적용: {bg_options_list[single_bg]}",
+                        type="positive",
+                    )
+                    return
+
+            # 복수 포즈(세트/범위)인 경우 엔진이 각 포즈별로 동적 주입하도록 [Auto] 모드로 설정
+            state["bg_preset"] = "auto"
+            bg_sel.value = "auto"
+            ui.notify(
+                "🎯 포즈별 자동 매핑(Auto) 적용: 각 포즈(일상, 카페, 침실 등)에 맞는 배경이 동적으로 자동 주입됩니다.",
+                type="positive",
+            )
         except Exception as e:
             print(f"[WARNING] auto_match_background: {e}")
 
