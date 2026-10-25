@@ -36,6 +36,9 @@
   # 🎯 단일 로스터 1초 에셋 전수 감사 (완비율, 누락 포즈, _origin 백업 현황 1초 출력)
   python batch_generator.py -r campus --audit
 
+  # 🏫 캠퍼스 108종 풀패키지 완비 생성 (000~055, 060~071, 080~127, 130~132)
+  python batch_generator.py -r campus -c aya -p campus_108 --censor
+
   # 🌟 10대 대표 골든 샘플러 (핵심 10종만 고속 검증: 000, 020, 034, 044, 048, 060, 088, 102, 130, 131)
   python batch_generator.py -r campus -c aya -p sample10
 

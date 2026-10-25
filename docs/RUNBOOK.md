@@ -18,7 +18,7 @@
 | **ComfyUI 서버 헬스체크** | `Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" \| ConvertTo-Json -Depth 3` | GPU/VRAM JSON 응답 반환 |
 | **로스터 5단계 사전점검** | `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus` | `✔ [PASS] 위반 사항 0건!` |
 | **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
-| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `78 passed` |
+| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `87 passed (100% ALL PASS)` |
 
 
 ---
@@ -36,7 +36,10 @@ python batch_generator.py -r all --all-chars -p sample10 --censor
 # 2) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 V2 108종 풀 에셋 일괄 생성
 python batch_generator.py -r all --all-chars -p all --censor
 
-# 3) 단일 로스터 전체 캐릭터 일괄 생성 + 화이트 실루엣 자동 검열
+# 3) [캠퍼스 108종 풀패키지] 108종 에셋 일괄 생성 + 화이트 실루엣 자동 검열
+python batch_generator.py -r campus --all-chars -p campus_108 --censor
+
+# 3-1) 단일 로스터 전체 캐릭터 일괄 생성 + 화이트 실루엣 자동 검열
 python batch_generator.py -r sns --all-chars -p all --censor
 python batch_generator.py -r campus --all-chars -p all --censor
 
@@ -143,3 +146,13 @@ flowchart TD
 - **조치**:
   1. `censor.py`의 상반신 얼굴/입술 보호 가드(`y < H * 0.42`) 및 적색/분홍색 입술·혀 HSV 마스킹 + Hole Filling이 활성화되어 있는지 확인.
   2. 결합 씬(`080~130`, `150~200`)에서 1차+2차 멀티스케일 감지가 모두 실패할 경우 `POSE_SAFE_ANCHORS` 안전 앵커 보조 스캔이 동작하며, 콘솔의 `[WARN] 성인 결합 씬 성기 미탐지` 로그를 통해 확인 가능.
+
+
+## 4. 외부망(LTE/5G) 원격 접속 (Cloudflare Quick Tunnel)
+
+- **실행**: 루트의 `원격접속.bat` 더블클릭 (또는 `powershell -ExecutionPolicy Bypass -File scripts\start_remote.ps1`)
+- 동작: NiceGUI(8080) 기동/재사용 → `cloudflared` 아웃바운드 터널 개설 → 공개 URL 출력 및 `/mobile` 주소 클립보드 복사
+- 원리: PC가 Cloudflare로 먼저 암호화 터널을 연결(Outbound)하므로 공유기 포트포워딩·Windows 방화벽 설정이 필요 없음
+- 주의: Quick Tunnel URL은 **실행할 때마다 바뀜**. 고정 주소가 필요하면 Cloudflare 계정 + Named Tunnel로 전환
+- 보안: URL을 아는 사람은 누구나 접속 가능하므로 링크를 외부에 공유하지 말 것 (GUI 인증 도입 전까지)
+- `cloudflared.exe`는 `.gitignore` 처리됨 (없으면 스크립트가 자동 다운로드)
