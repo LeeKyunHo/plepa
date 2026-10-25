@@ -135,6 +135,7 @@ def render_header(current_page: str = "") -> None:
                 ("포즈 세트", "/pose-sets", "collections_bookmark"),
                 ("배치 생성", "/generate", "auto_awesome"),
                 ("갤러리", "/gallery", "photo_library"),
+                ("📱 모바일 뷰어", "/mobile", "smartphone"),
                 ("환경 설정", "/settings", "settings"),
             ]
             for label, route, icon in nav_items:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import time
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from nicegui import app, run, ui
@@ -72,6 +73,7 @@ def render_gallery_page() -> None:
         "selected_codes": sorted(all_poses.keys()),
         "pose_set": "all",
         "misc_filter": "all",
+        "single_sort": "mtime_desc",  # 'mtime_desc' (최신 생성순), 'code_asc' (포즈 번호순)
     }
 
     with ui.column().classes("w-full max-w-[1550px] mx-auto p-6 gap-6"):
@@ -101,6 +103,29 @@ def render_gallery_page() -> None:
                     ).props("dense outlined dark options-dense").classes("w-36 text-sm")
 
                 with ui.row().classes("items-center gap-2"):
+                    async def quick_fill_missing():
+                        missing_map = default_asset_service.get_missing_poses_by_character(state["roster"])
+                        tot = sum(len(v) for v in missing_map.values())
+                        if tot == 0:
+                            ui.notify("✨ 모든 포즈가 완비되었습니다!", type="positive")
+                            return
+                        ui.notify(f"⚡ 누락 포즈 {tot}개 백그라운드 생성 가동...", type="info")
+                        for c_pfx, c_codes in missing_map.items():
+                            if not c_codes:
+                                continue
+                            g_params = GenerationParams(
+                                character_expr=c_pfx,
+                                pose_expr=",".join(c_codes),
+                                roster=state["roster"],
+                                overwrite=False,
+                                censor=True,
+                            )
+                            run.io_bound(default_generation_service.run_batch, g_params)
+                        ui.notify(f"🚀 총 {tot}개 누락 포즈 생성이 시작되었습니다.", type="positive")
+
+                    ui.button("⚡ 누락 채우기", icon="bolt", on_click=quick_fill_missing).props(
+                        "unelevated color=amber-500 text-color=slate-950 dense size=sm font-bold"
+                    ).tooltip("현재 로스터에서 비어있는 모든 포즈를 찾아 자동으로 일괄 생성합니다.")
                     ui.button("📊 에셋 전수 감사", icon="assessment", on_click=lambda: open_audit_dialog()).props(
                         "unelevated color=emerald-600 text-color=white dense size=sm font-bold"
                     ).tooltip("로스터 캐릭터별 에셋 완비율과 누락 포즈를 1초 만에 전수 감사하고 누락분을 즉시 생성합니다.")
@@ -398,6 +423,16 @@ def render_gallery_page() -> None:
                         on_change=lambda e: (state.update({"single_char": e.value}), render_content())
                     ).props("dense outlined dark options-dense").classes("w-60 text-sm")
 
+                    ui.label("정렬:").classes("text-xs text-slate-400 font-semibold ml-2")
+                    ui.toggle(
+                        {
+                            "mtime_desc": "🕒 최신 생성순 (NEW 먼저)",
+                            "code_asc": "🔢 포즈 번호순",
+                        },
+                        value=state.get("single_sort", "mtime_desc"),
+                        on_change=lambda e: (state.update({"single_sort": e.value}), render_content())
+                    ).props("dense dark").classes("text-xs")
+
         else:
             # 기타 / 비포즈 에셋 뷰 (배경, 레퍼런스, 샘플)
             matrix_controls.set_visibility(False)
@@ -566,6 +601,9 @@ def render_gallery_page() -> None:
             return
 
         assets = default_asset_service.list_character_assets(prefix, state["roster"])
+        sort_mode = state.get("single_sort", "mtime_desc")
+        if sort_mode == "mtime_desc":
+            assets = sorted(assets, key=lambda x: x.get("mtime", 0.0), reverse=True)
 
         with content_container:
             if not assets:
@@ -575,7 +613,8 @@ def render_gallery_page() -> None:
                 return
 
             with ui.row().classes("w-full items-center justify-between mb-4 pb-2 border-b border-slate-800"):
-                ui.label(f"🖼️ {prefix} 생성 에셋 목록 (총 {len(assets)}장)").classes("text-base font-bold text-amber-300")
+                sort_text = "🕒 최신 생성순 (NEW 먼저)" if sort_mode == "mtime_desc" else "🔢 포즈 번호순"
+                ui.label(f"🖼️ {prefix} 생성 에셋 목록 (총 {len(assets)}장 · {sort_text})").classes("text-base font-bold text-amber-300")
 
             all_single_paths = [x["path"] for x in assets]
             # 4열 반응형 카드 그리드
@@ -595,11 +634,17 @@ def render_gallery_page() -> None:
 
                         with ui.row().classes("w-full items-center justify-between mt-2 px-1"):
                             with ui.column().classes("gap-0"):
-                                ui.label(f"#{code} {label_str}").classes("text-xs font-bold text-slate-100")
-                                ui.label(f"{(a['size_bytes']/1024):.0f} KB").classes("text-[10px] text-slate-400")
+                                ui.label(f"#{code} {label_str}").classes("text-xs font-bold text-slate-100 truncate max-w-[170px]").tooltip(label_str)
+                                mtime_val = a.get("mtime", 0.0)
+                                mtime_str = datetime.fromtimestamp(mtime_val).strftime("%m-%d %H:%M") if mtime_val else ""
+                                ui.label(f"{(a['size_bytes']/1024):.0f} KB · {mtime_str}").classes("text-[10px] text-slate-400 font-mono")
 
-                            if a.get("censored_path"):
-                                ui.badge("검열본 보유", color="info").props("dense text-[10px]")
+                            # 최근 1시간 이내 생성된 파일에 NEW 황금 뱃지 부여
+                            is_new = (time.time() - a.get("mtime", 0.0)) < 3600
+                            if is_new:
+                                ui.badge("NEW ✨", color="amber-500").props("dense text-[10px] text-slate-950 font-bold")
+                            elif a.get("censored_path"):
+                                ui.badge("검열본", color="info").props("dense text-[10px]")
 
     def render_matrix_view():
         """캐릭터 x 포즈 2차원 매트릭스 비교 테이블."""
@@ -845,6 +890,19 @@ def render_gallery_page() -> None:
                             ui.button("🔒 시드 고정 리롤", icon="lock_reset", on_click=lambda: run_reroll(True)).props(
                                 "unelevated dense size=sm color=amber-600 text-slate-950 font-bold"
                             ).tooltip("기존 골든 시드를 고정하여 구도는 유지하고 의상/태그만 다시 생성합니다")
+
+                            async def run_delete_asset():
+                                res = default_asset_service.delete_asset_bundle(curr["path"])
+                                if res["success"]:
+                                    ui.notify(f"🗑️ {res['filename']} 휴지통으로 이동되었습니다.", type="warning")
+                                    dialog.close()
+                                    render_content()
+                                else:
+                                    ui.notify("❌ 삭제 실패", type="negative")
+
+                            ui.button("🗑️ 삭제", icon="delete", on_click=run_delete_asset).props(
+                                "unelevated dense size=sm color=rose-700 text-white font-bold"
+                            ).tooltip("해당 에셋(원본 포함)을 휴지통으로 안전하게 이동합니다 (단축키: Del)")
 
                         # _origin 무검열 원본 비교 및 복원 버튼 (2-Track 서브폴더/플랫 동시 지원)
                         char_pfx = prefix_val or p.name.split("_")[0]

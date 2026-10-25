@@ -35,18 +35,22 @@ mimetypes.add_type("image/png", ".png")
 mimetypes.add_type("image/jpeg", ".jpg")
 mimetypes.add_type("image/jpeg", ".jpeg")
 
+from fastapi.responses import HTMLResponse
 from nicegui import app, ui
+from plepa_gui.api_routes import api_router
 from plepa_gui.pages.backgrounds import render_backgrounds_page
 from plepa_gui.pages.characters import render_characters_page
 from plepa_gui.pages.gallery import render_gallery_page
 from plepa_gui.pages.generate import render_generate_page
+from plepa_gui.pages.mobile_viewer import generate_mobile_viewer_html, render_mobile_viewer_page
 from plepa_gui.pages.pose_sets import render_pose_sets_page
 from plepa_gui.pages.poses import render_poses_page
 from plepa_gui.pages.settings import render_settings_page
 
 
 def setup_routes():
-    """페이지 라우트 등록."""
+    """페이지 라우트 및 REST API 등록."""
+    app.include_router(api_router)
     @ui.page("/")
     def index():
         ui.dark_mode().enable()
@@ -81,6 +85,12 @@ def setup_routes():
     def page_gallery():
         ui.dark_mode().enable()
         render_gallery_page()
+
+    @app.get("/mobile", response_class=HTMLResponse)
+    @app.get("/m", response_class=HTMLResponse)
+    def api_mobile_viewer():
+        """스마트폰 전용 무경량 고속 터치 스와이프 뷰어 (Vue/Quasar 미로드, 덮어쓰기 버그 원천 차단)."""
+        return HTMLResponse(content=generate_mobile_viewer_html("campus"))
 
     @ui.page("/settings")
     def page_settings():

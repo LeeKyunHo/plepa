@@ -137,9 +137,9 @@ def render_generate_page() -> None:
                     ui.button("🌟 10대 골든 (sample10)", icon="star", on_click=lambda: select_genit_set("sample10", "10대 대표 골든 샘플러")).props(
                         "unelevated dense size=xs color=amber-500 text-color=slate-950 font-bold"
                     ).tooltip("000, 002, 020, 024, 034, 040, 044, 060, 080, 088 (1분 고속 검증)")
-                    ui.button("🏫 캠퍼스 106종", icon="school", on_click=lambda: select_genit_set("campus_106", "캠퍼스 표준 106종")).props(
+                    ui.button("🏫 캠퍼스 108종", icon="school", on_click=lambda: select_genit_set("campus_108", "캠퍼스 108종 풀패키지")).props(
                         "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
-                    ).tooltip("000~052, 060~063, 080~127, 130 (오토코노코 자동 +70 매핑)")
+                    ).tooltip("000~055, 060~071, 080~127, 130~132 (108종 풀패키지, 오토코노코 자동 +70 대칭)")
 
             # V2 상용 표준 퀵 셀렉트 버튼 바
             with ui.row().classes("w-full items-center gap-1.5 p-1.5 bg-indigo-950/40 border border-indigo-700/50 rounded-lg mb-2 flex-wrap"):
@@ -238,7 +238,11 @@ def render_generate_page() -> None:
             preview_container = ui.card().classes("w-full bg-slate-950/70 border border-slate-800 p-3 rounded-lg mb-4 flex flex-row items-center gap-4")
             preview_img = ui.image().classes("w-28 h-40 object-cover rounded shadow border border-slate-700")
             with ui.column().classes("flex-1 gap-1 text-xs"):
-                preview_title = ui.label("생성 대기 중").classes("text-sm font-bold text-amber-300")
+                with ui.row().classes("w-full justify-between items-center"):
+                    preview_title = ui.label("생성 대기 중").classes("text-sm font-bold text-amber-300")
+                    ui.button("🎨 갤러리 열기 (최신순)", icon="collections", on_click=lambda: ui.navigate.to("/gallery")).props(
+                        "flat dense size=xs color=amber-400 font-bold"
+                    ).tooltip("새로 생성된 이미지를 최신순으로 갤러리에서 즉시 검수합니다.")
                 preview_seed = ui.label("Seed: -").classes("font-mono text-slate-400")
                 preview_file = ui.label("파일명: -").classes("font-mono text-slate-400 truncate max-w-[280px]")
                 preview_time = ui.label("소요 시간: -").classes("text-emerald-400")
@@ -289,8 +293,6 @@ def render_generate_page() -> None:
         """현재 선택된 포즈 세트 또는 커스텀 표현식의 포즈 코드 목록을 반환합니다."""
         try:
             if state["pose_selection_mode"] == "set":
-                if state["selected_pose_set"] == "all_80":
-                    return [f"{i:03d}" for i in range(60)] + [f"{i:03d}" for i in range(140, 160)]
                 sets = default_pose_service.load_pose_sets()
                 target_set = next((s for s in sets if s.id == state["selected_pose_set"]), None)
                 if target_set and target_set.codes:
