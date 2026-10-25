@@ -146,6 +146,102 @@ class AssetService:
         """에셋 파일을 휴지통으로 안전하게 이동합니다."""
         return self.repo.move_to_trash(file_path)
 
+    def delete_asset_bundle(self, file_path: Path) -> Dict[str, Any]:
+        """
+        에셋 파일과 관련된 쌍둥이 에셋(원본 _origin, 검열본 _censored)을 함께 휴지통으로 안전 이동합니다.
+        """
+        p = Path(file_path).resolve()
+        if not p.is_file():
+            return {"success": False, "filename": p.name, "moved": [], "code": None, "prefix": None}
+
+        moved: List[Dict[str, str]] = []
+        main_trash = self.repo.move_to_trash(p)
+        if main_trash:
+            moved.append({"original": str(p), "trash": str(main_trash)})
+
+        m = re.match(r"^([a-zA-Z0-9]+)_([a-zA-Z0-9]+)", p.name)
+        prefix = m.group(1) if m else None
+        code = m.group(2) if m else None
+
+        if prefix:
+            for parent in p.parents:
+                if parent.name == prefix and parent.parent.name == "assets":
+                    origin_root = parent.parent / f"{prefix}_origin"
+                    if origin_root.is_dir():
+                        sub_rel = p.parent.relative_to(parent)
+                        cand_sub = origin_root / sub_rel / p.name
+                        cand_flat = origin_root / p.name
+                        for cand in (cand_sub, cand_flat):
+                            if cand.is_file():
+                                o_trash = self.repo.move_to_trash(cand)
+                                if o_trash:
+                                    moved.append({"original": str(cand), "trash": str(o_trash)})
+                    break
+
+        return {
+            "success": len(moved) > 0,
+            "filename": p.name,
+            "moved": moved,
+            "code": code,
+            "prefix": prefix,
+        }
+
+    def restore_asset_bundle(self, moved_list: List[Dict[str, str]]) -> bool:
+        """휴지통으로 이동되었던 에셋 번들을 원래 위치로 복원(Undo)합니다."""
+        import shutil
+        success = True
+        for item in moved_list:
+            trash_p = Path(item["trash"])
+            orig_p = Path(item["original"])
+            if trash_p.is_file():
+                try:
+                    orig_p.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(trash_p), str(orig_p))
+                except Exception:
+                    success = False
+        return success
+
+    def get_missing_poses_by_character(self, roster: str = DEFAULT_ROSTER) -> Dict[str, List[str]]:
+        """
+        로스터 내 각 캐릭터별로 아직 생성되지 않은(누락된) 포즈 코드 목록을 전수 계산합니다.
+        """
+        from plepa_engine.services.character_service import default_character_service
+        from plepa_engine.services.pose_service import default_pose_service
+
+        chars = default_character_service.list_characters(roster=roster)
+        pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
+        all_codes = set(pose_db.keys())
+
+        otokonoko_range = {f"{i:03d}" for i in range(150, 210)} | {"133", "134", "135"}
+        female_h_range = {f"{i:03d}" for i in range(80, 140)}
+
+        missing_map: Dict[str, List[str]] = {}
+
+        for char_item in chars:
+            if isinstance(char_item, tuple):
+                prefix, char_obj = char_item[0], char_item[1]
+            else:
+                prefix, char_obj = char_item.prefix, char_item
+            existing_assets = self.list_character_assets(prefix, roster)
+            existing_codes = {a["code"] for a in existing_assets}
+
+            is_otoko = getattr(char_obj, "gender", "") == "otokonoko"
+            expected_codes = set()
+            for c in all_codes:
+                if is_otoko:
+                    if c in female_h_range:
+                        continue
+                    expected_codes.add(c)
+                else:
+                    if c in otokonoko_range:
+                        continue
+                    expected_codes.add(c)
+
+            missing_codes = sorted(list(expected_codes - existing_codes))
+            missing_map[prefix] = missing_codes
+
+        return missing_map
+
     def list_misc_assets(self, roster: str = DEFAULT_ROSTER) -> List[Dict[str, Any]]:
         """
         포즈 번호 규격에 묶이지 않은 비포즈 에셋(레퍼런스, 배경, 샘플, 비규격 이미지)을 모두 검색합니다.
@@ -283,13 +379,14 @@ class AssetService:
             prefix = char_obj.prefix
             is_otokonoko = (getattr(char_obj, "gender", "") or "").lower() == "otokonoko"
 
-            # 캐릭터별 맞춤 기대 코드 계산
+            # 캐릭터 젠더별 맞춤 기대 코드 계산 (V3 규격)
+            otokonoko_range = {f"{i:03d}" for i in range(150, 210)} | {"133", "134", "135"}
+            female_h_range = {f"{i:03d}" for i in range(80, 140)}
+
             if is_otokonoko:
-                char_expected_codes = [
-                    otokonoko_offset_map.get(c, c) for c in expected_codes
-                ]
+                char_expected_codes = [c for c in expected_codes if c not in female_h_range]
             else:
-                char_expected_codes = list(expected_codes)
+                char_expected_codes = [c for c in expected_codes if c not in otokonoko_range]
 
             assets = self.list_character_assets(prefix, roster=roster)
             assets_by_code = {a["code"]: a for a in assets}

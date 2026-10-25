@@ -296,14 +296,14 @@ class GenerationService:
                 elif section in ("h_scenes", "special_h") and char_obj.gender == "otokonoko":
                     continue
                 else:
-                    # 하위 호환 및 숫자 대역 기반 젠더 필터링
+                    # 하위 호환 및 숫자 대역 기반 젠더 필터링 (V3 공식 규격)
                     try:
                         code_num = int(code)
-                        # 여성 성인/특수 대역 (080~132): 오토코노코 제외
-                        if char_obj.gender == "otokonoko" and (80 <= code_num <= 132 or 48 <= code_num <= 99):
+                        # 여성 성인/특수 대역 (080~139): 오토코노코 제외
+                        if char_obj.gender == "otokonoko" and 80 <= code_num <= 139:
                             continue
-                        # 오토코노코 성인/특수 대역 (133~135, 150~219): 여성 제외
-                        elif char_obj.gender != "otokonoko" and ((133 <= code_num <= 135) or (148 <= code_num <= 219)):
+                        # 오토코노코 성인/특수 대역 (133~135, 150~209): 여성 제외
+                        elif char_obj.gender != "otokonoko" and ((133 <= code_num <= 135) or (150 <= code_num <= 209)):
                             continue
                     except ValueError:
                         pass
