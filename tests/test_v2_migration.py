@@ -64,13 +64,15 @@ class TestV2MigrationIntegrity(unittest.TestCase):
             self.assertEqual(o_entry.section, "scenes_otokonoko")
 
     def test_special_event_adult_slots_symmetry(self):
-        """특수 성인 씬 여성(130~132)과 오토코노코(133~135)의 1:1 대칭성 검증."""
+        """특수 성인 씬 여성(130~132)과 오토코노코(200~202, +70 거울 대칭) 및 V2 호환(133~135) 검증."""
         for i in range(3):
             f_code = f"{130 + i}"
-            o_code = f"{133 + i}"
+            o_code_v3 = f"{130 + i + 70}"
+            o_code_v2 = f"{133 + i}"
             self.assertIn(f_code, self.db)
-            self.assertIn(o_code, self.db)
+            self.assertIn(o_code_v3, self.db, f"V3 특색 오토코노코 포즈 {o_code_v3}가 로드되어야 합니다.")
+            self.assertIn(o_code_v2, self.db, f"V2 하위 호환 오토코노코 포즈 {o_code_v2}가 로드되어야 합니다.")
             self.assertIn(self.db[f_code].section, ("special_h", "special_female_h"))
-            self.assertIn(self.db[o_code].section, ("special_otokonoko", "special_otokonoko_h"))
+            self.assertIn(self.db[o_code_v3].section, ("special_otokonoko", "special_otokonoko_h"))
             self.assertEqual(self.db[f_code].required_outfit, "default")
-            self.assertEqual(self.db[o_code].required_outfit, "default")
+            self.assertEqual(self.db[o_code_v3].required_outfit, "default")
