@@ -149,11 +149,14 @@ def validate_generated_image(
                 reason = f"1인 씬 인원/머리 초과 감지 (인원: {metrics['persons']}명, 머리: {metrics['heads']}개)"
                 return False, reason, metrics
 
-            # 1인칭 손 개입 씬(쓰다듬기 047, 덮쳐짐 040 등 유저 손 개입) 허용치 완화
+            # 1인칭 손 개입 씬(쓰다듬기 047, 덮쳐짐 040 등 유저 손 개입) 및 스킨십/파이즈리 씬 허용치 완화
             p_text = (prompt or "").lower()
-            pov_hand_keywords = ("headpat", "patting head", "hand on head", "hands pressed on mattress", "pov")
-            is_pov_hand_scene = any(kw in p_text for kw in pov_hand_keywords)
-            max_hands = 4 if is_pov_hand_scene else 2
+            multi_hand_keywords = (
+                "headpat", "patting head", "hand on head", "hands pressed on mattress", "pov",
+                "paizuri", "breast grab", "grabbing breast", "hands cupping", "handjob", "caressing", "massage", "groping", "touching"
+            )
+            is_multi_hand_scene = any(kw in p_text for kw in multi_hand_keywords)
+            max_hands = 4 if is_multi_hand_scene else 2
 
             if metrics["hands"] > max_hands:
                 reason = f"1인 씬 손 증식({max_hands + 1}개 이상) 감지 (손: {metrics['hands']}개)"
@@ -161,8 +164,19 @@ def validate_generated_image(
 
         # ── 2인 상호작용 씬 판정 규칙 (오프스크린 제외) ──
         elif is_two_person and not is_offscreen_partner:
+            p_text = (prompt or "").lower()
+            # 상반신·바스트 밀착 클로즈업 씬에서는 모브/파트너 얼굴 및 머리 노출을 엄격 차단 (여주인공 1인 집중)
+            is_close_up_focus = any(kw in p_text for kw in ("face focus", "bust shot", "chest focus", "upper body close-up", "tight bust"))
+            if is_close_up_focus:
+                if metrics["faces"] > 1:
+                    reason = f"상반신 밀착 씬 모브 얼굴 침범 감지 (얼굴: {metrics['faces']}개, 단독 1인 얼굴만 허용)"
+                    return False, reason, metrics
+                if metrics["heads"] > 1:
+                    reason = f"상반신 밀착 씬 모브 머리 침범 감지 (머리: {metrics['heads']}개, 단독 1인 머리만 허용)"
+                    return False, reason, metrics
+
             if metrics["persons"] > 2 or metrics["heads"] > 2:
-                reason = f"2인 씬 제3자/남성 증식(3명 이상) 감지 (인원: {metrics['persons']}명, 머리: {metrics['heads']}개)"
+                reason = f"2인 씬 제3자/모브 증식(3명 이상) 감지 (인원: {metrics['persons']}명, 머리: {metrics['heads']}개)"
                 return False, reason, metrics
 
             if metrics["hands"] > 4:

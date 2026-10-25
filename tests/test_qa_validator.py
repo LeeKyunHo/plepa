@@ -56,5 +56,37 @@ class TestQAValidator(unittest.TestCase):
             self.assertEqual(p.nice(), psutil.BELOW_NORMAL_PRIORITY_CLASS)
 
 
+
+    def test_multi_hand_and_close_up_focus_logic(self):
+        # QA Validator의 키워드 인식 분기 검증
+        from unittest.mock import patch
+
+        img = Image.new("RGB", (256, 256), color=(200, 200, 200))
+
+        # 1. multi_hand 키워드 포함 시 손 3개 허용 (Reject 안 됨)
+        with patch("plepa_engine.qa_validator.detect_hands", return_value=[((0, 0, 10, 10), "hand", 0.9)] * 3),              patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 10, 10), "person", 0.9)]),              patch("plepa_engine.qa_validator.detect_heads", return_value=[((0, 0, 10, 10), "head", 0.9)]):
+            
+            # 일반 1인 씬: 손 3개 -> False (리젝트)
+            passed_normal, reason_normal, _ = validate_generated_image(
+                img, is_solo_scene=True, is_two_person=False, prompt="1girl, solo, standing"
+            )
+            self.assertFalse(passed_normal)
+            self.assertIn("손 증식", reason_normal)
+
+            # paizuri 키워드 포함 씬: 손 3개 -> True (합격)
+            passed_pz, _, _ = validate_generated_image(
+                img, is_solo_scene=True, is_two_person=False, prompt="1girl, solo, paizuri, chest focus"
+            )
+            self.assertTrue(passed_pz)
+
+        # 2. 2인 씬이지만 상반신 클로즈업 포커스에서 모브 얼굴(faces > 1) 침범 시 즉시 리젝트
+        with patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 10, 10), "person", 0.9)] * 2),              patch("plepa_engine.qa_validator.detect_heads", return_value=[((0, 0, 10, 10), "head", 0.9)]),              patch("plepa_engine.qa_validator.detect_faces", return_value=[((0, 0, 10, 10), "face", 0.9)] * 2):
+            
+            passed_closeup, reason_closeup, _ = validate_generated_image(
+                img, is_solo_scene=False, is_two_person=True, prompt="1girl, upper body close-up, bust shot, face focus"
+            )
+            self.assertFalse(passed_closeup)
+            self.assertIn("모브 얼굴 침범 감지", reason_closeup)
+
 if __name__ == "__main__":
     unittest.main()

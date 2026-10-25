@@ -10,10 +10,16 @@ from plepa_engine.censor import (
 
 class TestCensorAnchor(unittest.TestCase):
     def test_pose_category_classification(self):
-        # Fellatio
+        # Paizuri
+        self.assertEqual(get_pose_category("095"), "paizuri")
+        self.assertEqual(get_pose_category("165"), "paizuri")
+
+        # Fellatio & Deepthroat
         self.assertEqual(get_pose_category("086"), "fellatio")
+        self.assertEqual(get_pose_category("120"), "fellatio")
         self.assertEqual(get_pose_category("127"), "fellatio")
         self.assertEqual(get_pose_category(156), "fellatio")
+        self.assertEqual(get_pose_category("190"), "fellatio")
 
         # Doggystyle
         self.assertEqual(get_pose_category("088"), "doggystyle")
@@ -45,6 +51,16 @@ class TestCensorAnchor(unittest.TestCase):
         self.assertEqual(y1, 580)
         self.assertEqual(x2, 660)
         self.assertEqual(y2, 840)
+
+        # paizuri: [0.34, 0.40, 0.66, 0.68]
+        p_box = get_pose_anchor_box("095", w, h)
+        self.assertIsNotNone(p_box)
+        self.assertEqual(p_box, (340, 400, 660, 680))
+
+        # fellatio: [0.36, 0.38, 0.64, 0.60]
+        f_box = get_pose_anchor_box("086", w, h)
+        self.assertIsNotNone(f_box)
+        self.assertEqual(f_box, (360, 380, 640, 600))
 
     def test_censor_image_anchor_fallback(self):
         # Blank image where imgutils will find 0 genitals
