@@ -65,9 +65,10 @@ class PoseEntry:
         """H-씬(일반 여성 H씬, 오토코노코 H씬, 특수 H씬, 로맨스, 성기 관련 액션)인지 여부를 판정합니다."""
         sec = (self.section or "").lower()
         return (
-            sec in ("h_scenes", "scenes_otokonoko", "genit_actions", "special_h", "special_otokonoko", "romance")
+            sec in ("h_scenes", "scenes_otokonoko", "genit_actions", "special_h", "special_otokonoko", "romance", "special_female_h", "special_otokonoko_h")
             or "h_" in sec
             or "h_scene" in sec
+            or sec.endswith("_h")
             or self.is_two_person
         )
 

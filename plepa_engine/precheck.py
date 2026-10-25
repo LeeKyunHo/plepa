@@ -35,7 +35,8 @@ class PrecheckReport:
 
 
 # 캐릭터별 기본 착의(default) 고유 시그니처 의상 핵심 키워드 (spy 로스터 기준, 타 로스터는 appearance.outfit에서 자동 추출)
-_SPY_SIGNATURE_OUTFIT_TOKENS: Dict[str, Tuple[str, ...]] = {
+_SIGNATURE_OUTFIT_TOKENS: Dict[str, Tuple[str, ...]] = {
+    # spy 로스터
     "kzk": ("doctor coat", "halter bikini top", "garter belt"),
     "chl": ("cheongsam qipao", "gold embroidery", "high side slits"),
     "rvn": ("collared shirt", "loose black necktie", "micro pencil skirt"),
@@ -46,7 +47,15 @@ _SPY_SIGNATURE_OUTFIT_TOKENS: Dict[str, Tuple[str, ...]] = {
     "cla": ("collared blouse", "slate-navy blue corset vest", "micro pencil skirt"),
     "viv": ("collared blouse", "leather shoulder holster", "garter straps"),
     "scl": ("cropped leather jacket", "buckle strap across chest", "leather micro shorts"),
+    # campus 로스터
+    "aya": ("dress shirt", "shorts"),
+    "har": ("knit cardigan", "skirt"),
+    "kao": ("black dress", "denim jacket"),
+    "mai": ("lab coat", "sweater"),
+    "shz": ("sweatshirt", "hotpants"),
+    "yur": ("knit top", "miniskirt"),
 }
+_SPY_SIGNATURE_OUTFIT_TOKENS = _SIGNATURE_OUTFIT_TOKENS
 
 # 탈의(nude) 및 테마 스왑 시 캐릭터 본체 파트(BREAK 뒷단)에 절대 남아있으면 안 되는 기본 의상 키워드
 _FORBIDDEN_LEAK_TOKENS_IN_NUDE: Tuple[str, ...] = (
@@ -69,7 +78,7 @@ _FORBIDDEN_LEAK_TOKENS_IN_NUDE: Tuple[str, ...] = (
 )
 
 
-def run_pregeneration_check(roster: str = "spy") -> PrecheckReport:
+def run_pregeneration_check(roster: str = "campus") -> PrecheckReport:
     """지정된 로스터와 SDXL V2 포즈 DB에 대해 5단계 이미지 생산 사전 점검을 수행합니다."""
     report = PrecheckReport(roster=roster)
 
@@ -187,7 +196,13 @@ def run_pregeneration_check(roster: str = "spy") -> PrecheckReport:
         # ---------------------------------------------------------------------
         # [3~5단계] 전 포즈 조립 시뮬레이션: 착의 고정 / H씬 알몸 전환 / 테마 의상 격리
         # ---------------------------------------------------------------------
-        sig_tokens = _SPY_SIGNATURE_OUTFIT_TOKENS.get(pfx, ())
+        sig_tokens = _SPY_SIGNATURE_OUTFIT_TOKENS.get(pfx)
+        if sig_tokens is None:
+            outfit_desc = getattr(char.appearance, "outfit", "") or ""
+            if not outfit_desc and char.sdxl_positive and " BREAK " in char.sdxl_positive:
+                outfit_desc = char.sdxl_positive.split(" BREAK ")[1]
+            extracted = [t.strip().translate(str.maketrans("", "", "()[]{}")).split(":")[0] for t in outfit_desc.split(",") if len(t.strip()) > 3]
+            sig_tokens = tuple(extracted[:3])
         for code, pose in sdxl_db.items():
             report.total_combinations_checked += 1
             slot = resolve_pose_outfit_slot(pose)

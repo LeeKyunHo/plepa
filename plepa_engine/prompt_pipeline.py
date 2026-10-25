@@ -177,7 +177,7 @@ class PositiveAssemblyMutator(PromptMutator):
 
         if (ctx.nude or ctx.slot != "default") and getattr(ctx.char, "sdxl_nude_positive", None):
             base_pos = ctx.char.sdxl_nude_positive.strip()
-            base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
+            base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
             if ctx.nude:
                 base_pos = f"{base_pos}, nude, completely nude"
             else:
@@ -190,7 +190,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 if ctx.is_two_person:
                     char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
                     char_part = re.sub(r"^\s*,\s*", "", char_part)
-                quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
+                quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
                 for kw in ctx.extra_quality_kws:
                     if kw.lower() not in quality_clean.lower():
                         quality_clean = f"{quality_clean}, {kw}"
@@ -207,7 +207,7 @@ class PositiveAssemblyMutator(PromptMutator):
         elif ctx.char.sdxl_positive:
             base_pos = ctx.char.sdxl_positive.strip()
             base_pos = re.sub(r",?\s*\(?hourglass\s*(shape)?(:[0-9\.]+)?\)?", "", base_pos, flags=re.IGNORECASE)
-            base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
+            base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
             if ctx.nude:
                 base_pos = strip_sdxl_outfit_tags(base_pos)
                 base_pos = f"{base_pos}, nude, completely nude"
@@ -223,7 +223,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 if ctx.is_two_person:
                     char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
                     char_part = re.sub(r"^\s*,\s*", "", char_part)
-                quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|sweat|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
+                quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
                 for kw in ctx.extra_quality_kws:
                     if kw.lower() not in quality_clean.lower():
                         quality_clean = f"{quality_clean}, {kw}"
@@ -545,14 +545,36 @@ class TwoPersonMobMutator(PromptMutator):
                     else:
                         head_cue = "(male head out of frame:1.15), "
                         head_suppression = male_face_suppression
-                        lower_body = "(bottomless male:1.15), muscular build" if ctx.nude else "(solid black pants:1.2), muscular build"
+
+                        # 구강/파이즈리 및 상반신/바스트/페이스 줌인 씬 판정 (하반신/바지 주입 바이패스)
+                        is_upper_body_scene = any(
+                            kw in pose_tag.lower()
+                            for kw in (
+                                "fellatio", "blowjob", "deepthroat", "oral sex", "oral intimacy",
+                                "licking shaft", "licking penis", "mouth around shaft", "taking shaft into mouth", "taking shaft",
+                                "tongue extended", "paizuri", "titfuck", "cleavage penetration", "breasts squeezing",
+                                "face focus", "bust portrait", "tight close-up", "upper body close-up", "bust shot",
+                                "chest focus", "head tilted back", "close-up upper body", "intimate close-up", "tight bust portrait"
+                            )
+                        )
+
+                        if is_upper_body_scene:
+                            lower_body = ""
+                            upper_body_guard = ", (standing male legs:1.45), (male lower body:1.45), (male legs:1.45), (pants:1.45), (trousers:1.40), (full body:1.45), (cowboy shot:1.45), (wide shot:1.45), (kneeling wide view:1.40)"
+                        else:
+                            lower_body = "(bottomless male:1.15), muscular build" if ctx.nude else "(solid black pants:1.2), muscular build"
+                            upper_body_guard = ""
 
                         if ctx.nude:
-                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15), {lower_body}"
-                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45)"
+                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15)"
+                            if lower_body:
+                                mob_positive += f", {lower_body}"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
                         else:
-                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), {lower_body}"
-                            mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45)"
+                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1)"
+                            if lower_body:
+                                mob_positive += f", {lower_body}"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
 
                 if mob_positive:
                     pos = f"{pos} {mob_positive}"
@@ -616,7 +638,8 @@ def find_tag_conflicts(positive: str, negative: str) -> List[str]:
 def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple[str, List[str]]:
     """
     긍정과 부정 사이에 충돌하는 태그를 감지하고, 네거티브 프롬프트에서 해당 태그를 안전하게 제거합니다.
-    다중 태그 괄호 그룹 내부 조각이나 구도/인원수 제어용 보호 태그는 괄호 파손 및 가드 무력화를 막기 위해 보존합니다.
+    다중 태그 괄호 그룹(((tag1, tag2:1.5))) 내부 조각도 괄호 쌍을 완벽하게 보존하면서 충돌 태그를 정확히 정제합니다.
+    구도/인원수 제어용 보호 태그(_PROTECTED_CONTROL_TAGS)는 가드 무력화를 막기 위해 보존합니다.
     """
     conflicts = [t for t in find_tag_conflicts(positive, negative) if t not in _PROTECTED_CONTROL_TAGS]
     if not conflicts:
@@ -624,14 +647,33 @@ def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple
 
     conflict_set = set(conflicts)
     neg_chunks = [c.strip() for c in negative.split(",") if c.strip()]
-    kept_chunks = []
-    removed_tags = []
+    kept_chunks: List[str] = []
+    removed_tags: List[str] = []
+    pending_open_parens = ""
+
     for chunk in neg_chunks:
         norm = normalize_tag(chunk)
-        # 괄호 짝이 맞지 않는 다중 태그 그룹의 일부(예: '((1boy')는 잘라내면 괄호 구문이 깨지므로 보존
-        if norm in conflict_set and chunk.count("(") == chunk.count(")"):
+        leading_parens = len(chunk) - len(chunk.lstrip("("))
+        trailing_parens = len(chunk) - len(chunk.rstrip(")"))
+
+        if norm in conflict_set:
             removed_tags.append(norm)
+            if leading_parens > trailing_parens:
+                pending_open_parens += "(" * (leading_parens - trailing_parens)
+            elif trailing_parens > leading_parens:
+                needed_close = ")" * (trailing_parens - leading_parens)
+                if pending_open_parens:
+                    cancel_count = min(len(pending_open_parens), len(needed_close))
+                    pending_open_parens = pending_open_parens[:-cancel_count] if cancel_count else ""
+                    needed_close = needed_close[cancel_count:]
+                if needed_close and kept_chunks:
+                    kept_chunks[-1] = kept_chunks[-1] + needed_close
             continue
+
+        if pending_open_parens:
+            chunk = pending_open_parens + chunk
+            pending_open_parens = ""
+
         kept_chunks.append(chunk)
 
     new_neg = ", ".join(kept_chunks)
