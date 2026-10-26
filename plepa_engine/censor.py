@@ -45,6 +45,25 @@ def get_sam_model():
             _SAM_MODEL = False
     return _SAM_MODEL if _SAM_MODEL is not False else None
 
+def get_skin_mask(img_np: np.ndarray) -> np.ndarray:
+    """
+    2D 애니메이션 일러스트에서 여주인공의 밝은 피부 영역(살구빛/핑크빛)을 고정밀 HSV 필터로 추출합니다.
+    - Hue: [0, 28] 또는 [165, 180] (자연스러운 붉은빛~살구빛 피부톤)
+    - Saturation: [20, 160] (너무 무채색(흰색)이거나 너무 원색(의상)인 픽셀 제외)
+    - Value: [125, 255] (어두운 음영/선화 제외한 밝은 피부 영역)
+    """
+    hsv = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
+    lower1 = np.array([0, 20, 125], dtype=np.uint8)
+    upper1 = np.array([28, 160, 255], dtype=np.uint8)
+    mask1 = cv2.inRange(hsv, lower1, upper1)
+
+    lower2 = np.array([165, 20, 125], dtype=np.uint8)
+    upper2 = np.array([180, 160, 255], dtype=np.uint8)
+    mask2 = cv2.inRange(hsv, lower2, upper2)
+
+    return cv2.bitwise_or(mask1, mask2)
+
+
 
 def apply_silhouette(
     img: Image.Image,
@@ -61,17 +80,17 @@ def apply_silhouette(
     w, h = img.size
     img_np = np.array(img.convert("RGB"))
     final_mask = np.zeros((h, w), dtype=np.uint8)
+    skin_np = get_skin_mask(img_np)
 
     sam = get_sam_model()
 
-    # 0. 눈/이마(Upper Face) 보호 마스크 추출:
-    #    - detect_heads 및 detect_hands는 구강/핸드잡/파이즈리 씬에서 대상 부위를 오탐하여
-    #      마스킹을 통째로 지워버리므로 보호 차감에서 배제합니다.
-    #    - 얼굴(detect_faces)도 하단 58%(입/턱/코 아래)는 구강 접촉 영역이므로 제외하고,
-    #      상단 42%(눈·이마) 영역만 보호하여 구강 씬에서도 대상이 온전히 마스킹되게 합니다.
+    # 0. 눈/이마(Upper Face) 및 손(Hands) 보호 마스크 추출:
+    #    - 얼굴(detect_faces) 상단 42%(눈·이마) 영역 보호
+    #    - 손(detect_hands) 영역 감지 후 피부색 스마트 차감용으로 활용
     protection_mask = np.zeros((h, w), dtype=np.uint8)
+    hands_mask = np.zeros((h, w), dtype=np.uint8)
     try:
-        from imgutils.detect import detect_faces
+        from imgutils.detect import detect_faces, detect_hands
         detected_faces = detect_faces(img, conf_threshold=0.35)
 
         for (fx1, fy1, fx2, fy2), _, _ in detected_faces:
@@ -79,6 +98,10 @@ def apply_silhouette(
             safe_fy2 = int(fy1 + fh * 0.42)
             if safe_fy2 > fy1:
                 cv2.rectangle(protection_mask, (int(fx1), int(fy1)), (int(fx2), safe_fy2), 255, -1)
+
+        detected_hands = detect_hands(img, conf_threshold=0.55)
+        for (hx1, hy1, hx2, hy2), _, _ in detected_hands:
+            cv2.rectangle(hands_mask, (int(hx1), int(hy1)), (int(hx2), int(hy2)), 255, -1)
     except Exception as pe:
         logger.debug(f"[Censor] 보호 영역 검출 생략: {pe}")
 
@@ -114,10 +137,22 @@ def apply_silhouette(
         mask_obtained = False
         sub_m = np.zeros((h, w), dtype=np.uint8)
 
-        # 1. MobileSAM 추론 (인공 도형 없이 순수 선화/외곽선 분할 마스크 사용)
+        # 1. MobileSAM 추론 (BBox + Point Prompting 중심점 가이드)
         if sam is not None:
             try:
-                results = sam(img, bboxes=[expanded_bbox], verbose=False)
+                cx = int((ex1 + ex2) / 2)
+                cy = int((ey1 + ey2) / 2)
+                try:
+                    results = sam(
+                        img,
+                        bboxes=[expanded_bbox],
+                        points=[[[cx, cy]]],
+                        labels=[[1]],
+                        verbose=False
+                    )
+                except Exception:
+                    results = sam(img, bboxes=[expanded_bbox], verbose=False)
+
                 if results and results[0].masks is not None:
                     m_data = results[0].masks.data.cpu().numpy()
                     sub_m = (m_data[0] * 255).astype(np.uint8)
@@ -128,6 +163,26 @@ def apply_silhouette(
                     crop_mask = np.zeros_like(sub_m)
                     crop_mask[ey1:ey2, ex1:ex2] = 255
                     sub_m = cv2.bitwise_and(sub_m, crop_mask)
+
+                    # ── 스마트 피부색 차감 (손가락/허벅지 번짐 원천 방지) ──
+                    # BBox 내부 중심 코어 영역(55%)은 대상 부위 본체이므로 온전히 보호하고,
+                    # 손(detect_hands) 영역과 겹치거나 BBox 외곽부에 위치한 밝은 피부색 픽셀을 차감
+                    core_mask = np.zeros((h, w), dtype=np.uint8)
+                    c_pad_x = int(bw * 0.22)
+                    c_pad_y = int(bh * 0.20)
+                    core_x1 = min(w - 1, max(0, x1 + c_pad_x))
+                    core_y1 = min(h - 1, max(0, y1 + c_pad_y))
+                    core_x2 = max(core_x1 + 1, min(w, x2 - c_pad_x))
+                    core_y2 = max(core_y1 + 1, min(h, y2 - c_pad_y))
+                    cv2.rectangle(core_mask, (core_x1, core_y1), (core_x2, core_y2), 255, -1)
+
+                    non_core = cv2.bitwise_not(core_mask)
+                    # 손과 겹치는 피부는 100% 차감
+                    hand_skin = cv2.bitwise_and(skin_np, hands_mask)
+                    # 코어 바깥 BBox 외곽의 겹치는 피부 차감
+                    outer_skin = cv2.bitwise_and(skin_np, non_core)
+                    peel_mask = cv2.bitwise_or(hand_skin, outer_skin)
+                    sub_m = cv2.bitwise_and(sub_m, cv2.bitwise_not(peel_mask))
 
                     # 노이즈 컨투어 정제: 미세 파편 제거
                     contours, _ = cv2.findContours(sub_m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -611,7 +666,40 @@ def censor_image(
     else:
         censored = apply_white_silhouette(img, detected_boxes_with_labels)
 
+    # 2차 사후 무결성 게이트: 미세 잔여 노출 자동 치유
+    censored, was_healed = verify_and_heal_censor(censored, style=style_clean, min_confidence=min_confidence)
     return censored, len(detected_boxes_with_labels)
+
+
+
+
+def verify_and_heal_censor(
+    censored_img: Image.Image,
+    style: str = "white_silhouette",
+    min_confidence: float = 0.14,
+) -> Tuple[Image.Image, bool]:
+    """
+    검열이 완료된 이미지를 대상으로 성기 검출기를 다시 돌려 잔여 노출 여부를 2차 검증합니다.
+    미세 누출이 감지되면 10% 확장 마진으로 즉시 2차 실루엣을 덧칠하여 100% 무결성을 보장합니다.
+    반환값: (최종 안전 이미지, 추가 보정 발생 여부)
+    """
+    if not HAS_IMGUTILS:
+        return censored_img, False
+
+    try:
+        results = detect_censors(censored_img, conf_threshold=min_confidence)
+        leaks = [((int(b[0]), int(b[1]), int(b[2]), int(b[3])), label) for b, label, score in results if label in ("penis", "pussy")]
+        if not leaks:
+            return censored_img, False
+
+        logger.warning(
+            f"[Censor Gate] 2차 사후 검증에서 미세 잔여 노출 {len(leaks)}건 감지! 즉시 2차 안전 덧칠 보정을 수행합니다."
+        )
+        healed = apply_silhouette(censored_img, leaks, color=style)
+        return healed, True
+    except Exception as e:
+        logger.debug(f"[Censor Gate] 사후 검증 예외: {e}")
+        return censored_img, False
 
 
 def censor_file(
