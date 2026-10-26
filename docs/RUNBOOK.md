@@ -25,7 +25,18 @@
 
 ## 🚀 2. 에셋 생성 및 검열 실전 명령어 (`batch_generator.py`)
 
+### 2.0 6대 섹터별 전수 정밀 감사 스크립트
+```powershell
+# 6대 섹터(01_emotions ~ 06_special_h)별 파일수, 검열본, 원본백업, 검열이상, Auto-QC 전수 검수
+python scripts/audit_sector_assets.py --roster campus
+python scripts/audit_sector_assets.py --roster ykn
+```
+
 ### 2.1 전 로스터 / 단일 / 다중 캐릭터 배치 생성
+- **신규 엔진 최적화 (기본 탑재)**:
+  - `--freeu`: ComfyUI 내장 `FreeU_Advanced` 노드로 선명도 & 콘트라스트 부스팅 (기본값: 활성화)
+  - `동적 종횡비(Dynamic Aspect Ratio)`: 상반신/바스트/클로즈업 씬은 물리적 줌인을 유도하는 `1024x1024` 정방형 규격으로 자동 전환.
+  - `지능형 프롬프트 결함 자가 진단`: 동일 포즈 2회 이상 연속 불량 시 `🚨 [프롬프트 점검 경고]` 및 구체적 원인 가이드 즉시 출력.
 ```powershell
 # 0) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 기준점 1장(000) 초고속 생성 (외형 전수 점검)
 python batch_generator.py -r all --all-chars -p 000 --censor

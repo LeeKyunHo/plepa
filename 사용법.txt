@@ -33,6 +33,10 @@
   # 🩺 시스템 10단계 통합 무결성 자가 진단 (포즈DB, 캐릭터, 파이프라인, 검열, Auto-QC, ComfyUI 등 전수 점검)
   python batch_generator.py --test
 
+  # 🔍 6대 섹터(01_emotions~06_special_h)별 파일수/검열본/백업/오검열 전수 정밀 감사
+  python scripts/audit_sector_assets.py --roster campus
+  python scripts/audit_sector_assets.py --roster ykn
+
   # 🎯 단일 로스터 1초 에셋 전수 감사 (완비율, 누락 포즈, _origin 백업 현황 1초 출력)
   python batch_generator.py -r campus --audit
 
