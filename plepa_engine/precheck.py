@@ -54,6 +54,11 @@ _SIGNATURE_OUTFIT_TOKENS: Dict[str, Tuple[str, ...]] = {
     "mai": ("lab coat", "sweater"),
     "shz": ("sweatshirt", "hotpants"),
     "yur": ("knit top", "miniskirt"),
+    # ykn 로스터
+    "hay": ("button-up blouse", "pleated skirt"),
+    "ser": ("knit cardigan", "blouse", "pleated skirt"),
+    "sia": ("trench jacket", "collared blouse", "pleated skirt"),
+    "yua": ("knit cardigan", "collared blouse", "pleated skirt"),
 }
 _SPY_SIGNATURE_OUTFIT_TOKENS = _SIGNATURE_OUTFIT_TOKENS
 
