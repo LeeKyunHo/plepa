@@ -1,7 +1,7 @@
 {
   "none": "simple background, white background, solid background, studio background",
-  "default": "modern luxury apartment living room interior, large panoramic window, daytime ambient lighting, city skyline view, cozy sofa, indoor plants, soft bokeh, depth of field, blurry background",
-  "room": "private luxury apartment bedroom interior, dim mood lighting, king size bed, soft pillows, evening city lights through window, intimate ambiance, depth of field, blurry background",
-  "elevator": "modern luxury apartment elevator interior, sleek metallic walls, warm ambient lighting, mirror reflection, depth of field, blurry background",
-  "corridor": "modern upscale apartment hallway corridor, soft wall sconce lighting, carpeted floor, quiet atmosphere, depth of field, blurry background"
+  "default": "clean aesthetic room interior, minimalist neutral wall, gentle indoor daylight, bright clean atmosphere, clean background, soft lighting",
+  "bedroom": "cozy private bedroom, comfortable bed, soft white pillows, clean bedsheets, gentle warm ambient light, clean background",
+  "living_space": "clean modern aesthetic living space, neutral pale wall, pleasant indoor light, clean background",
+  "terrace": "modern aesthetic apartment balcony, gentle natural daylight, pleasant atmosphere, clean background"
 }
