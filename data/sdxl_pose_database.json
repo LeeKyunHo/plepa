@@ -289,10 +289,12 @@
       "section": "poses"
     },
     "049": {
-      "label": "스트릿스냅",
-      "description": "범용 일상: 야외 거리를 걸어가며 자연스럽게 뒤돌아보는 일상 스냅 포즈",
-      "prompt": "walking, looking back over shoulder at viewer, casual natural posture, slight smile, full body",
-      "required_outfit": "default",
+      "label": "전라",
+      "description": "완전한 나체 상태에서 뒤돌아보며 매혹적인 시선으로 전신을 드러내는 전라 스냅 포즈",
+      "required_outfit": "nude",
+      "prompt": "completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, soft lighting",
+      "prompt_female": "completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, soft lighting",
+      "prompt_otokonoko": "crossdressing, otokonoko, completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, soft lighting",
       "section": "poses"
     },
     "050": {
@@ -347,10 +349,10 @@
       "description": "탈의 구강: 알몸으로 무릎 꿇고 중심부를 혀로 조심스럽게 핥으며 올려다보는 봉사 포즈",
       "required_outfit": "nude",
       "section": "romance",
-      "prompt": "1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.3)), ((upper body, looking up at partner:1.35)), mouth open, ((licking shaft tip with tongue:1.35)), tongue extended, flushed bedroom eyes, heavy blush, saliva trail glistening, intimate bedroom lighting",
-      "prompt_female": "1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.3)), ((upper body, looking up at partner:1.35)), mouth open, ((licking shaft tip with tongue:1.35)), tongue extended, flushed bedroom eyes, heavy blush, saliva trail glistening, intimate bedroom lighting",
-      "prompt_otokonoko": "2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.3)), ((upper body, looking up at partner:1.35)), mouth open, ((licking shaft tip with tongue:1.35)), tongue extended, flushed bedroom eyes, heavy blush, saliva trail glistening, intimate bedroom lighting",
-      "negative_add": "(clothes, clothing, shirt, blouse:1.35), (wearing pants over crotch:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (fully clothed male lower body:1.4), (standing male legs:1.45), (pants:1.45)"
+      "prompt": "1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.3)), ((upper body, looking up at partner:1.35)), ((large thick erect penis:1.4)), ((impressive large manhood, prominent thick shaft:1.35)), mouth open, ((licking tip of large penis with pink tongue:1.4)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
+      "prompt_female": "1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.3)), ((upper body, looking up at partner:1.35)), ((large thick erect penis:1.4)), ((impressive large manhood, prominent thick shaft:1.35)), mouth open, ((licking tip of large penis with pink tongue:1.4)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
+      "prompt_otokonoko": "2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.3)), ((upper body, looking up at partner:1.35)), ((large thick erect penis:1.4)), ((impressive large manhood, prominent thick shaft:1.35)), mouth open, ((licking tip of large penis with pink tongue:1.4)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
+      "negative_add": "(small penis:1.45), (thin penis:1.4), (micropenis:1.45), (sharp teeth:1.4)"
     },
     "065": {
       "label": "탈의펠라약",
@@ -714,9 +716,9 @@
       "section": "h_scenes"
     },
     "113": {
-      "label": "착의섹스 본편",
-      "description": "옷깃이 흐트러진 채 책상이나 벽에서 진행되는 착의 씬 (중)",
-      "prompt": "1girl, 1boy, ((intense clothed sex:1.35)), ((fully clothed except bottom, wearing clothes, top on:1.35)), skirt hiked up, bent over desk or against wall, rapid panting, disheveled clothing, heavy blush, desperate moaning, overwhelming arousal, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.35)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.3))",
+      "label": "착의섹스 후",
+      "description": "착의 행위 후 옷과 치마를 벌리고 속옷을 살짝 당겨 내부에 가득 고인 분비흔을 확인시켜주는 도발적 사후 씬",
+      "prompt": "1girl, ((clothed sex aftermath:1.35)), ((lifting skirt, holding clothes open to reveal inner:1.35)), ((pulling front waistband of panties down slightly:1.35)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.4)), ((white liquid dripping and running down inner thighs:1.35)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting, cowboy shot",
       "required_outfit": "default",
       "section": "h_scenes"
     },
@@ -727,10 +729,10 @@
       "section": "h_scenes"
     },
     "115": {
-      "label": "착의섹스후",
-      "description": "착의 행위 후 옷과 치마를 벌리고 속옷을 살짝 당겨 내부에 가득 고인 분비흔을 확인시켜주는 도발적 사후 씬",
-      "prompt": "1girl, ((clothed sex aftermath:1.35)), ((lifting skirt, holding clothes open to reveal inner:1.35)), ((pulling front waistband of panties down slightly:1.35)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.4)), ((white liquid dripping and running down inner thighs:1.35)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting, cowboy shot",
-      "required_outfit": "default",
+      "label": "샤워섹스강",
+      "description": "샤워실 젖은 타일 벽에 기대어 쏟아지는 온수 물줄기 속에서 격렬하게 나누는 수중 결합 씬 (강)",
+      "prompt": "1girl, 1boy, completely nude, full nudity, bare skin, shower sex, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), dripping water, water running down body, (steam:1.1), steamy, standing against clear glass wall, pinned against glass, one leg wrapped around partner waist, vaginal penetration, partner behind, faceless male, male hands on waist, clear glass shower stall, heavy body blush, intensely flushed face, parted lips gasping, head tilted back against glass, heavy-lidded pleasure eyes, trembling with intense arousal, sensual moaning expression, teary eyes, clean background, cowboy shot, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.35)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.3))",
+      "required_outfit": "nude",
       "section": "h_scenes"
     },
     "116": {
@@ -1038,16 +1040,16 @@
       "section": "scenes_otokonoko"
     },
     "182": {
-      "label": "착의섹스약",
+      "label": "착의섹스 전",
       "description": "옷을 입은 채 치마만 걷어올리고 나누는 착의 씬 (약)",
       "prompt": "2boys, ((clothed anal sex:1.25)), skirt lifted, underwear aside, standing or sitting, gentle rhythm, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, trembling with sweet sensation, sweet moaning:1.25)), thrilling secret encounter, soft lighting",
       "required_outfit": "default",
       "section": "scenes_otokonoko"
     },
     "183": {
-      "label": "착의섹스강",
+      "label": "착의섹스 후",
       "description": "옷깃이 흐트러진 채 책상이나 벽에서 진행되는 격렬한 착의 씬 (강)",
-      "prompt": "2boys, ((intense clothed anal sex:1.35)), skirt hiked up, bent over desk or against wall, rapid panting, disheveled clothing, heavy blush, desperate moaning, overwhelming arousal, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.35)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.3))",
+      "prompt": "2boys, crossdressing, otokonoko, ((clothed sex aftermath:1.35)), ((lifting skirt, holding clothes open to reveal inner:1.35)), ((pulling front waistband of panties down slightly:1.35)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.4)), ((white liquid dripping and running down inner thighs:1.35)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting, cowboy shot",
       "required_outfit": "default",
       "section": "scenes_otokonoko"
     },
