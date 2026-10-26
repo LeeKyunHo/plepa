@@ -1,9 +1,9 @@
 """
 scripts/heal_unprotected_assets.py
-미검열 상태로 분리되지 않은 에셋을 안전하게 치유하는 스크립트:
+미검열 상태로 분리되지 않은 에셋을 안전하게 치유하고 남성기(penis) 전용 검열을 정합화하는 스크립트:
 - 1. 원본 이미지를 _origin 폴더로 안전 복사 백업 (무손실 보존)
-- 2. 실루엣 검열 마스킹을 적용하여 메인 에셋 폴더에 덮어쓰기 저장
-- 3. 치유 후 결과 검증
+- 2. 사용자 정책에 따라 남성기(penis) 부위만 실루엣 마스킹 적용 (여성 신체 부위는 100% 무손실 보존)
+- 3. 남성기 미검출 씬 및 여성 단독 노출 씬(목욕/샤워 등)은 마스킹 없이 깨끗한 원본으로 자동 복원
 """
 
 import argparse
@@ -36,7 +36,7 @@ logger = logging.getLogger("HealAssets")
 
 
 def heal_single_asset(roster: str, prefix: str, code: str, sector: str, file_path: Path) -> bool:
-    """단일 에셋을 안전하게 원본 백업 및 실루엣 검열 처리합니다."""
+    """단일 에셋을 안전하게 원본 백업 및 남성기(penis) 전용 실루엣 검열 처리합니다."""
     origin_dir = PROJECTS_DIR / roster / "assets" / f"{prefix}_origin" / sector
     origin_dir.mkdir(parents=True, exist_ok=True)
     backup_file = origin_dir / file_path.name
@@ -48,29 +48,33 @@ def heal_single_asset(roster: str, prefix: str, code: str, sector: str, file_pat
     else:
         logger.debug(f"[{prefix}] #{code}: 기존 원본 백업 존재함.")
 
-    # 2. 원본 이미지를 열고 실루엣 검열 적용 (안전 앵커 폴백 활성화)
+    # 2. 원본 이미지를 열고 남성기(penis) 전용 실루엣 검열 적용 (여성 신체는 100% 보존)
     try:
         src_img = Image.open(backup_file).convert("RGB")
         censored_img, detected_count = censor_image(
             src_img,
             style="white_silhouette",
-            targets=("all",),
+            targets=("penis",),
             pose_code=code,
             enable_anchor_fallback=True,
         )
 
-        # 3. 메인 에셋 파일에 덮어쓰기 저장
-        censored_img.save(file_path, "WEBP", quality=95)
-        logger.info(f"[{prefix}] #{code}: 실루엣 검열본 덮어쓰기 완료 (감지/적용 부위: {detected_count}개)")
+        # 3. 메인 에셋 파일에 저장: 남성기 미검출 시 깨끗한 원본 그대로 복원, 검출 시 마스킹본 적용
+        if detected_count > 0:
+            censored_img.save(file_path, "WEBP", quality=95)
+            logger.info(f"[{prefix}] #{code}: 남성기 실루엣 검열본 적용 완료 (감지 부위: {detected_count}개)")
+        else:
+            shutil.copy2(backup_file, file_path)
+            logger.info(f"[{prefix}] #{code}: 남성기 없음(여성 단독 씬 등) -> 무손실 원본 복원 완료")
         return True
     except Exception as e:
         logger.error(f"[{prefix}] #{code}: 검열 처리 중 예외 발생: {e}")
         return False
 
 
-def heal_roster(roster: str) -> Tuple[int, int]:
-    """지정된 로스터 내의 모든 캐릭터 에셋 중 검열 대상이나 원본 분리가 안 된 항목을 치유합니다."""
-    logger.info(f"=== [{roster.upper()}] 로스터 에셋 검열 및 원본 백업 치유 시작 ===")
+def heal_roster(roster: str, reapply: bool = False) -> Tuple[int, int]:
+    """지정된 로스터 내의 모든 캐릭터 에셋을 점검하고 남성기 전용 검열 및 원본 복원을 수행합니다."""
+    logger.info(f"=== [{roster.upper()}] 로스터 에셋 남성기 전용 검열 및 무손실 원본 정합성 작업 시작 ===")
     char_svc = CharacterService()
     chars = char_svc.list_characters(roster)
     if not chars:
@@ -99,10 +103,6 @@ def heal_roster(roster: str) -> Tuple[int, int]:
                 continue
             code = m.group(1)
 
-            # 검열 필요 여부
-            if not is_pose_censor_required(pose_code=code, file_path=file_path):
-                continue
-
             # 서브섹터 확인
             rel_parts = file_path.relative_to(asset_dir).parts
             if len(rel_parts) > 1:
@@ -110,9 +110,18 @@ def heal_roster(roster: str) -> Tuple[int, int]:
             else:
                 sector = get_subfolder_for_code(code)
 
-            # 원본 백업 존재 여부 확인
             origin_file = origin_root / sector / file_path.name
-            if origin_file.is_file():
+
+            # 여성 단독 노출 씬 등 검열 대상이 아닌 포즈가 과거에 마스킹된 경우 무손실 원본으로 깨끗이 복원
+            if not is_pose_censor_required(pose_code=code, file_path=file_path):
+                if origin_file.is_file():
+                    shutil.copy2(origin_file, file_path)
+                    logger.info(f"[{prefix}] #{code}: 비검열 여성 씬 무손실 원본 복원 완료 -> {file_path.name}")
+                    success_count += 1
+                continue
+
+            # 이미 원본 백업이 존재하고 재적용 모드가 아니면 스킵
+            if origin_file.is_file() and not reapply:
                 continue
 
             ok = heal_single_asset(roster, prefix, code, sector, file_path)
@@ -125,14 +134,15 @@ def heal_roster(roster: str) -> Tuple[int, int]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="미검열 에셋 안전 치유 및 _origin 무손실 백업 도구")
+    parser = argparse.ArgumentParser(description="남성기 전용 안전 치유 및 _origin 무손실 복원 도구")
     parser.add_argument("--roster", "-r", default="campus", help="치유 대상 로스터 폴더 (기본: campus)")
+    parser.add_argument("--reapply", action="store_true", help="기존 백업본에 대해 남성기 전용 검열을 재적용")
     args = parser.parse_args()
 
-    success, fail = heal_roster(args.roster)
+    success, fail = heal_roster(args.roster, reapply=args.reapply)
 
     print("\n" + "=" * 60)
-    print(f"[{args.roster.upper()}] 치유 완료: 성공 {success}건 / 실패 {fail}건")
+    print(f"[{args.roster.upper()}] 정합화 완료: 성공 {success}건 / 실패 {fail}건")
     print("=" * 60 + "\n")
 
 
