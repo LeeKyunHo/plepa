@@ -167,7 +167,8 @@ def validate_generated_image(
             p_text = (prompt or "").lower()
             # 상반신·바스트 밀착 클로즈업 씬에서는 모브/파트너 얼굴 및 머리 노출을 엄격 차단 (여주인공 1인 집중)
             is_close_up_focus = any(kw in p_text for kw in ("face focus", "bust shot", "chest focus", "upper body close-up", "tight bust", "intimate close-up", "close-up upper body"))
-            if is_close_up_focus:
+            is_kiss_scene = any(kw in p_text for kw in ("kiss", "french kiss", "deep kiss"))
+            if is_close_up_focus and not is_kiss_scene:
                 if metrics["faces"] > 1:
                     reason = f"상반신 밀착 씬 모브 얼굴 침범 감지 (얼굴: {metrics['faces']}개, 단독 1인 얼굴만 허용)"
                     return False, reason, metrics
