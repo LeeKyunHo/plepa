@@ -343,8 +343,14 @@ class DefectDefenseMutator(PromptMutator):
             f"(eyes covered by hair:1.45), (bangs over eyes:1.45), (hair over eyes:1.45), {face_obscure_guard}, "
             f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
             f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35), "
-            f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45)"
+            f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45), "
+            f"(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25)"
         )
+
+        # [패치 0-1-1] 엘프귀 / 뾰족귀 왜곡 원천 차단 (명시적 엘프 캐릭터 제외)
+        char_desc = f"{ctx.char.appearance.face_and_hair} {ctx.char.sdxl_positive or ''}".lower()
+        if "elf" not in char_desc and "pointed ears" not in char_desc:
+            neg = f"{neg}, (pointed ears, elf ears, pointy ears:1.45)" 
 
         # [패치 0-2] 무협 시대착오 차단
         if ctx.is_wuxia:
