@@ -344,7 +344,7 @@ class DefectDefenseMutator(PromptMutator):
             f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
             f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35), "
             f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45), "
-            f"(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25)"
+            f"(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25), ((sharp teeth, pointed teeth, shark teeth, jagged teeth, animal teeth, monster teeth, vampire fangs:1.45)), ((multiple beauty marks:1.45)), ((multiple moles:1.45)), ((freckles:1.35)), ((neck blemishes, neck moles, black spots on neck, dotted line:1.45)), ((skin spots:1.35))"
         )
 
         # [패치 0-1-1] 엘프귀 / 뾰족귀 왜곡 원천 차단 (명시적 엘프 캐릭터 제외)
@@ -575,7 +575,8 @@ class TwoPersonMobMutator(PromptMutator):
                             mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15)"
                             if lower_body:
                                 mob_positive += f", {lower_body}"
-                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
+                            mob_positive += ", ((large thick erect penis:1.35)), ((impressive manhood, thick shaft:1.3))"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
                         else:
                             mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1)"
                             if lower_body:
