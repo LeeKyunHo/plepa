@@ -35,8 +35,9 @@ def test_build_sdxl_workflow_freeu():
     freeu_nodes = [k for k, v in wf_with_freeu.items() if v.get("class_type") == "FreeU"]
     assert len(freeu_nodes) == 1
     freeu_data = wf_with_freeu[freeu_nodes[0]]
-    assert freeu_data["inputs"]["b1"] == 1.1
-    assert freeu_data["inputs"]["b2"] == 1.2
+    assert freeu_data["inputs"]["b1"] == 1.02
+    assert freeu_data["inputs"]["b2"] == 1.03
+    assert freeu_data["inputs"]["s1"] == 0.95
 
     # use_freeu=False 시 FreeU 노드가 없어야 함
     wf_no_freeu = build_sdxl_workflow(
