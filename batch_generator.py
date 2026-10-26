@@ -205,6 +205,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-face-detailer", dest="face_detailer", action="store_false", help="Face Detailer 얼굴 보정 워크플로우 비활성화")
     parser.add_argument("--hand-detailer", dest="hand_detailer", action="store_true", default=False, help="Hand Detailer 손 보정 워크플로우 체이닝 활성화")
     parser.add_argument("--no-hand-detailer", dest="hand_detailer", action="store_false", help="Hand Detailer 손 보정 비활성화")
+    parser.add_argument("--freeu", dest="freeu", action="store_true", default=True, help="ComfyUI FreeU_Advanced 노드로 SDXL 선명도 및 질감 부스팅 (기본: 활성화)")
+    parser.add_argument("--no-freeu", dest="freeu", action="store_false", help="FreeU 선명도 부스팅 비활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
     parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
     parser.add_argument("--cfg", type=float, default=None, help="CFG 스케일 (기본: flux=3.5, sdxl=6.0)")
@@ -322,6 +324,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             overwrite=args.overwrite,
             face_detailer=args.face_detailer,
             hand_detailer=args.hand_detailer,
+            freeu=args.freeu,
             upscale=args.upscale,
             steps=args.steps,
             cfg=args.cfg,

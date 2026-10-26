@@ -54,6 +54,7 @@ def build_sdxl_workflow(
     clip_skip: int = DEFAULT_CLIP_SKIP,
     use_face_detailer: Optional[bool] = None,
     use_hand_detailer: bool = False,
+    use_freeu: bool = True,
     use_upscale: bool = False,
     ref_image_name: Optional[str] = None,
     ref_weight: float = DEFAULT_REF_WEIGHT,
@@ -86,6 +87,18 @@ def build_sdxl_workflow(
     if clip_skip > 1:
         skip_id = graph.add_node("CLIPSetLastLayer", clip=clip_ref, stop_at_clip_layer=-clip_skip)
         clip_ref = graph.out(skip_id, 0)
+
+    # 2.1. FreeU 노드 (SDXL 선명도, 콘트라스트 및 피부 질감 부스팅, SDXL 표준 파라미터)
+    if use_freeu:
+        freeu_id = graph.add_node(
+            "FreeU",
+            model=base_model,
+            b1=1.1,
+            b2=1.2,
+            s1=0.9,
+            s2=0.2,
+        )
+        base_model = graph.out(freeu_id, 0)
 
     # 3. IP-Adapter 결합 (PrepImageForClipVision + 2-Track 하이브리드)
     ipa_model = None
