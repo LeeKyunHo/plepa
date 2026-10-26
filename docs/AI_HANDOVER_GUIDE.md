@@ -1336,3 +1336,24 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   1. YKN 4인 전원에 대해 `sdxl_nude_positive`(순수 알몸 전용 프롬프트), `default_mode: "sdxl"`, `faction: "ykn_family"`, `outfits: {"underwear": ...}` 완비.
   2. `precheck.py`의 `_SIGNATURE_OUTFIT_TOKENS`에 YKN 4인 의상 시그니처 정식 등록.
   3. 사전 점검 결과 **총 689건 위반 ➔ 0건(100% ALL PASS)**으로 완전 무결성 확보.
+
+
+### ADR-75: 064~071 구강·핸드잡 포즈 명칭·의상 슬롯 2-Track 분기 및 키스 씬 QA 예외 처리 (2026-10-26)
+- **배경 및 문제점**:
+  1. `064`~`071` 포즈에서 착의/탈의 의상 슬롯 구분이 모호하여, 블라우스를 입고 진행되어야 하는 착의 펠라와 알몸이어야 하는 탈의 펠라가 모두 동일한 의상(`default`)으로 나오는 정합성 결함 발생.
+  2. `066`(탈의펠라강)에서 상대 남성의 위치와 여성의 시선 구도가 정립되지 않아 남성이 등 뒤에 서서 여성이 화면 앞을 바라보는 이상 구도 발생.
+  3. `070`번(구강 사후)과 `071`번(핸드잡)에서 제스처 태그 인식율 저하로 손의 위치가 이탈하거나 사후 뉘앙스가 퇴색됨.
+  4. 2인 밀착 키스 포즈(`060`, `061`) 생성 시, QA Validator의 단독 상반신 규격(`detected_faces > 1` 리젝트)이 오작동하여 불필요한 리롤 한도 초과 및 생성 지연 발생.
+- **결정 사항**:
+  1. **명칭 및 의상 2-Track 분기 확립**:
+     - `065` (탈의펠라약, `nude`), `066` (탈의펠라강, `nude`): 탈의 구강 봉사 분기.
+     - `067` (딥스로트, `default`), `068` (착의펠라약, `default`), `069` (착의펠라강, `default`): 착의 유지.
+     - `070` (펠라후 청소, `default`): 입가/가슴의 분비흔과 사후 청소 뉘앙스 태그 보강.
+     - `071` (대딸, `default`): 댄보루 정석 핸드잡 태그(`holding penis with both hands`)로 양손 밀착 제스처 확립.
+     - 단일 진실 공급원(SSOT) 3곳(`data/sdxl_pose_database.json`, `POSE_MAPPING.md`, `docs/POSE_MAPPING_V2.md`) 100% 동기화.
+  2. **상대방 기하학적 공간 좌표 강제(066)**:
+     - `kneeling facing male partner`, `looking up at male partner in front` 및 네거티브 `(partner behind:1.45)`로 정면 마주보기 구도 완벽 고정.
+  3. **키스 씬 QA Validator 거짓 양성(False Positive) 방어**:
+     - `plepa_engine/qa_validator.py`에 `is_kiss_scene` 파라미터 신설. 포즈 프롬프트 또는 포즈 코드(`060`, `061` 등)가 키스 씬일 경우 얼굴 2개 감지 시 모브 침범 리젝트를 면제하여 1회 만에 100% 통과.
+  4. **YKN 로스터 범용 배경 프리셋 및 매핑 구축**:
+     - `projects/ykn/background.json` 및 `projects/ykn/pose_background_mapping.json` 신설: 일상 포즈는 범용 실내(`default`), 성인 포즈는 침대(`bedroom`)로 자동 분기 매핑.
