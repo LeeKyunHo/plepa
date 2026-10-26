@@ -25,8 +25,8 @@
 > 새로 투입된 AI 에이전트는 과거 시행착오 이력(ADR 1~39)을 읽기 전에 반드시 아래 **현재 유효한 11대 표준 규격**을 기준으로 판단하십시오:
 
 1. **단일 메인 엔트리포인트**: [`batch_generator.py`](../batch_generator.py) (`flux_batch_generator.py`는 18줄 하위 호환 래퍼).
-2. **SDXL 단일 엔진 파라미터**: `unholyDesireMixSinister_v90.safetensors` | `832x1216` | `CFG 5.0` | `Steps 28` | `dpmpp_2m` + `karras` | 단일 `CLIPTextEncode` 노드 (이중 conditioning 결합 금지).
-3. **V3 포즈 아키텍처 (`000~209`)**: 코어 범용 DB(`sdxl_pose_database.json`)와 로스터 고유 이벤트(`events.json`)의 물리적 격리. 감정(`000~019`) + 일상(`020~050`) + 로스터이벤트(`051~059`, 격리) + 로맨스/공용구강(`060~079`) + 여성성인(`080~129`) + 여성특색H(`130~139`, 격리) + 오토성인(`150~199`) + 오토특색H(`200~209`, 격리).
+2. **SDXL 단일 엔진 파라미터**: `unholyDesireMixSinister_v90.safetensors` | `832x1216` | `CFG 4.0` | `Steps 28` | `dpmpp_2m` + `karras` | 단일 `CLIPTextEncode` 노드 (이중 conditioning 결합 금지).
+3. **V3 포즈 아키텍처 (`000~209`)**: 코어 범용 DB(`sdxl_pose_database.json`)와 로스터 고유 이벤트(`events.json`)의 물리적 격리. 감정(`000~019`) + 일상(`020~050`) + 로스터이벤트(`051~059`, 격리) + 로맨스/봉사일원화(`060~079`, 파이즈리/대딸/풋잡 및 078 웨딩봉사 완비) + 여성성인본방(`080~129`, 095 웨딩본방체위 포함) + 여성특색H(`130~139`, 격리) + 오토성인(`150~199`) + 오토특색H(`200~209`, 격리).
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
