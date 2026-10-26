@@ -56,7 +56,7 @@ def heal_single_asset(roster: str, prefix: str, code: str, sector: str, file_pat
             style="white_silhouette",
             targets=("penis",),
             pose_code=code,
-            enable_anchor_fallback=True,
+            enable_anchor_fallback=False,
         )
 
         # 3. 메인 에셋 파일에 저장: 남성기 미검출 시 깨끗한 원본 그대로 복원, 검출 시 마스킹본 적용

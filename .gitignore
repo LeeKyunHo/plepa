@@ -43,6 +43,7 @@ projects/*/assets/
 projects/*/assets_flux/
 projects/*/assets_facedetailer/
 projects/*/legacy_assets/
+projects/*/legacy_backups/
 projects/*/censor_*/
 projects/*/assets/censor_*/
 projects/*/assets/*_origin/

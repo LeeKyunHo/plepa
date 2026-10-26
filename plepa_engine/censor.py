@@ -562,7 +562,7 @@ def censor_image(
     image: Union[Image.Image, Path, str],
     style: str = "silhouette",
     targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.14,
+    min_confidence: float = 0.22,
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
 ) -> Tuple[Image.Image, int]:
@@ -601,7 +601,7 @@ def censor_image(
 
     if HAS_IMGUTILS:
         try:
-            results = detect_censors(img, conf_threshold=max(0.08, min_confidence * 0.8))
+            results = detect_censors(img, conf_threshold=max(0.18, min_confidence * 0.9))
             img_w, img_h = img.size
             for box, label, score in results:
                 if label in normalized_targets and score >= min_confidence:
@@ -630,12 +630,7 @@ def censor_image(
             logger.warning(
                 f"[WARN] [Censor] 포즈 {pose_code}: 성기 미탐지! 안전 앵커 영역({cat}) 폴백 점검 대상입니다."
             )
-            if enable_anchor_fallback:
-                w, h = img.size
-                anchor_box = get_pose_anchor_box(pose_code, w, h)
-                if anchor_box:
-                    detected_boxes_with_labels.append((anchor_box, "safe_anchor"))
-                    logger.info(f"[Censor] 포즈 {pose_code}: 안전 앵커 폴백 박스 적용 {anchor_box}")
+            # Anchor box disabled to prevent artificial rectangular artifact on body
 
     if not detected_boxes_with_labels:
         return img, 0
@@ -671,7 +666,7 @@ def censor_image(
 def verify_and_heal_censor(
     censored_img: Image.Image,
     style: str = "white_silhouette",
-    min_confidence: float = 0.14,
+    min_confidence: float = 0.22,
 ) -> Tuple[Image.Image, bool]:
     """
     검열이 완료된 이미지를 대상으로 성기 검출기를 다시 돌려 잔여 노출 여부를 2차 검증합니다.
@@ -702,7 +697,7 @@ def censor_file(
     dst_path: Optional[Union[Path, str]] = None,
     style: str = "white_silhouette",
     targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.14,
+    min_confidence: float = 0.22,
     quality: int = 95,
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
@@ -755,7 +750,7 @@ def censor_file(
 def detect_genitals(
     image: Union[Path, str, Image.Image],
     targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.14,
+    min_confidence: float = 0.22,
 ) -> List[Tuple[Tuple[int, int, int, int], str, float]]:
     """이미지에서 검열 대상 부위(성기 등)를 감지하여 [(box, label, score), ...] 형태로 반환합니다."""
     if not HAS_IMGUTILS:
@@ -765,7 +760,7 @@ def detect_genitals(
             img = Image.open(str(image)).convert("RGB")
         else:
             img = image.convert("RGB")
-        results = detect_censors(img, conf_threshold=max(0.08, min_confidence * 0.8))
+        results = detect_censors(img, conf_threshold=max(0.18, min_confidence * 0.9))
         filtered = []
         normalized = set(t.lower() for t in targets)
         for box, label, score in results:
@@ -783,7 +778,7 @@ def run_batch_censor(
     overwrite: bool = True,
     recursive: bool = True,
     targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.14,
+    min_confidence: float = 0.22,
     enable_anchor_fallback: bool = False,
 ) -> int:
     """폴더 내의 모든 일러스트 에셋을 스캔하여 일괄 검열을 수행합니다."""
