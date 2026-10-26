@@ -58,6 +58,41 @@ from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
 
 
+
+def get_optimal_resolution_for_pose(
+    pose_obj: Any,
+    default_w: int,
+    default_h: int,
+    engine: str = "sdxl",
+    user_specified: bool = False,
+) -> Tuple[int, int]:
+    """
+    포즈의 화각(상반신/클로즈업 vs 전신/일상)에 따라 물리적으로 카메라 줌인을 유도하는
+    최적의 종횡비 및 해상도를 반환합니다.
+    """
+    if user_specified or engine != "sdxl":
+        return default_w, default_h
+
+    p_text = (getattr(pose_obj, "sdxl_positive", "") or getattr(pose_obj, "prompt", "") or "").lower()
+    code_str = str(getattr(pose_obj, "code", "")).strip().zfill(3)
+
+    # 상반신/바스트/클로즈업 밀착 씬 키워드 및 대역
+    close_up_keywords = (
+        "face focus", "bust shot", "chest focus", "upper body close-up", "tight bust",
+        "fellatio", "blowjob", "deepthroat", "paizuri", "titfuck", "close-up upper body", "intimate close-up"
+    )
+    is_close_up = any(kw in p_text for kw in close_up_keywords)
+
+    if code_str in ("064", "065", "066", "067", "068", "069", "070", "071", "095", "165"):
+        is_close_up = True
+
+    if is_close_up:
+        # SDXL 네이티브 정방형 줌인 밀착 규격 (1024x1024)
+        return 1024, 1024
+
+    return default_w, default_h
+
+
 def generate_mock_image(output_path: Path) -> None:
     """ComfyUI 연동 없이 0.001초 만에 더미 WebP 이미지를 생성하여 파이프라인 무결성을 검증합니다."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -112,6 +147,8 @@ class GenerationParams:
     ckpt_tag: Optional[str] = None  # 체크포인트 비교용 서브폴더 태그 (예: "unholy", "wai")
     auto_qc: bool = True
     max_retries: int = 3
+    freeu: bool = True  # ComfyUI FreeU_Advanced SDXL 선명도/질감 부스팅
+    prompt_alert_threshold: int = 2  # 연속 불량 시 프롬프트 점검 경고 발령 임계치
     reuse_seed: bool = False  # _batch_manifest.json의 이전 골든 시드 고정 재생성
     strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
 
@@ -131,6 +168,13 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "label": "Hand Detailer",
         "tooltip": "손 디테일러(Hand Detailer) 체이닝으로 손가락 왜곡 자동 보정",
         "default": False,
+    },
+    {
+        "field": "freeu",
+        "cli_flag": "--freeu",
+        "label": "FreeU 화질 부스팅",
+        "tooltip": "ComfyUI FreeU 노드로 SDXL 선명도, 콘트라스트 및 피부 질감 극대화",
+        "default": True,
     },
     {
         "field": "upscale",
@@ -490,12 +534,16 @@ class GenerationService:
                         else:
                             ref_mode = "full"
 
+                        eff_w, eff_h = get_optimal_resolution_for_pose(
+                            pose, width, height, engine=params.engine,
+                            user_specified=(params.width is not None or params.height is not None)
+                        )
                         workflow = build_sdxl_workflow(
                             positive_prompt=pos_prompt,
                             negative_prompt=neg_prompt,
                             output_prefix=f"{char.prefix}_{code}",
-                            width=width,
-                            height=height,
+                            width=eff_w,
+                            height=eff_h,
                             steps=steps,
                             cfg=cfg,
                             sampler=sampler,
@@ -503,6 +551,7 @@ class GenerationService:
                             ckpt_name=ckpt_name,
                             use_face_detailer=params.face_detailer,
                             use_hand_detailer=params.hand_detailer,
+                            use_freeu=params.freeu,
                             use_upscale=params.upscale,
                             ref_image_name=ref_file_name,
                             ref_weight=ref_weight,
@@ -776,6 +825,21 @@ class GenerationService:
                                 )
                                 if not passed:
                                     final_qc_fail = fail_reason
+                                    # ── 프롬프트 결함 자가 진단 및 경고 시스템 ──
+                                    if attempt + 1 >= params.prompt_alert_threshold:
+                                        guide_msg = ""
+                                        if "인원" in fail_reason or "머리" in fail_reason or "얼굴" in fail_reason:
+                                            guide_msg = "단독 씬인데 제3자가 침범하고 있습니다. 프롬프트의 1girl/solo/partner 태그 충돌을 점검하세요."
+                                        elif "손 증식" in fail_reason or "손" in fail_reason:
+                                            guide_msg = "손이 비정상 증식하고 있습니다. 스킨십/손 태그 가중치를 낮추거나 Hand Detailer를 활성화하세요."
+                                        elif "화각 드리프트" in fail_reason:
+                                            guide_msg = "상반신 씬인데 전신 롱샷으로 이탈했습니다. 네거티브 (full body:1.4)를 점검하세요."
+                                        else:
+                                            guide_msg = f"프롬프트 키워드 간의 충돌 가능성을 점검하세요: {fail_reason}"
+                                        
+                                        if not quiet:
+                                            print(f"\n    🚨 [프롬프트 점검 경고] #{code} {pose.label} ({attempt+1}회 연속 결함!)\n       └─ 사유: {fail_reason}\n       └─ 진단 가이드: {guide_msg}", flush=True)
+
                                     if attempt < params.max_retries:
                                         if not quiet:
                                             print(f" [Auto-QC 불량: {fail_reason} -> 재시도 {attempt+1}/{params.max_retries}]", end="", flush=True)

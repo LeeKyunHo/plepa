@@ -166,7 +166,7 @@ def validate_generated_image(
         elif is_two_person and not is_offscreen_partner:
             p_text = (prompt or "").lower()
             # 상반신·바스트 밀착 클로즈업 씬에서는 모브/파트너 얼굴 및 머리 노출을 엄격 차단 (여주인공 1인 집중)
-            is_close_up_focus = any(kw in p_text for kw in ("face focus", "bust shot", "chest focus", "upper body close-up", "tight bust"))
+            is_close_up_focus = any(kw in p_text for kw in ("face focus", "bust shot", "chest focus", "upper body close-up", "tight bust", "intimate close-up", "close-up upper body"))
             if is_close_up_focus:
                 if metrics["faces"] > 1:
                     reason = f"상반신 밀착 씬 모브 얼굴 침범 감지 (얼굴: {metrics['faces']}개, 단독 1인 얼굴만 허용)"
@@ -174,6 +174,16 @@ def validate_generated_image(
                 if metrics["heads"] > 1:
                     reason = f"상반신 밀착 씬 모브 머리 침범 감지 (머리: {metrics['heads']}개, 단독 1인 머리만 허용)"
                     return False, reason, metrics
+
+                # ── 기하학적 화각 검증: 얼굴 높이 비율 측정 (전신 롱샷 이탈 방지) ──
+                if valid_faces:
+                    img_w, img_h = img.size
+                    max_face_h = max((f[0][3] - f[0][1]) for f in valid_faces)
+                    face_ratio = max_face_h / max(1, img_h)
+                    metrics["face_height_ratio"] = round(face_ratio, 3)
+                    if face_ratio < 0.08:
+                        reason = f"상반신/클로즈업 씬 화각 드리프트(전신 롱샷 이탈) 감지 (얼굴 비율: {face_ratio * 100:.1f}% < 8.0%)"
+                        return False, reason, metrics
 
             if metrics["persons"] > 2 or metrics["heads"] > 2:
                 reason = f"2인 씬 제3자/모브 증식(3명 이상) 감지 (인원: {metrics['persons']}명, 머리: {metrics['heads']}개)"

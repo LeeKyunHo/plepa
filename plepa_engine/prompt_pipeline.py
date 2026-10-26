@@ -560,7 +560,7 @@ class TwoPersonMobMutator(PromptMutator):
 
                         if is_upper_body_scene:
                             lower_body = ""
-                            upper_body_guard = ", (standing male legs:1.45), (male lower body:1.45), (male legs:1.45), (pants:1.45), (trousers:1.40), (full body:1.45), (cowboy shot:1.45), (wide shot:1.45), (kneeling wide view:1.40)"
+                            upper_body_guard = ", (standing male legs:1.45), (male lower body:1.45), (male legs:1.45), (pants:1.45), (trousers:1.40), (full body:1.45), (standing:1.40), (feet:1.40), (bare feet:1.35), (shoes:1.35), (boots:1.35), (cowboy shot:1.45), (wide shot:1.45), (kneeling wide view:1.40)"
                         else:
                             lower_body = "(bottomless male:1.15), muscular build" if ctx.nude else "(solid black pants:1.2), muscular build"
                             upper_body_guard = ""
