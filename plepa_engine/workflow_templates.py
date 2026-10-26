@@ -93,9 +93,9 @@ def build_sdxl_workflow(
         freeu_id = graph.add_node(
             "FreeU",
             model=base_model,
-            b1=1.1,
-            b2=1.2,
-            s1=0.9,
+            b1=1.02,
+            b2=1.03,
+            s1=0.95,
             s2=0.2,
         )
         base_model = graph.out(freeu_id, 0)

@@ -1357,3 +1357,22 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - `plepa_engine/qa_validator.py`에 `is_kiss_scene` 파라미터 신설. 포즈 프롬프트 또는 포즈 코드(`060`, `061` 등)가 키스 씬일 경우 얼굴 2개 감지 시 모브 침범 리젝트를 면제하여 1회 만에 100% 통과.
   4. **YKN 로스터 범용 배경 프리셋 및 매핑 구축**:
      - `projects/ykn/background.json` 및 `projects/ykn/pose_background_mapping.json` 신설: 일상 포즈는 범용 실내(`default`), 성인 포즈는 침대(`bedroom`)로 자동 분기 매핑.
+
+
+### ADR-76: 남성기 단일 마스킹 정책 전환, 레퍼런스 노이즈 차단 및 엘프귀 왜곡 방지 (2026-10-26)
+- **배경 및 문제점**:
+  1. 검열 모듈에서 여성 상체 및 하체 노출 부위까지 과도하게 마스킹되어 미관을 저해함 (단독 목욕/샤워 씬에 흰색 실루엣 발생).
+  2. 일러스트 생성 시 조명이 타는 듯한 과노출(blown-out highlights) 및 과포화가 발생함.
+  3. 사용자의 날카로운 진단대로 IP-Adapter 레퍼런스(`ref_weight: 0.55`)가 정적 스탠딩 이미지의 조명/노이즈를 잠재 공간에 강제 투영하면서 화질 저하와 명암 왜곡을 초래하고 있었음.
+  4. 물/목욕 씬 등에서 캐릭터의 귀가 엘프 귀(pointed ears)로 왜곡되는 결함 발생.
+- **결정 사항**:
+  1. **남성기(`penis`) 단일 마스킹 정책 확립**:
+     - 검열 타겟을 오직 남성기(`penis`)로 한정하고, 여성 단독 노출 씬(`030, 038, 039, 044, 045`)을 일상 검열 대상에서 완전 면제.
+     - `heal_unprotected_assets.py`를 통해 여성 신체 부위 마스킹을 일체 해제하고 무손실 원본으로 100% 복원.
+  2. **순수 고화질 프롬프트 모드 전환 및 파라미터 안정화**:
+     - YKN 4인의 `ref_weight`를 `0.0`으로 설정하여 IP-Adapter에 의한 명암 왜곡 및 화질 저하를 원천 차단.
+     - SDXL CFG 기본값을 `5.0` ➔ `4.0`으로 완화.
+     - FreeU 노드 파라미터를 마일드 규격(`b1=1.02, b2=1.03, s1=0.95, s2=0.2`)으로 최적화.
+     - `DefectDefenseMutator`에 `(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25)` 전역 가드 주입.
+  3. **엘프귀 왜곡 방어**:
+     - `DefectDefenseMutator`에 `(pointed ears, elf ears, pointy ears:1.45)` 가드를 자동 주입하고 캐릭터 네거티브에도 명시 등록.

@@ -7,7 +7,10 @@
   "profiles": {
     "waiIllustriousSDXL_v170.safetensors": {
       "name": "WAI-Illustrious-SDXL v17",
-      "match_patterns": ["illustrious", "wai"],
+      "match_patterns": [
+        "illustrious",
+        "wai"
+      ],
       "engine": "sdxl",
       "width": 1024,
       "height": 1344,
@@ -23,32 +26,44 @@
       "quality_positive": "masterpiece, best quality, amazing quality, very aesthetic, absurdres, ultra-detailed anime digital art",
       "quality_negative": "bad quality, worst quality, worst detail, sketch, censor, jpeg artifacts, signature, watermark",
       "description": "Illustrious 기반 고해상도 특화 모델 (최소 1024x1024 이상 권장, Euler a 최적화)",
-      "tags": ["illustrious", "high_res", "anime", "detailed"],
+      "tags": [
+        "illustrious",
+        "high_res",
+        "anime",
+        "detailed"
+      ],
       "recommended_settings": {
         "face_detailer": true,
         "upscale": true,
-        "ref_weight": 0.70
+        "ref_weight": 0.7
       }
     },
     "unholyDesireMixSinister_v90.safetensors": {
       "name": "Unholy Desire Mix Sinister v9.0",
-      "match_patterns": ["unholy", "sinister"],
+      "match_patterns": [
+        "unholy",
+        "sinister"
+      ],
       "engine": "sdxl",
       "width": 832,
       "height": 1216,
       "steps": 24,
-      "cfg": 5.0,
+      "cfg": 4.0,
       "sampler": "dpmpp_2m",
       "scheduler": "karras",
       "clip_skip": 2,
       "baked_vae": true,
       "recommended_upscaler": "4x-UltraSharp.pth",
       "hires_steps": 25,
-      "hires_denoise": 0.40,
+      "hires_denoise": 0.4,
       "quality_positive": "amazing quality, very aesthetic, absurdres, newest, glossy skin, delicate anime coloring",
       "quality_negative": "bad quality, worst quality, monochrome, (photorealistic, realistic, 3d, render, cgi:1.25), (multiple characters:1.3)",
       "description": "NTR/오토코노코/하드 H-씬 특화 SDXL 모델 (2D 애니메이션 셀 채색 극대화)",
-      "tags": ["adult", "h_scene", "2d_anime"],
+      "tags": [
+        "adult",
+        "h_scene",
+        "2d_anime"
+      ],
       "recommended_settings": {
         "face_detailer": true,
         "upscale": false,
@@ -57,7 +72,10 @@
     },
     "loxsHEXMIX_hexmixV50.safetensors": {
       "name": "Loxs HEXMIX v5.0",
-      "match_patterns": ["hexmix", "loxs"],
+      "match_patterns": [
+        "hexmix",
+        "loxs"
+      ],
       "engine": "sdxl",
       "width": 832,
       "height": 1216,
@@ -73,16 +91,24 @@
       "quality_positive": "masterpiece, best quality, very aesthetic, absurdres",
       "quality_negative": "bad quality, worst quality, jpeg artifacts, blurry",
       "description": "2D 애니메이션 셀 채색 밸런스형 체크포인트 (Illustrious 베이스, CFG 4, 30 steps 최적화)",
-      "tags": ["anime", "balanced", "versatile", "illustrious"],
+      "tags": [
+        "anime",
+        "balanced",
+        "versatile",
+        "illustrious"
+      ],
       "recommended_settings": {
         "face_detailer": true,
         "upscale": true,
-        "ref_weight": 0.70
+        "ref_weight": 0.7
       }
     },
     "ponyDiffusionV6XL.safetensors": {
       "name": "Pony Diffusion V6 XL",
-      "match_patterns": ["pony", "pdxl"],
+      "match_patterns": [
+        "pony",
+        "pdxl"
+      ],
       "engine": "sdxl",
       "width": 832,
       "height": 1216,
@@ -94,11 +120,15 @@
       "baked_vae": true,
       "recommended_upscaler": "4x-UltraSharp.pth",
       "hires_steps": 20,
-      "hires_denoise": 0.40,
+      "hires_denoise": 0.4,
       "quality_positive": "score_9, score_8_up, score_7_up, masterpiece, best quality",
       "quality_negative": "score_6, score_5, score_4, worst quality, bad quality",
       "description": "Danbooru 태그 전용 훈련 모델 (score_9 필수, 일반 품질 태그 무효)",
-      "tags": ["danbooru", "furry_capable", "score_based"],
+      "tags": [
+        "danbooru",
+        "furry_capable",
+        "score_based"
+      ],
       "recommended_settings": {
         "face_detailer": true,
         "upscale": true,
@@ -107,7 +137,11 @@
     },
     "flatbreadILV60.safetensors": {
       "name": "Flatbread - IL - v6.0",
-      "match_patterns": ["flatbread", "flatbread_il", "flatbread-il"],
+      "match_patterns": [
+        "flatbread",
+        "flatbread_il",
+        "flatbread-il"
+      ],
       "engine": "sdxl",
       "width": 1024,
       "height": 1536,
@@ -123,7 +157,13 @@
       "quality_positive": "masterpiece, newest, absurdres, incredibly absurdres, best quality, amazing quality, very aesthetic",
       "quality_negative": "lowres, bad anatomy, worst quality, low quality, normal quality, bad hands, mutated, extra fingers, artifacts, disfigured",
       "description": "Flatbread IL v6.0 (mommymia 제작, Illustrious 베이스, 1024x1536 권장, DPM++ 2M Karras, Hi-Res Fix + ADetailer 권장)",
-      "tags": ["illustrious", "anime", "high_res", "detailed", "adult"],
+      "tags": [
+        "illustrious",
+        "anime",
+        "high_res",
+        "detailed",
+        "adult"
+      ],
       "recommended_settings": {
         "face_detailer": true,
         "upscale": true,
@@ -132,7 +172,9 @@
     },
     "animagineXLV31.safetensors": {
       "name": "Animagine XL V3.1",
-      "match_patterns": ["animagine"],
+      "match_patterns": [
+        "animagine"
+      ],
       "engine": "sdxl",
       "width": 832,
       "height": 1216,
@@ -148,11 +190,15 @@
       "quality_positive": "masterpiece, best quality, very aesthetic, newest",
       "quality_negative": "bad quality, worst quality, lowres, normal quality",
       "description": "범용 애니메이션 특화 SDXL (광범위 스타일 커버리지)",
-      "tags": ["anime", "versatile", "stable"],
+      "tags": [
+        "anime",
+        "versatile",
+        "stable"
+      ],
       "recommended_settings": {
         "face_detailer": true,
         "upscale": true,
-        "ref_weight": 0.70
+        "ref_weight": 0.7
       }
     }
   },
@@ -173,7 +219,9 @@
     "quality_positive": "masterpiece, best quality, very aesthetic, absurdres",
     "quality_negative": "bad quality, worst quality, jpeg artifacts",
     "description": "범용 SDXL 기본 설정 (미등록 체크포인트 폴백)",
-    "tags": ["default"],
+    "tags": [
+      "default"
+    ],
     "recommended_settings": {
       "face_detailer": false,
       "upscale": false,
@@ -193,11 +241,14 @@
     "baked_vae": false,
     "recommended_upscaler": "4x-UltraSharp.pth",
     "hires_steps": 15,
-    "hires_denoise": 0.30,
+    "hires_denoise": 0.3,
     "quality_positive": "",
     "quality_negative": "",
     "description": "FLUX.1 [dev] 기본 설정 (자연어 프롬프트 전용)",
-    "tags": ["flux", "default"],
+    "tags": [
+      "flux",
+      "default"
+    ],
     "recommended_settings": {
       "face_detailer": false,
       "upscale": false,
