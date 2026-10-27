@@ -433,7 +433,7 @@ class DefectDefenseMutator(PromptMutator):
         # [패치 E] 착의 H-씬 탈의/가슴 노출 원천 차단 네거티브벽 및 상의 보존
         is_clothed_h_scene = (not ctx.nude) and (
             any(kw in pose_tag.lower() for kw in ("clothed sex", "clothed fellatio", "fully clothed except bottom", "skirt lifted", "panties aside", "underwear aside", "clothes half removed"))
-            or ctx.pose.code in ("033", "112", "113", "115", "126", "127", "130", "131", "132", "133", "134", "135")
+            or ctx.pose.code in ("033", "112", "113", "114", "126", "127", "130", "131", "132", "133", "134", "135", "182", "183", "184")
         )
         if is_clothed_h_scene:
             # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
