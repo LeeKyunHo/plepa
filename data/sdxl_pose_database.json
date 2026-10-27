@@ -600,7 +600,7 @@
       "label": "웨딩섹스",
       "description": "순백의 웨딩드레스 치마를 허리까지 걷어올리고 면사포와 가터벨트, 레이스 스타킹 착의 상태로 신혼 첫날밤을 치르는 정통 웨딩 착의 본방 체위 결합 연출",
       "required_outfit": "wedding",
-      "prompt": "1girl, 1boy, ((missionary position, sex from front, passionate intimacy:1.35)), ((lying on back across luxurious bridal bed:1.3)), ((wearing pure white wedding dress, bridal dress lifted up to waist:1.35)), ((bridal veil, white lace garter belt, white sheer lace stockings:1.35)), bride, legs spread, flushed blushing face, intense breathless blissful expression, parted lips, loving gaze, soft romantic bedroom lighting",
+      "prompt": "1girl, 1boy, ((missionary position, sex from front, passionate intimacy:1.35)), ((lying on back across luxurious bridal bed:1.3)), ((wearing pure white wedding dress, bridal dress lifted up to waist:1.35)), ((bridal veil, white lace garter belt, white sheer lace stockings:1.35)), bride, legs spread, flushed blushing face, intense breathless blissful expression, parted lips, ((looking directly at viewer, making loving eye contact:1.35)), soft romantic bedroom lighting",
       "section": "h_scenes",
       "negative_add": " (completely nude:1.35), (bare shoulders without dress:1.2), (street clothes:1.3)"
     },

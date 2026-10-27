@@ -1376,3 +1376,21 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - `DefectDefenseMutator`에 `(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25)` 전역 가드 주입.
   3. **엘프귀 왜곡 방어**:
      - `DefectDefenseMutator`에 `(pointed ears, elf ears, pointy ears:1.45)` 가드를 자동 주입하고 캐릭터 네거티브에도 명시 등록.
+
+### ADR-77: 전역 시선 제어(Eye Contact) 가드 구축 및 캠퍼스 에셋 최신 V3 표준 정합화 (2026-10-27)
+- **배경 및 문제점**:
+  1. 누운 자세(`lying on back`)나 본방 체위(`095 웨딩섹스` 등)에서 캐릭터가 파트너나 화면 밖의 유저를 바라보지 않고 멍하니 천장이나 허공을 응시하는 인형화 결함 발생.
+  2. 캠퍼스 로스터 6인의 에셋이 과거 버전 잔재(`048_캠퍼스_카페`, `049_캠퍼스_도서관`, `050_캠퍼스_벤치`)로 인해 중복되어 있고, 라벨이 YKN 최신 표준과 불일치.
+- **결정 사항**:
+  1. **전역 시선 제어(Eye Contact) 가드 확립**:
+     - `DefectDefenseMutator`에 `(looking up at ceiling:1.4), (staring into distance:1.4), (vacant eyes:1.4), (blank stare:1.4), (unfocused eyes:1.4), (wandering eyes:1.4)`를 기본 주입하여 상시 차단.
+     - `095 웨딩섹스` 프롬프트에 `((looking directly at viewer, making loving eye contact:1.35))`를 명시 주입.
+     - `docs/캐릭터_포즈_제작_규칙.md` 1.4항에 공식 등재 완료.
+  2. **캠퍼스 6인 순차 마이그레이션 및 무손실 보존**:
+     - 시스템 과부하를 방지하기 위해 캐릭터별 순차(aya ➔ har ➔ mai ➔ yur ➔ shz ➔ kao) 3단계 마이그레이션 실행.
+     - 중복 레거시 3종을 `legacy_backups/{char}/`로 무손실 격리 보존.
+     - `065_탈의펠라약`, `066_탈의펠라강`, `070_펠라후_청소`, `071_대딸`, `113_착의섹스_후`, `115_샤워섹스강` 2-Pass 안전 리네임 완료.
+     - 캠퍼스 고유 이벤트(`051~055`) 및 특색 H씬(`130~132`) 100% 무손실 보존.
+  3. **검증**:
+     - `scripts/audit_sector_assets.py --roster campus` 686장 전수 검수 0건 결함 (ALL PASS).
+

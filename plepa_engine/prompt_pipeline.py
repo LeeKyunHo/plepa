@@ -342,6 +342,7 @@ class DefectDefenseMutator(PromptMutator):
             f"(mask:1.4), (white mask:1.4), (face mask:1.4), (noh mask:1.4), (porcelain mask:1.4), (paper mask:1.4), (theatrical mask:1.4), (blindfold:1.4), (covered eyes:1.4), "
             f"(eyes covered by hair:1.45), (bangs over eyes:1.45), (hair over eyes:1.45), {face_obscure_guard}, "
             f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
+            f"(looking up at ceiling:1.4), (staring into distance:1.4), (vacant eyes:1.4), (blank stare:1.4), (unfocused eyes:1.4), (wandering eyes:1.4), "
             f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35), "
             f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45), "
             f"(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25), ((sharp teeth, pointed teeth, shark teeth, jagged teeth, animal teeth, monster teeth, vampire fangs:1.45)), ((multiple beauty marks:1.45)), ((multiple moles:1.45)), ((freckles:1.35)), ((neck blemishes, neck moles, black spots on neck, dotted line:1.45)), ((skin spots:1.35))"
