@@ -623,14 +623,21 @@ def censor_image(
         except Exception as e:
             logger.warning(f"[Censor] 감지 모델 추론 예외: {e}")
 
-    # 검열 미탐지 시 체위별 안전 앵커 폴백 점검
+    # 검열 미탐지 시 체위별 안전 앵커 폴백 점검 (기본 False: 신체 오검열 아티팩트 방지)
     if not detected_boxes_with_labels and pose_code is not None:
         cat = get_pose_category(pose_code)
         if cat:
-            logger.warning(
-                f"[WARN] [Censor] 포즈 {pose_code}: 성기 미탐지! 안전 앵커 영역({cat}) 폴백 점검 대상입니다."
-            )
-            # Anchor box disabled to prevent artificial rectangular artifact on body
+            if enable_anchor_fallback:
+                anchor_box = get_pose_anchor_box(pose_code, img.width, img.height)
+                if anchor_box:
+                    detected_boxes_with_labels.append((anchor_box, "anchor"))
+                    logger.info(
+                        f"[Censor] 포즈 {pose_code}: 성기 미탐지 ➔ 안전 앵커({cat}) 폴백 적용: {anchor_box}"
+                    )
+            else:
+                logger.warning(
+                    f"[WARN] [Censor] 포즈 {pose_code}: 성기 미탐지! 안전 앵커 영역({cat}) 폴백 점검 대상입니다."
+                )
 
     if not detected_boxes_with_labels:
         return img, 0

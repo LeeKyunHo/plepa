@@ -10,10 +10,6 @@ from plepa_engine.censor import (
 
 class TestCensorAnchor(unittest.TestCase):
     def test_pose_category_classification(self):
-        # Paizuri
-        self.assertEqual(get_pose_category("095"), "paizuri")
-        self.assertEqual(get_pose_category("165"), "paizuri")
-
         # Fellatio & Deepthroat
         self.assertEqual(get_pose_category("086"), "fellatio")
         self.assertEqual(get_pose_category("120"), "fellatio")
@@ -33,8 +29,8 @@ class TestCensorAnchor(unittest.TestCase):
         self.assertEqual(get_pose_category("080"), "missionary")
         self.assertEqual(get_pose_category("150"), "missionary")
 
-        # Non-exposure poses
-        self.assertIsNone(get_pose_category("105"))
+        # Non-exposure poses (101 펠라사후, 104 입위강, 115 필로우토크)
+        self.assertIsNone(get_pose_category("115"))
         self.assertIsNone(get_pose_category("104"))
 
         # Everyday pose (not adult)
@@ -53,7 +49,7 @@ class TestCensorAnchor(unittest.TestCase):
         self.assertEqual(y2, 840)
 
         # paizuri: [0.34, 0.40, 0.66, 0.68]
-        p_box = get_pose_anchor_box("095", w, h)
+        p_box = get_pose_anchor_box("165", w, h)
         self.assertIsNotNone(p_box)
         self.assertEqual(p_box, (340, 400, 660, 680))
 

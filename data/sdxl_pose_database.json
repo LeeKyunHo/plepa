@@ -602,7 +602,10 @@
       "required_outfit": "wedding",
       "prompt": "1girl, 1boy, ((missionary position, sex from front, passionate intimacy:1.35)), ((lying on back across luxurious bridal bed:1.3)), ((wearing pure white wedding dress, bridal dress lifted up to waist:1.35)), ((bridal veil, white lace garter belt, white sheer lace stockings:1.35)), bride, legs spread, flushed blushing face, intense breathless blissful expression, parted lips, ((looking directly at viewer, making loving eye contact:1.35)), soft romantic bedroom lighting",
       "section": "h_scenes",
-      "negative_add": " (completely nude:1.35), (bare shoulders without dress:1.2), (street clothes:1.3)"
+      "negative_add": " (completely nude:1.35), (bare shoulders without dress:1.2), (street clothes:1.3)",
+      "legacy_labels": [
+        "파이즈리약"
+      ]
     },
     "096": {
       "label": "남근핥기",
