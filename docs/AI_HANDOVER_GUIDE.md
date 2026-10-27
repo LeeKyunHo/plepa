@@ -670,6 +670,25 @@
       - **엔진 실시간 동적 주입**: `GenerationService` 포즈 순회 루프 내부에서 사용자 `--bg` > 명시 `--bg-preset` > 기본 상태(포즈별 자동 매핑 실시간 조회)의 3계층 우선순위 주입 파이프라인 탑재.
       - **전수 검증**: `tests/test_pose_background_integration.py` 신설 및 전체 81개 테스트 100% ALL PASS.
 
+56. **포즈 DB 변경 시 검수 도구 및 테스트 항목의 100% 실시간 동적 자동 연동 (Data-Driven Contract Architecture) (ADR 2026-10-27)**
+    - **배경 및 사용자 요구사항**:
+      - 포즈 데이터베이스(`data/sdxl_pose_database.json`)와 로스터별 오버라이드가 신규 포즈 추가, 라벨 변경, 번호 수정 등으로 변화하더라도, 검수 도구(`audit_asset_alignment.py`)와 테스트 스위트(`test_asset_pose_alignment.py`)가 코드 수정 없이 **포즈 DB 변경 사항을 100% 실시간 동적으로 자동 연동(Dynamic Data-Driven Alignment)**하도록 전면 개편 요구.
+    - **해결 조치 및 기술 불변식**:
+      - **검수 카탈로그 동적 생성 (`scripts/audit_asset_alignment.py`)**:
+        - 하드코딩된 섹션 리스트를 전면 폐지하고, DB의 모든 섹션을 동적으로 순회하며 성별(`otokonoko` vs `female`) 전용 섹션만 지능형 분기 필터링.
+        - 로스터별 `events.json`, `pose_overrides.json`, `custom_poses.json`을 단일 진실 공급원(SSOT) 우선순위로 자동 병합.
+        - DB 포즈 엔트리에 `legacy_labels`/`aliases` 메타데이터를 공식 지원하여 과도기 허용 라벨(예: 095 웨딩섹스 슬롯의 기존 파이즈리약 에셋)을 순수 불일치 오류와 분리하여 `legacy_compatible` 범주로 정밀 추적.
+      - **테스트 스위트 제로 하드코딩 계약 기반 전환 (`tests/test_asset_pose_alignment.py`)**:
+        - 캐릭터 목록을 `projects/{roster}/characters/*.json`에서 동적으로 스캔.
+        - `PENDING_UPGRADE_CODES` 제거 및 DB 메타데이터 기반 계약 단언으로 완전 전환.
+        - `test_dynamic_pose_db_sync_contract` E2E 테스트 신설: 가상 포즈(999번) 추가 및 라벨 변경 시 검수기가 코드 수정 없이 실시간으로 즉시 반응함을 영구 보증.
+      - **전체 파이프라인 동기화**:
+        - `test_censor_anchor.py`: 105번(샤워약) 및 115번(필로우토크) 재배치 반영 및 기본 안전 앵커 아티팩트 방지 가드 정밀 검증.
+        - `캠퍼스_젠잇_캐릭터_채팅_v2_완성본.md`: 일상 이벤트 참조 3건(048,049,050 ➔ 055,054,053) 실제 에셋 파일명과 100% 일치 교정.
+    - **전수 검증**:
+      - 전체 테스트 스위트 101개 항목 100% ALL PASS (`101 passed`).
+
+
 ---
 
 ## 3. 플에파 시스템 아키텍처 및 불변식 (Invariants)
