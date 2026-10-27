@@ -1,78 +1,116 @@
+"""
+tests/test_v2_migration.py
+포즈 DB의 의상 슬롯(required_outfit), 착의/탈의 판정(is_nude_pose),
+그리고 여성-오토코노코 +70 거울 대칭 계약을 하드코딩 없이 100% 동적으로 검증하는 테스트.
+"""
+
 import unittest
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.prompt_builder import is_nude_pose, resolve_pose_outfit_slot
-from plepa_engine.models import CharacterAppearance, CharacterConfig
+
+
+ADULT_SECTIONS = {
+    "h_scenes",
+    "special_h",
+    "special_female_h",
+    "scenes_otokonoko",
+    "special_otokonoko",
+    "special_otokonoko_h",
+}
+
 
 class TestV2MigrationIntegrity(unittest.TestCase):
-    """V2 대역 개편 및 무결성 단위 테스트."""
+    """데이터 주도형(Contract-Driven) 포즈 대역 및 의상 슬롯 무결성 테스트."""
 
     def setUp(self):
         self.db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
 
     def test_romance_nude_poses_detection(self):
-        """061, 062, 063 (romance 탈의 씬)이 정확히 is_nude == True 및 nude 슬롯으로 판정되는지 검증."""
-        for code in ("061", "062", "063"):
-            self.assertIn(code, self.db, f"포즈 코드 '{code}'가 DB에 존재해야 합니다.")
-            entry = self.db[code]
-            self.assertEqual(entry.section, "romance")
-            self.assertEqual(entry.required_outfit, "nude")
-            self.assertTrue(is_nude_pose(entry), f"포즈 {code}는 is_nude_pose == True여야 합니다.")
+        """romance 섹션에서 required_outfit == 'nude'로 선언된 모든 포즈가 is_nude == True로 판정되는지 동적 검증."""
+        nude_romance = [
+            entry for entry in self.db.values()
+            if entry.section == "romance" and entry.required_outfit == "nude"
+        ]
+        self.assertGreater(len(nude_romance), 0, "romance 섹션에 nude 슬롯 포즈가 최소 1개 이상 존재해야 합니다.")
+        for entry in nude_romance:
+            self.assertTrue(
+                is_nude_pose(entry),
+                f"romance 탈의 포즈 {entry.code} ({entry.label})는 is_nude_pose == True여야 합니다.",
+            )
             self.assertEqual(resolve_pose_outfit_slot(entry), "nude")
 
     def test_romance_dressed_pose_detection(self):
-        """060 (romance 딥키스 착의 씬)은 required_outfit == 'default'이며 is_nude == False여야 함."""
-        entry = self.db["060"]
-        self.assertEqual(entry.section, "romance")
-        self.assertEqual(entry.required_outfit, "default")
-        self.assertFalse(is_nude_pose(entry))
-        self.assertEqual(resolve_pose_outfit_slot(entry), "default")
-
-    def test_adult_dressed_scenes_detection(self):
-        """
-        성인 섹션(h_scenes, special_h, scenes_otokonoko, special_otokonoko) 내부의 착의 씬들은
-        'required_outfit: default'가 우선 적용되어 is_nude == False(의상 유지)로 작동하는지 검증.
-        여성 착의씬: 112, 113, 115, 126, 127, 130, 131, 132
-        오토코노코 착의씬: 182, 183, 196, 197, 133, 134, 135
-        """
-        dressed_codes = [
-            "112", "113", "114", "126", "127", "130", "131", "132",
-            "182", "183", "196", "197", "133", "134", "135"
+        """romance 섹션에서 required_outfit == 'default'로 선언된 모든 포즈가 is_nude == False로 판정되는지 동적 검증."""
+        dressed_romance = [
+            entry for entry in self.db.values()
+            if entry.section == "romance" and entry.required_outfit == "default"
         ]
-        for code in dressed_codes:
-            self.assertIn(code, self.db, f"포즈 코드 '{code}'가 DB에 존재해야 합니다.")
-            entry = self.db[code]
-            self.assertEqual(
-                entry.required_outfit, "default",
-                f"포즈 {code} ({entry.label})의 required_outfit은 'default'여야 합니다."
-            )
+        self.assertGreater(len(dressed_romance), 0, "romance 섹션에 default 착의 포즈가 최소 1개 이상 존재해야 합니다.")
+        for entry in dressed_romance:
             self.assertFalse(
                 is_nude_pose(entry),
-                f"성인 착의 포즈 {code} ({entry.label})는 is_nude_pose == False여야 합니다 (의상 유지)."
+                f"romance 착의 포즈 {entry.code} ({entry.label})는 is_nude_pose == False여야 합니다.",
             )
             self.assertEqual(resolve_pose_outfit_slot(entry), "default")
 
+    def test_adult_dressed_scenes_detection(self):
+        """
+        성인 섹션 내부에서 required_outfit이 비탈의('default', 'wedding' 등)로 선언된 모든 포즈들을
+        동적으로 수집하여, is_nude_pose == False(의상 유지)로 작동하는지 전수 계약 검증.
+        """
+        dressed_adult_entries = [
+            entry for entry in self.db.values()
+            if entry.section in ADULT_SECTIONS
+            and entry.required_outfit
+            and entry.required_outfit != "nude"
+        ]
+        self.assertGreater(len(dressed_adult_entries), 0, "성인 섹션 내 착의 포즈가 최소 1개 이상 존재해야 합니다.")
+
+        for entry in dressed_adult_entries:
+            self.assertFalse(
+                is_nude_pose(entry),
+                f"성인 착의 포즈 {entry.code} ({entry.label}, slot={entry.required_outfit})는 is_nude_pose == False여야 합니다.",
+            )
+            self.assertEqual(resolve_pose_outfit_slot(entry), entry.required_outfit)
+
     def test_symmetric_offset_70(self):
-        """여성 기본 성인(080~127, 48종)과 오토코노코(150~197, 48종)의 +70 대칭성 검증."""
-        for f_num in range(80, 128):
-            f_code = f"{f_num:03d}"
+        """h_scenes 섹션에 존재하는 모든 숫자 포즈 코드에 대해 +70 대칭 코드가 scenes_otokonoko에 실존하는지 동적 검증."""
+        h_scene_entries = [
+            entry for entry in self.db.values()
+            if entry.section == "h_scenes" and entry.code.isdigit()
+        ]
+        self.assertGreater(len(h_scene_entries), 0, "h_scenes 포즈가 존재해야 합니다.")
+
+        for f_entry in h_scene_entries:
+            f_num = int(f_entry.code)
             o_code = f"{f_num + 70:03d}"
-            self.assertIn(f_code, self.db)
-            self.assertIn(o_code, self.db)
-            f_entry = self.db[f_code]
+            self.assertIn(
+                o_code,
+                self.db,
+                f"여성 성인 포즈 {f_entry.code}({f_entry.label})에 대응하는 +70 오토코노코 코드 {o_code}가 DB에 존재해야 합니다.",
+            )
             o_entry = self.db[o_code]
-            self.assertEqual(f_entry.section, "h_scenes")
             self.assertEqual(o_entry.section, "scenes_otokonoko")
 
     def test_special_event_adult_slots_symmetry(self):
-        """특수 성인 씬 여성(130~132)과 오토코노코(200~202, +70 거울 대칭) 및 V2 호환(133~135) 검증."""
-        for i in range(3):
-            f_code = f"{130 + i}"
-            o_code_v3 = f"{130 + i + 70}"
-            o_code_v2 = f"{133 + i}"
-            self.assertIn(f_code, self.db)
-            self.assertIn(o_code_v3, self.db, f"V3 특색 오토코노코 포즈 {o_code_v3}가 로드되어야 합니다.")
-            self.assertIn(o_code_v2, self.db, f"V2 하위 호환 오토코노코 포즈 {o_code_v2}가 로드되어야 합니다.")
-            self.assertIn(self.db[f_code].section, ("special_h", "special_female_h"))
+        """로스터 특수 성인 씬(special_female_h / special_h)의 모든 코드가 +70 오토코노코 대칭 슬롯을 보유하는지 동적 검증."""
+        special_female = [
+            entry for entry in self.db.values()
+            if entry.section in ("special_h", "special_female_h") and entry.code.isdigit()
+        ]
+        self.assertGreater(len(special_female), 0, "특수 성인 씬이 최소 1개 이상 존재해야 합니다.")
+
+        for f_entry in special_female:
+            f_num = int(f_entry.code)
+            o_code_v3 = f"{f_num + 70:03d}"
+            self.assertIn(
+                o_code_v3,
+                self.db,
+                f"특수 포즈 {f_entry.code}에 대응하는 +70 대칭 포즈 {o_code_v3}가 로드되어야 합니다.",
+            )
             self.assertIn(self.db[o_code_v3].section, ("special_otokonoko", "special_otokonoko_h"))
-            self.assertEqual(self.db[f_code].required_outfit, "default")
-            self.assertEqual(self.db[o_code_v3].required_outfit, "default")
+            self.assertEqual(f_entry.required_outfit, self.db[o_code_v3].required_outfit)
+
+
+if __name__ == "__main__":
+    unittest.main()

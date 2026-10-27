@@ -424,7 +424,6 @@ NON_EXPOSURE_H_POSES = frozenset({
     "115",  # 필로우토크
     "171",  # 펠라사후 (오토)
     "174",  # 입위강 (오토)
-    "185",  # 필로우토크 (오토)
 })
 
 
@@ -498,10 +497,25 @@ def is_pose_censor_required(
     return False
 
 
+_POSE_DB_CACHE: Optional[dict] = None
+
+
+def _get_cached_pose_db() -> dict:
+    """포즈 DB를 지연 로드하여 체위 카테고리 동적 추론에 활용합니다."""
+    global _POSE_DB_CACHE
+    if _POSE_DB_CACHE is None:
+        try:
+            from plepa_engine.services.pose_service import default_pose_service
+            _POSE_DB_CACHE = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+        except Exception:
+            _POSE_DB_CACHE = {}
+    return _POSE_DB_CACHE
+
+
 def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
     """
-    V3 포즈 코드(060~079, 080~139, 150~209)에 따른 체위 카테고리를 반환합니다.
-    비노출 씬이거나 일반 일상 포즈는 None을 반환합니다.
+    포즈 DB의 프롬프트 및 라벨 메타데이터를 기반으로 체위 카테고리를 동적으로 판정합니다.
+    포즈 DB가 수정되면 별도 하드코딩 수정 없이 자동으로 연동됩니다.
     """
     code_str = str(pose_code).zfill(3)
     if code_str in NON_EXPOSURE_H_POSES:
@@ -512,35 +526,41 @@ def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
     except ValueError:
         return None
 
-    # 바스트/가슴 밀착 씬 (095 여성, 165 오토 대칭)
-    if code_str in ("095", "165"):
-        return "paizuri"
+    if not ((64 <= code_int <= 79) or (80 <= code_int <= 139) or (150 <= code_int <= 209)):
+        return None
 
-    # 구강/클로즈업 씬 (064~071 공용, 086~087, 098~100, 102, 120, 126~127, 132 및 오토 대칭)
-    fellatio_codes = {
-        "064", "065", "066", "067", "068", "069", "070", "071",
-        "086", "087", "098", "099", "100", "102", "120", "126", "127", "132",
-        "156", "157", "169", "170", "172", "190", "196", "197", "202"
-    }
-    if code_str in fellatio_codes:
-        return "fellatio"
-    # 후배위/배면 씬
-    if code_str in ("088", "089", "090", "118", "121", "154", "158", "159", "160", "188", "191"):
-        return "doggystyle"
-    # 기승위/승마 씬
-    if code_str in ("091", "092", "093", "109", "114", "130", "161", "162", "163", "179", "184", "200"):
-        return "cowgirl"
-    # 측와위 씬
-    if code_str in ("107", "108", "119", "168", "177", "178", "189"):
-        return "side"
-    # 정상위/배위/누운 자세
-    if code_str in ("080", "081", "082", "083", "084", "085", "094", "096", "097", "131", "150", "151", "152", "153", "164", "166", "167", "201"):
-        return "missionary"
-    # 그 외 성인 H-씬 대역 (064~079 공용 H, 080~139 여캐 H/특색, 150~209 오토 H/특색)
-    if (64 <= code_int <= 79) or (80 <= code_int <= 139) or (150 <= code_int <= 209):
-        return "default_h"
+    db = _get_cached_pose_db()
+    entry = db.get(code_str)
+    if entry is not None:
+        label = (entry.label or "").lower()
+        prompt = (entry.prompt or "").lower()
+        combined = f"{label} {prompt}"
 
-    return None
+        # 1. 바스트 밀착 단독 (구강 복합이 아닌 순수 바스트 밀착)
+        if ("paizuri" in combined or "titfuck" in combined or "파이즈리" in label or "가슴사정" in label) and "fellatio" not in combined and "펠라" not in label:
+            return "paizuri"
+
+        # 2. 상반신 구강/손 밀착
+        if any(kw in combined for kw in ("fellatio", "blowjob", "deepthroat", "licking shaft", "licking penis", "펠라", "딥스로트", "남근핥기", "수유대딸", "가슴애무대딸")):
+            return "fellatio"
+
+        # 3. 후배위/배면
+        if any(kw in combined for kw in ("doggystyle", "sex from behind", "anal doggystyle", "후배위", "교배프레스", "뒷스마타", "빈강의실")):
+            return "doggystyle"
+
+        # 4. 기승위/상위
+        if any(kw in combined for kw in ("cowgirl", "straddling", "riding partner", "기승위", "보건실")):
+            return "cowgirl"
+
+        # 5. 측와위
+        if any(kw in combined for kw in ("side by side sex", "측위", "들박")):
+            return "side"
+
+        # 6. 정상위/배위/누운 자세
+        if any(kw in combined for kw in ("missionary", "정상위", "대면좌위", "삽입조르기", "웨딩섹스", "알몸섹스절정", "m자개각", "밀착절정")):
+            return "missionary"
+
+    return "default_h"
 
 
 def get_pose_anchor_box(

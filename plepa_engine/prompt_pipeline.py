@@ -433,7 +433,8 @@ class DefectDefenseMutator(PromptMutator):
         # [패치 E] 착의 H-씬 탈의/가슴 노출 원천 차단 네거티브벽 및 상의 보존
         is_clothed_h_scene = (not ctx.nude) and (
             any(kw in pose_tag.lower() for kw in ("clothed sex", "clothed fellatio", "fully clothed except bottom", "skirt lifted", "panties aside", "underwear aside", "clothes half removed"))
-            or ctx.pose.code in ("033", "112", "113", "114", "126", "127", "130", "131", "132", "133", "134", "135", "182", "183", "184")
+            or (ctx.pose.section in ("h_scenes", "special_h", "special_female_h", "scenes_otokonoko", "special_otokonoko", "special_otokonoko_h") and getattr(ctx.pose, "required_outfit", "") == "default")
+            or ctx.pose.code == "033"
         )
         if is_clothed_h_scene:
             # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
@@ -536,9 +537,9 @@ class TwoPersonMobMutator(PromptMutator):
                         for kw in (
                             "head on chest", "burying face", "face buried", "holding head",
                             "hugging head", "patting head", "kissing head", "hair from behind",
-                            "back of male", "back of head", "pillow talk", "lying side by side"
+                            "back of male", "back of head", "pillow talk", "lying side by side", "lying together"
                         )
-                    ) or (getattr(ctx.pose, "code", None) in ("105", "175"))
+                    )
                     is_rear_scene = (
                         any(kw in pose_tag.lower() for kw in ("back hug", "doggystyle", "sumata", "rear", "prone", "grabbed from behind", "hugging from behind"))
                         or ("behind" in pose_tag.lower() and not any(f in pose_tag.lower() for f in ("head from behind", "hair from behind", "face buried", "cleavage", "buried between breasts", "nestled in cleavage")))

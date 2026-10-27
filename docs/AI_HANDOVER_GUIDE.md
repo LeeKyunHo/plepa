@@ -688,6 +688,22 @@
     - **전수 검증**:
       - 전체 테스트 스위트 101개 항목 100% ALL PASS (`101 passed`).
 
+57. **엔진 포즈 번호 하드코딩 전면 제거 및 전체 테스트 스위트 동적 계약(Contract-Driven) 전환 (ADR 2026-10-27)**
+    - **배경 및 원인**:
+      - 포즈 재배치(095 웨딩, 105~106 샤워 연속, 112~114 착의 3부작, 115 필로우토크) 이후에도 엔진 모듈(`censor.py`, `prompt_pipeline.py`, `generation_service.py`)과 다수의 테스트 파일 내부에 과거 시절의 정적 포즈 번호 셋이나 구버전 캐릭터 리스트 하드코딩이 잔존하여, DB가 수정될 때 기능 괴리나 거짓 양성(False Positive)이 발생할 구조적 취약점이 확인됨.
+    - **해결 조치 및 기술 불변식**:
+      - **엔진 코어 하드코딩 제거 및 DB 메타데이터 동적 연동**:
+        - `plepa_engine/services/generation_service.py`: `get_optimal_resolution_for_pose`에서 구버전 `095, 165` 클로즈업 하드코딩 제거 및 `framing == "close_up"` 메타데이터 지원으로 전환 (095 웨딩 슬롯이 정상적으로 832x1216 세로형을 반환하도록 교정). `is_kiss`의 죽은 코드(`198, 199`) 제거.
+        - `plepa_engine/prompt_pipeline.py`: `is_clothed_h_scene`의 정적 번호 리스트(15종)를 폐지하고 성인 섹션 내 `required_outfit == "default"` 동적 판정으로 일원화. `is_head_hug_scene`에서 구버전 `105, 175` 하드코딩 제거 및 `"lying together"` 키워드 동적 판정 추가.
+        - `plepa_engine/censor.py`: `NON_EXPOSURE_H_POSES`에서 `185`(샤워강) 오면제 제거. `get_pose_category`의 정적 번호 셋 5종을 전면 폐지하고 캐시된 포즈 DB의 `label` 및 `prompt` 키워드 기반 동적 체위 분류기로 전환.
+      - **전체 테스트 스위트(11개 파일) 제로 하드코딩 동적 계약 전환**:
+        - 신설: `tests/conftest.py`(공용 동적 Fixture), `tests/test_pose_db_contracts.py`(코어/이벤트 DB 스키마 및 `POSE_MAPPING.md` 문서 실시간 동기화 헌법 계약 테스트).
+        - 리팩토링: `test_v2_migration.py`, `test_dynamic_aspect_ratio.py`, `test_censor_anchor.py`, `test_audit_and_seed.py`, `test_pose_background_integration.py`, `test_quality_tags.py`, `test_checkpoint_service.py`(기존 assert 0개 → 7개 동적 검증 탑재), `test_cli_gui_sync.py`, `test_gui_all_features.py`.
+      - **포즈 매핑 문서 동기화**: `POSE_MAPPING.md` 및 `docs/POSE_MAPPING_V2.md`에 누락되어 있던 `122~127`(`192~197`) 6종을 동기화하여 `test_pose_mapping_md_sync_contract` 100% 통과.
+    - **전수 검증**:
+      - 전체 테스트 스위트 104개 항목 100% ALL PASS (`104 passed`).
+
+
 
 ---
 

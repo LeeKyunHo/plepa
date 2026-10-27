@@ -83,7 +83,7 @@ def get_optimal_resolution_for_pose(
     )
     is_close_up = any(kw in p_text for kw in close_up_keywords)
 
-    if code_str in ("064", "065", "066", "067", "068", "069", "070", "071", "095", "165"):
+    if getattr(pose_obj, "framing", "") == "close_up" or code_str in ("064", "065", "066", "067", "068", "069", "070", "071"):
         is_close_up = True
 
     if is_close_up:
@@ -813,7 +813,7 @@ class GenerationService:
 
                             # Auto-QC 품질 및 결함 검증
                             if params.auto_qc:
-                                is_kiss = "kiss" in (pose.prompt or "").lower() or str(target.code) in ("060", "061", "198", "199", "019")
+                                is_kiss = "kiss" in (pose.prompt or "").lower() or str(target.code) in ("060", "061", "019")
                                 passed, fail_reason, _ = validate_generated_image(
                                     image=out_path,
                                     is_solo_scene=pose.is_solo_scene,
