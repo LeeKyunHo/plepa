@@ -76,3 +76,5 @@ pose_mapping.txt
 .cache/
 
 cloudflared.exe
+
+projects/*/artist_benchmark*/

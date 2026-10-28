@@ -10,6 +10,13 @@ import uvicorn
 
 app = FastAPI(title="Plepa Realtime Mobile Gallery")
 
+BENCH1_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark"
+BENCH2_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark_v2"
+if BENCH1_DIR.exists():
+    app.mount("/bench1", StaticFiles(directory=BENCH1_DIR, html=True), name="bench1")
+if BENCH2_DIR.exists():
+    app.mount("/bench2", StaticFiles(directory=BENCH2_DIR, html=True), name="bench2")
+
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "assets"
 TOTAL_TARGET = 476
 
