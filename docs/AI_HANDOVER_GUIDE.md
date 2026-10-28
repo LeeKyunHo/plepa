@@ -1462,3 +1462,23 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
      - YKN 4인 113번 파일명을 `착의섹스_본편`으로 동기화.
      - `test_v2_migration.py` 착의 씬 대역을 112~114로 갱신하여 24개 테스트 100% ALL PASS.
 
+
+
+### ADR-80: 80인 작가 화풍 벤치마크 파이프라인(400장 완주) 및 모바일 갤러리 웹 뷰어 마운트 아키텍처 (2026-10-28)
+- **배경 및 목적**:
+  1. SDXL 단일 파이프라인(`unholyDesireMixSinister_v90.safetensors`)에서 80인의 유명 일러스트레이터/망가/동인지/성인웹툰 작가들의 화풍 태그(`(artist:xxx:1.15)`)가 캐릭터 고유성 및 다양한 포즈에 미치는 영향을 체계적으로 벤치마크하고자 함.
+  2. 1차 40인(설하율 20인, 설유아 20인 × 5개 포즈 = 200장) + 2차 40인(설세린 14인, 설시아 13인, 유키노 원본 13인 × 5개 포즈 = 200장) 총 400장 대규모 생성.
+  3. 5대 핵심 검증 포즈: `000`(기본 전신 스탠딩), `028`(포옹/스킨십), `076`(봉사/기승위 준비), `095`(웨딩 본방/클로즈업 결합), `106`(샤워 본방/입체 결합).
+- **결정 사항**:
+  1. **벤치마크 전용 스크립트 구축 (`scripts/run_artist_benchmark.py`, `run_artist_benchmark_v2.py`)**:
+     - `GenerationParams`의 `custom_pos`를 활용해 작가 태그(`(artist:xxx:1.15)`)를 최상단 품질 태그 바로 앞에 주입.
+     - `ckpt_tag=f"art_{artist_id}"` 및 `overwrite=True`로 격리 생성하여 기존 완성 에셋과의 충돌 및 스킵 현상 방지.
+     - 2차 스크립트에서 유키노 원본(`ykn`)은 `roster="don"`으로 동적 분기하여 단일 진실 공급원(SSOT) 준수.
+  2. **에셋 무손실 보존 & Git 슬림화 (.gitignore)**:
+     - 대규모 벤치마크 에셋(`projects/*/artist_benchmark*/`)을 `.gitignore`에 등록하여 400장의 고해상도 WebP 파일이 깃 커밋에 올라가 리포지토리가 비대해지는 것을 방지하고 로컬 SSD에 100% 무손실 보존.
+  3. **모바일 갤러리 웹 라우트 마운트 (`scripts/mobile_gallery.py`)**:
+     - FastAPI 기반 웹 갤러리에 `/bench1` (`projects/ykn/artist_benchmark/`) 및 `/bench2` (`projects/ykn/artist_benchmark_v2/`)를 `StaticFiles(html=True)`로 마운트.
+     - 포트 8080 및 Cloudflare 모바일 터널에서 웹 브라우저로 80인 400장 결과물을 원클릭으로 쾌적하게 열람 가능.
+  4. **트러블슈팅 및 가드레일**:
+     - 윈도우 `COM Surrogate`(`dllhost.exe`) 파일 잠금 현상 원인 규명 및 작업관리자/taskkill 프로세스 종료 플레이북 정립.
+     - `test_grounding_production_asset_lossless_guardrail` 무결성 검증 통과.

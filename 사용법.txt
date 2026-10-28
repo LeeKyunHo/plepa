@@ -126,6 +126,17 @@
   python scripts/export_context.py                                  # 외부 AI(Gemini Notebook 등) 코드 리뷰용 3-Tier 스냅샷 생성
   python scripts/export_context.py --full-code                      # Tier 2 핵심 모듈 원문(40_CORE_CODE.md) 포함 번들링
 
+  ── [9] 80인 작가 화풍 벤치마크 (400장) 및 모바일/PC 웹 갤러리 서빙 (ADR-80) ────
+  # 🎨 1차 40인 벤치마크 생성 (하율 20인, 유아 20인 × 5개 포즈 = 200장)
+  python scripts/run_artist_benchmark.py
+
+  # 🎨 2차 40인 벤치마크 생성 (세린 14인, 시아 13인, 유키노 13인 × 5개 포즈 = 200장)
+  python scripts/run_artist_benchmark_v2.py
+
+  # 📱 모바일/PC 갤러리 웹 서버 구동 (포트 8080에서 1차 /bench1, 2차 /bench2 원클릭 서빙)
+  python scripts/mobile_gallery.py
+  # 브라우저 접속: http://127.0.0.1:8080/bench1/  및  http://127.0.0.1:8080/bench2/
+
 
 ==============================================================================
   2. V3 포즈 번호 체계 요약 (코어 범용 & 로스터 격리 + 오토코노코 +70 대칭 법칙)
