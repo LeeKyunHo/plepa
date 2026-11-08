@@ -11,30 +11,26 @@
 
 ## 1. 개편 대역 체계 요약 (V3 Section Architecture)
 
-| 새 대역 (V3 Range) | V3 섹션명 | 에셋 서브폴더 | 성격 및 수위 | 관리 주체 (SSOT) |
+| 새 대역 (V3 Range) | V3 섹션명 | 에셋 서브폴더 (통합 2대) | 성격 및 수위 | 관리 주체 (SSOT) |
 | :--- | :--- | :--- | :--- | :--- |
-| `000 ~ 019` | `emotions` | `01_emotions` | 완전 착의 기본 감정 표현 (20종) | `sdxl_pose_database.json` (코어) |
-| `020 ~ 050` | `poses` | `02_daily` | 범용 일상 및 가벼운 스킨십 (31종, 배경 하드코딩 제거) | `sdxl_pose_database.json` (코어) |
-| `051 ~ 059` | `daily_events` | `03_events` | 로스터 고유 일상 이벤트 (9슬롯 예약, 캠퍼스 5종) | `projects/{roster}/events.json` |
-| `060 ~ 079` | `romance` | `04_romance` | 로맨스 (4종) + 구강/핸드잡 (8종) + 봉사/웨딩 (8종) = 20종 완비 | `sdxl_pose_database.json` (코어) |
-| `080 ~ 129` | `h_scenes` | `05_h_scenes` | 여성 범용 체위 H씬 (37종) | `sdxl_pose_database.json` (코어) |
-| `130 ~ 139` | `special_female_h`| `06_special_h` | 여성 특색 이벤트 H씬 (캠퍼스 3종: 빈강의실, 보건실, 화장실펠라) | `projects/{roster}/events.json` |
-| `150 ~ 199` | `scenes_otokonoko`| `05_h_scenes` | 오토코노코 범용 체위 H씬 (37종, 여캐와 1:1 대칭 `+70`) | `sdxl_pose_database.json` (코어) |
-| `200 ~ 209` | `special_otokonoko`| `06_special_h` | 오토코노코 특색 이벤트 H씬 (캠퍼스 3종, 여캐와 1:1 대칭 `+70`)| `projects/{roster}/events.json` |
+| `000 ~ 019` | `emotions` | `01_normal` (통합) | 완전 착의 기본 감정 표현 (20종) | `sdxl_pose_database.json` (코어) |
+| `020 ~ 050` | `poses` | `01_normal` (통합) | 범용 일상 및 가벼운 스킨십 (31종, 배경 하드코딩 제거) | `sdxl_pose_database.json` (코어) |
+| `051 ~ 059` | `daily_events` | `01_normal` (통합) | 로스터 고유 일상 이벤트 (9슬롯 예약, 캠퍼스 5종) | `projects/{roster}/events.json` |
+| `060 ~ 079` | `romance` | `02_h_scenes` (통합)| 로맨스 (4종) + 구강/핸드잡 (8종) + 봉사/웨딩 (8종) = 20종 완비 | `sdxl_pose_database.json` (코어) |
+| `080 ~ 129` | `h_scenes` | `02_h_scenes` (통합)| 여성 범용 체위 H씬 (37종) | `sdxl_pose_database.json` (코어) |
+| `130 ~ 139` | `special_female_h`| `02_h_scenes` (통합)| 여성 특색 이벤트 H씬 (캠퍼스 3종: 빈강의실, 보건실, 화장실펠라) | `projects/{roster}/events.json` |
+| `150 ~ 199` | `scenes_otokonoko`| `02_h_scenes` (통합)| 오토코노코 범용 체위 H씬 (37종, 여캐와 1:1 대칭 `+70`) | `sdxl_pose_database.json` (코어) |
+| `200 ~ 209` | `special_otokonoko`| `02_h_scenes` (통합)| 오토코노코 특색 이벤트 H씬 (캠퍼스 3종, 여캐와 1:1 대칭 `+70`)| `projects/{roster}/events.json` |
 
 ---
 
-## 2. 6대 에셋 계층 서브폴더 구조 (Asset Folder Hierarchy)
+## 2. 2대 에셋 계층 서브폴더 구조 (Asset Folder Hierarchy)
 
 ```text
 projects/{roster}/assets/{prefix}/ (검열 완성본)
 projects/{roster}/assets/{prefix}_origin/ (무검열 백업 원본)
-├── 01_emotions/   (000~019: 감정표현 20종)
-├── 02_daily/      (020~050: 범용 일상 31종)
-├── 03_events/     (051~059: 로스터 고유 일상 이벤트)
-├── 04_romance/    (060~079: 로맨스 & 봉사 일원화 20종 완비)
-├── 05_h_scenes/   (080~129 여캐 / 150~199 오토코노코 범용 체위 37종)
-└── 06_special_h/  (130~139 여캐 / 200~209 오토코노코 특색 이벤트 H씬)
+├── 01_normal/     (000~059: 감정표현 20종 + 범용일상 31종 + 로스터 고유 일상 이벤트)
+└── 02_h_scenes/   (060~209+: 로맨스 & 구강 20종 + 여캐/오토 범용 H씬 37종 + 특색 H씬)
 ```
 
 ---
@@ -154,7 +150,7 @@ projects/{roster}/assets/{prefix}_origin/ (무검열 백업 원본)
 | `095` | 웨딩섹스 | `165` | 웨딩섹스 (대칭) | `05_h_scenes` |
 | `096` | 남근핥기 | `166` | 핸드잡강 | `05_h_scenes` |
 | `097` | 가슴사정 | `167` | 동시사정 | `05_h_scenes` |
-| `098` | 파이즈리펠라 | `168` | 가슴애무핸드잡 | `05_h_scenes` |
+| `098` | 파이즈리펠라 | `168` | 투핸드펠라 | `05_h_scenes` |
 | `099` | 펠라치오약 | `169` | 펠라치오약 | `05_h_scenes` |
 | `100` | 펠라치오강 | `170` | 펠라치오강 | `05_h_scenes` |
 | `101` | 펠라사후 | `171` | 펠라사후 | `05_h_scenes` |
@@ -168,19 +164,19 @@ projects/{roster}/assets/{prefix}_origin/ (무검열 백업 원본)
 | `109` | 커닐링구스 | `179` | 구강애무받기 | `05_h_scenes` |
 | `110` | 보지애무약 | `180` | 후방애무약 | `05_h_scenes` |
 | `111` | 보지애무강 | `181` | 후방애무강 | `05_h_scenes` |
-| `112` | 착의섹스_전 | `182` | 착의섹스약 | `05_h_scenes` |
-| `113` | 착의섹스_본편 | `183` | 착의섹스강 | `05_h_scenes` |
-| `114` | 착의섹스_후 | `184` | 착의섹스후 (대칭) | `05_h_scenes` |
+| `112` | 착의섹스_전 | `182` | 착의섹스_전 | `05_h_scenes` |
+| `113` | 착의섹스_본편 | `183` | 착의섹스_본편 | `05_h_scenes` |
+| `114` | 착의섹스_후 | `184` | 착의섹스_후 | `05_h_scenes` |
 | `115` | 필로우토크 | `185` | 필로우토크 (대칭) | `05_h_scenes` |
 | `116` | 파일드라이버 | `186` | 파일드라이버 | `05_h_scenes` |
 | `117` | 누드대딸 | `187` | 누드대딸 | `05_h_scenes` |
 | `118` | 교배프레스 | `188` | 교배프레스 | `05_h_scenes` |
 | `119` | 들박 | `189` | 들박 | `05_h_scenes` |
-| `120` | 수유대딸 | `190` | 가슴애무대딸 | `05_h_scenes` |
+| `120` | 수유대딸 | `190` | 백허그대딸 | `05_h_scenes` |
 | `121` | 뒷스마타 | `191` | 뒷스마타 | `05_h_scenes` |
 | `122` | 스팽킹 | `192` | 스팽킹 | `05_h_scenes` |
 | `123` | 전라유혹 | `193` | 배복종자세 | `05_h_scenes` |
-| `124` | 애널섹스 | `194` | 애널섹스 | `05_h_scenes` |
+| `124` | 애널섹스 | `194` | 역기승위 | `05_h_scenes` |
 | `125` | 풋잡 | `195` | 풋잡 | `05_h_scenes` |
 | `126` | 착의펠라약 | `196` | 착의펠라약 | `05_h_scenes` |
 | `127` | 착의펠라강 | `197` | 착의펠라강 | `05_h_scenes` |
