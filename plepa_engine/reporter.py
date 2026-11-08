@@ -16,14 +16,23 @@ SEPARATOR = "═" * 70
 
 def get_subfolder_for_code(code: str | int) -> str:
     """
-    포즈 코드에 따른 V3 에셋 대역별 서브폴더명을 반환합니다:
-    - 000~019 -> '01_emotions' (감정표현)
-    - 020~050 -> '02_daily' (범용 일상)
-    - 051~059 -> '03_events' (로스터 이벤트)
-    - 060~079 -> '04_romance' (로맨스 & 공용 구강)
-    - 080~129, 150~199 -> '05_h_scenes' (범용 H씬 체위)
-    - 130~139, 200~209 -> '06_special_h' (로스터 특색 이벤트 H씬)
+    포즈 코드에 따른 2대 통합 서브폴더명을 반환합니다:
+    - 000~059 -> '01_normal' (감정표현 000~019 + 범용일상 020~050 + 로스터이벤트 051~059 통합)
+    - 060~209+ -> '02_h_scenes' (로맨스/구강 060~079 + 범용H씬 080~129/150~199 + 특색H씬 130~139/200~209 통합)
     """
+    try:
+        c = int(str(code).strip())
+    except (ValueError, TypeError):
+        return "01_normal"
+
+    if 0 <= c <= 59:
+        return "01_normal"
+    else:
+        return "02_h_scenes"
+
+
+def get_legacy_subfolder_for_code(code: str | int) -> str:
+    """구버전 V3 6대 대역 서브폴더명 반환 (레거시 폴백 및 마이그레이션용)."""
     try:
         c = int(str(code).strip())
     except (ValueError, TypeError):

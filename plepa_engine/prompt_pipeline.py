@@ -188,7 +188,8 @@ class PositiveAssemblyMutator(PromptMutator):
                 quality_part, char_part = base_pos.split(" BREAK ", 1)
                 char_part = harmonize_character_expression(char_part, pose_tag)
                 if ctx.is_two_person:
-                    char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
+                    char_part = re.sub(r",?\s*\b(1girl,\s*solo|1boy,\s*solo)\b", lambda m: ", 1girl" if "1girl" in m.group(0).lower() else ", 1boy", char_part, flags=re.IGNORECASE)
+                    char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
                     char_part = re.sub(r"^\s*,\s*", "", char_part)
                 quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
                 for kw in ctx.extra_quality_kws:
@@ -221,7 +222,8 @@ class PositiveAssemblyMutator(PromptMutator):
                 quality_part, char_part = base_pos.split(" BREAK ", 1)
                 char_part = harmonize_character_expression(char_part, pose_tag)
                 if ctx.is_two_person:
-                    char_part = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", char_part, flags=re.IGNORECASE)
+                    char_part = re.sub(r",?\s*\b(1girl,\s*solo|1boy,\s*solo)\b", lambda m: ", 1girl" if "1girl" in m.group(0).lower() else ", 1boy", char_part, flags=re.IGNORECASE)
+                    char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
                     char_part = re.sub(r"^\s*,\s*", "", char_part)
                 quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
                 for kw in ctx.extra_quality_kws:
@@ -290,7 +292,7 @@ class NegativeBaseMutator(PromptMutator):
                 neg = f"{neg}, {solo_inhibit}"
 
             # [패치 2BOYS]
-            multi_male_inhibit = "((2boys, 3boys, multiple boys, multiple males, group sex, threesome, gangbang:1.35))"
+            multi_male_inhibit = "((3boys, multiple boys, group sex, threesome, gangbang:1.35))" if ((ctx.char.gender or "").lower() == "otokonoko" or "2boys" in ctx.pose_tag.lower()) else "((2boys, 3boys, multiple boys, multiple males, group sex, threesome, gangbang:1.35))"
             if multi_male_inhibit not in neg:
                 neg = f"{neg}, {multi_male_inhibit}"
 
@@ -503,12 +505,12 @@ class TwoPersonMobMutator(PromptMutator):
 
             is_multi_partner = any(
                 kw in pose_tag.lower()
-                for kw in ("2boys", "3boys", "multiple boys", "gangbang", "threesome", "foursome", "group sex", "bukkake", "surrounded", "harem")
+                for kw in ("3boys", "multiple boys", "gangbang", "threesome", "foursome", "group sex", "bukkake", "surrounded", "harem")
             )
 
             multi_male_guard = (
                 "" if is_multi_partner
-                else "(2boys:1.6), (multiple boys:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate male:1.5), (two male partners:1.5), (second man:1.5), (multiple partners:1.5), "
+                else "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate male:1.5), (two male partners:1.5), (multiple partners:1.5), " if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate male:1.5), (two male partners:1.5), (second man:1.5), (multiple partners:1.5), "
             )
             limb_guard = "(extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (multiple arms:1.45), (three hands:1.45), (four hands:1.45), (duplicate hands:1.45), (duplicate arms:1.45), (extra limbs:1.4), (fused hands:1.4), (poorly drawn hands:1.4), "
             neg = f"{neg}, (severed head:1.4), (decapitation:1.4), (headless:1.4), (floating head:1.4), (disembodied head:1.4), (multiple heads:1.35), (two heads:1.35), (2girls:1.35), (multiple girls:1.35), (extra girl:1.35), (two girls:1.35), (duplicate:1.35), (reaction face:1.35), (inset:1.35), {multi_male_guard}{limb_guard}(extra head:1.35), own hand on face, own hand on chin, resting chin on hand, holding own chin, touching own face, touching own chin, hand on own face, hand on own chin, gloves, orange skin, (pitch black shadow on body:1.25), (burnt skin:1.25)"
@@ -549,7 +551,8 @@ class TwoPersonMobMutator(PromptMutator):
                     if is_head_hug_scene:
                         # 이미 포즈 자체에 남성의 밀착 위치/뒤통수가 완전히 정의되어 있으므로 추가 모브 BREAK 블록을 주입하지 않음 (남성 분신 2명 방지)
                         mob_positive = ""
-                        mob_negative = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), (2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8), (extra head:1.6), (three heads:1.6), (multiple heads:1.6)"
+                        mob_boy_guard_hug = "(3boys:1.8), (multiple boys:1.8), (three men:1.8), (extra male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)" if ctx.is_otokonoko else "(2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)"
+                        mob_negative = f"(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), {mob_boy_guard_hug}, (extra head:1.6), (three heads:1.6), (multiple heads:1.6)"
                     else:
                         head_cue = "(male head out of frame:1.15), "
                         head_suppression = male_face_suppression
@@ -578,12 +581,14 @@ class TwoPersonMobMutator(PromptMutator):
                             if lower_body:
                                 mob_positive += f", {lower_body}"
                             mob_positive += ", ((large thick erect penis:1.35)), ((impressive manhood, thick shaft:1.3))"
-                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
+                            mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
                         else:
                             mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1)"
                             if lower_body:
                                 mob_positive += f", {lower_body}"
-                            mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, (2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6), (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
+                            mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
+                            mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
 
                 if mob_positive:
                     pos = f"{pos} {mob_positive}"

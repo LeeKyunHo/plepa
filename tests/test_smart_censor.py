@@ -11,7 +11,9 @@ import pytest
 from PIL import Image
 
 from plepa_engine.censor import (
+    apply_debug_bbox,
     apply_silhouette,
+    censor_image,
     get_skin_mask,
     verify_and_heal_censor,
 )
@@ -54,3 +56,20 @@ def test_verify_and_heal_censor_clean():
     result, was_healed = verify_and_heal_censor(clean_img, style="white_silhouette")
     assert isinstance(result, Image.Image)
     assert was_healed is False
+
+
+def test_apply_debug_bbox():
+    """BBox 및 신뢰도 점수 디버그 시각화 렌더링 검증."""
+    img = Image.new("RGB", (300, 300), (255, 255, 255))
+    boxes = [
+        ((50, 50, 150, 150), "penis", 0.88),
+        ((160, 160, 220, 220), "pussy"),
+    ]
+    debug_img = apply_debug_bbox(img, boxes)
+    assert isinstance(debug_img, Image.Image)
+    assert debug_img.size == (300, 300)
+
+    # 원본 흰색 이미지와 디버그 박스가 그려진 이미지가 달라야 함
+    orig_arr = np.array(img)
+    debug_arr = np.array(debug_img)
+    assert not np.array_equal(orig_arr, debug_arr)

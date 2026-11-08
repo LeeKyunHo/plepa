@@ -48,7 +48,7 @@ from plepa_engine.models import (
     PoseEntry,
 )
 from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
-from plepa_engine.reporter import asset_filename, get_subfolder_for_code, print_batch_summary, print_overall_batch_summary
+from plepa_engine.reporter import asset_filename, get_subfolder_for_code, get_legacy_subfolder_for_code, print_batch_summary, print_overall_batch_summary
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
@@ -362,7 +362,7 @@ class GenerationService:
         # 3. ComfyUI 연결 검사
         comfy_host = conf.get("comfy_host", COMFY_HOST)
         client = ComfyClient(host=comfy_host)
-        if not params.dry_run and not params.mock:
+        if not params.dry_run and not params.mock and not params.censor_only:
             if not client.check_connection():
                 raise ConnectionError(
                     f"ComfyUI 서버({comfy_host})에 연결할 수 없습니다. "
@@ -409,7 +409,7 @@ class GenerationService:
                 print(f"  자동 검열: 활성 (스타일: {params.censor_style}, 대상: {params.censor_targets})")
             print("=" * 60)
 
-        session_cm = client.session() if (not params.dry_run and not params.mock) else nullcontext()
+        session_cm = client.session() if (not params.dry_run and not params.mock and not params.censor_only) else nullcontext()
         total_batch_start = time.time()
         with session_cm:
             for char_idx, (char, actual_roster) in enumerate(target_chars, 1):
@@ -445,7 +445,7 @@ class GenerationService:
                 if params.engine == "sdxl" and not params.no_ref and ref_weight > 0.0:
                     ref_path = self.asset_svc.find_reference_image(char.prefix, actual_roster, custom_path=params.ref_image)
                     if ref_path:
-                        if not params.dry_run and not params.mock:
+                        if not params.dry_run and not params.mock and not params.censor_only:
                             try:
                                 ref_file_name = client.upload_image(ref_path)
                             except Exception as ue:
@@ -491,16 +491,29 @@ class GenerationService:
                     out_name = asset_filename(char.prefix, code, label=pose.label, naming=params.naming)
                     legacy_name = asset_filename(char.prefix, code, naming="code")
 
-                    # 2-Track 탐색기: 대역별 서브폴더 우선, 기존 플랫 디렉토리 폴백
+                    # 3-Track 탐색기: 신규 2대 서브폴더(01_normal, 02_h_scenes) 우선 -> 구버전 6대 서브폴더 폴백 -> 기존 플랫 디렉토리 폴백
+                    legacy_subfolder = get_legacy_subfolder_for_code(code)
+                    legacy_sub_out = output_dir / legacy_subfolder
+                    legacy_sub_origin = origin_dir / legacy_subfolder
+
                     if (sub_out_dir / out_name).exists():
                         out_path = sub_out_dir / out_name
+                    elif (legacy_sub_out / out_name).exists():
+                        out_path = legacy_sub_out / out_name
                     elif (output_dir / out_name).exists():
                         out_path = output_dir / out_name
                     else:
                         sub_out_dir.mkdir(parents=True, exist_ok=True)
                         out_path = sub_out_dir / out_name
 
-                    legacy_path = (sub_out_dir / legacy_name) if (sub_out_dir / legacy_name).exists() else (output_dir / legacy_name)
+                    if (sub_out_dir / legacy_name).exists():
+                        legacy_path = sub_out_dir / legacy_name
+                    elif (legacy_sub_out / legacy_name).exists():
+                        legacy_path = legacy_sub_out / legacy_name
+                    elif (output_dir / legacy_name).exists():
+                        legacy_path = output_dir / legacy_name
+                    else:
+                        legacy_path = sub_out_dir / legacy_name
     
                     # 포즈별 동적 배경 프롬프트 결정
                     if params.bg:
@@ -624,6 +637,8 @@ class GenerationService:
                     if params.censor_only:
                         if (sub_origin_dir / out_name).exists():
                             origin_path = sub_origin_dir / out_name
+                        elif (legacy_sub_origin / out_name).exists():
+                            origin_path = legacy_sub_origin / out_name
                         elif (origin_dir / out_name).exists():
                             origin_path = origin_dir / out_name
                         else:
@@ -681,6 +696,8 @@ class GenerationService:
                         if should_censor:
                             if (sub_origin_dir / out_path.name).exists():
                                 origin_path = sub_origin_dir / out_path.name
+                            elif (legacy_sub_origin / out_path.name).exists():
+                                origin_path = legacy_sub_origin / out_path.name
                             elif (origin_dir / out_path.name).exists():
                                 origin_path = origin_dir / out_path.name
                             else:

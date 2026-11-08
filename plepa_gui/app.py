@@ -92,6 +92,20 @@ def setup_routes():
         """스마트폰 전용 무경량 고속 터치 스와이프 뷰어 (Vue/Quasar 미로드, 덮어쓰기 버그 원천 차단)."""
         return HTMLResponse(content=generate_mobile_viewer_html("campus"))
 
+    @app.get("/otoko")
+    @app.get("/o")
+    def api_otoko_benchmark():
+        """오토코노코 40인 화풍 5대 H씬 벤치마크 뷰어 즉시 이동."""
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/projects_static/maid/otoko_benchmark/index.html")
+
+    @app.get("/compare")
+    @app.get("/c")
+    def api_compare_benchmark():
+        """검열 방식 3대 모드 비교 뷰어 즉시 이동."""
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/projects_static/maid/otoko_benchmark/compare.html")
+
     @ui.page("/settings")
     def page_settings():
         ui.dark_mode().enable()

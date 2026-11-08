@@ -78,3 +78,4 @@ pose_mapping.txt
 cloudflared.exe
 
 projects/*/artist_benchmark*/
+projects/*/otoko_benchmark/

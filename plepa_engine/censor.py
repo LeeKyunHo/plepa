@@ -105,139 +105,107 @@ def apply_silhouette(
     except Exception as pe:
         logger.debug(f"[Censor] 보호 영역 검출 생략: {pe}")
 
-    for box, label in boxes_with_labels:
+    for item in boxes_with_labels:
+        box, label = item[0], item[1]
         x1, y1, x2, y2 = box
         bw = max(1, x2 - x1)
         bh = max(1, y2 - y1)
 
         is_penis = label == "penis"
         if is_penis:
-            # 슬림/타이트 마진:
-            # 과도한 인공 마진으로 주변 피부/감상 영역이 가려지는 것을 막고,
-            # AI 세그멘테이션이 실제 선화 경계선만 정확히 따도록 최소한의 마진만 적용
-            m_x = 0.02
+            m_x = 0.03
             m_top = 0.02
-            m_bot = 0.08 if bh > bw * 1.2 else 0.03
+            m_bot = 0.16 if bh > bw * 0.8 else 0.10
             ex1 = max(0, int(x1 - bw * m_x))
             ey1 = max(0, int(y1 - bh * m_top))
             ex2 = min(w, int(x2 + bw * m_x))
             ey2 = min(h, int(y2 + bh * m_bot))
         else:
-            m_x = 0.02
-            m_top = 0.0
-            m_bot = 0.03
+            m_x = 0.03
+            m_top = 0.02
+            m_bot = 0.10
             ex1 = max(0, int(x1 - bw * m_x))
-            ey1 = max(0, y1)
+            ey1 = max(0, int(y1 - bh * m_top))
             ex2 = min(w, int(x2 + bw * m_x))
             ey2 = min(h, int(y2 + bh * m_bot))
 
         expanded_bbox = [ex1, ey1, ex2, ey2]
         ebw = max(1, ex2 - ex1)
         ebh = max(1, ey2 - ey1)
-        mask_obtained = False
         sub_m = np.zeros((h, w), dtype=np.uint8)
 
-        # 1. MobileSAM 추론 (BBox + Point Prompting 중심점 가이드)
         if sam is not None:
             try:
-                cx = int((ex1 + ex2) / 2)
-                cy = int((ey1 + ey2) / 2)
+                cx = int((x1 + x2) / 2)
+                cy = int((y1 + y2) / 2)
                 try:
-                    results = sam(
-                        img,
-                        bboxes=[expanded_bbox],
-                        points=[[[cx, cy]]],
-                        labels=[[1]],
-                        verbose=False
-                    )
+                    results = sam(img, bboxes=[[x1, y1, x2, y2]], points=[[[cx, cy]]], labels=[[1]], verbose=False)
                 except Exception:
-                    results = sam(img, bboxes=[expanded_bbox], verbose=False)
+                    results = sam(img, bboxes=[[x1, y1, x2, y2]], verbose=False)
 
                 if results and results[0].masks is not None:
                     m_data = results[0].masks.data.cpu().numpy()
-                    sub_m = (m_data[0] * 255).astype(np.uint8)
-                    if sub_m.shape != (h, w):
-                        sub_m = cv2.resize(sub_m, (w, h), interpolation=cv2.INTER_NEAREST)
-
-                    # BBox 경계 외곽 엄격 제한 (타 부위 누수 차단)
-                    crop_mask = np.zeros_like(sub_m)
+                    raw_m = (m_data[0] * 255).astype(np.uint8)
+                    if raw_m.shape != (h, w):
+                        raw_m = cv2.resize(raw_m, (w, h), interpolation=cv2.INTER_NEAREST)
+                    crop_mask = np.zeros_like(raw_m)
                     crop_mask[ey1:ey2, ex1:ex2] = 255
-                    sub_m = cv2.bitwise_and(sub_m, crop_mask)
-
-                    # ── 스마트 피부색 차감 (손가락/허벅지 번짐 원천 방지) ──
-                    # BBox 내부 중심 코어 영역(55%)은 대상 부위 본체이므로 온전히 보호하고,
-                    # 손(detect_hands) 영역과 겹치거나 BBox 외곽부에 위치한 밝은 피부색 픽셀을 차감
-                    core_mask = np.zeros((h, w), dtype=np.uint8)
-                    c_pad_x = int(bw * 0.22)
-                    c_pad_y = int(bh * 0.20)
-                    core_x1 = min(w - 1, max(0, x1 + c_pad_x))
-                    core_y1 = min(h - 1, max(0, y1 + c_pad_y))
-                    core_x2 = max(core_x1 + 1, min(w, x2 - c_pad_x))
-                    core_y2 = max(core_y1 + 1, min(h, y2 - c_pad_y))
-                    cv2.rectangle(core_mask, (core_x1, core_y1), (core_x2, core_y2), 255, -1)
-
-                    non_core = cv2.bitwise_not(core_mask)
-                    # 손과 겹치는 피부는 100% 차감
+                    raw_m = cv2.bitwise_and(raw_m, crop_mask)
                     hand_skin = cv2.bitwise_and(skin_np, hands_mask)
-                    # 코어 바깥 BBox 외곽의 겹치는 피부 차감
-                    outer_skin = cv2.bitwise_and(skin_np, non_core)
-                    peel_mask = cv2.bitwise_or(hand_skin, outer_skin)
-                    sub_m = cv2.bitwise_and(sub_m, cv2.bitwise_not(peel_mask))
-
-                    # 노이즈 컨투어 정제: 미세 파편 제거
-                    contours, _ = cv2.findContours(sub_m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    raw_m = cv2.bitwise_and(raw_m, cv2.bitwise_not(hand_skin))
+                    contours, _ = cv2.findContours(raw_m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     if contours:
                         max_area = max(cv2.contourArea(c) for c in contours)
-                        cleaned_sub_m = np.zeros_like(sub_m)
-                        for c in contours:
-                            c_area = cv2.contourArea(c)
-                            if c_area >= 150 and c_area >= max_area * 0.05:
-                                cv2.drawContours(cleaned_sub_m, [c], -1, 255, -1)
-                        sub_m = cleaned_sub_m
-
-                    if np.count_nonzero(sub_m) > 0:
-                        mask_obtained = True
+                        valid_pts = [c for c in contours if cv2.contourArea(c) >= max(200, max_area * 0.20)]
+                        if valid_pts:
+                            merged_pts = np.vstack(valid_pts)
+                            hull = cv2.convexHull(merged_pts)
+                            cv2.drawContours(sub_m, [hull], -1, 255, -1)
             except Exception as e:
-                logger.warning(f"[Censor] MobileSAM 추론 실패, OpenCV 폴백: {e}")
+                logger.warning(f'[Censor] MobileSAM fallback: {e}')
 
-        # 2. SAM 실패 시 OpenCV GrabCut 전경 마스크 폴백 (타원 강제 보강 배제)
-        if not mask_obtained:
-            try:
-                roi = img_np[ey1:ey2, ex1:ex2]
-                if roi.size > 0:
-                    bgd_model = np.zeros((1, 65), np.float64)
-                    fgd_model = np.zeros((1, 65), np.float64)
-                    rect = (2, 2, max(1, ex2 - ex1 - 4), max(1, ey2 - ey1 - 4))
-                    grab_mask = np.zeros(roi.shape[:2], np.uint8)
-                    cv2.grabCut(roi, grab_mask, rect, bgd_model, fgd_model, 3, cv2.GC_INIT_WITH_RECT)
-                    fg_mask = np.where((grab_mask == 2) | (grab_mask == 0), 0, 255).astype(np.uint8)
-                    sub_m[ey1:ey2, ex1:ex2] = np.maximum(sub_m[ey1:ey2, ex1:ex2], fg_mask)
-                    if np.count_nonzero(sub_m) > 0:
-                        mask_obtained = True
-            except Exception:
-                pass
+        # 중심부터 하단 기저부(16% 콤팩트 확장 영역)까지 포괄하는 매끈한 타원 캡슐 코어 통합
+        bcx = int((ex1 + ex2) / 2)
+        bcy = int((ey1 + ey2) / 2)
+        erx = max(6, int(ebw * 0.44))
+        ery = max(6, int(ebh * 0.46))
+        cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
 
-        # 인공적인 타원 보강(Core Capsule)은 일러스트 감상미를 해치므로 완전 배제하고,
-        # AI가 검출한 순수 실루엣만 렌더링합니다.
+        # 단일 볼록 껍질(Convex Hull)로 요철 및 점 파편 100% 제거
+        c_all, _ = cv2.findContours(sub_m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if c_all:
+            hull_all = cv2.convexHull(np.vstack(c_all))
+            sub_m = np.zeros((h, w), dtype=np.uint8)
+            cv2.drawContours(sub_m, [hull_all], -1, 255, -1)
+
         final_mask = np.maximum(final_mask, sub_m)
-
-    # 얼굴 상단(눈/이마) 보호 레이어 차감 (타겟 중심부가 훼손되지 않는 선에서만 보호)
-    if np.count_nonzero(protection_mask) > 0:
-        final_mask = cv2.bitwise_and(final_mask, cv2.bitwise_not(protection_mask))
 
     if np.count_nonzero(final_mask) == 0:
         return img
 
-    # 마스크 클로징 및 스무딩 (자연스러운 외곽선 곡선화)
-    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    closed = cv2.morphologyEx(final_mask, cv2.MORPH_CLOSE, kernel_close)
+    # 5. 미세 모폴로지 닫힘 + 경계 스무딩 (과도한 팽창 배제하고 콤팩트 라인 유지)
+    kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    dilated = cv2.dilate(final_mask, kernel_dilate, iterations=1)
 
-    # 테두리 가우시안 블러 (미세 안티앨리어싱)
-    blurred = cv2.GaussianBlur(closed, (3, 3), 1.0)
+    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    closed = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel_close)
 
-    # 색상 레이어 합성
+    smooth_blur = cv2.GaussianBlur(closed, (7, 7), 2.0)
+    _, smoothed = cv2.threshold(smooth_blur, 128, 255, cv2.THRESH_BINARY)
+
+    # 얼굴 상단(눈/이마) 보호 레이어 차감
+    if np.count_nonzero(protection_mask) > 0:
+        smoothed = cv2.bitwise_and(smoothed, cv2.bitwise_not(protection_mask))
+
+    if np.count_nonzero(smoothed) == 0:
+        return img
+
+    # 6. 경계 블러 페더링 (소프트 안티앨리어싱으로 일러스트 선화와 자연스럽게 융합)
+    blurred = cv2.GaussianBlur(smoothed, (5, 5), 1.2)
+
+    # 색상 레이어 합성 (블랙 실루엣은 애니메이션 먹선 톤 (12, 12, 16) 적용)
     if isinstance(color, str):
-        color_rgb = (255, 255, 255) if color.lower() in ("white", "whiteout", "white_silhouette") else (0, 0, 0)
+        color_rgb = (255, 255, 255) if color.lower() in ("white", "whiteout", "white_silhouette") else (12, 12, 16)
     else:
         color_rgb = color
 
@@ -367,26 +335,80 @@ def apply_shadow_silhouette(
 def apply_mosaic(
     img: Image.Image,
     boxes: Sequence[Tuple[int, int, int, int]],
-    block_size: int = 14,
+    block_size: int = 16,
+) -> Image.Image:
+    """하단 기저부 42% 통합 확장 및 소프트 캡슐 페더링이 적용된 상업 표준 정밀 블러-모자이크."""
+    w_img, h_img = img.size
+    orig_np = np.array(img.convert('RGB'))
+    blurred_pil = img.convert('RGB').filter(ImageFilter.GaussianBlur(radius=3))
+    small_w = max(1, w_img // block_size)
+    small_h = max(1, h_img // block_size)
+    mosaic_full = blurred_pil.resize((small_w, small_h), Image.Resampling.BILINEAR).resize((w_img, h_img), Image.Resampling.NEAREST)
+    mosaic_np = np.array(mosaic_full)
+    mask = np.zeros((h_img, w_img), dtype=np.uint8)
+    for (x1, y1, x2, y2) in boxes:
+        bw = max(1, x2 - x1)
+        bh = max(1, y2 - y1)
+        ex1 = max(0, int(x1 - bw * 0.04))
+        ey1 = max(0, int(y1 - bh * 0.02))
+        ex2 = min(w_img, int(x2 + bw * 0.04))
+        ey2 = min(h_img, int(y2 + bh * (0.16 if bh > bw * 0.8 else 0.10)))
+        cx = int((ex1 + ex2) / 2)
+        cy = int((ey1 + ey2) / 2)
+        rx = max(6, int((ex2 - ex1) * 0.48))
+        ry = max(6, int((ey2 - ey1) * 0.48))
+        cv2.ellipse(mask, (cx, cy), (rx, ry), 0, 0, 360, 255, -1)
+    if np.count_nonzero(mask) == 0:
+        return img.copy()
+    feathered = cv2.GaussianBlur(mask, (9, 9), 2.5)
+    alpha = (feathered.astype(np.float32) / 255.0)[:, :, np.newaxis]
+    blended = (1.0 - alpha) * orig_np.astype(np.float32) + alpha * mosaic_np.astype(np.float32)
+    return Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8))
+
+
+def apply_debug_bbox(
+    img: Image.Image,
+    boxes_with_labels: Sequence[Any],
 ) -> Image.Image:
     """
-    클래식 격자 모자이크(Pixelated Mosaic)를 적용합니다.
+    마스킹 대신 감지된 바운딩 박스(BBox), 라벨 및 신뢰도 점수를
+    고대비 가시화 테두리(라임/시안)와 뱃지 텍스트로 그려주는 진단(QA) 시각화 함수.
     """
-    canvas = img.copy()
+    out = img.copy()
+    draw = ImageDraw.Draw(out)
 
-    for (x1, y1, x2, y2) in boxes:
-        crop_box = (max(0, x1), max(0, y1), min(canvas.width, x2), min(canvas.height, y2))
-        sub_img = canvas.crop(crop_box)
-        w, h = sub_img.size
-        small_w = max(1, w // block_size)
-        small_h = max(1, h // block_size)
+    palette = {
+        "penis": (0, 255, 64),        # 형광 라임 그린
+        "pussy": (0, 229, 255),       # 형광 시안 블루
+        "nipple_f": (255, 128, 192),  # 핑크
+        "anchor": (255, 170, 0),      # 오렌지
+    }
+    fallback_color = (255, 235, 59)   # 밝은 노랑
 
-        pixelated = sub_img.resize((small_w, small_h), Image.Resampling.BILINEAR).resize(
-            (w, h), Image.Resampling.NEAREST
-        )
-        canvas.paste(pixelated, crop_box)
+    for item in boxes_with_labels:
+        if len(item) >= 3:
+            box, label, score = item[0], str(item[1]), float(item[2])
+            caption = f"{label} {score:.2f}"
+        else:
+            box, label = item[0], str(item[1])
+            caption = label
 
-    return canvas
+        x1, y1, x2, y2 = [int(v) for v in box]
+        color = palette.get(label.lower(), fallback_color)
+
+        # 가시성을 위한 3px 두께 직사각형 테두리
+        for off in range(3):
+            draw.rectangle([x1 - off, y1 - off, x2 + off, y2 + off], outline=color)
+
+        # 상단 캡션 뱃지 배경 (검은 반투명 효과용 솔리드 블랙)
+        badge_h = 16
+        text_w = max(45, len(caption) * 7 + 8)
+        bx2 = min(out.width, x1 + text_w)
+        by1 = max(0, y1 - badge_h)
+        draw.rectangle([x1, by1, bx2, y1], fill=(20, 20, 20))
+        draw.text((x1 + 4, by1 + 2), caption, fill=color)
+
+    return out
 
 
 # 체위별 안전 앵커 바운딩 박스 (정규화 좌표: [x0, y0, x1, y1])
@@ -434,12 +456,14 @@ def is_pose_censor_required(
     file_path: Union[str, Path, None] = None,
 ) -> bool:
     """
-    V3 대역 체계 및 서브폴더 구조에 기반하여 해당 포즈/에셋이 검열 대상인지 엄격히 판정합니다:
-    - 01_emotions (000~019): 완전 착의 감정표현 -> False (절대 면제)
-    - 03_events (051~059): 완전 착의 일상 이벤트 -> False (절대 면제)
-    - 02_daily (020~050): DAILY_EXPOSURE_CODES(030,037,038,039,044,045)만 True, 나머지 False (절대 면제)
-    - 04_romance (060~079): 060,061(키스)은 False (절대 면제), 064~071(공용구강) 및 062,063은 True
-    - 05_h_scenes, 06_special_h: NON_EXPOSURE_H_POSES(101,104,105,171,174,175)는 False, 나머지 True
+    2대 서브폴더 구조(01_normal, 02_h_scenes) 및 포즈 코드에 기반하여 해당 포즈/에셋이 검열 대상인지 엄격히 판정합니다:
+    - 01_normal (000~059):
+      * 000~019 (감정표현): 완전 착의 -> False (절대 면제)
+      * 051~059 (일상 이벤트): 완전 착의 -> False (절대 면제)
+      * 020~050 (범용 일상): DAILY_EXPOSURE_CODES(030,037,038,039,044,045)만 True, 나머지 False (절대 면제)
+    - 02_h_scenes (060~209+):
+      * 060~079 (로맨스/구강): 060,061(키스)은 False (절대 면제), 064~071(공용구강) 및 062,063은 True
+      * 080~209 (범용/특색 H씬): NON_EXPOSURE_H_POSES(101,104,105,171,174,175)는 False, 나머지 True
     """
     # 1. 파일 경로 기반 서브폴더 1차 검사 (01_emotions, 03_events는 무조건 면제)
     if file_path is not None:
@@ -578,18 +602,29 @@ def get_pose_anchor_box(
     return (x1, y1, x2, y2)
 
 
+def _box_iou(a: Tuple[int, int, int, int], b: Tuple[int, int, int, int]) -> float:
+    ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+    ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+    inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+    if inter <= 0:
+        return 0.0
+    area_a = max(1, (a[2] - a[0]) * (a[3] - a[1]))
+    area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
+    return inter / float(min(area_a, area_b))
+
+
 def censor_image(
     image: Union[Image.Image, Path, str],
-    style: str = "silhouette",
+    style: str = "white_silhouette",
     targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.22,
+    min_confidence: float = 0.16,
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
 ) -> Tuple[Image.Image, int]:
     """
-    이미지 내 성기 부위를 자동으로 감지하여 검열을 적용합니다.
-    - 기본 스타일: 'white_silhouette' (외곽선 화이트 실루엣)
-    - 기본 대상: 남성기+고환 ('penis') — 여주인공 신체/다리/복부 오검열 방지
+    이미지 내 성기 및 결합 접점 부위를 다중 스케일(전체 + 하반신 줌인 ROI)로 정밀 감지하여 검열을 적용합니다.
+    - 기본 스타일: 'white_silhouette' (매끈한 소프트 화이트 실루엣 - 젠잇 심의 규정 표준)
+    - 기본 대상: 남성기+고환 ('penis') 및 성인 결합 씬의 하반신 삽입 접점 ('pussy', y2 >= 0.48*H)
     - 반환값: (검열된 PIL 이미지, 감지된 부위 개수)
     """
     # V3 오검열 원천 방어 가드: 비검열 대상(감정표현, 일상 스킨십, 착의 이벤트 등)은 즉시 원본 반환
@@ -617,29 +652,85 @@ def censor_image(
         else:
             normalized_targets.add(t_clean)
 
-    detected_boxes_with_labels: List[Tuple[Tuple[int, int, int, int], str]] = []
+    # 성인 결합 씬에서 'penis' 타겟 지정 시, 삽입 결합 접점('pussy'로 분류되는 하반신 접합부)도 함께 포착
+    include_lower_junction = "penis" in normalized_targets
+    eff_conf = min(min_confidence, 0.16)
+    img_w, img_h = img.size
+
+    detected_boxes_with_labels: List[Tuple[Any, ...]] = []
+
+    skin_check_np = get_skin_mask(np.array(img))
+    def _add_candidate(box_coords: Tuple[int, int, int, int], lbl: str, score: float = 1.0) -> None:
+        x1, y1, x2, y2 = box_coords
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(img_w, x2), min(img_h, y2)
+        bw, bh = max(1, x2 - x1), max(1, y2 - y1)
+        if bw < 12 or bh < 12:
+            return
+        # 상단 배경/머리카락 오탐지 차단 (구강 씬 외에는 y2 < 0.25*H 배제)
+        if y2 < img_h * 0.24:
+            return
+        # 배경/침대 시트 허공 박스 오탐지 원천 차단 (Skin Density Gate: 내부 피부톤 비율 18% 미만 시 즉시 폐기)
+        roi_skin = skin_check_np[y1:y2, x1:x2]
+        if roi_skin.size == 0 or (np.count_nonzero(roi_skin) / float(roi_skin.size)) < 0.18:
+            return
+        if lbl == "pussy":
+            if y2 < img_h * 0.48:
+                return
+            if bh > bw * 1.25 and bh > 60:
+                safe_cut = int(bh * 0.22)
+                y1 = min(y2 - 20, y1 + safe_cut)
+        cand = (x1, y1, x2, y2)
+        for idx, entry in enumerate(detected_boxes_with_labels):
+            existing_box, existing_lbl = entry[0], entry[1]
+            existing_score = float(entry[2]) if len(entry) >= 3 else 1.0
+            if _box_iou(cand, existing_box) > 0.45:
+                # 더 넓은 결합 영역으로 병합
+                merged = (
+                    min(cand[0], existing_box[0]),
+                    min(cand[1], existing_box[1]),
+                    max(cand[2], existing_box[2]),
+                    max(cand[3], existing_box[3]),
+                )
+                detected_boxes_with_labels[idx] = (
+                    merged,
+                    "penis" if "penis" in (lbl, existing_lbl) else lbl,
+                    max(score, existing_score),
+                )
+                return
+        detected_boxes_with_labels.append((cand, lbl, score))
 
     if HAS_IMGUTILS:
         try:
-            results = detect_censors(img, conf_threshold=max(0.18, min_confidence * 0.9))
-            img_w, img_h = img.size
+            # [1단계] 전체 이미지 스캔
+            results = detect_censors(img, conf_threshold=max(0.12, eff_conf * 0.85))
             for box, label, score in results:
-                if label in normalized_targets and score >= min_confidence:
-                    x1, y1, x2, y2 = [int(v) for v in box]
-                    bw = max(1, x2 - x1)
-                    bh = max(1, y2 - y1)
+                is_target = (label in normalized_targets and score >= eff_conf) or (
+                    include_lower_junction and label == "pussy" and score >= max(0.18, eff_conf)
+                )
+                if is_target:
+                    _add_candidate(tuple(int(v) for v in box), label, float(score))
 
-                    # ── 자궁문신(Womb Tattoo) 및 복부 오탐지 보호 필터 ──
-                    if label == "pussy":
-                        if y2 < img_h * 0.48 and bh < img_h * 0.15:
-                            logger.info(f"[Censor] 하복부 자궁문신 오인식 박스 제외: ({x1},{y1},{x2},{y2})")
-                            continue
-
-                        if bh > bw * 1.25 and bh > 60:
-                            safe_cut = int(bh * 0.25)
-                            y1 = min(y2 - 20, y1 + safe_cut)
-
-                    detected_boxes_with_labels.append(((x1, y1, x2, y2), label))
+            # [2단계] 하반신 결합 영역 2중 Zoom-In ROI 크롭 정밀 재스캔 (후배위/기승위 등 가려진 성기 검출률 극대화)
+            roi_specs = [
+                (0.14, 0.38, 0.86, 0.98),
+                (0.20, 0.45, 0.80, 0.95),
+            ]
+            for rx0, ry0, rx1, ry1 in roi_specs:
+                cx1, cy1 = int(img_w * rx0), int(img_h * ry0)
+                cx2, cy2 = int(img_w * rx1), int(img_h * ry1)
+                crop_img = img.crop((cx1, cy1, cx2, cy2))
+                # 1.6배 Lanczos 업스케일 스캔으로 소형 타겟 검출률 극대화
+                up_w, up_h = int(crop_img.width * 1.6), int(crop_img.height * 1.6)
+                up_img = crop_img.resize((up_w, up_h), Image.Resampling.LANCZOS)
+                crop_res = detect_censors(up_img, conf_threshold=0.13)
+                for box, label, score in crop_res:
+                    is_target = (label in normalized_targets and score >= 0.17) or (
+                        include_lower_junction and label == "pussy" and score >= 0.20
+                    )
+                    if is_target:
+                        bx1, by1, bx2, by2 = [int(v / 1.6) for v in box]
+                        _add_candidate((bx1 + cx1, by1 + cy1, bx2 + cx1, by2 + cy1), label, float(score))
         except Exception as e:
             logger.warning(f"[Censor] 감지 모델 추론 예외: {e}")
 
@@ -650,7 +741,7 @@ def censor_image(
             if enable_anchor_fallback:
                 anchor_box = get_pose_anchor_box(pose_code, img.width, img.height)
                 if anchor_box:
-                    detected_boxes_with_labels.append((anchor_box, "anchor"))
+                    detected_boxes_with_labels.append((anchor_box, "anchor", 1.0))
                     logger.info(
                         f"[Censor] 포즈 {pose_code}: 성기 미탐지 ➔ 안전 앵커({cat}) 폴백 적용: {anchor_box}"
                     )
@@ -662,16 +753,16 @@ def censor_image(
     if not detected_boxes_with_labels:
         return img, 0
 
-    detected_boxes = [box for box, _ in detected_boxes_with_labels]
+    detected_boxes = [item[0] for item in detected_boxes_with_labels]
     style_clean = style.lower().strip()
 
-    if style_clean in ("white_silhouette", "white", "whiteout"):
+    if style_clean in ("debug", "debug_bbox", "bbox", "bbox_debug"):
+        censored = apply_debug_bbox(img, detected_boxes_with_labels)
+        return censored, len(detected_boxes_with_labels)
+    elif style_clean in ("white_silhouette", "white", "whiteout"):
         censored = apply_white_silhouette(img, detected_boxes_with_labels)
-    elif style_clean in ("black_silhouette", "silhouette_black", "black"):
+    elif style_clean in ("black_silhouette", "silhouette_black", "black", "silhouette", "contour"):
         censored = apply_black_silhouette(img, detected_boxes_with_labels)
-    elif style_clean in ("silhouette", "contour"):
-        # 기본 실루엣: 화이트 실루엣
-        censored = apply_white_silhouette(img, detected_boxes_with_labels)
     elif style_clean in ("bar", "wide_bar", "solid_bar", "black_bar", "pill_bar"):
         censored = apply_wide_solid_bar(img, detected_boxes)
     elif style_clean in ("slim_bar", "thin_bar"):
@@ -683,36 +774,37 @@ def censor_image(
     else:
         censored = apply_white_silhouette(img, detected_boxes_with_labels)
 
-    # 2차 사후 무결성 게이트: 미세 잔여 노출 자동 치유
-    censored, was_healed = verify_and_heal_censor(censored, style=style_clean, min_confidence=min_confidence)
+    # 2차 사후 무결성 게이트: 미세 잔여 노출 자동 치유 (임계값 0.32로 과도한 2중 팽창 방지)
+    censored, was_healed = verify_and_heal_censor(censored, style=style_clean, min_confidence=0.32)
     return censored, len(detected_boxes_with_labels)
-
-
 
 
 def verify_and_heal_censor(
     censored_img: Image.Image,
     style: str = "white_silhouette",
-    min_confidence: float = 0.22,
+    min_confidence: float = 0.32,
 ) -> Tuple[Image.Image, bool]:
     """
     검열이 완료된 이미지를 대상으로 성기 검출기를 다시 돌려 잔여 노출 여부를 2차 검증합니다.
-    미세 누출이 감지되면 10% 확장 마진으로 즉시 2차 실루엣을 덧칠하여 100% 무결성을 보장합니다.
+    과도한 2중 팽창을 방지하기 위해 신뢰도 임계값 0.32 이상의 명백한 잔여 노출에만 2차 보정을 발동합니다.
     반환값: (최종 안전 이미지, 추가 보정 발생 여부)
     """
     if not HAS_IMGUTILS:
         return censored_img, False
 
     try:
-        results = detect_censors(censored_img, conf_threshold=min_confidence)
+        results = detect_censors(censored_img, conf_threshold=max(0.28, min_confidence))
         leaks = [((int(b[0]), int(b[1]), int(b[2]), int(b[3])), label) for b, label, score in results if label in ("penis", "pussy")]
         if not leaks:
             return censored_img, False
 
         logger.warning(
-            f"[Censor Gate] 2차 사후 검증에서 미세 잔여 노출 {len(leaks)}건 감지! 즉시 2차 안전 덧칠 보정을 수행합니다."
+            f"[Censor Gate] 2차 사후 검증에서 명백한 잔여 노출 {len(leaks)}건 감지! 즉시 2차 안전 보정을 수행합니다."
         )
-        healed = apply_silhouette(censored_img, leaks, color=style)
+        if style.lower().strip() in ("mosaic", "pixel"):
+            healed = apply_mosaic(censored_img, [b for b, _ in leaks])
+        else:
+            healed = apply_silhouette(censored_img, leaks, color=style)
         return healed, True
     except Exception as e:
         logger.debug(f"[Censor Gate] 사후 검증 예외: {e}")
@@ -724,7 +816,7 @@ def censor_file(
     dst_path: Optional[Union[Path, str]] = None,
     style: str = "white_silhouette",
     targets: Sequence[str] = ("penis",),
-    min_confidence: float = 0.22,
+    min_confidence: float = 0.16,
     quality: int = 95,
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
