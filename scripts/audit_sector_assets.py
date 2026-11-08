@@ -40,6 +40,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("AuditSectorAssets")
 
 SECTORS = [
+    "01_normal",
+    "02_h_scenes",
     "01_emotions",
     "02_daily",
     "03_events",
@@ -49,12 +51,14 @@ SECTORS = [
 ]
 
 SECTOR_NAMES = {
-    "01_emotions": "01. 감정표현 (000~019)",
-    "02_daily": "02. 범용 일상 (020~050)",
-    "03_events": "03. 로스터 이벤트 (051~059)",
-    "04_romance": "04. 로맨스 & 구강 (060~079)",
-    "05_h_scenes": "05. 범용 H씬 체위 (080~129 / 150~199)",
-    "06_special_h": "06. 특색 H씬 (130~139 / 200~209)",
+    "01_normal": "01. 일반/일상/이벤트 (000~059)",
+    "02_h_scenes": "02. 로맨스/H씬 (060~209+)",
+    "01_emotions": "01. 감정표현 (000~019) [구버전]",
+    "02_daily": "02. 범용 일상 (020~050) [구버전]",
+    "03_events": "03. 로스터 이벤트 (051~059) [구버전]",
+    "04_romance": "04. 로맨스 & 구강 (060~079) [구버전]",
+    "05_h_scenes": "05. 범용 H씬 체위 (080~129 / 150~199) [구버전]",
+    "06_special_h": "06. 특색 H씬 (130~139 / 200~209) [구버전]",
 }
 
 
@@ -131,7 +135,7 @@ def audit_character(
             sector = get_subfolder_for_code(code)
 
         if sector not in report["sectors"]:
-            sector = "02_daily"
+            sector = "01_normal"
 
         sec_data = report["sectors"][sector]
         sec_data["files_count"] += 1

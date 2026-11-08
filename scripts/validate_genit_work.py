@@ -71,7 +71,7 @@ def get_asset_info(roster: str) -> Tuple[int, float, Set[str]]:
     suffixes: Set[str] = set()
 
     for p in assets_dir.rglob("*.webp"):
-        if "_origin" in p.parts:
+        if any(skip in p.parts for skip in ("_origin", "_trash", "legacy_backups")):
             continue
         count += 1
         m = p.stat().st_mtime
@@ -287,10 +287,8 @@ def validate_document(
     # 5. 실제 에셋 파일명 대조 검증
     referenced_poses: Set[str] = set()
 
-    m_table = re.search(r"\[5\. 캠퍼스 6인 전수 포즈 매핑 테이블 \(108종 SSOT\)\](.*?)\[6\.", body, re.DOTALL)
-    if m_table:
-        for token in re.findall(r"\b(\d{3}_[^\s\|\]\n\r]+)", m_table.group(1)):
-            referenced_poses.add(token.strip())
+    for token in re.findall(r"(?<![a-zA-Z0-9_])(\d{3}_[가-힣a-zA-Z0-9_\(\)]+)", all_code_blocks):
+        referenced_poses.add(token.strip())
 
     for url_match in re.findall(r"\{\{url\}\}[a-z]{3}_(\d{3}_[^\s\.\n\r\t\"\'\`]+)\.webp", body):
         referenced_poses.add(url_match.strip())

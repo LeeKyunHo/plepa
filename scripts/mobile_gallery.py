@@ -12,10 +12,14 @@ app = FastAPI(title="Plepa Realtime Mobile Gallery")
 
 BENCH1_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark"
 BENCH2_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark_v2"
+BENCH_RATATATA_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark_ratatata"
+BENCH_RATATATA_DIR.mkdir(parents=True, exist_ok=True)
 if BENCH1_DIR.exists():
     app.mount("/bench1", StaticFiles(directory=BENCH1_DIR, html=True), name="bench1")
 if BENCH2_DIR.exists():
     app.mount("/bench2", StaticFiles(directory=BENCH2_DIR, html=True), name="bench2")
+if BENCH_RATATATA_DIR.exists():
+    app.mount("/bench_ratatata", StaticFiles(directory=BENCH_RATATATA_DIR, html=True), name="bench_ratatata")
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "assets"
 TOTAL_TARGET = 476
