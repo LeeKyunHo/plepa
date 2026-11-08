@@ -67,29 +67,9 @@ def get_optimal_resolution_for_pose(
     user_specified: bool = False,
 ) -> Tuple[int, int]:
     """
-    포즈의 화각(상반신/클로즈업 vs 전신/일상)에 따라 물리적으로 카메라 줌인을 유도하는
-    최적의 종횡비 및 해상도를 반환합니다.
+    모든 포즈에서 챗봇 UI 레이아웃 일관성 및 검열기(censor.py) Y축 좌표 정합성을 보장하기 위해
+    단일 세로형 표준 해상도(기본 832x1216)를 일관되게 반환합니다.
     """
-    if user_specified or engine != "sdxl":
-        return default_w, default_h
-
-    p_text = (getattr(pose_obj, "sdxl_positive", "") or getattr(pose_obj, "prompt", "") or "").lower()
-    code_str = str(getattr(pose_obj, "code", "")).strip().zfill(3)
-
-    # 상반신/바스트/클로즈업 밀착 씬 키워드 및 대역
-    close_up_keywords = (
-        "face focus", "bust shot", "chest focus", "upper body close-up", "tight bust",
-        "fellatio", "blowjob", "deepthroat", "paizuri", "titfuck", "close-up upper body", "intimate close-up"
-    )
-    is_close_up = any(kw in p_text for kw in close_up_keywords)
-
-    if getattr(pose_obj, "framing", "") == "close_up" or code_str in ("064", "065", "066", "067", "068", "069", "070", "071"):
-        is_close_up = True
-
-    if is_close_up:
-        # SDXL 네이티브 정방형 줌인 밀착 규격 (1024x1024)
-        return 1024, 1024
-
     return default_w, default_h
 
 
