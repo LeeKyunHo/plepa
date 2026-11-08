@@ -25,9 +25,9 @@
 
 ## 🚀 2. 에셋 생성 및 검열 실전 명령어 (`batch_generator.py`)
 
-### 2.0 6대 섹터별 전수 정밀 감사 스크립트
+### 2.0 2대 통합 섹터(01_normal, 02_h_scenes)별 전수 정밀 감사 스크립트
 ```powershell
-# 6대 섹터(01_emotions ~ 06_special_h)별 파일수, 검열본, 원본백업, 검열이상, Auto-QC 전수 검수
+# 2대 통합 섹터(01_normal, 02_h_scenes)별 파일수, 검열본, 원본백업, 검열이상, Auto-QC 전수 검수
 python scripts/audit_sector_assets.py --roster campus
 python scripts/audit_sector_assets.py --roster ykn
 ```
@@ -61,8 +61,8 @@ python batch_generator.py -r campus -c aya -p 051,060,061 --overwrite --censor
 python batch_generator.py -r campus -c mio -p all --censor
 ```
 
-### 2.2 정밀 외곽선 화이트 실루엣 자동 검열 (`--censor` & `--censor-only`)
-- **동작 원리**: `dghs-imgutils` 성기 감지(`penis` + `pussy`) + 고환 하단 35% 확장 + MobileSAM 외곽선 추출 + 멀티스케일 2x 타일 스캔 + `POSE_SAFE_ANCHORS` 안전 앵커 폴백.
+### 2.2 정밀 외곽선 실루엣 / 모자이크 및 진단 디버그 자동 검열 (`--censor` & `--censor-only`)
+- **동작 원리**: `dghs-imgutils` 성기 감지(`penis` + `pussy`) + 하단 기저부 적응형 42% 확장(`m_bot=0.42`) + Skin Density Gate(18% 피부톤 미달 시 허공 박스 원천 폐기) + 하반신 1.6x Lanczos 줌인 ROI 2중 스캔 + `apply_silhouette`(Convex Hull 캡슐 결합) / `apply_mosaic`(소프트 알파 블렌딩) / `apply_debug_bbox`(BBox 테두리 및 점수 시각화).
 - **저장 구조**:
   - 검열이 완료된 파일은 `projects/{roster}/assets/{char}/` 내의 해당 파일을 직접 교체합니다.
   - 노출이 감지되어 검열된 파일의 **무검열 원본**은 `projects/{roster}/assets/{char}_origin/` 폴더에 동일한 파일명으로 안전하게 격리 백업됩니다.
@@ -70,8 +70,11 @@ python batch_generator.py -r campus -c mio -p all --censor
 # 1) 이미 생성된 에셋 폴더에 대해 ComfyUI 호출 없이 소급 검열만 단독 실행 (장당 0.2초)
 python batch_generator.py -r campus -c aya -p all --censor-only
 
-# 2) 검열 스타일 지정 (기본값: white_silhouette)
+# 2) 검열 스타일 지정 (기본값: white_silhouette [젠잇 심의 표준], 대안: black_silhouette, debug_bbox)
 python batch_generator.py -r campus -c aya -p 080 --censor --censor-style white_silhouette
+
+# 3) QA 진단용 BBox 및 신뢰도 점수 시각화 디버그 모드 (마스킹 없이 감지 영역 직사각형 및 점수 표기)
+python batch_generator.py -r campus -c aya -p all --censor-only --censor-style debug_bbox
 ```
 
 ### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프

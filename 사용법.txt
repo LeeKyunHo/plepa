@@ -33,7 +33,7 @@
   # 🩺 시스템 10단계 통합 무결성 자가 진단 (포즈DB, 캐릭터, 파이프라인, 검열, Auto-QC, ComfyUI 등 전수 점검)
   python batch_generator.py --test
 
-  # 🔍 6대 섹터(01_emotions~06_special_h)별 파일수/검열본/백업/오검열 전수 정밀 감사
+  # 🔍 2대 통합 섹터(01_normal, 02_h_scenes)별 파일수/검열본/백업/오검열 전수 정밀 감사
   python scripts/audit_sector_assets.py --roster campus
   python scripts/audit_sector_assets.py --roster ykn
 
@@ -90,13 +90,15 @@
   python batch_generator.py -r spy -c chl -p bdsm                   # BDSM 팩 8종 (E01~E08)
   python batch_generator.py -r spy -c chl -p S01..S10               # 첩보 살롱 전용 10종
 
-  ── [6] 정밀 외곽선 화이트 실루엣 검열 (--censor & --censor-only) ──────────
+  ── [6] 정밀 외곽선 실루엣/모자이크/디버그 자동 검열 (--censor & --censor-only) ────
   # • 검열본은 assets/{char}/에 교체 배치되고, 무검열 원본은 assets/{char}_origin/에 무손실 백업됩니다.
   # • 이미 생성된 에셋들을 ComfyUI 호출 없이 0.2초 만에 소급 검열할 때:
   python batch_generator.py -r campus -c aya -p all --censor-only
   python batch_generator.py -r campus --all-chars -p all --censor-only
-  # • 검열 스타일 변경(기본값: white_silhouette):
-  #   --censor-style {white_silhouette, silhouette, bar, shadow, mosaic}
+  # • 검열 스타일 변경(기본값: white_silhouette [젠잇 심의 표준]):
+  #   --censor-style {white_silhouette, black_silhouette, debug_bbox, bar, shadow, mosaic}
+  # • QA 점검용 BBox 및 신뢰도 점수 시각화 디버그 모드 (마스킹 없이 초록/시안 BBox와 점수 출력):
+  python batch_generator.py -r campus -c aya -p all --censor-only --censor-style debug_bbox
 
   ── [7] Auto-QC 자동 품질 검수, 골든 시드 고정 재생성 & 엄격 검열 리롤 ───────
   # • 색감 과포화, 남성 분신, 단독 씬 남성 난입 감지 시 시드를 바꿔 자동 재생성(기본 3회):
@@ -153,12 +155,14 @@
 
 
 ==============================================================================
-  3. 에셋 파일명 및 6대 대역 서브폴더 구조
+  3. 에셋 파일명 및 2대 통합 서브폴더 구조 (검토 최적화)
 ==============================================================================
 
   • 대역별 서브폴더 : projects/{roster}/assets/{char}/{대역폴더}/{char}_{code}_{label}.webp
-    (예: assets/aya/01_emotions/aya_000_평상.webp, assets/aya/05_h_scenes/aya_080_삽입조르기.webp)
-  • 2-Track 탐색기  : 신규 서브폴더 우선 탐색 + 기존 루트 플랫 디렉토리 자동 폴백 호환
+    - 01_normal/   : 000~059 (감정표현 20종 + 범용일상 31종 + 로스터 고유 일상 이벤트)
+    - 02_h_scenes/ : 060~209+ (로맨스/구강 20종 + 범용 H-씬 37종 + 특색 H-씬)
+    (예: assets/aya/01_normal/aya_000_평상.webp, assets/aya/02_h_scenes/aya_080_삽입조르기.webp)
+  • 3-Track 탐색기  : 신규 2대 서브폴더 우선 + 구버전 6대 서브폴더 폴백 + 기존 루트 플랫 디렉토리 자동 폴백 호환
   • 검열 원본 백업  : projects/{roster}/assets/{char}_origin/{대역폴더}/{char}_{code}_{label}.webp
     (--censor 실행 시 노출이 감지된 성인/탈의 씬의 무검열 원본만 선제 자동 보관)
   • 동적 배경 주입  : 기본 생성 시 각 포즈마다 pose_background_mapping.json을 참조하여 최적 배경 자동 주입

@@ -32,8 +32,8 @@
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
 6. **정밀 외곽선 화이트 실루엣 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py))**:
    - 기본 스타일 `white_silhouette` (`#FFFFFF`), `penis` 단일 타겟 기본(여캐 신체 오검열 원천 방지) + 인공 타원 코어 배제 순수 MobileSAM 외곽선 렌더링 + 입술/혀 HSV 보호 & Hole Filling + `POSE_SAFE_ANCHORS` 폴백.
-7. **검열 에셋 저장 및 6대 대역별 계층 서브폴더 구조**:
-   - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 6개 서브폴더(`01_emotions`, `02_daily`, `03_events`, `04_romance`, `05_h_scenes`, `06_special_h`)로 자동 분류 저장되며 2-Track 탐색기로 플랫 폴백 지원. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
+7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
+   - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
 8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
    - ① 색감 과포화(Color Burn), ② 남성 모브 분신(2명 이상), ③ 여운/단독 씬 남성 난입, ④ 9~10등신 기형 장신 감지 시 시드를 바꿔 자동 리롤(기본 최대 3회).
 9. **배치 생산 전 5단계 사전 점검 ([`plepa_engine/precheck.py`](../plepa_engine/precheck.py))**:
@@ -43,6 +43,8 @@
 11. **유연한 확장과 지속적 콘텐츠 유입 원칙 (Data-Driven & Lossless Preservation)**:
     - 플에파는 새로운 캐릭터, 포즈, 로스터, 챗봇 시나리오, 최신 생성 기술이 끊임없이 유입되는 살아있는 콘텐츠 파이프라인임을 항상 기본 전제로 삼음.
     - 엔진 코드 내 포즈 번호/로스터 하드코딩 금지, 스키마/계약(Contract) 기반 검증, 기존 완성 에셋(캠퍼스 648장 등) 100% 무손실 보존 및 2-Track 하위 호환성을 영구 유지함.
+12. **선제적 세부 질문 및 선택지 정렬 원칙 (Proactive Clarification & Choice Alignment Rule)**:
+    - 구조 변경(폴더명/규격), 마이그레이션 범위, 생성 옵션 등 디테일 결정이 필요한 지시를 수행할 때는 독단적 결정을 금지하고, 반드시 작업 착수 전에 추천안(`(Recommended)`)과 대안들을 `ask_question` 선택지로 구성하여 사용자 확인 및 선택을 받은 후 안전하게 작업을 개시함.
 
 ---
 
@@ -1482,3 +1484,43 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   4. **트러블슈팅 및 가드레일**:
      - 윈도우 `COM Surrogate`(`dllhost.exe`) 파일 잠금 현상 원인 규명 및 작업관리자/taskkill 프로세스 종료 플레이북 정립.
      - `test_grounding_production_asset_lossless_guardrail` 무결성 검증 통과.
+
+
+### ADR-81: 에셋 검토 생산성 극대화를 위한 2대 서브폴더(`01_normal`, `02_h_scenes`) 통합 및 무손실 마이그레이션 (2026-11-05)
+- **배경 및 문제점**:
+  1. 기존 V3 아키텍처는 캐릭터당 6개 서브폴더(`01_emotions`, `02_daily`, `03_events`, `04_romance`, `05_h_scenes`, `06_special_h`)로 세분화되어 있어, 윈도우 탐색기나 이미지 뷰어로 에셋을 검토할 때 6개 폴더를 일일이 탐색해야 하는 피로도와 검토 번거로움이 발생함.
+- **결정 사항**:
+  1. **2대 통합 서브폴더 체계 확립**:
+     - `01_normal` (000~059): 감정표현(000~019) + 범용일상(020~050) + 로스터 고유 일상 이벤트(051~059) 통합.
+     - `02_h_scenes` (060~209+): 로맨스/구강(060~079) + 여성/오토 범용 H씬(080~129 / 150~199) + 특색 이벤트 H씬(130~139 / 200~209) 통합.
+  2. **하위 호환성 3-Track 탐색기 구현 ([`plepa_engine/services/generation_service.py`](../plepa_engine/services/generation_service.py))**:
+     - 1순위: 신규 2대 서브폴더 (`01_normal`, `02_h_scenes`)
+     - 2순위: 구버전 6대 서브폴더 (`01_emotions` ~ `06_special_h`)
+     - 3순위: 루트 플랫 폴더
+     - 파일 존재 시 중복 재생성을 영구 방어하고 100% 무손실 보존.
+  3. **기존 프로덕션 에셋 1,908장 안전 자동 마이그레이션 ([`scripts/migrate_to_2sector_assets.py`](../scripts/migrate_to_2sector_assets.py))**:
+     - `projects/campus/` 및 `projects/ykn/`의 완성본 및 `_origin` 백업본 1,908장을 단 1장의 누락이나 충돌 없이 2대 서브폴더 체계로 안전하게 이전 완료.
+  4. **섹터 전수 감사 도구(`scripts/audit_sector_assets.py`) 동기화**:
+     - 2대 서브폴더 및 구버전 6대 서브폴더를 모두 동시 지원하도록 갱신, 캠퍼스 713장 전수 감사 결과 결함 0건 정상 통과.
+
+### ADR-82: 검열 시스템 아키텍처 개편 및 BBox 신뢰도 시각화 진단 모드(debug_bbox) 도입 (2026-11-08)
+- **배경 및 문제점**:
+  1. 기존 검열 파이프라인에서 하이라이트 반사광 팽창으로 인한 산란형 블랙 점(Splatter Dots), 밝은 침대 시트 오인식으로 인한 허공 박스, 팽창 마진 부족으로 인한 하단 기저부 노출 미가림 등의 결함이 보고됨.
+  2. 단순 마스킹 이미지 결과만으로는 탐지 모델이 객체를 놓친 것인지, 신뢰도 점수가 임계치에 미달한 것인지, 혹은 바운딩 박스 좌표가 빗나간 것인지 원인 규명이 어려운 한계가 존재함.
+- **결정 사항**:
+  1. **스마트 기하학 컨투어 및 마진 개편 ([plepa_engine/censor.py](../plepa_engine/censor.py))**:
+     - white_rem 및 불필요한 외곽 차감 로직을 전면 제거하여 반사광이 검은 점으로 변형되는 현상 원천 방지.
+     - Skin Density Gate (BBox 내부 피부톤 비율 18% 미만 시 즉시 폐기)를 적용하여 침대 시트나 배경 허공 박스 오탐지 원천 차단.
+     - 하단 기저부 적응형 콤팩트 마진(`m_bot = 0.16`, 좌우 `m_x = 0.03`, 상단 `m_top = 0.02`) 및 모폴로지 팽창 축소(`kernel=3x3`, `threshold=128`)로 초록색 BBox 대비 과도하게 부풀어오르는 오버 검열 풍선 효과 원천 차단.
+     - 2차 사후 치유(`verify_and_heal_censor`) 임계값을 `0.32`로 상향하여 이미 가려진 영역 위에 2중 덧칠이 반복되는 현상 방지 및 모자이크 스타일 치유 연동.
+     - 하반신 관심 영역(ROI) 2중 `1.6x` Lanczos 업스케일 스캔으로 원거리 및 소형 타겟 감지력 극대화.
+  2. **BBox 및 신뢰도 점수 시각화 진단 모드 (pply_debug_bbox / debug_bbox)**:
+     - 마스킹 대신 탐지된 직사각형 BBox 테두리(라임/시안), 클래스 라벨 및 신뢰도(Confidence) 점수를 고대비 뱃지로 가시화.
+     - 디버그 모드 시 사후 치유(erify_and_heal_censor)를 바이패스하여 탐지기의 원시 검출 상태를 온전히 진단할 수 있는 QA 환경 제공.
+  3. **CLI 및 단위 테스트 동기화 ([atch_generator.py](../batch_generator.py), [	ests/test_smart_censor.py](../tests/test_smart_censor.py))**:
+     - --censor-style debug_bbox 추가 및 소급 검열(--censor-only) 연동.
+     - 삼위일체 동기화 및 스마트 검열 테스트 13종 전원 통과 검증.
+
+   4. **젠잇(Gen-IT) 심의 규정에 따른 화이트 실루엣(white_silhouette) 단일 기본 표준 채택**:
+      - 젠잇 챗봇 심의 규정상 반투명 블러/모자이크가 엄격히 금지됨에 따라, 100% 완전 불투명 솔리드 마감으로 일원화.
+      - 2D 일러스트의 밝은 피부톤 및 조명 하이라이트와 조화되는 **화이트 실루엣(white_silhouette)**을 엔진, CLI, 서비스 레이어 전체의 단일 진실 공급원(SSOT) 기본값으로 확정.
