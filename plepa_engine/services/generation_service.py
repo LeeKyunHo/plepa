@@ -638,7 +638,7 @@ class GenerationService:
                                     style=params.censor_style,
                                     targets=targets,
                                     pose_code=pose.code,
-                                    enable_anchor_fallback=False,
+                                    enable_anchor_fallback=True,
                                     backup_dir=sub_origin_dir,
                                 )
                                 if c_res and c_res.exists():
@@ -693,7 +693,7 @@ class GenerationService:
                                 style=params.censor_style,
                                 targets=targets,
                                 pose_code=pose.code,
-                                enable_anchor_fallback=False,
+                                enable_anchor_fallback=True,
                                 backup_dir=sub_origin_dir,
                             )
                             if c_res and c_res.exists():
@@ -738,7 +738,7 @@ class GenerationService:
                                     style=params.censor_style,
                                     targets=targets,
                                     pose_code=pose.code,
-                                    enable_anchor_fallback=False,
+                                    enable_anchor_fallback=True,
                                     backup_dir=sub_origin_dir,
                                 )
                                 if c_res and c_res.exists():
@@ -888,7 +888,7 @@ class GenerationService:
                                     style=params.censor_style,
                                     targets=targets,
                                     pose_code=pose.code,
-                                    enable_anchor_fallback=False,
+                                    enable_anchor_fallback=True,
                                     backup_dir=sub_origin_dir,
                                 )
                                 if c_path and c_path.exists():

@@ -24,6 +24,8 @@ class PoseEntry:
     target_gender: Optional[str] = None
     allowed_rosters: Optional[List[str]] = None
     negative_add: str = ""
+    status: str = "active"
+    canonical_code: Optional[str] = None
 
 
     def get_prompt(self, gender: str = "female") -> str:

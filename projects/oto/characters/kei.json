@@ -1,0 +1,17 @@
+{
+  "name": "케이 (Kei)",
+  "prefix": "kei",
+  "gender": "otokonoko",
+  "default_mode": "sdxl",
+  "ref_weight": 0.68,
+  "appearance": {
+    "face_and_hair": "refined feminine face, vibrant scarlet red hair, sleek low side ponytail, crimson eyes",
+    "physique": "slender elegant build, small soft breasts, subtle chest, slender feminine waist",
+    "outfit": "tailored charcoal grey slim-fit blazer, white open-collar blouse, narrow black pencil miniskirt, sheer black nylons"
+  },
+  "positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.2), delicate feminine face, (slender elegant build:1.15), (small soft breasts, subtle chest:1.1), (vibrant scarlet red hair:1.3), (sleek low side ponytail, sharp bangs:1.2), striking deep crimson eyes, slender waist, (subtle bulge, tiny bulge under clothing:1.15), tailored charcoal grey slim-fit blazer, white open-collar blouse, narrow black pencil miniskirt, sheer black nylons",
+  "negative": "child, loli, kid, chibi, 1girl, female, large breasts, huge breasts, heavy cleavage, female anatomy, vagina, pussy, muscular, manly, beard, mustache, visible penis, large penis, erection, testicles, lowres, worst quality, bad anatomy, deformed",
+  "sdxl_nude_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.2), completely nude, full nudity, bare skin, delicate feminine face, (slender build, small soft breasts, subtle chest:1.15), smooth fair skin, (vibrant scarlet red hair, sleek low side ponytail:1.3), striking deep crimson eyes, slender waist",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.2), delicate feminine face, (slender elegant build:1.15), (small soft breasts, subtle chest:1.1), (vibrant scarlet red hair:1.3), (sleek low side ponytail, sharp bangs:1.2), striking deep crimson eyes, slender waist, (subtle bulge, tiny bulge under clothing:1.15), tailored charcoal grey slim-fit blazer, white open-collar blouse, narrow black pencil miniskirt, sheer black nylons",
+  "sdxl_negative": "child, loli, kid, chibi, 1girl, female, large breasts, huge breasts, heavy cleavage, female anatomy, vagina, pussy, muscular, manly, beard, mustache, visible penis, large penis, erection, testicles, lowres, worst quality, bad anatomy, deformed"
+}

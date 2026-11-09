@@ -1,0 +1,17 @@
+{
+  "name": "미쿠 (Miku)",
+  "prefix": "mik",
+  "gender": "otokonoko",
+  "default_mode": "sdxl",
+  "ref_weight": 0.68,
+  "appearance": {
+    "face_and_hair": "cute androgynous youth, sky blue very long twintails, violet eyes",
+    "physique": "petite, slender frame, flat chest, narrow shoulders",
+    "outfit": "oversized pastel purple off-shoulder loose sweater, black pleated micro skirt, striped thighhigh socks"
+  },
+  "positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.2), delicate feminine face, (petite, slender frame, flat chest, narrow shoulders:1.15), (subtle bulge, tiny bulge under clothing:1.15), (sky blue hair, very long twintails:1.3), violet eyes, oversized pastel purple off-shoulder loose sweater, black pleated micro skirt, striped thighhigh socks",
+  "negative": "child, loli, kid, chibi, 1girl, female, large breasts, huge breasts, heavy cleavage, female anatomy, vagina, pussy, muscular, manly, beard, mustache, visible penis, large penis, erection, testicles, lowres, worst quality, bad anatomy, deformed",
+  "sdxl_nude_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.2), completely nude, full nudity, bare skin, delicate feminine face, (petite, slender frame, flat chest, narrow shoulders:1.15), smooth pale skin, (sky blue hair, very long twintails:1.3), violet eyes",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy:1.2), delicate feminine face, (petite, slender frame, flat chest, narrow shoulders:1.15), (subtle bulge, tiny bulge under clothing:1.15), (sky blue hair, very long twintails:1.3), violet eyes, oversized pastel purple off-shoulder loose sweater, black pleated micro skirt, striped thighhigh socks",
+  "sdxl_negative": "child, loli, kid, chibi, 1girl, female, large breasts, huge breasts, heavy cleavage, female anatomy, vagina, pussy, muscular, manly, beard, mustache, visible penis, large penis, erection, testicles, lowres, worst quality, bad anatomy, deformed"
+}

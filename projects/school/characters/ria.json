@@ -1,0 +1,17 @@
+{
+  "name": "리아 (Ria)",
+  "prefix": "ria",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.68,
+  "appearance": {
+    "face_and_hair": "innocent cute face, teenage girl, pastel pink hair in a side ponytail, large emerald eyes, mascara",
+    "physique": "slender waist, huge breasts, large breasts, voluptuous chest, fair skin",
+    "outfit": "open white cropped shirt, micro pleated skirt, black choker"
+  },
+  "positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1girl, solo, pastel pink hair, (side ponytail:1.3), (side tail:1.2), hair scrunchie, (large emerald eyes:1.2), mascara, makeup, innocent cute face, (huge breasts:1.35), (large breasts:1.25), (voluptuous chest:1.25), slender waist, open white cropped shirt, tied shirt, exposed midriff, micro pleated skirt, black choker",
+  "negative": "child, loli, kid, chibi, 1boy, male, masculine, androgynous, flat chest, small breasts, lowres, worst quality, bad anatomy, deformed",
+  "sdxl_nude_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1girl, solo, completely nude, full nudity, bare skin, pastel pink hair, (side ponytail:1.3), (side tail:1.2), hair scrunchie, (large emerald eyes:1.2), mascara, makeup, innocent cute face, (huge breasts:1.35), (large breasts:1.25), (voluptuous chest:1.25), slender waist, smooth fair skin",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1girl, solo, pastel pink hair, (side ponytail:1.3), (side tail:1.2), hair scrunchie, (large emerald eyes:1.2), mascara, makeup, innocent cute face, (huge breasts:1.35), (large breasts:1.25), (voluptuous chest:1.25), slender waist, open white cropped shirt, tied shirt, exposed midriff, micro pleated skirt, black choker",
+  "sdxl_negative": "child, loli, kid, chibi, 1boy, male, masculine, androgynous, flat chest, small breasts, lowres, worst quality, bad anatomy, deformed"
+}

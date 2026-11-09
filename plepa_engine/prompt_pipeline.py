@@ -280,6 +280,21 @@ class NegativeBaseMutator(PromptMutator):
                 flags=re.IGNORECASE,
             )
 
+        # 성인 인터랙티브 씬 또는 64번 이상의 씬에서는 파트너 노출 억제 태그 자동 정제 (바지 위 봉사 참사 방지)
+        code_str = str(getattr(ctx.pose, "code", "")).strip()
+        code_num = int(code_str) if code_str.isdigit() else 0
+        is_adult_scene = (
+            ctx.pose.section in ("h_scenes", "special_h", "scenes_otokonoko", "special_otokonoko", "special_female_h", "special_otokonoko_h")
+            or code_num >= 64
+        )
+        if is_adult_scene or ctx.nude:
+            neg = re.sub(
+                r",?\s*\b(visible penis|large penis|erection|testicles|pantyshot|exposed panties|visible panties|see-through)\b",
+                "",
+                neg,
+                flags=re.IGNORECASE,
+            )
+
         if ctx.is_two_person:
             neg = re.sub(r",?\s*\b1boy\b", "", neg, flags=re.IGNORECASE)
             neg = re.sub(r",?\s*\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair))", "", neg, flags=re.IGNORECASE)
@@ -400,8 +415,8 @@ class DefectDefenseMutator(PromptMutator):
         if "chin lift" in pose_tag.lower():
             neg = f"{neg}, (extra hands:1.35), (two hands on chin:1.35), (multiple hands:1.35), (extra arms:1.35), (four hands:1.35), (three hands:1.35)"
 
-        # [패치 B-2] 풋잡(125/195) 다리 증식 특화 차단
-        if "footjob" in pose_tag.lower() or ctx.pose.code in ("125", "195"):
+        # [패치 B-2] 풋잡(077/125/195) 다리 증식 특화 차단
+        if "footjob" in pose_tag.lower() or ctx.pose.code in ("077", "125", "195"):
             neg = f"{neg}, (extra legs:1.5), (four legs:1.5), (three legs:1.5), (multiple legs:1.5), (extra feet:1.5), (multiple feet:1.5), (fused legs:1.45), (mutated feet:1.45), (bad foot anatomy:1.4)"
 
         # [패치 D] 뒷태/후방 구도 및 착의 씬 자궁문신/복부문신 방어
@@ -409,7 +424,7 @@ class DefectDefenseMutator(PromptMutator):
         is_back_view = any(kw in p_low for kw in (
             "back view", "from behind", "facing away", "rear view", "doggystyle", "lying on stomach",
             "on stomach", "butt focus", "ass focus", "from back", "behind"
-        )) or ctx.pose.code in ("024", "084", "088", "089", "090", "118", "121", "130")
+        )) or ctx.pose.code in ("024", "079", "084", "088", "089", "090", "118", "121", "130")
 
         has_tattoo_in_pos = any(kw in ctx.positive_prompt.lower() for kw in ("womb tattoo", "stomach tattoo", "belly tattoo", "navel tattoo"))
         if has_tattoo_in_pos:
@@ -427,7 +442,10 @@ class DefectDefenseMutator(PromptMutator):
         # [패치 C] 오토코노코 성기 분기
         char_gender_str = (ctx.char.gender or getattr(ctx.char, "default_mode", "") or "female").lower()
         ctx.is_otokonoko = char_gender_str == "otokonoko" or bool(ctx.char.sdxl_positive and "otokonoko" in ctx.char.sdxl_positive.lower())
-        if ctx.is_otokonoko and ctx.nude:
+        code_str_clean = str(getattr(ctx.pose, "code", "")).strip().zfill(3)
+        is_non_exposure_romance = code_str_clean in ("060", "061", "062", "063")
+
+        if ctx.is_otokonoko and ctx.nude and not is_non_exposure_romance:
             neg = f"{neg}, (pussy:1.35), (vagina:1.35), (female genitalia:1.35), (cameltoe:1.35), (cleavage:1.2), (large breasts:1.3), (breasts:1.2)"
             if "penis" not in ctx.positive_prompt.lower():
                 ctx.positive_prompt = f"{ctx.positive_prompt}, (penis:1.2), (small erect penis:1.15), (testicles:1.15), male genitalia"
@@ -436,22 +454,33 @@ class DefectDefenseMutator(PromptMutator):
         is_clothed_h_scene = (not ctx.nude) and (
             any(kw in pose_tag.lower() for kw in ("clothed sex", "clothed fellatio", "fully clothed except bottom", "skirt lifted", "panties aside", "underwear aside", "clothes half removed"))
             or (ctx.pose.section in ("h_scenes", "special_h", "special_female_h", "scenes_otokonoko", "special_otokonoko", "special_otokonoko_h") and getattr(ctx.pose, "required_outfit", "") == "default")
-            or ctx.pose.code == "033"
+            or ctx.pose.code in ("033", "067", "068", "069", "070", "071")
         )
         if is_clothed_h_scene:
+            # 상반신 착의 구강 씬에서는 화면 아래에 가려진 캐릭터 하의/가터벨트/스타킹 태그가 파트너 하반신이나 타겟 부위로 전이(검은 속옷/라텍스화)되는 현상을 원천 제거
+            is_clothed_oral = any(kw in pose_tag.lower() for kw in ("fellatio", "blowjob", "deepthroat", "oral", "licking", "handjob"))
+            if is_clothed_oral:
+                ctx.positive_prompt = re.sub(
+                    r",?\s*\(?(?:uniform\s+)?(?:black\s+|white\s+)?(?:garter belt|attached garter straps|garter straps|garters|thighhighs|stockings|pantyhose|thigh compression|panties|underwear)(?::[0-9\.]+)?\)?",
+                    "",
+                    ctx.positive_prompt,
+                    flags=re.IGNORECASE,
+                )
+
             # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
             ctx.positive_prompt = re.sub(r",?\s*\b(unbuttoned top button|unbuttoned|shirt unbuttoned|open shirt|clothes open)\b", "", ctx.positive_prompt, flags=re.IGNORECASE)
             if "fully clothed" not in ctx.positive_prompt.lower():
-                ctx.positive_prompt = f"{ctx.positive_prompt}, ((fully clothed except bottom, wearing clothes, top on, fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
+                ctx.positive_prompt = f"{ctx.positive_prompt}, ((wearing clothes, top on, fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
             else:
                 ctx.positive_prompt = f"{ctx.positive_prompt}, ((fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
 
+            # 글로벌 네거티브에 nude/naked/undressed를 넣으면 파트너 타겟 부위까지 검은 천/속옷으로 덮이므로 상의 탈의(topless/bare chest)만 정밀 억제
             neg = (
                 f"{neg}, "
-                f"((nude, completely nude, naked, topless, bare breasts, exposed breasts, nipples, exposed nipples, "
+                f"((topless, bare breasts, exposed breasts, nipples, exposed nipples, "
                 f"open shirt, unbuttoned, unbuttoned shirt, shirt pulled up, shirt lift, lifted shirt, clothes lift, open clothes, "
-                f"breast out, breasts out, areola, cleavage, exposed cleavage, deep cleavage, underboob, bare stomach, stripped, "
-                f"undressed, bare torso, no shirt, flashing, exposed chest, bare chest:1.55))"
+                f"breast out, breasts out, areola, cleavage, exposed cleavage, deep cleavage, underboob, "
+                f"no shirt, flashing, exposed chest, bare chest:1.45))"
             )
 
         ctx.negative_prompt = neg
@@ -548,11 +577,20 @@ class TwoPersonMobMutator(PromptMutator):
                     )
                     rear_direction = "(from behind:1.15), " if is_rear_scene else ""
 
+                    code_str_clean = str(getattr(ctx.pose, "code", "")).strip().zfill(3)
+                    code_num_clean = int(code_str_clean) if code_str_clean.isdigit() else 0
+                    is_non_exposure_romance = code_str_clean in ("060", "061", "062", "063")
+
                     if is_head_hug_scene:
                         # 이미 포즈 자체에 남성의 밀착 위치/뒤통수가 완전히 정의되어 있으므로 추가 모브 BREAK 블록을 주입하지 않음 (남성 분신 2명 방지)
                         mob_positive = ""
                         mob_boy_guard_hug = "(3boys:1.8), (multiple boys:1.8), (three men:1.8), (extra male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)" if ctx.is_otokonoko else "(2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)"
                         mob_negative = f"(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), {mob_boy_guard_hug}, (extra head:1.6), (three heads:1.6), (multiple heads:1.6)"
+                    elif is_non_exposure_romance:
+                        # 비성교 로맨스 씬(060 딥키스, 061 알몸키스 등): 상체 밀착 키스/포옹이므로 파트너 하부 노출 태그 배제
+                        mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), (unseen male eyes:1.15), (male head turned away:1.15), (naked male:1.15), (bare shoulders:1.15), (arms around partner neck or waist:1.2)"
+                        mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
+                        mob_negative = f"{male_face_suppression}, male clothes, male shirt, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (fellatio:1.4), (blowjob:1.4), (oral:1.4), (penis:1.4), (standing male legs:1.45)"
                     else:
                         head_cue = "(male head out of frame:1.15), "
                         head_suppression = male_face_suppression
@@ -584,11 +622,21 @@ class TwoPersonMobMutator(PromptMutator):
                             mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
                             mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
                         else:
-                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1)"
-                            if lower_body:
-                                mob_positive += f", {lower_body}"
-                            mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
-                            mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
+                            # 착의 씬이더라도 성인 구강/결합 씬(064번 이상)인 경우 파트너는 하의 탈의 상태(bottomless)여야 함
+                            is_adult_intercourse = (
+                                ctx.pose.section in ("h_scenes", "scenes_otokonoko", "special_h", "special_otokonoko", "special_female_h", "special_otokonoko_h")
+                                or code_num_clean >= 64
+                            )
+                            if is_adult_intercourse:
+                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), (bottomless male:1.15), ((large thick erect penis:1.35)), ((impressive manhood, thick shaft, natural skin tone penis, bare skin shaft:1.3))"
+                                mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
+                                mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (wearing pants over crotch:1.45), (pants:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (condom, black condom, sheath, clothed penis, covered penis, underwear on penis, garter on male, stockings on male:1.45), {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
+                            else:
+                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1)"
+                                if lower_body:
+                                    mob_positive += f", {lower_body}"
+                                mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
+                                mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
 
                 if mob_positive:
                     pos = f"{pos} {mob_positive}"

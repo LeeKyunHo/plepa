@@ -107,6 +107,10 @@ def load_full_pose_catalog(
             if "legacy_labels" in pdata and isinstance(pdata["legacy_labels"], list):
                 aliases.extend([str(l).strip() for l in pdata["legacy_labels"]])
 
+            # status가 deprecated인 항목은 기본 기대 카탈로그에서 제외 (하위 호환 에셋으로만 인식)
+            if pdata.get("status") == "deprecated":
+                continue
+
             catalog[code] = {
                 "label": pdata["label"].strip(),
                 "aliases": aliases,
@@ -209,14 +213,16 @@ def audit_character_alignment(
         logger.warning(f"캐릭터 에셋 폴더 없음: {char_dir}")
         return report
 
-    # 1. 파일 수집
+    # 1. 파일 수집 (체크포인트 믹스 벤치마크 및 쓰레시 폴더 제외)
     pattern = re.compile(rf"^{re.escape(prefix)}_([A-Za-z0-9]+)(?:_(.*?))?(?:_censored)?\.(webp|png|jpg)$")
     files_by_code: Dict[str, List[Tuple[Path, str]]] = {}
     malformed_files: List[Path] = []
 
     all_files = sorted([
         f for f in char_dir.rglob("*")
-        if f.is_file() and f.suffix in (".webp", ".png", ".jpg") and "_trash" not in f.parts
+        if f.is_file()
+        and f.suffix in (".webp", ".png", ".jpg")
+        and not any(p.startswith("ckpt_") or p == "_trash" for p in f.parts)
     ])
     report["total_files"] = len(all_files)
 
@@ -229,65 +235,116 @@ def audit_character_alignment(
         else:
             malformed_files.append(fpath)
 
+    # 코어 DB 로드 (deprecated 포즈 판정용)
+    deprecated_poses: Dict[str, Dict[str, Any]] = {}
+    if SDXL_POSE_DB_PATH.exists():
+        try:
+            with open(SDXL_POSE_DB_PATH, "r", encoding="utf-8") as f:
+                raw_db = json.load(f)
+                for sec, items in raw_db.items():
+                    if isinstance(items, dict):
+                        for c, it in items.items():
+                            if isinstance(it, dict) and it.get("status") == "deprecated":
+                                deprecated_poses[c] = {
+                                    "label": it.get("label", ""),
+                                    "section": sec,
+                                    "canonical_code": it.get("canonical_code", ""),
+                                }
+        except Exception:
+            pass
+
     # 2. 코드별 정합성 판정
     for code, flist in files_by_code.items():
-        # 중복 파일 검사
-        if len(flist) > 1:
-            report["duplicates"].append({
-                "code": code,
-                "files": [f[0].name for f in flist],
-            })
-
         # DB에 존재하는 코드인지 검사
         if code not in catalog:
-            for fpath, raw_label in flist:
-                report["orphan_files"].append({
+            # DB의 deprecated 포즈로 등록되어 있는 레거시 보존 에셋인지 검사 (손실 방지 2-Track 하위 호환)
+            if code in deprecated_poses:
+                dep_info = deprecated_poses[code]
+                for fpath, raw_label in flist:
+                    report.setdefault("legacy_deprecated", []).append({
+                        "code": code,
+                        "filename": fpath.name,
+                        "path": str(fpath),
+                        "actual_label": raw_label,
+                        "canonical_code": dep_info.get("canonical_code"),
+                        "section": dep_info.get("section"),
+                        "note": f"DB 선언 레거시 보존 에셋 (대체 표준: {dep_info.get('canonical_code')})",
+                    })
+            else:
+                for fpath, raw_label in flist:
+                    report["orphan_files"].append({
+                        "code": code,
+                        "filename": fpath.name,
+                        "path": str(fpath),
+                        "reason": "포즈 DB 및 로스터 이벤트에 정의되지 않은 미식별 코드",
+                    })
+            continue
+
+        expected_info = catalog[code]
+        expected_label = expected_info["label"]
+        norm_exp = normalize_label_for_comparison(expected_label)
+        aliases = expected_info.get("aliases", [])
+        norm_aliases = [normalize_label_for_comparison(a) for a in aliases]
+
+        # 중복 파일 검사 (동일 코드에 여러 파일이 있는 경우)
+        if len(flist) > 1:
+            # 공식 라벨 파일 1개와 구버전 별칭(legacy) 파일들이 공존하는 정상 승계 케이스인지 확인
+            canonical_files = [f for f in flist if normalize_label_for_comparison(f[1]) == norm_exp]
+            legacy_files = [f for f in flist if normalize_label_for_comparison(f[1]) in norm_aliases]
+
+            if len(canonical_files) == 1 and (len(canonical_files) + len(legacy_files) == len(flist)):
+                # 공식 파일이 존재하며 나머지 파일들이 DB 등록 별칭인 경우:
+                # 공식 파일 1개만 카운트하고, 나머지는 승계된 레거시 보존으로 분류하여 duplicate 오류 배제
+                report["matched_count"] += 1
+                for lf in legacy_files:
+                    report.setdefault("legacy_superseded", []).append({
+                        "code": code,
+                        "filename": lf[0].name,
+                        "path": str(lf[0]),
+                        "actual_label": lf[1],
+                        "expected_label": expected_label,
+                    })
+                continue
+            else:
+                report["duplicates"].append({
+                    "code": code,
+                    "files": [f[0].name for f in flist],
+                })
+
+        for fpath, raw_label in flist:
+            norm_raw = normalize_label_for_comparison(raw_label)
+
+            # 1) 공식 라벨과 완벽 일치
+            if norm_raw == norm_exp:
+                report["matched_count"] += 1
+            # 2) DB에 등록된 레거시/과도기 허용 라벨(alias)과 일치
+            elif norm_raw in norm_aliases:
+                report["legacy_compatible"].append({
                     "code": code,
                     "filename": fpath.name,
                     "path": str(fpath),
-                    "reason": "포즈 DB 및 로스터 이벤트에 정의되지 않은 미식별 코드",
+                    "actual_label": raw_label,
+                    "expected_label": expected_label,
+                    "section": expected_info["section"],
+                    "note": f"DB 선언 레거시 호환 라벨 (공식 목표: '{expected_label}')",
                 })
-        else:
-            expected_info = catalog[code]
-            expected_label = expected_info["label"]
-            norm_exp = normalize_label_for_comparison(expected_label)
-            aliases = expected_info.get("aliases", [])
-            norm_aliases = [normalize_label_for_comparison(a) for a in aliases]
+                # auto_fix 지정 시 공식 라벨로 안전 리네임 가능
+                if auto_fix:
+                    _execute_safe_rename(fpath, char_dir, origin_dir, prefix, code, expected_label, report)
+            # 3) DB 공식 및 별칭 어디에도 없는 순수 불일치
+            else:
+                mismatch_item = {
+                    "code": code,
+                    "filename": fpath.name,
+                    "path": str(fpath),
+                    "actual_label": raw_label,
+                    "expected_label": expected_label,
+                    "section": expected_info["section"],
+                }
+                report["mismatches"].append(mismatch_item)
 
-            for fpath, raw_label in flist:
-                norm_raw = normalize_label_for_comparison(raw_label)
-
-                # 1) 공식 라벨과 완벽 일치
-                if norm_raw == norm_exp:
-                    report["matched_count"] += 1
-                # 2) DB에 등록된 레거시/과도기 허용 라벨(alias)과 일치
-                elif norm_raw in norm_aliases:
-                    report["legacy_compatible"].append({
-                        "code": code,
-                        "filename": fpath.name,
-                        "path": str(fpath),
-                        "actual_label": raw_label,
-                        "expected_label": expected_label,
-                        "section": expected_info["section"],
-                        "note": f"DB 선언 레거시 호환 라벨 (공식 목표: '{expected_label}')",
-                    })
-                    # auto_fix 지정 시 공식 라벨로 안전 리네임 가능
-                    if auto_fix:
-                        _execute_safe_rename(fpath, char_dir, origin_dir, prefix, code, expected_label, report)
-                # 3) DB 공식 및 별칭 어디에도 없는 순수 불일치
-                else:
-                    mismatch_item = {
-                        "code": code,
-                        "filename": fpath.name,
-                        "path": str(fpath),
-                        "actual_label": raw_label,
-                        "expected_label": expected_label,
-                        "section": expected_info["section"],
-                    }
-                    report["mismatches"].append(mismatch_item)
-
-                    if auto_fix:
-                        _execute_safe_rename(fpath, char_dir, origin_dir, prefix, code, expected_label, report)
+                if auto_fix:
+                    _execute_safe_rename(fpath, char_dir, origin_dir, prefix, code, expected_label, report)
 
     # 비규격 파일 처리
     for mf in malformed_files:

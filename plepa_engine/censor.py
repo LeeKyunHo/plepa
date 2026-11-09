@@ -47,18 +47,18 @@ def get_sam_model():
 
 def get_skin_mask(img_np: np.ndarray) -> np.ndarray:
     """
-    2D 애니메이션 일러스트에서 여주인공의 밝은 피부 영역(살구빛/핑크빛)을 고정밀 HSV 필터로 추출합니다.
-    - Hue: [0, 28] 또는 [165, 180] (자연스러운 붉은빛~살구빛 피부톤)
-    - Saturation: [20, 160] (너무 무채색(흰색)이거나 너무 원색(의상)인 픽셀 제외)
-    - Value: [125, 255] (어두운 음영/선화 제외한 밝은 피부 영역)
+    2D 애니메이션 일러스트에서 밝은 피부 영역(살구빛/핑크빛)부터 구릿빛/태닝/음영 피부톤까지 고정밀 HSV 필터로 추출합니다.
+    - Hue: [0, 32] 또는 [162, 180] (자연스러운 붉은빛~살구빛~구릿빛 피부톤)
+    - Saturation: [15, 190] (무채색 흰색이나 고채도 원색 의상 픽셀 제외)
+    - Value: [55, 255] (태닝 피부 및 짙은 음영 피부까지 포괄)
     """
     hsv = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
-    lower1 = np.array([0, 20, 125], dtype=np.uint8)
-    upper1 = np.array([28, 160, 255], dtype=np.uint8)
+    lower1 = np.array([0, 15, 55], dtype=np.uint8)
+    upper1 = np.array([32, 190, 255], dtype=np.uint8)
     mask1 = cv2.inRange(hsv, lower1, upper1)
 
-    lower2 = np.array([165, 20, 125], dtype=np.uint8)
-    upper2 = np.array([180, 160, 255], dtype=np.uint8)
+    lower2 = np.array([162, 15, 55], dtype=np.uint8)
+    upper2 = np.array([180, 190, 255], dtype=np.uint8)
     mask2 = cv2.inRange(hsv, lower2, upper2)
 
     return cv2.bitwise_or(mask1, mask2)
@@ -71,11 +71,10 @@ def apply_silhouette(
     color: Union[str, Tuple[int, int, int]] = "black",
 ) -> Image.Image:
     """
-    네모난 박스가 아니라 남성기 전체와 고환의 실제 선화 외곽선(Contour)을 따라
+    네모난 박스가 아니라 타겟과 기저부의 실제 선화 외곽선(Contour)을 따라
     내부만 솔리드 컬러(블랙 #000000 또는 화이트 #FFFFFF)로 매끈하게 채우는 실루엣 검열을 렌더링합니다.
-    - MobileSAM BBox Prompting으로 픽셀 단위 마스크 추출.
-    - 펠라/오랄 구도에서 여주인공 팔/어깨 피부 침범을 원천 차단하는 적응형 마진 및 고립 노이즈 컨투어 정제.
-    - 타원 커널 모폴로지 클로징 및 가우시안 안티앨리어싱으로 계단 현상 없는 유려한 곡선 완성.
+    - 다중 피부 포인트 프롬프트 + 얼굴 중심 네거티브 프롬프트 기반 MobileSAM 정밀 세그멘테이션.
+    - 구강/측면 구도에서 입가 직각 파임이나 허공 타원 팽창을 원천 차단.
     """
     w, h = img.size
     img_np = np.array(img.convert("RGB"))
@@ -84,20 +83,25 @@ def apply_silhouette(
 
     sam = get_sam_model()
 
-    # 0. 눈/이마(Upper Face) 및 손(Hands) 보호 마스크 추출:
-    #    - 얼굴(detect_faces) 상단 42%(눈·이마) 영역 보호
-    #    - 손(detect_hands) 영역 감지 후 피부색 스마트 차감용으로 활용
+    # 0. 눈/이마(Upper Face 38%) 보호 마스크 및 얼굴 중심 네거티브 포인트 추출:
+    #    - 입이나 뺨을 직각으로 파내지 않도록 오직 눈·이마(상단 38%)만 소프트 보호
     protection_mask = np.zeros((h, w), dtype=np.uint8)
     hands_mask = np.zeros((h, w), dtype=np.uint8)
+    face_neg_pts: List[List[int]] = []
     try:
         from imgutils.detect import detect_faces, detect_hands
         detected_faces = detect_faces(img, conf_threshold=0.35)
 
         for (fx1, fy1, fx2, fy2), _, _ in detected_faces:
             fh = max(1, fy2 - fy1)
-            safe_fy2 = int(fy1 + fh * 0.42)
+            safe_fy2 = int(fy1 + fh * 0.38)
             if safe_fy2 > fy1:
                 cv2.rectangle(protection_mask, (int(fx1), int(fy1)), (int(fx2), safe_fy2), 255, -1)
+            face_neg_pts.append([int((fx1 + fx2) / 2), int(fy1 + fh * 0.42)])
+
+        if np.count_nonzero(protection_mask) > 0:
+            protection_mask = cv2.GaussianBlur(protection_mask, (15, 15), 4.0)
+            _, protection_mask = cv2.threshold(protection_mask, 128, 255, cv2.THRESH_BINARY)
 
         detected_hands = detect_hands(img, conf_threshold=0.55)
         for (hx1, hy1, hx2, hy2), _, _ in detected_hands:
@@ -113,87 +117,167 @@ def apply_silhouette(
 
         is_penis = label == "penis"
         if is_penis:
-            m_x = 0.03
-            m_top = 0.02
-            m_bot = 0.16 if bh > bw * 0.8 else 0.10
-            ex1 = max(0, int(x1 - bw * m_x))
-            ey1 = max(0, int(y1 - bh * m_top))
-            ex2 = min(w, int(x2 + bw * m_x))
-            ey2 = min(h, int(y2 + bh * m_bot))
+            m_x = 0.06
+            m_top = 0.04
+            m_bot = 0.14 if bh > bw * 0.7 else 0.08
         else:
             m_x = 0.03
             m_top = 0.02
-            m_bot = 0.10
-            ex1 = max(0, int(x1 - bw * m_x))
-            ey1 = max(0, int(y1 - bh * m_top))
-            ex2 = min(w, int(x2 + bw * m_x))
-            ey2 = min(h, int(y2 + bh * m_bot))
+            m_bot = 0.08
 
-        expanded_bbox = [ex1, ey1, ex2, ey2]
+        ex1 = max(0, int(x1 - bw * m_x))
+        ey1 = max(0, int(y1 - bh * m_top))
+        ex2 = min(w, int(x2 + bw * m_x))
+        ey2 = min(h, int(y2 + bh * m_bot))
+
         ebw = max(1, ex2 - ex1)
         ebh = max(1, ey2 - ey1)
         sub_m = np.zeros((h, w), dtype=np.uint8)
+        sam_succeeded = False
 
         if sam is not None:
             try:
-                cx = int((x1 + x2) / 2)
-                cy = int((y1 + y2) / 2)
-                try:
-                    results = sam(img, bboxes=[[x1, y1, x2, y2]], points=[[[cx, cy]]], labels=[[1]], verbose=False)
-                except Exception:
-                    results = sam(img, bboxes=[[x1, y1, x2, y2]], verbose=False)
+                # 1) BBox 내부의 타겟 피부 영역과 비타겟(창문/책장/벽/어두운 허공) 영역을 분리합니다.
+                #    - L자형 구강 구도에서 BBox는 [상단 수평 기둥 + 좌/우 한쪽의 수직 기저부]로 구성되며,
+                #      반대쪽 하단 코너(턱 밑 공간)는 배경(창문, 벽, 어두운 그림자 등)입니다!
+                #    - 기저부가 좌측에 있는지 우측에 있는지 판별하여, 턱 밑 반대쪽 하단 코너(Void Corner)에
+                #      네거티브 프롬프트 포인트를 찍고 비타겟 허공을 부드럽게 감산합니다!
+                roi_rgb = img_np[ey1:ey2, ex1:ex2]
+                roi_hsv = cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2HSV)
+                roi_skin = skin_np[ey1:ey2, ex1:ex2] > 0
 
-                if results and results[0].masks is not None:
-                    m_data = results[0].masks.data.cpu().numpy()
-                    raw_m = (m_data[0] * 255).astype(np.uint8)
-                    if raw_m.shape != (h, w):
-                        raw_m = cv2.resize(raw_m, (w, h), interpolation=cv2.INTER_NEAREST)
-                    crop_mask = np.zeros_like(raw_m)
-                    crop_mask[ey1:ey2, ex1:ex2] = 255
-                    raw_m = cv2.bitwise_and(raw_m, crop_mask)
-                    hand_skin = cv2.bitwise_and(skin_np, hands_mask)
-                    raw_m = cv2.bitwise_and(raw_m, cv2.bitwise_not(hand_skin))
-                    contours, _ = cv2.findContours(raw_m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                    if contours:
-                        max_area = max(cv2.contourArea(c) for c in contours)
-                        valid_pts = [c for c in contours if cv2.contourArea(c) >= max(200, max_area * 0.20)]
-                        if valid_pts:
-                            merged_pts = np.vstack(valid_pts)
-                            hull = cv2.convexHull(merged_pts)
-                            cv2.drawContours(sub_m, [hull], -1, 255, -1)
+                # 상단(15~48%)과 하단 좌/우(52~95%)의 피부 및 컬러 분포 비교
+                mid_y_l = int(ebh * 0.50)
+                mid_x_l = int(ebw * 0.50)
+                left_bot_hsv = roi_hsv[mid_y_l:, :mid_x_l]
+                right_bot_hsv = roi_hsv[mid_y_l:, mid_x_l:]
+
+                # 상단 기둥의 대표 Hue 추출 (0~180)
+                top_skin = roi_skin[int(ebh * 0.12):int(ebh * 0.48), :]
+                top_h_med = float(np.median(roi_hsv[int(ebh * 0.12):int(ebh * 0.48), :, 0][top_skin])) if np.count_nonzero(top_skin) >= 20 else 11.0
+
+                def _side_target_score(sub_hsv: np.ndarray, sub_sk: np.ndarray) -> float:
+                    if sub_hsv.size == 0:
+                        return 0.0
+                    # 상단 기둥과 Hue 차이가 9.5 이하이면서 피부 마스크에 속하는 픽셀 비율
+                    h_d = np.minimum(
+                        np.abs(sub_hsv[:, :, 0].astype(np.float32) - top_h_med),
+                        180.0 - np.abs(sub_hsv[:, :, 0].astype(np.float32) - top_h_med),
+                    )
+                    valid = sub_sk & (h_d <= 9.5)
+                    return float(np.count_nonzero(valid)) / float(max(1, sub_sk.size))
+
+                l_score = _side_target_score(left_bot_hsv, roi_skin[mid_y_l:, :mid_x_l])
+                r_score = _side_target_score(right_bot_hsv, roi_skin[mid_y_l:, mid_x_l:])
+
+                pos_pts: List[List[int]] = []
+                local_neg_pts: List[List[int]] = list(face_neg_pts)
+
+                # 상단 기둥 중심 포인트
+                top_ys, top_xs = np.where(top_skin)
+                if len(top_xs) >= 10:
+                    pos_pts.append([ex1 + int(np.median(top_xs)), ey1 + int(ebh * 0.12) + int(np.median(top_ys))])
+                else:
+                    pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.30)])
+
+                # 하단 기저부 포인트 및 반대쪽 턱 밑 허공(Void Corner) 판정
+                void_corner_mask = np.zeros((h, w), dtype=np.uint8)
+                if l_score > r_score * 1.15:
+                    # 기저부가 좌측(x1 쪽), 우하단(x2 쪽)은 턱 밑 허공!
+                    pos_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.72)])
+                    local_neg_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.78)])
+                    cv2.rectangle(
+                        void_corner_mask,
+                        (int(ex1 + ebw * 0.44), int(ey1 + ebh * 0.48)),
+                        (ex2, ey2),
+                        255,
+                        -1,
+                    )
+                elif r_score > l_score * 1.15:
+                    # 기저부가 우측(x2 쪽), 좌하단(x1 쪽)은 턱 밑 허공!
+                    pos_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.72)])
+                    local_neg_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.78)])
+                    cv2.rectangle(
+                        void_corner_mask,
+                        (ex1, int(ey1 + ebh * 0.48)),
+                        (int(ex1 + ebw * 0.56), ey2),
+                        255,
+                        -1,
+                    )
+                else:
+                    # 중앙 수직형(파이즈리, 정상 결합 등)
+                    pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.68)])
+
+                sam_union = np.zeros((h, w), dtype=np.uint8)
+                crop_mask = np.zeros((h, w), dtype=np.uint8)
+                crop_mask[ey1:ey2, ex1:ex2] = 255
+
+                for pt in pos_pts:
+                    try:
+                        all_pts = [pt] + local_neg_pts
+                        all_lbls = [1] + [0] * len(local_neg_pts)
+                        results = sam(
+                            img,
+                            bboxes=[[ex1, ey1, ex2, ey2]],
+                            points=[all_pts],
+                            labels=[all_lbls],
+                            verbose=False,
+                        )
+                    except Exception:
+                        results = sam(img, bboxes=[[ex1, ey1, ex2, ey2]], verbose=False)
+
+                    if results and results[0].masks is not None:
+                        m_data = results[0].masks.data.cpu().numpy()
+                        raw_m = (m_data[0] * 255).astype(np.uint8)
+                        if raw_m.shape != (h, w):
+                            raw_m = cv2.resize(raw_m, (w, h), interpolation=cv2.INTER_NEAREST)
+                        raw_m = cv2.bitwise_and(raw_m, crop_mask)
+                        if np.count_nonzero(raw_m) >= 60:
+                            sam_union = np.maximum(sam_union, raw_m)
+
+                # 턱 밑 허공 코너가 감지된 경우(L자형 구강 구도), 허공 사각 코너를 부드럽게 라운딩 차감하여
+                # 타겟 기둥과 수직 기저부는 100% 솔리드로 덮으면서 턱 밑 네모난 창문/배경 박스만 깔끔히 덜어냅니다!
+                if np.count_nonzero(void_corner_mask) > 0:
+                    soft_void = cv2.GaussianBlur(void_corner_mask, (21, 21), 6.0)
+                    _, soft_void_bin = cv2.threshold(soft_void, 140, 255, cv2.THRESH_BINARY)
+                    sam_union = cv2.bitwise_and(sam_union, cv2.bitwise_not(soft_void_bin))
+
+                contours, _ = cv2.findContours(sam_union, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                if contours:
+                    max_area = max(cv2.contourArea(c) for c in contours)
+                    for c in contours:
+                        if cv2.contourArea(c) >= max(80, max_area * 0.15):
+                            # 외곽 컨투어 내부를 -1로 완전히 채워 내부 검은 점/구멍을 100% 원천 제거합니다!
+                            cv2.drawContours(sub_m, [c], -1, 255, -1)
+                    if np.count_nonzero(sub_m) >= (bw * bh * 0.12):
+                        sam_succeeded = True
             except Exception as e:
-                logger.warning(f'[Censor] MobileSAM fallback: {e}')
+                logger.warning(f"[Censor] MobileSAM fallback: {e}")
 
-        # 중심부터 하단 기저부(16% 콤팩트 확장 영역)까지 포괄하는 매끈한 타원 캡슐 코어 통합
-        bcx = int((ex1 + ex2) / 2)
-        bcy = int((ey1 + ey2) / 2)
-        erx = max(6, int(ebw * 0.44))
-        ery = max(6, int(ebh * 0.46))
-        cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
-
-        # 단일 볼록 껍질(Convex Hull)로 요철 및 점 파편 100% 제거
-        c_all, _ = cv2.findContours(sub_m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if c_all:
-            hull_all = cv2.convexHull(np.vstack(c_all))
-            sub_m = np.zeros((h, w), dtype=np.uint8)
-            cv2.drawContours(sub_m, [hull_all], -1, 255, -1)
+        # MobileSAM이 실패했거나 중앙형 소형 타겟(면적 2.5% 미만, L자형 제외)인 경우에만 솔리드 타원 캡슐로 보강
+        if not sam_succeeded or ((ebw * ebh) < (w * h * 0.025) and np.count_nonzero(sub_m) < (ebw * ebh * 0.45)):
+            bcx = int((ex1 + ex2) / 2)
+            bcy = int((ey1 + ey2) / 2)
+            erx = min(int(w * 0.16), max(6, int(ebw * 0.44)))
+            ery = min(int(h * 0.20), max(6, int(ebh * 0.46)))
+            cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
 
         final_mask = np.maximum(final_mask, sub_m)
 
     if np.count_nonzero(final_mask) == 0:
         return img
 
-    # 5. 미세 모폴로지 닫힘 + 경계 스무딩 (과도한 팽창 배제하고 콤팩트 라인 유지)
-    kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    # 5. 모폴로지 팽창 + 닫힘 + 가우시안 스무딩으로 선화 내부 빈틈을 메우고 과장 없는 날렵한 외곽선 완성
+    kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     dilated = cv2.dilate(final_mask, kernel_dilate, iterations=1)
 
-    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
     closed = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel_close)
 
-    smooth_blur = cv2.GaussianBlur(closed, (7, 7), 2.0)
-    _, smoothed = cv2.threshold(smooth_blur, 128, 255, cv2.THRESH_BINARY)
+    smooth_blur = cv2.GaussianBlur(closed, (7, 7), 1.8)
+    _, smoothed = cv2.threshold(smooth_blur, 120, 255, cv2.THRESH_BINARY)
 
-    # 얼굴 상단(눈/이마) 보호 레이어 차감
+    # 얼굴 상단(눈/이마 38%) 보호 레이어 차감
     if np.count_nonzero(protection_mask) > 0:
         smoothed = cv2.bitwise_and(smoothed, cv2.bitwise_not(protection_mask))
 
@@ -413,13 +497,20 @@ def apply_debug_bbox(
 
 # 체위별 안전 앵커 바운딩 박스 (정규화 좌표: [x0, y0, x1, y1])
 POSE_SAFE_ANCHORS = {
-    "missionary": [0.34, 0.58, 0.66, 0.84],   # 정상위/배위: 하단 중앙 영역
-    "doggystyle": [0.35, 0.52, 0.65, 0.78],   # 후배위: 중앙 하단 결합부
-    "cowgirl":    [0.34, 0.60, 0.66, 0.86],   # 기승위: 하단 기저부
-    "fellatio":   [0.36, 0.38, 0.64, 0.60],   # 상반신·얼굴 밀착 구강: 중상단 입/접촉부
-    "paizuri":    [0.34, 0.40, 0.66, 0.68],   # 상반신·바스트 밀착: 가슴 중심 결합부
-    "side":       [0.35, 0.55, 0.65, 0.82],   # 측와위: 측면 교차부
-    "default_h":  [0.34, 0.56, 0.66, 0.84],   # 기본 성인 결합 씬
+    "missionary":  [0.34, 0.58, 0.66, 0.84],   # 정상위/배위: 하단 중앙 영역
+    "doggystyle":  [0.35, 0.52, 0.65, 0.78],   # 후배위: 중앙 하단 결합부
+    "cowgirl":     [0.34, 0.60, 0.66, 0.86],   # 기승위: 하단 기저부
+    "fellatio":    [0.36, 0.38, 0.64, 0.60],   # 상반신·얼굴 밀착 구강: 중상단 입/접촉부
+    "paizuri":     [0.34, 0.40, 0.66, 0.68],   # 상반신·바스트 밀착: 가슴 중심 결합부
+    "piledriver":  [0.36, 0.08, 0.64, 0.38],   # 역전 파일드라이버: 상단 중앙 결합부
+    "side":        [0.35, 0.55, 0.65, 0.82],   # 측와위: 측면 교차부
+    "standing":    [0.34, 0.44, 0.66, 0.72],   # 입위(서서 하는 체위): 중앙 허리~골반 높이
+    "shower":      [0.34, 0.48, 0.66, 0.76],   # 샤워실/수중 체위: 중앙 결합부
+    "cunnilingus": [0.32, 0.52, 0.68, 0.82],   # 애무/커닐링구스/핑거링: 하단 중심부
+    "handjob":     [0.34, 0.48, 0.66, 0.74],   # 대딸/핸드잡: 중하단 손 위치
+    "footjob":     [0.34, 0.52, 0.66, 0.80],   # 풋잡: 하단 발 위치
+    "spanking":    [0.34, 0.48, 0.66, 0.78],   # 스팽킹: 둔부/엉덩이 중심
+    "default_h":   [0.34, 0.56, 0.66, 0.84],   # 기본 성인 결합 씬
 }
 
 # 100% 완전 착의 감정 표현 대역 (000~019)
@@ -439,14 +530,8 @@ ROMANCE_NON_EXPOSURE_CODES = frozenset({
     "061",  # 알몸키스 (상체 밀착 키스)
 })
 
-# H씬(080~139, 150~209) 중 비노출 여운/포옹/대화 씬 (성기 노출 없음)
-NON_EXPOSURE_H_POSES = frozenset({
-    "101",  # 펠라사후
-    "104",  # 입위강
-    "115",  # 필로우토크
-    "171",  # 펠라사후 (오토)
-    "174",  # 입위강 (오토)
-})
+# H씬(080~139, 150~209)은 모델 생성 편차로 인한 우발적 노출까지 100% 포착하기 위해 면제 없이 전수 YOLO 스캔 수행
+NON_EXPOSURE_H_POSES: frozenset[str] = frozenset()
 
 
 def is_pose_censor_required(
@@ -510,9 +595,9 @@ def is_pose_censor_required(
     if 20 <= c_int <= 50:
         return code_str in DAILY_EXPOSURE_CODES or is_nude
 
-    # 5. 로맨스(060~079): 064~071(공용 구강) 및 062, 063(함께씻기, 스푸닝)
+    # 5. 로맨스(060~079): 064~079(공용 구강/바스트/핸드잡/풋잡/스마타) 및 062, 063(함께씻기, 스푸닝)
     if 60 <= c_int <= 79:
-        return c_int in (62, 63) or (64 <= c_int <= 71) or is_nude
+        return c_int in (62, 63) or (64 <= c_int <= 79) or is_nude
 
     # 6. 성인 H씬 대역 (080~139 여성, 150~209 오토코노코)
     if (80 <= c_int <= 139) or (150 <= c_int <= 209):
@@ -560,6 +645,10 @@ def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
         prompt = (entry.prompt or "").lower()
         combined = f"{label} {prompt}"
 
+        # 0. 역전 파일드라이버 (상단 결합 구도: 116, 186 등)
+        if any(kw in combined for kw in ("piledriver", "upside-down", "inverted position", "파일드라이버")):
+            return "piledriver"
+
         # 1. 바스트 밀착 단독 (구강 복합이 아닌 순수 바스트 밀착)
         if ("paizuri" in combined or "titfuck" in combined or "파이즈리" in label or "가슴사정" in label) and "fellatio" not in combined and "펠라" not in label:
             return "paizuri"
@@ -580,7 +669,31 @@ def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
         if any(kw in combined for kw in ("side by side sex", "측위", "들박")):
             return "side"
 
-        # 6. 정상위/배위/누운 자세
+        # 6. 입위(서서 하는 체위)
+        if any(kw in combined for kw in ("standing sex", "입위", "들박")):
+            return "standing"
+
+        # 7. 샤워실/수중 체위
+        if any(kw in combined for kw in ("shower sex", "샤워", "욕실")):
+            return "shower"
+
+        # 8. 애무/커닐링구스/핑거링
+        if any(kw in combined for kw in ("cunnilingus", "fingering", "보지애무", "구강애무", "후방애무", "커닐링구스")):
+            return "cunnilingus"
+
+        # 9. 핸드잡/대딸
+        if any(kw in combined for kw in ("handjob", "대딸", "핸드잡", "백허그대딸")):
+            return "handjob"
+
+        # 10. 풋잡
+        if any(kw in combined for kw in ("footjob", "풋잡")):
+            return "footjob"
+
+        # 11. 스팽킹
+        if any(kw in combined for kw in ("spanking", "스팽킹")):
+            return "spanking"
+
+        # 12. 정상위/배위/누운 자세
         if any(kw in combined for kw in ("missionary", "정상위", "대면좌위", "삽입조르기", "웨딩섹스", "알몸섹스절정", "m자개각", "밀착절정")):
             return "missionary"
 
@@ -610,7 +723,8 @@ def _box_iou(a: Tuple[int, int, int, int], b: Tuple[int, int, int, int]) -> floa
         return 0.0
     area_a = max(1, (a[2] - a[0]) * (a[3] - a[1]))
     area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
-    return inter / float(min(area_a, area_b))
+    union = max(1, area_a + area_b - inter)
+    return inter / float(union)
 
 
 def censor_image(
@@ -667,15 +781,24 @@ def censor_image(
         bw, bh = max(1, x2 - x1), max(1, y2 - y1)
         if bw < 12 or bh < 12:
             return
-        # 상단 배경/머리카락 오탐지 차단 (구강 씬 외에는 y2 < 0.25*H 배제)
-        if y2 < img_h * 0.24:
+        # 상단 배경/머리카락 오탐지 차단 (구강/상반신 클로즈업 및 역전 파일드라이버 씬은 상단 결합부까지 허용)
+        pose_cat = get_pose_category(pose_code) if pose_code is not None else None
+        is_upper_close = pose_cat in ("fellatio", "paizuri", "piledriver")
+        min_y2_ratio = 0.04 if pose_cat == "piledriver" else (0.10 if is_upper_close else 0.24)
+        if y2 < img_h * min_y2_ratio:
             return
+        # 상단 얼굴/머리카락 침범 방지 (piledriver 제외: y1이 최상단 7% 이내이면 하향 조정)
+        if pose_cat != "piledriver" and y1 < int(img_h * 0.07):
+            y1 = max(y1, int(img_h * 0.07))
         # 배경/침대 시트 허공 박스 오탐지 원천 차단 (Skin Density Gate: 내부 피부톤 비율 18% 미만 시 즉시 폐기)
         roi_skin = skin_check_np[y1:y2, x1:x2]
         if roi_skin.size == 0 or (np.count_nonzero(roi_skin) / float(roi_skin.size)) < 0.18:
             return
         if lbl == "pussy":
-            if y2 < img_h * 0.48:
+            # 구강/파이즈리 단독 상반신 씬에서는 겨드랑이/쇄골 주름이 pussy로 오탐지되므로 원천 차단
+            if pose_cat in ("fellatio", "paizuri"):
+                return
+            if pose_cat != "piledriver" and y2 < img_h * 0.48:
                 return
             if bh > bw * 1.25 and bh > 60:
                 safe_cut = int(bh * 0.22)
@@ -711,10 +834,12 @@ def censor_image(
                 if is_target:
                     _add_candidate(tuple(int(v) for v in box), label, float(score))
 
-            # [2단계] 하반신 결합 영역 2중 Zoom-In ROI 크롭 정밀 재스캔 (후배위/기승위 등 가려진 성기 검출률 극대화)
+            # [2단계] 다중 스케일 Zoom-In ROI 크롭 정밀 재스캔 (하반신 결합부 + 상반신 구강 클로즈업 + 상단 역전 결합부)
             roi_specs = [
                 (0.14, 0.38, 0.86, 0.98),
                 (0.20, 0.45, 0.80, 0.95),
+                (0.12, 0.12, 0.88, 0.70),  # 상반신 / 구강 클로즈업 정밀 재스캔 ROI
+                (0.18, 0.00, 0.82, 0.46),  # 상단 역전 자세(파일드라이버 등) 결합부 정밀 재스캔 ROI
             ]
             for rx0, ry0, rx1, ry1 in roi_specs:
                 cx1, cy1 = int(img_w * rx0), int(img_h * ry0)

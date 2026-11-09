@@ -1,0 +1,17 @@
+{
+  "name": "에나 (Ena)",
+  "prefix": "ena",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.68,
+  "appearance": {
+    "face_and_hair": "cute petite girl, short dark brown hair, messy bob, prominent ahoge, warm brown cat-like eyes",
+    "physique": "petite, youthful, soft body, small breasts, slender waist, fair skin",
+    "outfit": "white collared shirt, short sleeves, navy pleated miniskirt, black choker"
+  },
+  "positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1girl, solo, fair skin, (short dark brown hair, messy bob, prominent ahoge:1.3), warm brown eyes, (petite, youthful, soft body, small breasts, slender waist:1.15), white collared shirt, short sleeves, open shirt, tied shirt, (thin black strap:0.95), navy pleated miniskirt, dark blue pleated skirt, black choker",
+  "negative": "child, loli, kid, chibi, 1boy, male, masculine, large breasts, huge breasts, heavy cleavage, lowres, worst quality, bad anatomy, deformed",
+  "sdxl_nude_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1girl, solo, completely nude, full nudity, bare skin, fair skin, (short dark brown hair, messy bob, prominent ahoge:1.3), warm brown eyes, (petite, youthful, soft body, small breasts, slender waist:1.15), smooth legs",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1girl, solo, fair skin, (short dark brown hair, messy bob, prominent ahoge:1.3), warm brown eyes, (petite, youthful, soft body, small breasts, slender waist:1.15), white collared shirt, short sleeves, open shirt, tied shirt, (thin black strap:0.95), navy pleated miniskirt, dark blue pleated skirt, black choker",
+  "sdxl_negative": "child, loli, kid, chibi, 1boy, male, masculine, large breasts, huge breasts, heavy cleavage, lowres, worst quality, bad anatomy, deformed"
+}

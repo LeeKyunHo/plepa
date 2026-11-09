@@ -123,6 +123,8 @@ class PoseService:
                     prompt_female=item.get("prompt_female", ""),
                     prompt_otokonoko=item.get("prompt_otokonoko", ""),
                     negative_add=item.get("negative_add", ""),
+                    status=item.get("status", "active"),
+                    canonical_code=item.get("canonical_code"),
                 )
 
         # 로스터 전용 포즈 오버라이드 파일 (projects/{roster}/pose_overrides.json) 로드
@@ -173,6 +175,8 @@ class PoseService:
                             target_gender=target_g,
                             allowed_rosters=allowed_r,
                             negative_add=item.get("negative_add", ""),
+                            status=item.get("status", "active"),
+                            canonical_code=item.get("canonical_code"),
                         )
 
             except Exception:
@@ -200,10 +204,15 @@ class PoseService:
         expr = expr.strip()
         expr_lower = expr.lower()
 
+        def _is_active(entry: PoseEntry) -> bool:
+            return getattr(entry, "status", "active") != "deprecated"
+
         if expr_lower == "all":
             allowed_themes = set(self.ROSTER_THEME_MAP.get(roster.lower(), [])) if roster else set()
 
             def is_allowed_for_all(entry: PoseEntry) -> bool:
+                if not _is_active(entry):
+                    return False
                 # 1. 특수 코스튬 팩(수영복, BDSM, 바니걸 등)은 기본 전부생산에서 제외 (명시적 요청 시에만 생성)
                 if entry.section in self.OPTIONAL_COSTUME_SECTIONS:
                     return False
@@ -280,7 +289,7 @@ class PoseService:
                     codes = []
                     for i in range(s_num, e_num + 1):
                         c_str = f"{prefix}{i:02d}"
-                        if c_str in db:
+                        if c_str in db and _is_active(db[c_str]):
                             codes.append(c_str)
                     return codes
                 except ValueError:
@@ -291,7 +300,7 @@ class PoseService:
                 codes = []
                 for i in range(start, end + 1):
                     c_str = f"{i:03d}"
-                    if c_str in db:
+                    if c_str in db and _is_active(db[c_str]):
                         codes.append(c_str)
                 return codes
             except ValueError:

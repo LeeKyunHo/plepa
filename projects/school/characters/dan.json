@@ -1,0 +1,17 @@
+{
+  "name": "다은 (Dan)",
+  "prefix": "dan",
+  "gender": "female",
+  "default_mode": "sdxl",
+  "ref_weight": 0.68,
+  "appearance": {
+    "face_and_hair": "slender graceful girl, pure black straight long hair, see-through bangs, warm hazel brown eyes",
+    "physique": "slender, medium breasts, narrow waist, soft body curves, soft shaded skin",
+    "outfit": "white collared dress shirt, long sleeves, navy pleated miniskirt"
+  },
+  "positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes BREAK 1girl, solo, slender, (medium breasts:1.2), narrow waist, soft body curves, ((pure black hair:1.25)), ((straight long hair:1.2)), see-through bangs, long hair down, (warm hazel brown eyes:1.2), white collared dress shirt, long sleeves, button-up shirt, (thin black strap:0.95), navy pleated miniskirt, dark blue pleated skirt",
+  "negative": "child, loli, kid, chibi, 1boy, male, masculine, flat chest, giant hips, lowres, worst quality, bad anatomy, deformed",
+  "sdxl_nude_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes BREAK 1girl, solo, completely nude, full nudity, bare skin, slender, (medium breasts:1.2), narrow waist, soft body curves, ((pure black hair:1.25)), ((straight long hair:1.2)), see-through bangs, long hair down, (warm hazel brown eyes:1.2), smooth fair skin",
+  "sdxl_positive": "masterpiece, best quality, newest, absurdres, aesthetic illustration, delicate anime coloring, soft shaded skin, finely detailed beautiful eyes BREAK 1girl, solo, slender, (medium breasts:1.2), narrow waist, soft body curves, ((pure black hair:1.25)), ((straight long hair:1.2)), see-through bangs, long hair down, (warm hazel brown eyes:1.2), white collared dress shirt, long sleeves, button-up shirt, (thin black strap:0.95), navy pleated miniskirt, dark blue pleated skirt",
+  "sdxl_negative": "child, loli, kid, chibi, 1boy, male, masculine, flat chest, giant hips, lowres, worst quality, bad anatomy, deformed"
+}

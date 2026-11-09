@@ -1,0 +1,17 @@
+{
+  "name": "루카 (Luca)",
+  "prefix": "luc",
+  "gender": "otokonoko",
+  "default_mode": "sdxl",
+  "ref_weight": 0.68,
+  "appearance": {
+    "face_and_hair": "refined elegant face, young adult, bright violet eyes, platinum blonde hair, loose side ponytail, wavy ends",
+    "physique": "slender waist, soft curves, small-medium breasts, soft breast shape",
+    "outfit": "white off-shoulder chiffon blouse, black pleated skirt, lace trim"
+  },
+  "positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy, refined elegant face, young adult, bright violet eyes:1.15), (platinum blonde hair, loose side ponytail, wavy ends:1.2), (small-medium breasts, soft breast shape:1.15), slender waist, soft curves, (subtle bulge, tiny bulge under clothing:1.15), white off-shoulder chiffon blouse, black pleated skirt, lace trim, black lace-trimmed thighhighs",
+  "negative": "child, loli, kid, chibi, 1girl, female, huge breasts, heavy cleavage, female anatomy, vagina, pussy, muscular, manly, beard, mustache, visible penis, large penis, erection, testicles, lowres, worst quality, bad anatomy, deformed",
+  "sdxl_nude_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy, refined elegant face, young adult, bright violet eyes:1.15), completely nude, full nudity, bare skin, (platinum blonde hair, loose side ponytail, wavy ends:1.2), (small-medium breasts, soft breast shape:1.15), slender waist, soft curves, smooth fair skin",
+  "sdxl_positive": "masterpiece, best quality, very aesthetic, absurdres, newest, BREAK 1boy, solo, androgynous, (otokonoko, femboy, refined elegant face, young adult, bright violet eyes:1.15), (platinum blonde hair, loose side ponytail, wavy ends:1.2), (small-medium breasts, soft breast shape:1.15), slender waist, soft curves, (subtle bulge, tiny bulge under clothing:1.15), white off-shoulder chiffon blouse, black pleated skirt, lace trim, black lace-trimmed thighhighs",
+  "sdxl_negative": "child, loli, kid, chibi, 1girl, female, huge breasts, heavy cleavage, female anatomy, vagina, pussy, muscular, manly, beard, mustache, visible penis, large penis, erection, testicles, lowres, worst quality, bad anatomy, deformed"
+}
