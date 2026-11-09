@@ -18,7 +18,7 @@
 | **ComfyUI 서버 헬스체크** | `Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" \| ConvertTo-Json -Depth 3` | GPU/VRAM JSON 응답 반환 |
 | **로스터 5단계 사전점검** | `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus` | `✔ [PASS] 위반 사항 0건!` |
 | **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
-| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `87 passed (100% ALL PASS)` |
+| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `105 passed (100% ALL PASS)` |
 
 
 ---
