@@ -513,6 +513,14 @@ POSE_SAFE_ANCHORS = {
     "default_h":   [0.34, 0.56, 0.66, 0.84],   # 기본 성인 결합 씬
 }
 
+# 다중 표본(N>=9) 실측 벤치마크 기반 포즈별 고유 정밀 앵커 좌표 (x0, y0, x1, y1)
+# 범용 카테고리 앵커보다 최우선 적용되어 미탐지 폴백 시에도 정확한 실제 결합 부위에 마스킹 안착
+POSE_EXACT_ANCHORS: Dict[str, List[float]] = {
+    # 088 후배위약: 좌측 측면 배면 결합 (N=9 실측 평균 X=0.14, Y=0.73 기반 정밀 바운딩)
+    "088": [0.04, 0.66, 0.26, 0.88],
+    "158": [0.04, 0.66, 0.26, 0.88],  # 오토코노코 대칭 (+70)
+}
+
 # 100% 완전 착의 감정 표현 대역 (000~019)
 EXEMPT_EMOTION_CODES = frozenset(f"{i:03d}" for i in range(0, 20))
 
@@ -703,7 +711,23 @@ def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
 def get_pose_anchor_box(
     pose_code: Union[str, int], img_width: int, img_height: int
 ) -> Optional[Tuple[int, int, int, int]]:
-    """포즈 코드에 해당하는 안전 앵커 픽셀 바운딩 박스 (x1, y1, x2, y2)를 계산하여 반환합니다."""
+    """
+    포즈 코드에 해당하는 안전 앵커 픽셀 바운딩 박스 (x1, y1, x2, y2)를 계산하여 반환합니다.
+    1순위: N>=9 실측 벤치마크 기반 포즈 고유 앵커 (POSE_EXACT_ANCHORS)
+    2순위: 체위 카테고리 범용 안전 앵커 (POSE_SAFE_ANCHORS)
+    """
+    code_key = str(pose_code).strip().zfill(3)
+
+    # 1순위: 포즈별 실측 정밀 앵커
+    if code_key in POSE_EXACT_ANCHORS:
+        x0_pct, y0_pct, x1_pct, y1_pct = POSE_EXACT_ANCHORS[code_key]
+        x1 = int(round(x0_pct * img_width))
+        y1 = int(round(y0_pct * img_height))
+        x2 = int(round(x1_pct * img_width))
+        y2 = int(round(y1_pct * img_height))
+        return (x1, y1, x2, y2)
+
+    # 2순위: 카테고리 범용 앵커
     cat = get_pose_category(pose_code)
     if not cat or cat not in POSE_SAFE_ANCHORS:
         return None
