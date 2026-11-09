@@ -131,6 +131,7 @@ class GenerationParams:
     prompt_alert_threshold: int = 2  # 연속 불량 시 프롬프트 점검 경고 발령 임계치
     reuse_seed: bool = False  # _batch_manifest.json의 이전 골든 시드 고정 재생성
     strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
+    seed: Optional[int] = None  # 특정 난수 시드 고정 생성
 
 
 # CLI와 GUI가 단일 진실 공급원(SSOT)으로 공유하는 생성 옵션 메타데이터 레지스트리
@@ -531,10 +532,12 @@ class GenerationService:
                             pose, width, height, engine=params.engine,
                             user_specified=(params.width is not None or params.height is not None)
                         )
+                        sdxl_seed = params.seed if params.seed is not None else -1
                         workflow = build_sdxl_workflow(
                             positive_prompt=pos_prompt,
                             negative_prompt=neg_prompt,
                             output_prefix=f"{char.prefix}_{code}",
+                            seed=sdxl_seed,
                             width=eff_w,
                             height=eff_h,
                             steps=steps,
@@ -584,7 +587,16 @@ class GenerationService:
                                 break
 
                     code_key = str(code).strip()
-                    if params.reuse_seed and code_key in existing_manifest_seeds:
+                    if params.seed is not None:
+                        for node_id, node_data in workflow.items():
+                            if isinstance(node_data, dict) and "inputs" in node_data:
+                                inp = node_data["inputs"]
+                                if "seed" in inp:
+                                    inp["seed"] = params.seed
+                                elif "noise_seed" in inp:
+                                    inp["noise_seed"] = params.seed
+                        current_seed = params.seed
+                    elif params.reuse_seed and code_key in existing_manifest_seeds:
                         reused = existing_manifest_seeds[code_key]
                         for node_id, node_data in workflow.items():
                             if isinstance(node_data, dict) and "inputs" in node_data:

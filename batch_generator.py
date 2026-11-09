@@ -236,6 +236,7 @@ def create_parser() -> argparse.ArgumentParser:
         help="검열 대상 부위 (penis, pussy, all, 쉼표 구분 기본: penis)"
     )
     parser.add_argument("--censor-only", action="store_true", help="ComfyUI 호출 없이 기존 생성된 에셋들의 검열본만 초고속(0.2초) 일괄 갱신/생성")
+    parser.add_argument("--seed", type=int, default=None, help="생성에 사용할 난수 시드 값 고정 (미지정 시 무작위)")
     parser.add_argument("--reuse-seed", action="store_true", help="_batch_manifest.json에 기록된 기존 골든 시드를 재사용하여 동일 구도로 의상/프롬프트 재생성")
     parser.add_argument("--strict-censor-qc", action="store_true", help="필수 성인 결합/노출 씬에서 성기 미탐지 시 구도 불량으로 판정하여 자동 리롤")
     parser.add_argument("--audit", action="store_true", help="지정된 로스터의 캐릭터별 에셋 완비율, 누락 포즈, 검열 원본 백업 여부 1초 전수 감사 리포트 출력")
@@ -345,6 +346,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             max_retries=args.max_retries,
             reuse_seed=args.reuse_seed,
             strict_censor_qc=args.strict_censor_qc,
+            seed=args.seed,
         )
 
         try:
