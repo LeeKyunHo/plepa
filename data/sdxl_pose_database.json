@@ -379,10 +379,10 @@
       "description": "착의 구강: 옷을 입은 채 상의 옷깃을 흐트러뜨리고 목구멍 끝까지 삼키며 눈물을 흘리는 딥스로트 씬",
       "required_outfit": "default",
       "section": "romance",
-      "prompt": "1girl, 1boy, ((upper body, tight bust portrait:1.4)), ((head tilted back, chin raised high, exposed slender neck:1.4)), ((mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.35)), ((profile side view, facing left, partner on left:1.35)), ((streaming tears running down flushed cheeks, emotional teary eyes looking up:1.35)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.3)), intimate bedroom atmosphere, warm rim lighting",
-      "prompt_female": "1girl, 1boy, ((upper body, tight bust portrait:1.4)), ((head tilted back, chin raised high, exposed slender neck:1.4)), ((mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.35)), ((streaming tears running down flushed cheeks, emotional teary eyes looking up:1.35)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.3)), intimate bedroom atmosphere, warm rim lighting",
-      "prompt_otokonoko": "2boys, crossdressing, otokonoko, ((upper body, tight bust portrait:1.4)), ((head tilted back, chin raised high, exposed slender neck:1.4)), ((mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.35)), ((streaming tears running down flushed cheeks, emotional teary eyes looking up:1.35)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.3)), intimate bedroom atmosphere, warm rim lighting",
-      "negative_add": "(standing male legs:1.45), (pants around ankles:1.45), (kneeling wide view:1.4), (ball gag, gag, muzzle:1.5), (facing right:1.5), (from behind:1.5)"
+      "prompt": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 1girl, 1boy, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), intimate bedroom atmosphere, warm rim lighting",
+      "prompt_female": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 1girl, 1boy, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), intimate bedroom atmosphere, warm rim lighting",
+      "prompt_otokonoko": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 2boys, crossdressing, otokonoko, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), intimate bedroom atmosphere, warm rim lighting",
+      "negative_add": "(facing right:1.25), (looking right:1.25), (profile from left:1.25), (partner on right:1.25), (standing male legs:1.25), (pants around ankles:1.25), (ball gag, gag, muzzle:1.25), (kneeling wide view:1.25)"
     },
     "068": {
       "label": "착의펠라약",
@@ -428,11 +428,11 @@
       "label": "파이즈리약",
       "description": "가슴으로 부드럽게 감싸 안고 자극하는 파이즈리 연출",
       "required_outfit": "nude",
-      "prompt": "1girl, ((upper body, chest focus, tight bust portrait:1.4)), 1boy, completely nude, full nudity, bare skin, ((paizuri titfuck, gentle rhythm:1.3)), ((symmetrical front view, bust focus, centered vertical composition, looking directly at camera:1.35)), ((both hands squeezing breasts together symmetrically:1.35)), cleavage penetration, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, upper body",
+      "prompt": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, warm lighting",
       "section": "romance",
-      "negative_add": "(standing male legs:1.45), (male lower body:1.45), (pants:1.45), (full body:1.45), (cowboy shot:1.45), (wide shot:1.45), (profile view:1.4), (turned away:1.4), (side view:1.4)",
-      "prompt_female": "1girl, ((upper body, chest focus, tight bust portrait:1.4)), 1boy, completely nude, full nudity, bare skin, ((paizuri titfuck, gentle rhythm:1.3)), cleavage penetration, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, upper body",
-      "prompt_otokonoko": "otokonoko, ((upper body, chest focus, tight bust portrait:1.4)), 1boy, completely nude, full nudity, bare skin, ((paizuri titfuck, gentle rhythm:1.3)), cleavage penetration, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, upper body"
+      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (profile view:1.25), (turned away:1.25), (side view:1.25)",
+      "prompt_female": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, warm lighting",
+      "prompt_otokonoko": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, warm lighting"
     },
     "073": {
       "label": "파이즈리펠라",
@@ -716,9 +716,9 @@
     "116": {
       "label": "파일드라이버",
       "description": "어깨만 바닥에 닿고 허리와 엉덩이를 수직으로 치켜올려 무릎을 얼굴 옆에 접은 채 위에서 내리꽂듯 결합하는 역전 파일드라이버 자세 (N30)",
-      "prompt": "1girl, 1boy, completely nude, full nudity, bare skin, ((piledriver position, vertical piledriver sex:1.35)), ((symmetrical inverted composition, top-down angle, upside-down:1.35)), ((head at bottom center, shoulders and upper back on bed:1.3)), ((hips raised vertically in air at upper center, knees folded to sides of head:1.35)), ((legs spread wide in air:1.25)), partner standing above at top frame thrusting downward, partner gripping her hips, ((intense ecstasy expression:1.2)), eyes rolled back, open mouth moaning, tears of overwhelming pleasure, flushed face, trembling body, extreme deep penetration, bed, cowboy shot",
+      "prompt": "cowboy shot, top-down angle, upside-down, (symmetrical inverted composition:1.15), (piledriver position, vertical piledriver sex:1.15), (hips raised vertically at upper center:1.15), (head at bottom center, back on bed:1.15), (knees folded to sides:1.1), (legs spread in air:1.1), 1girl, 1boy, completely nude, full nudity, bare skin, partner standing above thrusting downward gripping hips, ((intense ecstasy expression, eyes rolled back, open mouth moaning, tears of pleasure:1.15)), flushed face, bed",
       "section": "h_scenes",
-      "negative_add": "(side view:1.4), (profile view:1.4), (doggystyle:1.5)"
+      "negative_add": "(side view:1.25), (profile view:1.25), (doggystyle:1.25), (standing male:1.25), (feet on ground:1.25)"
     },
     "118": {
       "label": "교배프레스",
@@ -1083,8 +1083,9 @@
     "186": {
       "label": "파일드라이버",
       "description": "어깨만 바닥에 닿고 허리와 엉덩이를 수직으로 치켜올려 무릎을 얼굴 옆에 접은 채 위에서 내리꽂듯 결합하는 역전 파일드라이버 자세 (N30)",
-      "prompt": "2boys, otokonoko, (size difference, masculine faceless male partner:1.15), completely nude, full nudity, bare skin, ((piledriver position, vertical anal piledriver:1.35)), ((upside-down, inverted position:1.3)), ((shoulders and upper back on bed, hips raised vertically in air:1.35)), ((knees folded to sides of head:1.3)), ((legs spread wide in air:1.25)), partner standing above thrusting downward, partner gripping hips, from side view, ((intense ecstasy expression:1.2)), eyes rolled back, open mouth moaning, tears of overwhelming pleasure, flushed face, trembling body, extreme deep penetration, bed, cowboy shot",
-      "section": "scenes_otokonoko"
+      "prompt": "cowboy shot, top-down angle, upside-down, (symmetrical inverted composition:1.15), (piledriver position, vertical anal piledriver:1.15), (hips raised vertically at upper center:1.15), (head at bottom center, back on bed:1.15), (knees folded to sides:1.1), (legs spread in air:1.1), 2boys, otokonoko, (size difference, masculine faceless male partner:1.15), completely nude, full nudity, bare skin, partner standing above thrusting downward gripping hips, ((intense ecstasy expression, eyes rolled back, open mouth moaning, tears of pleasure:1.15)), flushed face, bed",
+      "section": "scenes_otokonoko",
+      "negative_add": "(side view:1.25), (profile view:1.25), (doggystyle:1.25), (standing male:1.25), (feet on ground:1.25)"
     },
     "188": {
       "label": "교배프레스",
