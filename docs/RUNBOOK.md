@@ -77,6 +77,20 @@ python batch_generator.py -r campus -c aya -p 080 --censor --censor-style white_
 python batch_generator.py -r campus -c aya -p all --censor-only --censor-style debug_bbox
 ```
 
+
+### 2.4 모바일 인터랙티브 검수 갤러리 및 원클릭 터치 덧칠 에디터 (ADR-86)
+- **동작 원리**:
+  - '애매하면 모자라게(콤팩트 언더마스킹)' 기본 정책에 따라 침범률(오버마스킹)을 0%로 한정.
+  - 모바일 검수 갤러리(port: 8085)에서 에셋별 [✏️ 터치 덧칠] 버튼을 탭하여 풀스크린 캔버스 에디터 진입.
+  - 사용자가 스마트폰 화면에서 터치 브러시로 모자란 부분을 1~2초 덧칠하고 [💾 저장 완료] 시 POST /api/retouch_censor를 통해 원본 파일 영구 덮어쓰기 저장 및 output/benchmarks/ground_truth/ 정답 데이터 자동 아카이브.
+`powershell
+# 1) 모바일 검수 갤러리 및 Cloudflare 공인 터널 서버 구동 (포트 8085)
+python scripts/serve_benchmark_mobile.py
+
+# 2) 전수 재검열 및 갤러리 HTML 갱신 단독 실행
+python scripts/recensor_inspection_batch.py
+`
+
 ### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프
 - 생성 직후 [`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py)가 4대 결함(① 색감 과포화 Color Burn, ② 남성 모브 분신 2명 이상, ③ 단독/여운 씬 남성 난입, ④ 9~10등신 기형 장신)을 검사하여 불량 시 새 시드로 자동 재시도합니다(기본 3회):
 ```powershell
