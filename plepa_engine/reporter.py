@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 from plepa_engine.models import GenerationResult, PoseEntry
 
-SEPARATOR = "═" * 70
+SEPARATOR = "=" * 70
 
 
 
