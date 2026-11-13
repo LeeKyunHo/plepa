@@ -162,6 +162,7 @@ def generate_inspection_html(
                 <div class="sub-info">{safe_size}</div>
                 <div class="card-btn-row">
                   <button class="action-btn retouch-btn" data-path="{safe_path}" data-pose="{safe_code}" data-label="{safe_label}" onclick="openRetouch(event, this.dataset.path, this.dataset.pose, this.dataset.label)">✏️ 덧칠</button>
+                  <button class="action-btn recensor-btn" data-path="{safe_path}" data-char="{safe_char}" data-pose="{safe_code}" data-label="{safe_label}" onclick="reapplyCensor(event, this.dataset.path, this.dataset.char, this.dataset.pose, this.dataset.label)">⚡ 재검열</button>
                   <button class="action-btn origin-btn" data-path="{safe_path}" data-pose="{safe_code}" data-label="{safe_label}" onclick="restoreOrigin(event, this.dataset.path, this.dataset.pose, this.dataset.label)">🔄 원본</button>
                 </div>
               </div>
@@ -525,6 +526,19 @@ def generate_inspection_html(
     background: #0284c7;
     color: #fff;
   }}
+  .recensor-btn {{
+    background: #172554;
+    border: 1px solid #1d4ed8;
+    color: #93c5fd;
+  }}
+  .recensor-btn:active {{
+    background: #2563eb;
+    color: #fff;
+  }}
+  .recensor-btn:disabled {{
+    opacity: 0.5;
+    cursor: not-allowed;
+  }}
   .origin-btn {{
     background: #24211b;
     border: 1px solid #78350f;
@@ -533,6 +547,35 @@ def generate_inspection_html(
   .origin-btn:active {{
     background: #d97706;
     color: #fff;
+  }}
+  .censor-toolbar {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 8px;
+    flex-wrap: wrap;
+  }}
+  .censor-select {{
+    background: #151b2e;
+    border: 1px solid var(--border);
+    color: #f1f5f9;
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    outline: none;
+  }}
+  .anchor-toggle {{
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    background: #151b2e;
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
   }}
 
   /* 플로팅 최상단 이동 버튼 */
@@ -728,6 +771,22 @@ def generate_inspection_html(
     <button class="filter-btn" onclick="filterFolder('01_normal')">01 일상/감정</button>
     <button class="filter-btn" onclick="filterFolder('02_h_scenes')">02 로맨스/H씬</button>
   </div>
+  <div class="censor-toolbar">
+    <label for="global-censor-style" style="font-size:0.7rem;color:#94a3b8;font-weight:700;">검열 스타일</label>
+    <select id="global-censor-style" class="censor-select">
+      <option value="white_silhouette" selected>white_silhouette (백색 실루엣)</option>
+      <option value="black_silhouette">black_silhouette (흑색 실루엣)</option>
+      <option value="mosaic">mosaic (모자이크)</option>
+      <option value="bar">bar (검은 바)</option>
+      <option value="slim_bar">slim_bar (슬림 바)</option>
+      <option value="shadow">shadow (그림자)</option>
+      <option value="debug_bbox">debug_bbox (디버그 박스)</option>
+    </select>
+    <label class="anchor-toggle" title="YOLO 미검출 시 포즈 앵커 폴백 마스킹 활성화">
+      <input type="checkbox" id="global-anchor-fallback" />
+      <span>anchor_fallback</span>
+    </label>
+  </div>
 </div>
 
 {grids_html}
@@ -870,6 +929,7 @@ def generate_inspection_html(
     cleanRel = cleanRel.replace(/^\\/?inspect\\//, '').replace(/^\\//, '');
 
     try {{
+      const censorOpts = getCensorOptions();
       const resp = await fetch('/api/reroll_queue', {{
         method: 'POST',
         headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
@@ -877,7 +937,11 @@ def generate_inspection_html(
           file_path: cleanRel,
           char_code: charCode,
           pose_code: poseCode,
-          label: label || ''
+          label: label || '',
+          censor_style: censorOpts.censor_style,
+          censor_targets: censorOpts.censor_targets,
+          min_confidence: censorOpts.min_confidence,
+          enable_anchor_fallback: censorOpts.enable_anchor_fallback
         }})
       }});
       const result = await resp.json();
@@ -1001,6 +1065,69 @@ def generate_inspection_html(
       }}
     }} catch (err) {{
       console.warn('Queue poll error:', err);
+    }}
+  }}
+
+  function getCensorOptions() {{
+    const styleEl = document.getElementById('global-censor-style');
+    const anchorEl = document.getElementById('global-anchor-fallback');
+    return {{
+      censor_style: styleEl ? styleEl.value : 'white_silhouette',
+      censor_targets: 'penis',
+      min_confidence: 0.16,
+      enable_anchor_fallback: !!(anchorEl && anchorEl.checked)
+    }};
+  }}
+
+  /* 0.2초 즉시 재검열 함수 */
+  async function reapplyCensor(e, path, charCode, poseCode, label) {{
+    if (e) e.stopPropagation();
+    const btn = e && e.currentTarget ? e.currentTarget : null;
+    const prevText = btn ? btn.innerHTML : '⚡ 재검열';
+    if (btn) {{
+      btn.disabled = true;
+      btn.innerHTML = '⏳ 처리중';
+    }}
+
+    let cleanRel = path.split('?')[0];
+    cleanRel = cleanRel.replace(/^\\/?inspect\\//, '').replace(/^\\//, '');
+    const opts = getCensorOptions();
+
+    try {{
+      const resp = await fetch('/api/reapply_censor', {{
+        method: 'POST',
+        headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
+        body: JSON.stringify({{
+          file_path: cleanRel,
+          char_code: charCode || '',
+          pose_code: poseCode || '',
+          censor_style: opts.censor_style,
+          censor_targets: opts.censor_targets,
+          min_confidence: opts.min_confidence,
+          enable_anchor_fallback: opts.enable_anchor_fallback
+        }})
+      }});
+      const result = await resp.json();
+      if (resp.ok && result.success) {{
+        const syncNote = result.synced_asset ? ' (에셋 동기화)' : '';
+        showToast(`⚡ [#${{poseCode}}] ${{opts.censor_style}} 재검열 완료${{syncNote}} (탐지 ${{result.detected_count ?? 0}}건)`);
+        const t = Date.now();
+        document.querySelectorAll('img').forEach(img => {{
+          const rawSrc = (img.getAttribute('src') || '').split('?')[0];
+          if (rawSrc === cleanRel || rawSrc.endsWith('/' + cleanRel)) {{
+            img.src = cleanRel + '?t=' + t;
+          }}
+        }});
+      }} else {{
+        alert('재검열 실패: ' + (result.error || result.detail || '알 수 없는 오류'));
+      }}
+    }} catch (err) {{
+      alert('통신 오류: ' + err);
+    }} finally {{
+      if (btn) {{
+        btn.disabled = false;
+        btn.innerHTML = prevText;
+      }}
     }}
   }}
 

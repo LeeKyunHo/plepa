@@ -7,6 +7,7 @@ plepa_gui.app
 from __future__ import annotations
 
 import argparse
+import hmac
 import html
 import sys
 from pathlib import Path
@@ -37,10 +38,15 @@ mimetypes.add_type("image/png", ".png")
 mimetypes.add_type("image/jpeg", ".jpg")
 mimetypes.add_type("image/jpeg", ".jpeg")
 
-from fastapi.responses import HTMLResponse
+from fastapi import HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from nicegui import app, ui
 from plepa_engine.config import PROJECTS_DIR
-from plepa_gui.api_routes import api_router
+from plepa_gui.api_routes import (
+    api_router,
+    get_optional_mobile_token,
+    verify_optional_request_auth,
+)
 from plepa_gui.components.header import get_active_roster
 from plepa_gui.pages.backgrounds import render_backgrounds_page
 from plepa_gui.pages.characters import render_characters_page
@@ -52,8 +58,54 @@ from plepa_gui.pages.poses import render_poses_page
 from plepa_gui.pages.settings import render_settings_page
 
 
+def register_optional_token_middleware(target_app) -> None:
+    """PLEPA_MOBILE_TOKEN 설정 시 원격 ?token= 쿠키 발급 및 보호 미들웨어 등록."""
+    if getattr(target_app.state, "_plepa_token_mw_registered", False):
+        return
+    target_app.state._plepa_token_mw_registered = True
+
+    @target_app.middleware("http")
+    async def _plepa_optional_token_middleware(request: Request, call_next):
+        expected = get_optional_mobile_token()
+        if not expected:
+            return await call_next(request)
+
+        path = request.url.path or "/"
+        is_protected_path = (
+            path.startswith("/api/")
+            or path.startswith("/projects_static/")
+            or path in {"/mobile", "/m", "/otoko", "/o", "/compare", "/c"}
+        )
+        if is_protected_path:
+            is_mutating = path.startswith("/api/") and request.method.upper() not in {"GET", "HEAD", "OPTIONS"}
+            try:
+                verify_optional_request_auth(request, check_origin=is_mutating)
+            except HTTPException as exc:
+                return JSONResponse({"detail": exc.detail, "error": exc.detail}, status_code=exc.status_code)
+
+        response = await call_next(request)
+
+        q_token = (request.query_params.get("token") or "").strip()
+        if q_token and hmac.compare_digest(q_token, expected):
+            is_https = (
+                request.url.scheme == "https"
+                or (request.headers.get("x-forwarded-proto") or "").lower() == "https"
+            )
+            response.set_cookie(
+                key="plepa_token",
+                value=expected,
+                httponly=True,
+                samesite="lax",
+                secure=is_https,
+                path="/",
+                max_age=86400,
+            )
+        return response
+
+
 def setup_routes():
     """페이지 라우트, 정적 리소스 마운트 및 REST API 등록."""
+    register_optional_token_middleware(app)
     app.add_static_files("/projects_static", str(PROJECTS_DIR))
     app.include_router(api_router)
     @ui.page("/")

@@ -174,6 +174,16 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
         .btn-reroll {{
             background: rgba(139, 92, 246, 0.25); border: 1px solid rgba(167, 139, 250, 0.6); color: #c4b5fd;
         }}
+        .btn-recensor {{
+            background: rgba(37, 99, 235, 0.28); border: 1px solid rgba(96, 165, 250, 0.65); color: #93c5fd;
+        }}
+        .btn-origin {{
+            background: rgba(217, 119, 6, 0.25); border: 1px solid rgba(251, 191, 36, 0.6); color: #fcd34d;
+        }}
+        .censor-select-mini {{
+            background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(71, 85, 105, 0.8);
+            color: #e2e8f0; border-radius: 6px; padding: 3px 6px; font-size: 11px; outline: none;
+        }}
         .btn-fill {{
             background: #059669; border: 1px solid #34d399; color: #ffffff;
             box-shadow: 0 0 10px rgba(5, 150, 105, 0.5);
@@ -229,7 +239,20 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                     </a>
                     <span style="font-size: 14px; font-weight: 700; color: #38bdf8;">📱 PLEPA MOBILE</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <select id="censorStyleSelect" class="censor-select-mini" title="즉시 재검열 및 리롤 스타일">
+                        <option value="white_silhouette" selected>white_silhouette</option>
+                        <option value="black_silhouette">black_silhouette</option>
+                        <option value="mosaic">mosaic</option>
+                        <option value="bar">bar</option>
+                        <option value="slim_bar">slim_bar</option>
+                        <option value="shadow">shadow</option>
+                        <option value="debug_bbox">debug_bbox</option>
+                    </select>
+                    <label style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#cbd5e1;cursor:pointer;">
+                        <input type="checkbox" id="anchorFallbackToggle" />
+                        <span>폴백</span>
+                    </label>
                     <button class="btn-action btn-fill" id="fillMissingBtn" onclick="triggerFillMissing()" style="padding: 4px 10px; font-size: 11px;">
                         ⚡ 누락 채우기 (<span id="missingCountBadge">0</span>)
                     </button>
@@ -269,10 +292,16 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                         캐릭터 및 코드
                     </div>
                 </div>
-                <!-- Action Buttons: 삭제 & 리롤 & 이전/다음 -->
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <!-- Action Buttons: 삭제 & 원본 & 재검열 & 리롤 & 이전/다음 -->
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
                     <button class="btn-action btn-delete" onclick="triggerDelete(event)" title="에셋 삭제 및 휴지통 이동">
                         🗑️ 삭제
+                    </button>
+                    <button class="btn-action btn-origin" onclick="triggerRestoreOrigin(event)" title="무검열 원본(_origin)으로 즉시 복원">
+                        🔄 원본
+                    </button>
+                    <button class="btn-action btn-recensor" onclick="triggerReapplyCensor(event)" title="원본 기반 0.2초 즉시 재검열">
+                        ⚡ 재검열
                     </button>
                     <button class="btn-action btn-reroll" onclick="triggerReroll(event)" title="새로운 시드로 즉시 다시 생성">
                         🎲 리롤
@@ -390,6 +419,24 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             updateView();
         }}
 
+        function getPlepaAuthHeaders(extra = {{}}) {{
+            const headers = Object.assign({{}}, extra || {{}});
+            const tok = new URLSearchParams(window.location.search).get('token');
+            if (tok) headers['X-Plepa-Token'] = tok;
+            return headers;
+        }}
+
+        function getSelectedCensorOptions() {{
+            const styleEl = document.getElementById('censorStyleSelect');
+            const anchorEl = document.getElementById('anchorFallbackToggle');
+            return {{
+                censor_style: styleEl ? styleEl.value : 'white_silhouette',
+                censor_targets: 'penis',
+                min_confidence: 0.16,
+                enable_anchor_fallback: !!(anchorEl && anchorEl.checked)
+            }};
+        }}
+
         // 에셋 삭제 (휴지통 안전 이동)
         async function triggerDelete(e) {{
             if (e) e.stopPropagation();
@@ -401,7 +448,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             try {{
                 const res = await fetch('/api/assets/delete', {{
                     method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
+                    headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
                     body: JSON.stringify({{ rel_path: item.rel_path, roster: rawData.roster }})
                 }});
                 const data = await res.json();
@@ -428,7 +475,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             try {{
                 const res = await fetch('/api/assets/undo', {{
                     method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
+                    headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
                     body: JSON.stringify({{ moved: lastDeletedBundle.moved }})
                 }});
                 const data = await res.json();
@@ -445,22 +492,86 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             }}
         }}
 
+        // 무검열 원본(_origin) 즉시 복원
+        async function triggerRestoreOrigin(e) {{
+            if (e) e.stopPropagation();
+            if (filteredItems.length === 0) return;
+            const item = filteredItems[currentIndex];
+            if (!confirm('#' + item.code + ' [' + item.char + '] 이미지를 무검열 원본(_origin)으로 복원하시겠습니까?')) return;
+
+            try {{
+                const res = await fetch('/api/assets/restore-origin', {{
+                    method: 'POST',
+                    headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
+                    body: JSON.stringify({{ rel_path: item.rel_path, roster: rawData.roster }})
+                }});
+                const data = await res.json();
+                if (res.ok && data.success) {{
+                    item.url = item.url.split('?')[0] + '?t=' + Date.now();
+                    updateView();
+                    showToast('✅ 원본 이미지로 복원 완료!');
+                }} else {{
+                    showToast('❌ 원본 복원 실패: ' + (data.detail || '알 수 없는 오류'));
+                }}
+            }} catch (err) {{
+                showToast('❌ 요청 오류: ' + err.message);
+            }}
+        }}
+
+        // 0.2초 즉시 재검열
+        async function triggerReapplyCensor(e) {{
+            if (e) e.stopPropagation();
+            if (filteredItems.length === 0) return;
+            const item = filteredItems[currentIndex];
+            const opts = getSelectedCensorOptions();
+
+            showToast('⚡ #' + item.code + ' ' + opts.censor_style + ' 재검열 중...');
+            try {{
+                const res = await fetch('/api/assets/reapply-censor', {{
+                    method: 'POST',
+                    headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
+                    body: JSON.stringify({{
+                        rel_path: item.rel_path,
+                        roster: rawData.roster,
+                        pose_code: item.code,
+                        censor_style: opts.censor_style,
+                        censor_targets: opts.censor_targets,
+                        min_confidence: opts.min_confidence,
+                        enable_anchor_fallback: opts.enable_anchor_fallback
+                    }})
+                }});
+                const data = await res.json();
+                if (res.ok && data.success) {{
+                    item.url = item.url.split('?')[0] + '?t=' + Date.now();
+                    updateView();
+                    showToast('⚡ 재검열 완료 (' + opts.censor_style + ', 탐지 ' + (data.detected_count ?? 0) + '건)');
+                }} else {{
+                    showToast('❌ 재검열 실패: ' + (data.detail || '알 수 없는 오류'));
+                }}
+            }} catch (err) {{
+                showToast('❌ 요청 오류: ' + err.message);
+            }}
+        }}
+
         // 현재 포즈 단독 리롤
         async function triggerReroll(e) {{
             if (e) e.stopPropagation();
             if (filteredItems.length === 0) return;
             const item = filteredItems[currentIndex];
+            const opts = getSelectedCensorOptions();
 
             showToast('🎲 #' + item.code + ' [' + item.char + '] 백그라운드 리롤 시작...');
             try {{
                 await fetch('/api/assets/reroll', {{
                     method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
+                    headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
                     body: JSON.stringify({{
                         char: item.char,
                         code: item.code,
                         roster: rawData.roster,
-                        reuse_seed: false
+                        reuse_seed: false,
+                        censor_style: opts.censor_style,
+                        censor_targets: opts.censor_targets
                     }})
                 }});
             }} catch (err) {{
@@ -477,12 +588,17 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             }}
             if (!confirm('현재 로스터의 비어있는 포즈 ' + count + '개를 모두 백그라운드로 자동 생성하시겠습니까?')) return;
 
+            const opts = getSelectedCensorOptions();
             showToast('⚡ 누락 포즈 ' + count + '개 백그라운드 생성 시작...');
             try {{
                 const res = await fetch('/api/assets/fill-missing', {{
                     method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ roster: rawData.roster }})
+                    headers: getPlepaAuthHeaders({{ 'Content-Type': 'application/json' }}),
+                    body: JSON.stringify({{
+                        roster: rawData.roster,
+                        censor_style: opts.censor_style,
+                        censor_targets: opts.censor_targets
+                    }})
                 }});
                 const data = await res.json();
                 showToast('🚀 ' + data.message);

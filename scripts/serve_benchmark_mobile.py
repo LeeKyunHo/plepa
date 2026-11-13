@@ -134,7 +134,7 @@ def _resolve_safe_subpath(base_dir: Path, raw_path: str) -> tuple[str, Path]:
     parts = clean_path.split("/")
     if not clean_path or any(part in ("", ".", "..") for part in parts):
         raise HTTPException(status_code=403, detail="Invalid file path")
-    if "_origin" in parts:
+    if any(part == "_origin" or part.endswith("_origin") for part in parts):
         raise HTTPException(status_code=403, detail="Forbidden path segment")
     resolved_base = base_dir.resolve()
     resolved_target = (resolved_base / clean_path).resolve()
@@ -192,9 +192,68 @@ def _resolve_char_roster(char_code: str) -> str:
     return DEFAULT_ROSTER
 
 
+def _extract_pose_code_from_filename(filename: str) -> str:
+    m = re.search(r"_([A-Za-z]\d{2,3}|\d{3})(?:_|\.)", filename or "")
+    if not m:
+        return ""
+    raw = m.group(1)
+    return raw.zfill(3) if raw.isdigit() else raw.upper()
+
+
+def _find_origin_for_inspect_path(clean_path: str) -> tuple[Optional[Path], str, str, str]:
+    """inspection_batch 상대경로에 대응하는 무검열 원본(_origin) 파일과 경로 조각을 탐색합니다."""
+    parts = clean_path.split("/")
+    if len(parts) < 3:
+        return None, "", "", ""
+
+    c_code, subfolder, filename = parts[0], parts[1], parts[2]
+    proj_root_resolved = PROJECTS_DIR.resolve()
+    for proj in _list_all_rosters():
+        assets_base = (PROJECTS_DIR / proj / "assets").resolve()
+        for cand in (
+            (assets_base / f"{c_code}_origin" / subfolder / filename).resolve(),
+            (assets_base / c_code / "_origin" / subfolder / filename).resolve(),
+            (assets_base / f"{c_code}_origin" / filename).resolve(),
+        ):
+            if cand.is_relative_to(proj_root_resolved) and cand.exists() and cand.is_file():
+                return cand, c_code, subfolder, filename
+    return None, c_code, subfolder, filename
+
+
+def _sync_inspect_to_project_assets(
+    clean_path: str,
+    *,
+    img: Optional[Image.Image] = None,
+    src_file: Optional[Path] = None,
+    preferred_roster: Optional[str] = None,
+) -> bool:
+    """inspection_batch 변경 결과를 매핑되는 projects/{roster}/assets 본체 에셋에도 원자적으로 동기화합니다."""
+    parts = clean_path.split("/")
+    if len(parts) < 3 or (img is None and src_file is None):
+        return False
+
+    c_code, subfolder, filename = parts[0], parts[1], parts[2]
+    rosters = _list_all_rosters()
+    if preferred_roster:
+        rosters = [preferred_roster] + [r for r in rosters if r != preferred_roster]
+
+    proj_root_resolved = PROJECTS_DIR.resolve()
+    synced = False
+    for proj in rosters:
+        reg_p = (PROJECTS_DIR / proj / "assets" / c_code / subfolder / filename).resolve()
+        if reg_p.is_relative_to(proj_root_resolved) and reg_p.is_file():
+            if img is not None:
+                _atomic_save_webp(img, reg_p)
+            elif src_file is not None:
+                _atomic_copy_file(src_file, reg_p)
+            synced = True
+    return synced
+
+
 class RetouchRequest(BaseModel):
     file_path: str
     image_base64: str
+
 
 @app.post("/api/retouch_censor")
 async def save_retouch(req: RetouchRequest, request: Request):
@@ -208,7 +267,8 @@ async def save_retouch(req: RetouchRequest, request: Request):
         if "," in raw_b64:
             raw_b64 = raw_b64.split(",", 1)[1]
         img_bytes = base64.b64decode(raw_b64)
-        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        with Image.open(io.BytesIO(img_bytes)) as opened_img:
+            img = opened_img.convert("RGB")
 
         _atomic_save_webp(img, target_path)
 
@@ -216,11 +276,15 @@ async def save_retouch(req: RetouchRequest, request: Request):
         gt_dir = BENCHMARK_DIR / "ground_truth" / target_path.parent.name
         _atomic_save_webp(img, gt_dir / target_path.name)
 
+        # 정규 프로덕션 에셋(projects/{roster}/assets)에도 원자적 자동 동기화
+        synced_asset = _sync_inspect_to_project_assets(clean_path, img=img)
+
         return {
             "success": True,
             "message": "성공적으로 저장되었습니다!",
             "file_name": target_path.name,
-            "timestamp": int(time.time())
+            "synced_asset": synced_asset,
+            "timestamp": int(time.time()),
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -240,47 +304,92 @@ async def restore_origin_endpoint(req: RestoreOriginRequest, request: Request):
     _require_auth(request, check_origin=True)
     clean_path, target_inspect = _resolve_safe_subpath(INSPECT_BATCH, req.file_path)
     try:
-        parts = clean_path.split("/")
-        if len(parts) < 3:
+        found_origin, c_code, subfolder, filename = _find_origin_for_inspect_path(clean_path)
+        if not c_code:
             return {"success": False, "error": f"잘못된 파일 경로 형식입니다: {clean_path}"}
-
-        c_code = parts[0]
-        subfolder = parts[1]
-        filename = parts[2]
-
-        rosters = _list_all_rosters()
-        origin_candidates: List[Path] = []
-        for proj in rosters:
-            assets_base = (PROJECTS_DIR / proj / "assets").resolve()
-            origin_candidates.append((assets_base / f"{c_code}_origin" / subfolder / filename).resolve())
-            origin_candidates.append((assets_base / c_code / "_origin" / subfolder / filename).resolve())
-
-        found_origin = None
-        proj_root_resolved = PROJECTS_DIR.resolve()
-        for cand in origin_candidates:
-            if cand.is_relative_to(proj_root_resolved) and cand.exists() and cand.is_file():
-                found_origin = cand
-                break
 
         if not found_origin:
             return {
                 "success": False,
-                "error": f"오리지널 원본({c_code}_origin/{subfolder}/{filename})을 찾을 수 없습니다."
+                "error": f"오리지널 원본({c_code}_origin/{subfolder}/{filename})을 찾을 수 없습니다.",
             }
 
         # 1. inspection_batch에 원자적 덮어쓰기
         _atomic_copy_file(found_origin, target_inspect)
 
         # 2. 정규 에셋(projects/{roster}/assets)에도 원자적 복원
-        for proj in rosters:
-            reg_p = (PROJECTS_DIR / proj / "assets" / c_code / subfolder / filename).resolve()
-            if reg_p.is_relative_to(proj_root_resolved) and reg_p.parent.exists():
-                _atomic_copy_file(found_origin, reg_p)
+        synced_asset = _sync_inspect_to_project_assets(clean_path, src_file=found_origin)
 
         return {
             "success": True,
             "message": "오리지널 원본 이미지로 성공적으로 복원되었습니다!",
             "file_name": filename,
+            "synced_asset": synced_asset,
+            "timestamp": int(time.time()),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+class ReapplyCensorRequest(BaseModel):
+    file_path: str
+    char_code: Optional[str] = ""
+    pose_code: Optional[str] = ""
+    censor_style: str = "white_silhouette"
+    censor_targets: str = "penis"
+    min_confidence: float = 0.16
+    enable_anchor_fallback: bool = False
+
+
+@app.post("/api/reapply_censor")
+async def reapply_censor_endpoint(req: ReapplyCensorRequest, request: Request):
+    """ComfyUI 재생성 없이 무검열 원본(_origin)으로부터 0.2초 즉시 재검열을 수행하고 양쪽 에셋을 동기화합니다."""
+    _require_auth(request, check_origin=True)
+    clean_path, target_inspect = _resolve_safe_subpath(INSPECT_BATCH, req.file_path)
+    try:
+        found_origin, c_code, subfolder, filename = _find_origin_for_inspect_path(clean_path)
+        if not c_code:
+            return {"success": False, "error": f"잘못된 파일 경로 형식입니다: {clean_path}"}
+        if not found_origin:
+            return {
+                "success": False,
+                "error": f"오리지널 원본({c_code}_origin/{subfolder}/{filename})을 찾을 수 없습니다.",
+            }
+
+        eff_char = (req.char_code or c_code).lower()
+        eff_pose = (req.pose_code or _extract_pose_code_from_filename(filename)).strip()
+        if eff_pose.isdigit():
+            eff_pose = eff_pose.zfill(3)
+
+        roster = _resolve_char_roster(eff_char)
+        targets_list = [t.strip() for t in (req.censor_targets or "penis").split(",") if t.strip()] or ["penis"]
+
+        from plepa_engine.censor import censor_image
+
+        with Image.open(found_origin) as opened_orig:
+            orig_rgb = opened_orig.convert("RGB")
+
+        censored_img, mask_count = censor_image(
+            orig_rgb,
+            style=req.censor_style,
+            targets=targets_list,
+            min_confidence=req.min_confidence,
+            pose_code=eff_pose or None,
+            enable_anchor_fallback=req.enable_anchor_fallback,
+            roster=roster,
+        )
+
+        _atomic_save_webp(censored_img, target_inspect)
+        synced_asset = _sync_inspect_to_project_assets(clean_path, img=censored_img, preferred_roster=roster)
+
+        return {
+            "success": True,
+            "message": f"즉시 재검열 완료 ({req.censor_style}, 마스크 {mask_count}건)",
+            "file_name": filename,
+            "detected_count": mask_count,
+            "mask_count": mask_count,
+            "censor_style": req.censor_style,
+            "synced_asset": synced_asset,
             "timestamp": int(time.time()),
         }
     except Exception as e:
@@ -292,16 +401,35 @@ class RerollRequest(BaseModel):
     char_code: str
     pose_code: str
     label: Optional[str] = ""
+    censor_style: str = "white_silhouette"
+    censor_targets: str = "penis"
+    min_confidence: float = 0.16
+    enable_anchor_fallback: bool = False
 
 
 class RerollJob:
-    def __init__(self, job_id: str, file_path: str, char_code: str, pose_code: str, label: str = ""):
+    def __init__(
+        self,
+        job_id: str,
+        file_path: str,
+        char_code: str,
+        pose_code: str,
+        label: str = "",
+        censor_style: str = "white_silhouette",
+        censor_targets: str = "penis",
+        min_confidence: float = 0.16,
+        enable_anchor_fallback: bool = False,
+    ):
         self.job_id = job_id
         self.file_path = file_path
         self.char_code = char_code.lower()
         norm_pose = str(pose_code or "").strip()
         self.pose_code = norm_pose.zfill(3) if norm_pose.isdigit() else norm_pose.upper()
         self.label = label
+        self.censor_style = (censor_style or "white_silhouette").strip() or "white_silhouette"
+        self.censor_targets = (censor_targets or "penis").strip() or "penis"
+        self.min_confidence = float(min_confidence)
+        self.enable_anchor_fallback = bool(enable_anchor_fallback)
         self.status = "queued"  # queued | processing | done | failed
         self.created_at = time.time()
         self.started_at: Optional[float] = None
@@ -316,6 +444,10 @@ class RerollJob:
             "char_code": self.char_code,
             "pose_code": self.pose_code,
             "label": self.label,
+            "censor_style": self.censor_style,
+            "censor_targets": self.censor_targets,
+            "min_confidence": self.min_confidence,
+            "enable_anchor_fallback": self.enable_anchor_fallback,
             "status": self.status,
             "queue_position": queue_pos,
             "created_at": self.created_at,
@@ -381,6 +513,8 @@ def _execute_reroll_job(job: RerollJob) -> tuple[bool, Optional[int], Optional[s
             overwrite=True,
             engine="sdxl",
             censor=False,
+            censor_style=job.censor_style,
+            censor_targets=job.censor_targets,
             seed=new_seed,
             no_ref=True,
             custom_neg=None,
@@ -400,23 +534,24 @@ def _execute_reroll_job(job: RerollJob) -> tuple[bool, Optional[int], Optional[s
         origin_path = origin_dir / filename
         _atomic_copy_file(gen_p, origin_path)
 
-        # 2. ADR-86 검열 적용 (폴백 앵커는 명시 요청 외 비활성화)
-        img = Image.open(gen_p).convert("RGB")
+        # 2. 요청된 검열 스타일/대상/임계값/폴백 옵션으로 검열 적용
+        targets_list = [t.strip() for t in (job.censor_targets or "penis").split(",") if t.strip()] or ["penis"]
+        with Image.open(gen_p) as opened_gen:
+            img = opened_gen.convert("RGB")
         censored_img, mask_cnt = censor_image(
             img,
-            style="white_silhouette",
+            style=job.censor_style,
+            targets=targets_list,
+            min_confidence=job.min_confidence,
             pose_code=p_code,
-            enable_anchor_fallback=False,
+            enable_anchor_fallback=job.enable_anchor_fallback,
             roster=roster,
         )
 
         # 3. inspection_batch 및 정규 에셋 원자적 덮어쓰기
         _, safe_target_inspect = _resolve_safe_subpath(INSPECT_BATCH, clean_path)
         _atomic_save_webp(censored_img, safe_target_inspect)
-
-        reg_asset_p = PROJECTS_DIR / roster / "assets" / c_code / subfolder / filename
-        if reg_asset_p.parent.exists():
-            _atomic_save_webp(censored_img, reg_asset_p)
+        _sync_inspect_to_project_assets(clean_path, img=censored_img, preferred_roster=roster)
 
         # 4. 임시 생성 폴더 정리
         tmp_dir = gen_p.parent.parent
@@ -486,6 +621,10 @@ class RerollQueueManager:
             char_code=req.char_code,
             pose_code=req.pose_code,
             label=req.label or "",
+            censor_style=req.censor_style,
+            censor_targets=req.censor_targets,
+            min_confidence=req.min_confidence,
+            enable_anchor_fallback=req.enable_anchor_fallback,
         )
         self.jobs[job_id] = job
         await self.queue.put(job_id)

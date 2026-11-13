@@ -5,6 +5,7 @@ NiceGUI 서버(8080)와 Cloudflare Quick Tunnel을 기동하고 모바일 접속
 
 import os
 import re
+import secrets
 import socket
 import subprocess
 import sys
@@ -38,12 +39,19 @@ def main():
         print(f"[오류] cloudflared.exe를 찾을 수 없습니다: {CF}")
         sys.exit(1)
 
+    mobile_token = os.environ.get("PLEPA_MOBILE_TOKEN", "").strip()
+
     # 1. 8080 서버 기동 확인
     if not is_port_open(8080):
-        print("[기동] NiceGUI 웹 서버 (포트 8080)...")
+        if not mobile_token:
+            mobile_token = secrets.token_urlsafe(24)
+        launch_env = os.environ.copy()
+        launch_env["PLEPA_MOBILE_TOKEN"] = mobile_token
+        print("[기동] NiceGUI 웹 서버 (포트 8080, 원격 토큰 인증 활성)...")
         subprocess.Popen(
             [str(PY), "-m", "plepa_gui.app", "--host", "0.0.0.0", "--port", "8080"],
             cwd=str(ROOT),
+            env=launch_env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
@@ -93,12 +101,16 @@ def main():
                 pass
 
     if tunnel_url:
-        mobile_url = f"{tunnel_url}/mobile"
-        otoko_url = f"{tunnel_url}/otoko"
+        token_suffix = f"?token={mobile_token}" if mobile_token else ""
+        mobile_url = f"{tunnel_url}/mobile{token_suffix}"
+        otoko_url = f"{tunnel_url}/otoko{token_suffix}"
+        studio_url = f"{tunnel_url}{token_suffix}"
         print("\n" + "=" * 65)
+        if mobile_token:
+            print(f"[Auth Token]       PLEPA_MOBILE_TOKEN 활성")
         print(f"[Otoko 600 Viewer] {otoko_url}")
         print(f"[Mobile Link]      {mobile_url}")
-        print(f"[PC Studio]        {tunnel_url}")
+        print(f"[PC Studio]        {studio_url}")
         print("=" * 65 + "\n")
     else:
         print("[실패] 터널 URL을 발급받지 못했습니다. 로그를 확인하세요:", log_file)
