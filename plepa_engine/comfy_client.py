@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import io
 import json
+import os
+import socket
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -14,7 +17,7 @@ import urllib.request
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 try:
     from PIL import Image
@@ -34,8 +37,24 @@ from plepa_engine.config import (
     WEBP_QUALITY,
 )
 
-# 프로세스 전역 레퍼런스 이미지 업로드 캐시: {str(file_path): (mtime, remote_filename)}
-_IMAGE_UPLOAD_CACHE: Dict[str, Tuple[float, str]] = {}
+# 프로세스 전역 레퍼런스 이미지 업로드 캐시: {(base_url, str(file_path)): (mtime_ns, size, remote_filename)}
+_IMAGE_UPLOAD_CACHE: Dict[Tuple[str, str], Tuple[int, int, str]] = {}
+_IMAGE_UPLOAD_CACHE_LOCK = threading.Lock()
+
+
+def _atomic_replace_with_retry(src_tmp: Path, dst_path: Path, retries: int = 5) -> None:
+    """원본 선삭제 없이 단일 os.replace로 원자적 파일 교체를 수행합니다."""
+    last_err: Optional[OSError] = None
+    for attempt in range(retries):
+        try:
+            os.replace(src_tmp, dst_path)
+            return
+        except OSError as oe:
+            last_err = oe
+            if attempt < retries - 1:
+                time.sleep(0.25 * (attempt + 1))
+    if last_err is not None:
+        raise last_err
 
 
 class ComfyClientError(Exception):
@@ -67,13 +86,18 @@ class ComfyClient:
             )
 
         ws = websocket.WebSocket()
-        ws.connect(f"{self.ws_url}?clientId={self.client_id}")
+        ws.connect(f"{self.ws_url}?clientId={self.client_id}", timeout=10.0)
+        try:
+            ws.settimeout(2.0)
+        except Exception:
+            pass
         self._shared_ws = ws
         try:
             yield self
         finally:
+            active_ws = self._shared_ws or ws
             try:
-                ws.close()
+                active_ws.close()
             except Exception:
                 pass
             self._shared_ws = None
@@ -132,14 +156,18 @@ class ComfyClient:
             raise FileNotFoundError(f"업로드할 레퍼런스 이미지를 찾을 수 없습니다: {file_path}")
 
         file_path_resolved = file_path.resolve()
-        cache_key = str(file_path_resolved)
-        mtime = file_path_resolved.stat().st_mtime
+        cache_key = (self.base_url, str(file_path_resolved))
+        st = file_path_resolved.stat()
+        mtime_ns = st.st_mtime_ns
+        file_size = st.st_size
 
-        # 캐시 조회: 수정 시간이 동일하면 업로드 생략하고 즉시 반환
-        if cache_key in _IMAGE_UPLOAD_CACHE:
-            cached_mtime, cached_name = _IMAGE_UPLOAD_CACHE[cache_key]
-            if cached_mtime == mtime:
-                return cached_name
+        # 스레드 안전 캐시 조회: 동일 서버/파일/수정시각/크기일 때만 업로드 생략
+        with _IMAGE_UPLOAD_CACHE_LOCK:
+            cached = _IMAGE_UPLOAD_CACHE.get(cache_key)
+            if cached is not None:
+                cached_mtime_ns, cached_size, cached_name = cached
+                if cached_mtime_ns == mtime_ns and cached_size == file_size:
+                    return cached_name
 
         boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
         filename = file_path.name
@@ -171,7 +199,8 @@ class ComfyClient:
             with urllib.request.urlopen(req, timeout=30.0) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 remote_name = result.get("name", filename)
-                _IMAGE_UPLOAD_CACHE[cache_key] = (mtime, remote_name)
+                with _IMAGE_UPLOAD_CACHE_LOCK:
+                    _IMAGE_UPLOAD_CACHE[cache_key] = (mtime_ns, file_size, remote_name)
                 return remote_name
         except Exception as e:
             raise ComfyClientError(f"ComfyUI 이미지 업로드 실패: {e}") from e
@@ -203,7 +232,12 @@ class ComfyClient:
                     f"'run_nvidia_gpu.bat'가 실행 중인지 확인해 주십시오."
                 )
             ws = websocket.WebSocket()
-            ws.connect(f"{self.ws_url}?clientId={self.client_id}")
+            ws.connect(f"{self.ws_url}?clientId={self.client_id}", timeout=10.0)
+
+        try:
+            ws.settimeout(min(2.0, max(0.2, float(timeout_sec))))
+        except Exception:
+            pass
 
         # 1. 작업 전송
         payload = json.dumps({"prompt": workflow, "client_id": self.client_id}).encode("utf-8")
@@ -246,16 +280,66 @@ class ComfyClient:
             raise ComfyClientError("ComfyUI로부터 prompt_id를 수신하지 못했습니다.")
 
 
-        # 2. WebSocket 이벤트 루프
+        # 2. WebSocket 이벤트 루프 (타임아웃 및 재연결 복구 지원)
         start_time = time.time()
         output_image_info: Optional[Dict[str, Any]] = None
+        timeout_excs = (TimeoutError, socket.timeout)
+        ws_timeout_cls = getattr(websocket, "WebSocketTimeoutException", None)
+        if isinstance(ws_timeout_cls, type) and issubclass(ws_timeout_cls, BaseException):
+            timeout_excs = timeout_excs + (ws_timeout_cls,)
 
+        closed_excs: Tuple[type, ...] = (ConnectionError, EOFError, OSError)
+        ws_closed_cls = getattr(websocket, "WebSocketConnectionClosedException", None)
+        if isinstance(ws_closed_cls, type) and issubclass(ws_closed_cls, BaseException):
+            closed_excs = closed_excs + (ws_closed_cls,)
+
+        def _poll_history_image() -> Optional[Dict[str, Any]]:
+            try:
+                hist_url = f"{self.base_url}/history/{urllib.parse.quote(str(prompt_id))}"
+                with urllib.request.urlopen(hist_url, timeout=5.0) as hresp:
+                    hist = json.loads(hresp.read().decode("utf-8"))
+                entry = hist.get(prompt_id) if isinstance(hist, dict) else None
+                if isinstance(entry, dict):
+                    for node_out in (entry.get("outputs") or {}).values():
+                        imgs = node_out.get("images") if isinstance(node_out, dict) else None
+                        if imgs:
+                            return imgs[0]
+            except Exception:
+                pass
+            return None
+
+        reconnect_attempts = 0
         try:
             while True:
                 if time.time() - start_time > timeout_sec:
                     raise ComfyClientError(f"생성 대기 시간 초과 ({timeout_sec}초)")
 
-                msg = ws.recv()
+                try:
+                    msg = ws.recv()
+                except timeout_excs:
+                    continue
+                except closed_excs as ce:
+                    hist_img = _poll_history_image()
+                    if hist_img is not None:
+                        output_image_info = hist_img
+                        break
+                    reconnect_attempts += 1
+                    if reconnect_attempts > 2 or time.time() - start_time > timeout_sec:
+                        raise ComfyClientError(f"ComfyUI WebSocket 연결이 끊어졌습니다: {ce}") from ce
+                    try:
+                        try:
+                            ws.close()
+                        except Exception:
+                            pass
+                        ws = websocket.WebSocket()
+                        ws.connect(f"{self.ws_url}?clientId={self.client_id}", timeout=10.0)
+                        ws.settimeout(min(2.0, max(0.2, float(timeout_sec))))
+                        if is_shared:
+                            self._shared_ws = ws
+                        continue
+                    except Exception as re_err:
+                        raise ComfyClientError(f"ComfyUI WebSocket 재연결 실패: {re_err}") from re_err
+
                 if isinstance(msg, str):
                     event = json.loads(msg)
                     msg_type = event.get("type")
@@ -304,33 +388,14 @@ class ComfyClient:
             image = Image.open(io.BytesIO(img_bytes))
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Windows 파일 락 및 충돌 방지를 위한 원자적 임시 저장 및 교체 (Atomic Save)
-            temp_path = output_path.with_name(f"{output_path.stem}_{uuid.uuid4().hex[:6]}.tmp.webp")
-            image.save(temp_path, "WEBP", quality=WEBP_QUALITY, method=WEBP_METHOD)
-
-            # 재시도 루프를 통한 안전한 파일 교체
-            last_err = None
-            for _ in range(5):
-                try:
-                    if output_path.exists():
-                        try:
-                            output_path.unlink()
-                        except Exception:
-                            pass
-                    temp_path.replace(output_path)
-                    last_err = None
-                    break
-                except OSError as oe:
-                    last_err = oe
-                    time.sleep(0.3)
-
-            if last_err is not None:
+            # Windows 파일 락 및 충돌 방지를 위한 원자적 임시 저장 및 단일 os.replace 교체 (원본 선삭제 금지)
+            temp_path = output_path.with_name(f".{output_path.stem}_{uuid.uuid4().hex[:6]}.tmp.webp")
+            try:
+                image.save(temp_path, "WEBP", quality=WEBP_QUALITY, method=WEBP_METHOD)
+                _atomic_replace_with_retry(temp_path, output_path, retries=5)
+            finally:
                 if temp_path.exists():
-                    try:
-                        temp_path.unlink()
-                    except Exception:
-                        pass
-                raise last_err
+                    temp_path.unlink(missing_ok=True)
 
         except Exception as se:
             raise ComfyClientError(f"이미지 저장 실패 ({output_path.name}): {se}") from se

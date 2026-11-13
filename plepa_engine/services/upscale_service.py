@@ -5,7 +5,9 @@ plepa_engine.services.upscale_service
 
 from __future__ import annotations
 
+import os
 import time
+import uuid
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
@@ -101,20 +103,16 @@ class UpscaleService:
             upscale_model=model_name,
         )
 
-        # 4. 임시 파일로 수신 후 최종 목적지로 이동/덮어쓰기
-        temp_out = output_path.parent / f".tmp_{output_path.name}"
+        # 4. 임시 파일로 수신 후 원자적 교체 (원본 선삭제 금지)
+        temp_out = output_path.parent / f".tmp_{uuid.uuid4().hex[:6]}_{output_path.name}"
         temp_out.parent.mkdir(parents=True, exist_ok=True)
 
         try:
             self.client.generate_image(workflow=workflow, output_path=temp_out)
-            # 원본 교체 시 안전한 교체
-            if output_path.exists():
-                output_path.unlink()
-            temp_out.replace(output_path)
-        except Exception:
+            os.replace(temp_out, output_path)
+        finally:
             if temp_out.exists():
-                temp_out.unlink()
-            raise
+                temp_out.unlink(missing_ok=True)
 
         new_dims = self.get_image_dimensions(output_path)
         new_w, new_h = new_dims if new_dims else (0, 0)

@@ -5,8 +5,11 @@ Genit 상용 표준 형식({{url}}캐릭터코드/상황코드.webp)으로 에�
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import shutil
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -67,17 +70,45 @@ class GenitExporter:
     """Genit 플랫폼 규격 에셋 패키징 및 내보내기 서비스."""
 
     @staticmethod
-    def resolve_export_code(char_name: str, char_prefix: str, custom_code: Optional[str] = None) -> str:
+    def _load_roster_export_map(roster: Optional[str]) -> Dict[str, str]:
+        """로스터 디렉토리 내 genit_map.json 설정(데이터 주도형 매핑)을 로드합니다."""
+        if not roster:
+            return {}
+        map_path = PROJECTS_DIR / roster / "genit_map.json"
+        if map_path.is_file():
+            try:
+                data = json.loads(map_path.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    return {str(k): str(v).strip().upper() for k, v in data.items() if str(v).strip()}
+            except Exception:
+                return {}
+        return {}
+
+    @staticmethod
+    def resolve_export_code(
+        char_name: str,
+        char_prefix: str,
+        custom_code: Optional[str] = None,
+        roster: Optional[str] = None,
+    ) -> str:
         """캐릭터 이름 또는 prefix를 기반으로 Genit 2글자 캐릭터 코드를 결정합니다."""
         if custom_code and custom_code.strip():
             return custom_code.strip().upper()
 
-        # 사전 정의 프리셋 검사
+        # 1. 로스터 데이터 주도형 매핑(projects/{roster}/genit_map.json) 우선 조회
+        roster_map = GenitExporter._load_roster_export_map(roster)
+        if char_prefix in roster_map:
+            return roster_map[char_prefix]
+        for name_key, code_val in roster_map.items():
+            if name_key and name_key in char_name:
+                return code_val
+
+        # 2. 레거시 기본 프리셋 검사 (하위 호환)
         for name_key, code_val in DEFAULT_GENIT_CHARACTER_MAP.items():
             if name_key in char_name:
                 return code_val
 
-        # fallback: prefix의 앞 2글자 대문자
+        # 3. fallback: prefix의 앞 2글자 대문자
         clean_prefix = re.sub(r"[^A-Za-z0-9]", "", char_prefix)
         if len(clean_prefix) >= 2:
             return clean_prefix[:2].upper()
@@ -98,7 +129,9 @@ class GenitExporter:
         """
         from plepa_engine.services.pose_service import default_pose_service
 
-        export_code = self.resolve_export_code(char_name, char_prefix, custom_export_code)
+        export_code = self.resolve_export_code(
+            char_name, char_prefix, custom_export_code, roster=roster
+        )
         target_root = output_dir or (ROOT_DIR / "dist" / "genit")
         target_dir = target_root / export_code
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -121,7 +154,13 @@ class GenitExporter:
             genit_code = denormalize_genit_code(internal_code)
             dest_file = target_dir / f"{genit_code}.webp"
 
-            shutil.copy2(webp_file, dest_file)
+            temp_dest = target_dir / f".{dest_file.name}.{uuid.uuid4().hex[:8]}.tmp"
+            try:
+                shutil.copy2(webp_file, temp_dest)
+                os.replace(temp_dest, dest_file)
+            finally:
+                if temp_dest.exists():
+                    temp_dest.unlink(missing_ok=True)
             exported_count += 1
 
             # 프롬프트 시트용 정보 추출
@@ -134,7 +173,7 @@ class GenitExporter:
                 desc = p_entry.description or p_entry.section
             sheet_rows.append(f"| `{genit_code}` | `{dest_file.name}` | **{label}** | {desc} |")
 
-        # _genit_prompt_sheet.md 마크다운 시트 생성
+        # _genit_prompt_sheet.md 마크다운 시트 원자적 생성
         sheet_path = target_dir / "_genit_prompt_sheet.md"
         sheet_content = [
             f"# 젠잇(Genit) 프롬프트 매핑 시트 - {char_name} (`{export_code}`)",
@@ -147,8 +186,16 @@ class GenitExporter:
             f"| 젠잇 포즈코드 | 출력 파일명 | 한글 라벨 | 상황 및 연출 설명 |",
             f"| :---: | :--- | :--- | :--- |",
         ] + sheet_rows
-        with open(sheet_path, "w", encoding="utf-8") as sf:
-            sf.write("\n".join(sheet_content) + "\n")
+        temp_sheet = target_dir / f".{sheet_path.name}.{uuid.uuid4().hex[:8]}.tmp"
+        try:
+            with open(temp_sheet, "w", encoding="utf-8") as sf:
+                sf.write("\n".join(sheet_content) + "\n")
+                sf.flush()
+                os.fsync(sf.fileno())
+            os.replace(temp_sheet, sheet_path)
+        finally:
+            if temp_sheet.exists():
+                temp_sheet.unlink(missing_ok=True)
 
         return exported_count, target_dir, export_code
 

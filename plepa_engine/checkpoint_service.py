@@ -9,8 +9,9 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
+import plepa_engine.config as cfg
 from plepa_engine.config import ROOT_DIR
 
 
@@ -34,7 +35,7 @@ class CheckpointProfile:
     quality_negative: str = ""
     description: str = ""
     tags: List[str] = field(default_factory=list)
-    recommended_settings: Dict[str, any] = field(default_factory=dict)
+    recommended_settings: Dict[str, Any] = field(default_factory=dict)
     match_patterns: List[str] = field(default_factory=list)
 
 
@@ -90,12 +91,12 @@ class CheckpointService:
         return CheckpointProfile(
             name=profile_dict.get("name", "Unknown"),
             engine=profile_dict.get("engine", "sdxl"),
-            width=profile_dict.get("width", 832),
-            height=profile_dict.get("height", 1216),
-            steps=profile_dict.get("steps", 25),
-            cfg=profile_dict.get("cfg", 6.5),
-            sampler=profile_dict.get("sampler", "dpmpp_sde"),
-            scheduler=profile_dict.get("scheduler", "karras"),
+            width=profile_dict.get("width", cfg.DEFAULT_SDXL_WIDTH),
+            height=profile_dict.get("height", cfg.DEFAULT_SDXL_HEIGHT),
+            steps=profile_dict.get("steps", cfg.DEFAULT_SDXL_STEPS),
+            cfg=profile_dict.get("cfg", cfg.DEFAULT_SDXL_CFG),
+            sampler=profile_dict.get("sampler", cfg.DEFAULT_SDXL_SAMPLER),
+            scheduler=profile_dict.get("scheduler", cfg.DEFAULT_SDXL_SCHEDULER),
             clip_skip=profile_dict.get("clip_skip", 2),
             baked_vae=profile_dict.get("baked_vae", False),
             recommended_upscaler=profile_dict.get("recommended_upscaler", "4x-UltraSharp.pth"),
@@ -163,12 +164,12 @@ class CheckpointService:
         return CheckpointProfile(
             name="Fallback SDXL",
             engine="sdxl",
-            width=832,
-            height=1216,
-            steps=25,
-            cfg=6.5,
-            sampler="dpmpp_sde",
-            scheduler="karras"
+            width=cfg.DEFAULT_SDXL_WIDTH,
+            height=cfg.DEFAULT_SDXL_HEIGHT,
+            steps=cfg.DEFAULT_SDXL_STEPS,
+            cfg=cfg.DEFAULT_SDXL_CFG,
+            sampler=cfg.DEFAULT_SDXL_SAMPLER,
+            scheduler=cfg.DEFAULT_SDXL_SCHEDULER,
         )
     
     def list_all_profiles(self) -> List[CheckpointProfile]:
@@ -245,12 +246,12 @@ class CheckpointService:
         
         # 기본값 정의 (이 값들이면 프로필 값으로 교체)
         default_values = {
-            "width": 832,
-            "height": 1216,
-            "steps": 25,
-            "cfg": 6.5,
-            "sampler": "dpmpp_sde",
-            "scheduler": "karras"
+            "width": cfg.DEFAULT_SDXL_WIDTH,
+            "height": cfg.DEFAULT_SDXL_HEIGHT,
+            "steps": cfg.DEFAULT_SDXL_STEPS,
+            "cfg": cfg.DEFAULT_SDXL_CFG,
+            "sampler": cfg.DEFAULT_SDXL_SAMPLER,
+            "scheduler": cfg.DEFAULT_SDXL_SCHEDULER,
         }
         
         for key, profile_value in {

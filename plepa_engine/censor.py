@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 from pathlib import Path
+import re
 import shutil
-from typing import Any, List, Optional, Sequence, Tuple, Union
+import threading
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+import uuid
 
 import cv2
 import numpy as np
@@ -592,6 +596,7 @@ def is_pose_censor_required(
     pose: Any = None,
     is_nude: bool = False,
     file_path: Union[str, Path, None] = None,
+    roster: Optional[str] = None,
 ) -> bool:
     """
     2대 서브폴더 구조(01_normal, 02_h_scenes) 및 포즈 코드에 기반하여 해당 포즈/에셋이 검열 대상인지 엄격히 판정합니다:
@@ -622,12 +627,16 @@ def is_pose_censor_required(
         except (ValueError, TypeError):
             code_str = str(pose.code).strip()
     elif file_path is not None:
-        m = re.search(r"_(\d{3})(?:_|\.)", Path(file_path).name)
+        m = re.search(r"_([A-Za-z]\d{2,3}|\d{3})(?:_|\.)", Path(file_path).name)
         if m:
-            code_str = m.group(1)
+            code_str = m.group(1).upper()
 
     if not code_str:
         return False
+
+    # 알파벳 코드(N01 등) 중 explicit 성인 접두사 판별
+    if len(code_str) >= 2 and code_str[0] == "N" and code_str[1:].isdigit():
+        return True
 
     # 3. 비노출 면제 대역 판정
     if code_str in EXEMPT_EMOTION_CODES:
@@ -659,22 +668,42 @@ def is_pose_censor_required(
     return False
 
 
-_POSE_DB_CACHE: Optional[dict] = None
+_POSE_DB_CACHE: Dict[str, dict] = {}
+_POSE_DB_CACHE_LOCK = threading.Lock()
 
 
-def _get_cached_pose_db() -> dict:
-    """포즈 DB를 지연 로드하여 체위 카테고리 동적 추론에 활용합니다."""
-    global _POSE_DB_CACHE
-    if _POSE_DB_CACHE is None:
-        try:
-            from plepa_engine.services.pose_service import default_pose_service
-            _POSE_DB_CACHE = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
-        except Exception:
-            _POSE_DB_CACHE = {}
-    return _POSE_DB_CACHE
+def _normalize_censor_targets(targets: Sequence[str] = ("penis",)) -> set[str]:
+    """검열 대상 라벨 시퀀스를 정규화된 소문자 집합으로 변환합니다 ('all' 지원)."""
+    raw = {str(t).strip().lower() for t in (targets or ()) if str(t).strip()}
+    if not raw:
+        return {"penis"}
+    if "all" in raw:
+        return {"penis", "pussy"}
+    return raw
 
 
-def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
+def _get_cached_pose_db(roster: Optional[str] = None) -> dict:
+    """로스터별 포즈 DB를 스레드 안전하게 지연 로드하여 체위 카테고리 동적 추론에 활용합니다."""
+    from plepa_engine.config import DEFAULT_ROSTER
+
+    eff_roster = (roster or DEFAULT_ROSTER).strip() or DEFAULT_ROSTER
+    with _POSE_DB_CACHE_LOCK:
+        cached = _POSE_DB_CACHE.get(eff_roster)
+    if cached is not None:
+        return cached
+
+    try:
+        from plepa_engine.services.pose_service import default_pose_service
+        loaded = default_pose_service.load_pose_db(engine="sdxl", roster=eff_roster)
+    except Exception:
+        loaded = {}
+
+    with _POSE_DB_CACHE_LOCK:
+        _POSE_DB_CACHE.setdefault(eff_roster, loaded)
+        return _POSE_DB_CACHE[eff_roster]
+
+
+def get_pose_category(pose_code: Union[str, int], roster: Optional[str] = None) -> Optional[str]:
     """
     포즈 DB의 프롬프트 및 라벨 메타데이터를 기반으로 체위 카테고리를 동적으로 판정합니다.
     포즈 DB가 수정되면 별도 하드코딩 수정 없이 자동으로 연동됩니다.
@@ -691,7 +720,7 @@ def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
     if not ((64 <= code_int <= 79) or (80 <= code_int <= 139) or (150 <= code_int <= 209)):
         return None
 
-    db = _get_cached_pose_db()
+    db = _get_cached_pose_db(roster=roster)
     entry = db.get(code_str)
     if entry is not None:
         label = (entry.label or "").lower()
@@ -754,7 +783,10 @@ def get_pose_category(pose_code: Union[str, int]) -> Optional[str]:
 
 
 def get_pose_anchor_box(
-    pose_code: Union[str, int], img_width: int, img_height: int
+    pose_code: Union[str, int],
+    img_width: int,
+    img_height: int,
+    roster: Optional[str] = None,
 ) -> Optional[Tuple[int, int, int, int]]:
     """
     포즈 코드에 해당하는 안전 앵커 픽셀 바운딩 박스 (x1, y1, x2, y2)를 계산하여 반환합니다.
@@ -773,7 +805,7 @@ def get_pose_anchor_box(
         return (x1, y1, x2, y2)
 
     # 2순위: 카테고리 범용 앵커
-    cat = get_pose_category(pose_code)
+    cat = get_pose_category(pose_code, roster=roster)
     if not cat or cat not in POSE_SAFE_ANCHORS:
         return None
     x0_pct, y0_pct, x1_pct, y1_pct = POSE_SAFE_ANCHORS[cat]
@@ -803,15 +835,20 @@ def censor_image(
     min_confidence: float = 0.16,
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
+    roster: Optional[str] = None,
 ) -> Tuple[Image.Image, int]:
     """
     이미지 내 성기 및 결합 접점 부위를 다중 스케일(전체 + 하반신 줌인 ROI)로 정밀 감지하여 검열을 적용합니다.
     - 기본 스타일: 'white_silhouette' (매끈한 소프트 화이트 실루엣 - 젠잇 심의 규정 표준)
-    - 기본 대상: 남성기+고환 ('penis') 및 성인 결합 씬의 하반신 삽입 접점 ('pussy', y2 >= 0.48*H)
+    - 기본 대상: 남성기+고환 ('penis'), 옵션으로 'pussy'/'all' 등 targets 인수를 존중
     - 반환값: (검열된 PIL 이미지, 감지된 부위 개수)
     """
     # V3 오검열 원천 방어 가드: 비검열 대상(감정표현, 일상 스킨십, 착의 이벤트 등)은 즉시 원본 반환
-    if pose_code is not None and not is_pose_censor_required(pose_code=pose_code, file_path=image if isinstance(image, (str, Path)) else None):
+    if pose_code is not None and not is_pose_censor_required(
+        pose_code=pose_code,
+        file_path=image if isinstance(image, (str, Path)) else None,
+        roster=roster,
+    ):
         return (Image.open(str(image)).convert("RGB") if isinstance(image, (str, Path)) else image.convert("RGB")), 0
 
     if isinstance(image, (str, Path)):
@@ -819,9 +856,9 @@ def censor_image(
     else:
         img = image.convert("RGB")
 
-    # 사용자 절대 정책: 여성 부위는 검열 대상에서 완전 배제, 오직 남성 결합 부위('penis')만 단일 대상
-    normalized_targets = {"penis"}
-    include_lower_junction = False
+    # targets 파라미터 존중 (기본값: ('penis',), 'all' 지정 시 ('penis', 'pussy'))
+    normalized_targets = _normalize_censor_targets(targets)
+    include_lower_junction = "pussy" in normalized_targets
     eff_conf = max(0.26, min_confidence)
     img_w, img_h = img.size
 
@@ -829,6 +866,7 @@ def censor_image(
 
     skin_check_np = get_skin_mask(np.array(img))
     def _add_candidate(box_coords: Tuple[int, int, int, int], lbl: str, score: float = 1.0) -> None:
+        lbl_low = str(lbl).lower().strip()
         x1, y1, x2, y2 = box_coords
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(img_w, x2), min(img_h, y2)
@@ -836,7 +874,7 @@ def censor_image(
         if bw < 12 or bh < 12:
             return
         # 상단 배경/머리카락 오탐지 차단 (구강/상반신 클로즈업 및 역전 파일드라이버 씬은 상단 결합부까지 허용)
-        pose_cat = get_pose_category(pose_code) if pose_code is not None else None
+        pose_cat = get_pose_category(pose_code, roster=roster) if pose_code is not None else None
         is_upper_close = pose_cat in ("fellatio", "paizuri", "piledriver")
         min_y2_ratio = 0.04 if pose_cat == "piledriver" else (0.10 if is_upper_close else 0.24)
         if y2 < img_h * min_y2_ratio:
@@ -848,8 +886,10 @@ def censor_image(
         roi_skin = skin_check_np[y1:y2, x1:x2]
         if roi_skin.size == 0 or (np.count_nonzero(roi_skin) / float(roi_skin.size)) < 0.18:
             return
-        # 여성 부위 오탐지 원천 차단: 오직 남성 결합 부위(penis)만 마스킹 허용
-        if lbl != "penis" and lbl != "anchor":
+        # 요청되지 않은 부위는 차단 (targets 기준 일치 검증 + 하반신 접점 필터링)
+        if lbl_low not in normalized_targets and lbl_low != "anchor":
+            return
+        if lbl_low == "pussy" and y2 < img_h * 0.45:
             return
         # 저신뢰도 그림자 노이즈 기각 (0.28 미만은 단독/보조 불문 기각)
         if score < 0.28:
@@ -868,22 +908,23 @@ def censor_image(
                 )
                 detected_boxes_with_labels[idx] = (
                     merged,
-                    "penis" if "penis" in (lbl, existing_lbl) else lbl,
+                    lbl_low if "penis" not in (lbl_low, existing_lbl) else "penis",
                     max(score, existing_score),
                 )
                 return
-        detected_boxes_with_labels.append((cand, lbl, score))
+        detected_boxes_with_labels.append((cand, lbl_low, score))
 
     if HAS_IMGUTILS:
         try:
             # [1단계] 전체 이미지 스캔
             results = detect_censors(img, conf_threshold=max(0.12, eff_conf * 0.85))
             for box, label, score in results:
-                is_target = (label in normalized_targets and score >= eff_conf) or (
-                    include_lower_junction and label == "pussy" and score >= max(0.18, eff_conf)
+                lbl_l = str(label).lower().strip()
+                is_target = (lbl_l in normalized_targets and score >= eff_conf) or (
+                    include_lower_junction and lbl_l == "pussy" and score >= max(0.18, eff_conf)
                 )
                 if is_target:
-                    _add_candidate(tuple(int(v) for v in box), label, float(score))
+                    _add_candidate(tuple(int(v) for v in box), lbl_l, float(score))
 
             # [2단계] 다중 스케일 Zoom-In ROI 크롭 정밀 재스캔 (하반신 결합부 + 상반신 구강 클로즈업 + 상단 역전 결합부)
             roi_specs = [
@@ -901,21 +942,22 @@ def censor_image(
                 up_img = crop_img.resize((up_w, up_h), Image.Resampling.LANCZOS)
                 crop_res = detect_censors(up_img, conf_threshold=0.13)
                 for box, label, score in crop_res:
-                    is_target = (label in normalized_targets and score >= 0.17) or (
-                        include_lower_junction and label == "pussy" and score >= 0.20
+                    lbl_l = str(label).lower().strip()
+                    is_target = (lbl_l in normalized_targets and score >= 0.17) or (
+                        include_lower_junction and lbl_l == "pussy" and score >= 0.20
                     )
                     if is_target:
                         bx1, by1, bx2, by2 = [int(v / 1.6) for v in box]
-                        _add_candidate((bx1 + cx1, by1 + cy1, bx2 + cx1, by2 + cy1), label, float(score))
+                        _add_candidate((bx1 + cx1, by1 + cy1, bx2 + cx1, by2 + cy1), lbl_l, float(score))
         except Exception as e:
             logger.warning(f"[Censor] 감지 모델 추론 예외: {e}")
 
     # 검열 미탐지 시 체위별 안전 앵커 폴백 점검 (기본 False: 신체 오검열 아티팩트 방지)
     if not detected_boxes_with_labels and pose_code is not None:
-        cat = get_pose_category(pose_code)
+        cat = get_pose_category(pose_code, roster=roster)
         if cat:
             if enable_anchor_fallback:
-                anchor_box = get_pose_anchor_box(pose_code, img.width, img.height)
+                anchor_box = get_pose_anchor_box(pose_code, img.width, img.height, roster=roster)
                 if anchor_box:
                     detected_boxes_with_labels.append((anchor_box, "anchor", 1.0))
                     logger.info(
@@ -958,6 +1000,7 @@ def verify_and_heal_censor(
     censored_img: Image.Image,
     style: str = "white_silhouette",
     min_confidence: float = 0.32,
+    targets: Sequence[str] = ("penis",),
 ) -> Tuple[Image.Image, bool]:
     """
     검열이 완료된 이미지를 대상으로 성기 검출기를 다시 돌려 잔여 노출 여부를 2차 검증합니다.
@@ -968,8 +1011,13 @@ def verify_and_heal_censor(
         return censored_img, False
 
     try:
+        target_labels = _normalize_censor_targets(targets)
         results = detect_censors(censored_img, conf_threshold=max(0.28, min_confidence))
-        leaks = [((int(b[0]), int(b[1]), int(b[2]), int(b[3])), label) for b, label, score in results if label in ("penis", "pussy")]
+        leaks = [
+            ((int(b[0]), int(b[1]), int(b[2]), int(b[3])), str(label).strip().lower())
+            for b, label, score in results
+            if str(label).strip().lower() in target_labels
+        ]
         if not leaks:
             return censored_img, False
 
@@ -996,6 +1044,7 @@ def censor_file(
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
     backup_dir: Optional[Union[Path, str]] = None,
+    roster: Optional[str] = None,
 ) -> Optional[Path]:
     """
     파일 경로를 입력받아 검열본을 생성하고 저장합니다.
@@ -1008,7 +1057,7 @@ def censor_file(
         return None
 
     # V3 오검열 원천 방어 가드: 비검열 대역(01_emotions, 03_events, 착의 일상 등)은 100% 면제
-    if not is_pose_censor_required(pose_code=pose_code, file_path=src):
+    if not is_pose_censor_required(pose_code=pose_code, file_path=src, roster=roster):
         return None
 
     if backup_dir:
@@ -1026,6 +1075,7 @@ def censor_file(
         min_confidence=min_confidence,
         pose_code=pose_code,
         enable_anchor_fallback=enable_anchor_fallback,
+        roster=roster,
     )
 
     if count == 0:
@@ -1037,7 +1087,16 @@ def censor_file(
         target_dst = Path(dst_path)
 
     target_dst.parent.mkdir(parents=True, exist_ok=True)
-    censored_img.save(target_dst, "WEBP", quality=quality)
+    ext_map = {".webp": "WEBP", ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG"}
+    save_fmt = ext_map.get(target_dst.suffix.lower(), "WEBP")
+    temp_dst = target_dst.with_name(f".{target_dst.stem}_{uuid.uuid4().hex[:8]}.tmp{target_dst.suffix or '.webp'}")
+    try:
+        save_kwargs = {"quality": quality} if save_fmt in ("WEBP", "JPEG") else {}
+        censored_img.save(temp_dst, save_fmt, **save_kwargs)
+        os.replace(temp_dst, target_dst)
+    finally:
+        if temp_dst.exists():
+            temp_dst.unlink(missing_ok=True)
     return target_dst
 
 
@@ -1098,9 +1157,12 @@ def run_batch_censor(
         if "_origin" in file_path.parts:
             continue
 
-        # 2. V3 정밀 정규식: 하이브리드 파일명(prefix_000_label.webp) 및 코드 파일명(prefix_000.webp) 지원
-        match = re.search(r"_(\d{3})(?:_|\.)", file_path.name)
-        pose_code = int(match.group(1)) if match else None
+        # 2. V3 정밀 정규식: 하이브리드 파일명(prefix_000_label.webp), 영숫자 코드(prefix_N01_label.webp) 및 코드 파일명 지원
+        match = re.search(r"_([A-Za-z]\d{2,3}|\d{3})(?:_|\.)", file_path.name)
+        pose_code: Union[str, int, None] = None
+        if match:
+            raw_code = match.group(1)
+            pose_code = int(raw_code) if raw_code.isdigit() else raw_code.upper()
 
         # 3. V3 대역 체계 기반 검열 대상 여부 엄격 판정: 비검열 대역은 100% 바이패스
         if not is_pose_censor_required(pose_code=pose_code, file_path=file_path):

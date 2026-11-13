@@ -169,6 +169,40 @@ def harmonize_character_expression(char_part: str, pose_tag: str) -> str:
     return char_part
 
 
+def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) -> str:
+    """BREAK 유무에 따라 캐릭터 표현 조화, 2인 solo 제거, 추가 품질 키워드 및 custom_pos를 일관되게 조립합니다."""
+    if " BREAK " in base_pos:
+        quality_part, char_part = base_pos.split(" BREAK ", 1)
+        char_part = harmonize_character_expression(char_part, pose_tag)
+        if ctx.is_two_person:
+            char_part = re.sub(
+                r",?\s*\b(1girl,\s*solo|1boy,\s*solo)\b",
+                lambda m: ", 1girl" if "1girl" in m.group(0).lower() else ", 1boy",
+                char_part,
+                flags=re.IGNORECASE,
+            )
+            char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
+            char_part = re.sub(r"^\s*,\s*", "", char_part)
+        quality_clean = re.sub(
+            r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)",
+            "",
+            quality_part,
+            flags=re.IGNORECASE,
+        )
+        for kw in ctx.extra_quality_kws:
+            if kw.lower() not in quality_clean.lower():
+                quality_clean = f"{quality_clean}, {kw}"
+        prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
+        first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+        return f"{first_chunk} BREAK {char_part.strip()}"
+
+    base_pos = harmonize_character_expression(base_pos, pose_tag)
+    if ctx.is_two_person:
+        base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
+    prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
+    return f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+
+
 class PositiveAssemblyMutator(PromptMutator):
     """2단계: 캐릭터 외형/의상과 포즈를 결합하여 긍정 프롬프트(Positive Prompt) 1차 조립."""
 
@@ -184,26 +218,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 theme_outfit = get_character_outfit_prompt(ctx.char, ctx.slot)
                 if theme_outfit:
                     base_pos = f"{base_pos}, {theme_outfit}"
-            if " BREAK " in base_pos:
-                quality_part, char_part = base_pos.split(" BREAK ", 1)
-                char_part = harmonize_character_expression(char_part, pose_tag)
-                if ctx.is_two_person:
-                    char_part = re.sub(r",?\s*\b(1girl,\s*solo|1boy,\s*solo)\b", lambda m: ", 1girl" if "1girl" in m.group(0).lower() else ", 1boy", char_part, flags=re.IGNORECASE)
-                    char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
-                    char_part = re.sub(r"^\s*,\s*", "", char_part)
-                quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
-                for kw in ctx.extra_quality_kws:
-                    if kw.lower() not in quality_clean.lower():
-                        quality_clean = f"{quality_clean}, {kw}"
-                prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
-                first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
-                ctx.positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
-            else:
-                base_pos = harmonize_character_expression(base_pos, pose_tag)
-                if ctx.is_two_person:
-                    base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
-                prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
-                ctx.positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+            ctx.positive_prompt = _assemble_positive_prompt(base_pos, pose_tag, ctx)
 
         elif ctx.char.sdxl_positive:
             base_pos = ctx.char.sdxl_positive.strip()
@@ -218,26 +233,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 if theme_outfit:
                     base_pos = f"{base_pos}, {theme_outfit}"
 
-            if " BREAK " in base_pos:
-                quality_part, char_part = base_pos.split(" BREAK ", 1)
-                char_part = harmonize_character_expression(char_part, pose_tag)
-                if ctx.is_two_person:
-                    char_part = re.sub(r",?\s*\b(1girl,\s*solo|1boy,\s*solo)\b", lambda m: ", 1girl" if "1girl" in m.group(0).lower() else ", 1boy", char_part, flags=re.IGNORECASE)
-                    char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
-                    char_part = re.sub(r"^\s*,\s*", "", char_part)
-                quality_clean = re.sub(r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", quality_part, flags=re.IGNORECASE)
-                for kw in ctx.extra_quality_kws:
-                    if kw.lower() not in quality_clean.lower():
-                        quality_clean = f"{quality_clean}, {kw}"
-                prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
-                first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
-                ctx.positive_prompt = f"{first_chunk} BREAK {char_part.strip()}"
-            else:
-                base_pos = harmonize_character_expression(base_pos, pose_tag)
-                if ctx.is_two_person:
-                    base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
-                prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
-                ctx.positive_prompt = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+            ctx.positive_prompt = _assemble_positive_prompt(base_pos, pose_tag, ctx)
         else:
             char_gender_val = (ctx.char.gender or getattr(ctx.char, "default_mode", "") or "female").lower()
             gender_tag = "1boy, male" if char_gender_val in ("male", "otokonoko") else "1girl"
@@ -311,18 +307,29 @@ class NegativeBaseMutator(PromptMutator):
             if multi_male_inhibit not in neg:
                 neg = f"{neg}, {multi_male_inhibit}"
 
-        if ctx.custom_neg and ctx.custom_neg.strip():
-            neg = f"{neg}, {ctx.custom_neg.strip()}"
-
-        # 포즈별 커스텀 네거티브 주입 (204번 발표 포즈 손 왜곡 방지 등)
-        if getattr(ctx.pose, "negative_add", None) and ctx.pose.negative_add.strip():
-            neg = f"{neg}, {ctx.pose.negative_add.strip()}"
-
+            # 기본 네거티브 조립 후 custom_neg 및 pose.negative_add는 TwoPersonMobMutator 이후 SanitizerMutator에서 결합하여
+            # 2인 씬 male/1boy/2boys 정규식 제거에 의해 사용자 네거티브가 훼손되지 않도록 보호합니다.
         if "(photorealistic, realistic, 3d" not in neg:
             char_mult_guard = "" if ctx.is_two_person else "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
             neg = f"(photorealistic, realistic, 3d, render, cgi:1.25), {char_mult_guard}{neg}"
 
         ctx.negative_prompt = neg
+
+
+def _strip_tags_preserving_parens(text: str, inner_pattern: str) -> str:
+    """중첩/가중치 괄호 균형을 훼손하지 않고 일치하는 태그 토큰만 안전하게 제거합니다."""
+    cleaned = re.sub(inner_pattern, "", text, flags=re.IGNORECASE)
+    cleaned = re.sub(r"(:\d+(?:\.\d+)?)\s*,\s*:\d+(?:\.\d+)?", r"\1", cleaned)
+    prev = None
+    while prev != cleaned:
+        prev = cleaned
+        cleaned = re.sub(r"\(\s*,\s*", "(", cleaned)
+        cleaned = re.sub(r",\s*(?=[:\)])", "", cleaned)
+        cleaned = re.sub(r"\(\s*(?::[0-9\.]+)?\s*\)", "", cleaned)
+    cleaned = re.sub(r"(,\s*){2,}", ", ", cleaned)
+    cleaned = re.sub(r"\bBREAK\s*,\s*", "BREAK ", cleaned)
+    cleaned = re.sub(r",\s*\bBREAK\b", " BREAK", cleaned)
+    return cleaned.strip(" ,")
 
 
 class DefectDefenseMutator(PromptMutator):
@@ -460,15 +467,16 @@ class DefectDefenseMutator(PromptMutator):
             # 상반신 착의 구강 씬에서는 화면 아래에 가려진 캐릭터 하의/가터벨트/스타킹 태그가 파트너 하반신이나 타겟 부위로 전이(검은 속옷/라텍스화)되는 현상을 원천 제거
             is_clothed_oral = any(kw in pose_tag.lower() for kw in ("fellatio", "blowjob", "deepthroat", "oral", "licking", "handjob"))
             if is_clothed_oral:
-                ctx.positive_prompt = re.sub(
-                    r",?\s*\(?(?:uniform\s+)?(?:black\s+|white\s+)?(?:garter belt|attached garter straps|garter straps|garters|thighhighs|stockings|pantyhose|thigh compression|panties|underwear)(?::[0-9\.]+)?\)?",
-                    "",
+                ctx.positive_prompt = _strip_tags_preserving_parens(
                     ctx.positive_prompt,
-                    flags=re.IGNORECASE,
+                    r"\b(?:[a-z\-]+\s+)*(?:garter belt|attached garter straps|garter straps|garters|thighhighs|stockings|pantyhose|thigh compression|panties|underwear)\b",
                 )
 
             # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
-            ctx.positive_prompt = re.sub(r",?\s*\b(unbuttoned top button|unbuttoned|shirt unbuttoned|open shirt|clothes open)\b", "", ctx.positive_prompt, flags=re.IGNORECASE)
+            ctx.positive_prompt = _strip_tags_preserving_parens(
+                ctx.positive_prompt,
+                r"\b(?:unbuttoned top button|unbuttoned|shirt unbuttoned|open shirt|clothes open)\b",
+            )
             if "fully clothed" not in ctx.positive_prompt.lower():
                 ctx.positive_prompt = f"{ctx.positive_prompt}, ((wearing clothes, top on, fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
             else:
@@ -581,6 +589,11 @@ class TwoPersonMobMutator(PromptMutator):
                     code_num_clean = int(code_str_clean) if code_str_clean.isdigit() else 0
                     is_non_exposure_romance = code_str_clean in ("060", "061", "062", "063")
 
+                    is_underdesk_scene = (
+                        code_str_clean in ("126", "127")
+                        or any(kw in pose_tag.lower() for kw in ("under desk", "under table", "책상밑"))
+                    )
+
                     if is_head_hug_scene:
                         # 이미 포즈 자체에 남성의 밀착 위치/뒤통수가 완전히 정의되어 있으므로 추가 모브 BREAK 블록을 주입하지 않음 (남성 분신 2명 방지)
                         mob_positive = ""
@@ -605,7 +618,7 @@ class TwoPersonMobMutator(PromptMutator):
                                 "face focus", "bust portrait", "tight close-up", "upper body close-up", "bust shot",
                                 "chest focus", "head tilted back", "close-up upper body", "intimate close-up", "tight bust portrait"
                             )
-                        )
+                        ) and not is_underdesk_scene
 
                         if is_upper_body_scene:
                             lower_body = ""
@@ -613,6 +626,14 @@ class TwoPersonMobMutator(PromptMutator):
                         else:
                             lower_body = "(bottomless male:1.15), muscular build" if ctx.nude else "(solid black pants:1.2), muscular build"
                             upper_body_guard = ""
+
+                        # 언더데스크(책상밑) 씬: 남성 파트너 착의(셔츠/슬랙스) 및 자연스러운 자세
+                        if is_underdesk_scene:
+                            male_upper_attire = "((clothed male partner:1.20)), ((wearing collared shirt, white shirt:1.20)), "
+                            male_clothing_neg = ", (shirtless male:1.35), (naked male:1.35), (bare chest:1.35), (bare shoulders:1.35)"
+                        else:
+                            male_upper_attire = "(shirtless male:1.1), (bare shoulders:1.1), "
+                            male_clothing_neg = ", male clothes, male shirt, male t-shirt, male jacket, male suit"
 
                         if ctx.nude:
                             mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15)"
@@ -628,15 +649,15 @@ class TwoPersonMobMutator(PromptMutator):
                                 or code_num_clean >= 64
                             )
                             if is_adult_intercourse:
-                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1), (bottomless male:1.15), ((large thick erect penis:1.35)), ((impressive manhood, thick shaft, natural skin tone penis, bare skin shaft:1.3))"
+                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}{male_upper_attire}(bottomless male:1.15), ((large thick erect penis:1.35)), ((impressive manhood, thick shaft, natural skin tone penis, bare skin shaft:1.3))"
                                 mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
-                                mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (wearing pants over crotch:1.45), (pants:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (condom, black condom, sheath, clothed penis, covered penis, underwear on penis, garter on male, stockings on male:1.45), {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
+                                mob_negative = f"{head_suppression}{male_clothing_neg}, (wearing pants over crotch:1.45), (pants:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (condom, black condom, sheath, clothed penis, covered penis, underwear on penis, garter on male, stockings on male:1.45), {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}, (small penis:1.45), (thin penis:1.4), (short penis:1.4), (micropenis:1.45)"
                             else:
-                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(shirtless male:1.1), (bare shoulders:1.1)"
+                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}{male_upper_attire}"
                                 if lower_body:
                                     mob_positive += f", {lower_body}"
                                 mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
-                                mob_negative = f"{head_suppression}, male clothes, male shirt, male t-shirt, male jacket, male suit, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
+                                mob_negative = f"{head_suppression}{male_clothing_neg}, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
 
                 if mob_positive:
                     pos = f"{pos} {mob_positive}"
@@ -715,21 +736,23 @@ def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple
 
     for chunk in neg_chunks:
         norm = normalize_tag(chunk)
-        leading_parens = len(chunk) - len(chunk.lstrip("("))
-        trailing_parens = len(chunk) - len(chunk.rstrip(")"))
+        open_parens = chunk.count("(")
+        close_parens = chunk.count(")")
 
         if norm in conflict_set:
             removed_tags.append(norm)
-            if leading_parens > trailing_parens:
-                pending_open_parens += "(" * (leading_parens - trailing_parens)
-            elif trailing_parens > leading_parens:
-                needed_close = ")" * (trailing_parens - leading_parens)
+            if open_parens > close_parens:
+                pending_open_parens += "(" * (open_parens - close_parens)
+            elif close_parens > open_parens:
+                needed_close = ")" * (close_parens - open_parens)
                 if pending_open_parens:
                     cancel_count = min(len(pending_open_parens), len(needed_close))
                     pending_open_parens = pending_open_parens[:-cancel_count] if cancel_count else ""
                     needed_close = needed_close[cancel_count:]
                 if needed_close and kept_chunks:
-                    kept_chunks[-1] = kept_chunks[-1] + needed_close
+                    open_balance = sum(c.count("(") - c.count(")") for c in kept_chunks)
+                    if open_balance > 0:
+                        kept_chunks[-1] = kept_chunks[-1] + needed_close[:open_balance]
             continue
 
         if pending_open_parens:
@@ -743,9 +766,15 @@ def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple
 
 
 class SanitizerMutator(PromptMutator):
-    """6단계: 가중치 안전 클램핑(clamp_sdxl_weights), 태그 충돌 정제 및 공백/쉼표/BREAK 구조 정규화."""
+    """6단계: 사용자/포즈 커스텀 네거티브 보호 주입, 가중치 안전 클램핑(clamp_sdxl_weights), 태그 충돌 정제 및 BREAK 정규화."""
 
     def mutate(self, ctx: PromptContext) -> None:
+        # 0. 모브 정규식(TwoPersonMobMutator) 종료 후 포즈별/사용자 커스텀 네거티브 안전 결합
+        if getattr(ctx.pose, "negative_add", None) and ctx.pose.negative_add.strip():
+            ctx.negative_prompt = f"{ctx.negative_prompt}, {ctx.pose.negative_add.strip()}"
+        if ctx.custom_neg and ctx.custom_neg.strip():
+            ctx.negative_prompt = f"{ctx.negative_prompt}, {ctx.custom_neg.strip()}"
+
         # 1. 긍정/부정 태그 충돌 감지 및 네거티브에서 자동 제거
         # 남성 모브 전용 BREAK 블록의 태그(예: bare shoulders)가 여주인공 본체 네거티브를 지우지 않도록 모브 블록 제외 후 검사
         pos_without_mob = re.sub(
@@ -763,9 +792,12 @@ class SanitizerMutator(PromptMutator):
         pos = clamp_sdxl_weights(ctx.positive_prompt, max_weight=1.15)
         neg = clamp_sdxl_weights(ctx.negative_prompt, max_weight=1.25)
 
-        pos = re.sub(r"\s*,\s*", ", ", pos).strip()
+        pos = re.sub(r"\(\s*,\s*", "(", pos)
+        pos = re.sub(r"\s*,\s*", ", ", pos).strip().strip(",")
         pos = re.sub(r",?\s*BREAK\s*,?", " BREAK ", pos).strip()
-        neg = re.sub(r"\s*,\s*", ", ", neg).strip()
+        neg = re.sub(r"\(\s*,\s*", "(", neg)
+        neg = re.sub(r",\s*,+", ", ", neg)
+        neg = re.sub(r"\s*,\s*", ", ", neg).strip().strip(",")
 
         ctx.positive_prompt = pos
         ctx.negative_prompt = neg

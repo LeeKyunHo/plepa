@@ -1,15 +1,18 @@
 """
 plepa_engine.services.pose_service
-FLUX & SDXL 듀얼 포즈 DB 동기화 CRUD, 소프트 삭제, 라벨 변경 시 에셋 파일명 리네임 트랜잭션, 포즈 세트 관리.
+SDXL 단일 진실 공급원(SSOT) 포즈 DB CRUD, 소프트 삭제, 라벨 변경 시 에셋 파일명 리네임 트랜잭션, 포즈 세트 관리.
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from plepa_engine.config import (
+    DEFAULT_ROSTER,
     FLUX_POSE_DB_PATH,
     POSE_DB_PATH,
     POSE_SETS_PATH,
@@ -18,6 +21,8 @@ from plepa_engine.config import (
     SDXL_POSE_DB_PATH,
     THEMES_DIR,
 )
+
+logger = logging.getLogger(__name__)
 from plepa_engine.models import PoseEntry
 from plepa_engine.services.repository import Repository, default_repo
 from plepa_engine.services.schemas import PoseFlags, PoseItemSchema, PoseSetSchema
@@ -179,10 +184,63 @@ class PoseService:
                             canonical_code=item.get("canonical_code"),
                         )
 
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("[PoseService] 테마 포즈 파일 로드 스킵 (%s): %s", tf, exc)
 
         return entries
+
+    @staticmethod
+    def is_pose_allowed_for_character(
+        pose_entry: Optional[PoseEntry],
+        char_obj: Any,
+        roster: str = DEFAULT_ROSTER,
+        code: str = "",
+    ) -> bool:
+        """포즈 메타데이터(section, target_gender, allowed_rosters) 및 캐릭터 젠더 기반 적합성을 판별합니다."""
+        effective_code = str(getattr(pose_entry, "code", "") or code).strip()
+        target_gender = getattr(pose_entry, "target_gender", None) if pose_entry else None
+        allowed_rosters = getattr(pose_entry, "allowed_rosters", None) if pose_entry else None
+        section = getattr(pose_entry, "section", "") if pose_entry else ""
+
+        if allowed_rosters and roster not in allowed_rosters:
+            return False
+
+        pose_restrictions = getattr(char_obj, "pose_restrictions", {}) or {}
+        if isinstance(pose_restrictions, dict):
+            restricted_rosters = pose_restrictions.get("roster_only")
+            if isinstance(restricted_rosters, dict):
+                allowed_for_code = restricted_rosters.get(effective_code)
+                if allowed_for_code and roster not in allowed_for_code:
+                    return False
+            campus_only_poses = set(pose_restrictions.get("campus_only", []))
+            if effective_code in campus_only_poses and roster != "campus":
+                if not allowed_rosters or roster not in allowed_rosters:
+                    return False
+
+        char_gender = (getattr(char_obj, "gender", "") or "").lower().strip()
+        if target_gender:
+            if target_gender == "otokonoko" and char_gender != "otokonoko":
+                return False
+            if target_gender in ("female", "girl") and char_gender == "otokonoko":
+                return False
+            return True
+
+        if section in ("scenes_otokonoko", "special_otokonoko", "special_otokonoko_h") and char_gender != "otokonoko":
+            return False
+        if section in ("h_scenes", "special_h", "special_female_h") and char_gender == "otokonoko":
+            return False
+
+        # 하위 호환 숫자 대역 폴백 (V3 규격: 080~139 여성 H, 133~135 & 150~209 오토코노코)
+        try:
+            code_num = int(effective_code)
+            if char_gender == "otokonoko" and 80 <= code_num <= 139:
+                return False
+            if char_gender != "otokonoko" and ((133 <= code_num <= 135) or (150 <= code_num <= 209)):
+                return False
+        except ValueError:
+            pass
+
+        return True
 
 
     ROSTER_THEME_MAP: Dict[str, List[str]] = {
@@ -232,33 +290,33 @@ class PoseService:
             return sorted([c for c, e in db.items() if is_allowed_for_all(e)], key=sort_key)
 
         if expr_lower in ("emotions", "emotion", "a"):
-            return [c for c, e in db.items() if e.section == "emotions" or c.startswith("A")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "emotions" or c.startswith("A"))]
         if expr_lower in ("poses", "pose", "b"):
-            return [c for c, e in db.items() if e.section == "poses" or c.startswith("B")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "poses" or c.startswith("B"))]
         if expr_lower in ("events", "event", "genit_actions", "daily_events"):
-            return [c for c, e in db.items() if e.section in ("events", "genit_actions", "daily_events") or c.startswith("B")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section in ("events", "genit_actions", "daily_events") or c.startswith("B"))]
         if expr_lower in ("romance", "rom"):
-            return [c for c, e in db.items() if e.section == "romance"]
+            return [c for c, e in db.items() if _is_active(e) and e.section == "romance"]
         if expr_lower in ("h_scenes", "h", "scenes", "n"):
-            return [c for c, e in db.items() if e.section in ("h_scenes", "special_h", "special_female_h") or c.startswith("N")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section in ("h_scenes", "special_h", "special_female_h") or c.startswith("N"))]
         if expr_lower in ("special_h", "special", "sph", "special_female_h"):
-            return [c for c, e in db.items() if e.section in ("special_h", "special_female_h")]
+            return [c for c, e in db.items() if _is_active(e) and e.section in ("special_h", "special_female_h")]
         if expr_lower in ("otokonoko", "scenes_otokonoko", "oto"):
-            return [c for c, e in db.items() if e.section in ("scenes_otokonoko", "special_otokonoko", "special_otokonoko_h")]
+            return [c for c, e in db.items() if _is_active(e) and e.section in ("scenes_otokonoko", "special_otokonoko", "special_otokonoko_h")]
         if expr_lower in ("special_otokonoko", "sp_oto", "special_otokonoko_h"):
-            return [c for c, e in db.items() if e.section in ("special_otokonoko", "special_otokonoko_h")]
+            return [c for c, e in db.items() if _is_active(e) and e.section in ("special_otokonoko", "special_otokonoko_h")]
         if expr_lower in ("swimsuit", "swim", "d"):
-            return [c for c, e in db.items() if e.section == "swimsuit" or c.startswith("D")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "swimsuit" or c.startswith("D"))]
         if expr_lower in ("bunny", "f"):
-            return [c for c, e in db.items() if e.section == "bunny" or c.startswith("F")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "bunny" or c.startswith("F"))]
         if expr_lower in ("maid", "g"):
-            return [c for c, e in db.items() if e.section == "maid" or c.startswith("G")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "maid" or c.startswith("G"))]
         if expr_lower in ("combat", "battle", "i"):
-            return [c for c, e in db.items() if e.section == "combat" or c.startswith("I")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "combat" or c.startswith("I"))]
         if expr_lower in ("spy", "spy_actions", "s"):
-            return [c for c, e in db.items() if e.section == "spy_actions" or c.startswith("S")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "spy_actions" or c.startswith("S"))]
         if expr_lower in ("wuxia", "wuxia_actions", "c"):
-            return [c for c, e in db.items() if e.section == "wuxia_actions" or c.startswith("C")]
+            return [c for c, e in db.items() if _is_active(e) and (e.section == "wuxia_actions" or c.startswith("C"))]
 
         # 쉼표 구분 복합 표현식 지원: "00,01,05" 또는 "A00..A23,S01..S10,B01..B22" 등
         if "," in expr:
@@ -267,7 +325,7 @@ class PoseService:
                 token = token.strip()
                 if not token:
                     continue
-                for sub_c in self.resolve_pose_codes(token, db):
+                for sub_c in self.resolve_pose_codes(token, db, roster=roster):
                     if sub_c not in codes:
                         codes.append(sub_c)
             return codes
@@ -320,61 +378,56 @@ class PoseService:
 
     def get_pose_details(self, code: str) -> Dict[str, Any]:
         """
-        SDXL과 FLUX 양쪽 DB에서 해당 코드의 상세 정보를 읽어 병합 반환합니다.
+        SDXL 단일 진실 공급원(SSOT) DB 및 테마 JSON에서 해당 코드의 상세 정보를 읽어 반환합니다.
         반환값: {
-            code, section, label, description, flags,
-            flux_prompt, sdxl_prompt
+            code, section, label, description, flags, sdxl_prompt
         }
         """
         code_str = self.normalize_code(code)
-        flux_raw = self.repo.read_json(FLUX_POSE_DB_PATH)
         sdxl_raw = self.repo.read_json(SDXL_POSE_DB_PATH)
 
         target_section = None
-        f_item = None
         s_item = None
         for sec in SECTION_NAMES:
             if code_str in sdxl_raw.get(sec, {}):
                 target_section = sec
                 s_item = sdxl_raw[sec][code_str]
-                f_item = flux_raw.get(sec, {}).get(code_str)
-                break
-            elif code_str in flux_raw.get(sec, {}):
-                target_section = sec
-                f_item = flux_raw[sec][code_str]
-                s_item = sdxl_raw.get(sec, {}).get(code_str)
                 break
 
         if not target_section:
-            # 테마 디렉토리(data/themes/*.json) 탐색 폴백
-            for tf in THEMES_DIR.glob("*.json"):
+            # 테마 디렉토리(data/themes/*.json) 및 로스터 events.json 탐색 폴백
+            extra_files: List[Path] = []
+            for tf in sorted(THEMES_DIR.glob("*.json")):
+                extra_files.append(tf)
+            if PROJECTS_DIR.is_dir():
+                for evf in sorted(PROJECTS_DIR.glob("*/events.json")):
+                    extra_files.append(evf)
+            for tf in extra_files:
                 try:
                     t_data = self.repo.read_json(tf)
                     for sec_name, sec_dict in t_data.items():
                         if isinstance(sec_dict, dict) and code_str in sec_dict:
                             target_section = sec_name
-                            f_item = sec_dict[code_str]
-                            s_item = f_item
+                            s_item = sec_dict[code_str]
                             break
                     if target_section:
                         break
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("[PoseService] 상세 조회 테마 파일 스킵 (%s): %s", tf, exc)
 
         if not target_section:
-            raise KeyError(f"포즈 코드 '{code_str}'를 데이터베이스에서 찾을 수 없습니다.")
+            raise KeyError(f"포즈 코드 '{code_str}'를 SDXL 데이터베이스에서 찾을 수 없습니다.")
 
-        f_item = f_item or s_item or {}
-        s_item = s_item or f_item or {}
+        s_item = s_item or {}
+        sdxl_prompt = s_item.get("sdxl_prompt") or s_item.get("prompt", "")
 
         return {
             "code": code_str,
             "section": target_section,
-            "label": f_item.get("label", s_item.get("label", "")),
-            "description": f_item.get("description", s_item.get("description", "")),
-            "flags": f_item.get("flags") or s_item.get("flags") or {},
-            "flux_prompt": f_item.get("flux_prompt") or f_item.get("prompt", ""),
-            "sdxl_prompt": s_item.get("sdxl_prompt") or s_item.get("prompt", ""),
+            "label": s_item.get("label", ""),
+            "description": s_item.get("description", ""),
+            "flags": s_item.get("flags") or {},
+            "sdxl_prompt": sdxl_prompt,
         }
 
     def update_pose(
@@ -387,33 +440,23 @@ class PoseService:
         sdxl_prompt: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        SDXL과 FLUX 양쪽 DB에 공유 필드(label, description, flags)를 동시에 동기화 기록합니다.
-        프롬프트는 전달된 경우에만 각 엔진 DB에 반영합니다.
+        SDXL 단일 진실 공급원(data/sdxl_pose_database.json)에 포즈 필드(label, description, flags, sdxl_prompt)를 기록합니다.
+        (레거시 FLUX DB는 GEMINI.md 단일화 원칙에 따라 일체 수정·동기화하지 않음; flux_prompt 인수는 하위 호환용 무시)
         """
+        del flux_prompt
         code_str = self.normalize_code(code)
-        flux_raw = self.repo.read_json(FLUX_POSE_DB_PATH)
         sdxl_raw = self.repo.read_json(SDXL_POSE_DB_PATH)
 
         target_section = None
         for sec in SECTION_NAMES:
-            if code_str in flux_raw.get(sec, {}):
+            if code_str in sdxl_raw.get(sec, {}):
                 target_section = sec
                 break
 
         if not target_section:
-            raise KeyError(f"포즈 코드 '{code_str}'를 찾을 수 없습니다.")
+            raise KeyError(f"포즈 코드 '{code_str}'를 SDXL 데이터베이스에서 찾을 수 없습니다.")
 
-        # FLUX 업데이트
-        f_sec = flux_raw.setdefault(target_section, {})
-        f_entry = f_sec.setdefault(code_str, {})
-        f_entry["label"] = label.strip()
-        f_entry["description"] = description.strip()
-        if flags is not None:
-            f_entry["flags"] = flags
-        if flux_prompt is not None:
-            f_entry["prompt"] = flux_prompt.strip()
-
-        # SDXL 업데이트
+        # SDXL DB 업데이트
         s_sec = sdxl_raw.setdefault(target_section, {})
         s_entry = s_sec.setdefault(code_str, {})
         s_entry["label"] = label.strip()
@@ -423,8 +466,7 @@ class PoseService:
         if sdxl_prompt is not None:
             s_entry["prompt"] = sdxl_prompt.strip()
 
-        # 두 파일 원자적 동시 저장
-        self.repo.write_json(FLUX_POSE_DB_PATH, flux_raw)
+        # SDXL DB 단일 진실 공급원 원자적 저장
         self.repo.write_json(SDXL_POSE_DB_PATH, sdxl_raw)
 
         return self.get_pose_details(code_str)
@@ -432,7 +474,7 @@ class PoseService:
     def plan_asset_rename(self, code: str, old_label: str, new_label: str) -> List[Tuple[Path, Path]]:
         """
         라벨 변경 시 영향을 받는 기존 에셋 파일들의 변경 전/후 경로 목록을 시뮬레이션(Dry-run)합니다.
-        형식: prefix_000_old_label.webp -> prefix_000_new_label.webp
+        형식: prefix_000_old_label.webp -> prefix_000_new_label.webp (V3 서브폴더 rglob 지원)
         """
         code_str = self.normalize_code(code)
         plan: List[Tuple[Path, Path]] = []
@@ -446,10 +488,12 @@ class PoseService:
             if not assets_dir.is_dir():
                 continue
             for char_dir in assets_dir.iterdir():
-                if not char_dir.is_dir():
+                if not char_dir.is_dir() or char_dir.name in ("_trash", "legacy_backups"):
                     continue
-                # 패턴 매칭: prefix_000_old_label*.webp
-                for f in char_dir.glob(f"*_{code_str}_{old_label}*.webp"):
+                # V3 서브폴더(01_normal, 02_h_scenes) 포함 재귀 매칭, 휴지통/백업 스킵
+                for f in sorted(char_dir.rglob(f"*_{code_str}_{old_label}*.webp")):
+                    if any(skip in f.parts for skip in ("_trash", "legacy_backups", "_origin")):
+                        continue
                     new_name = f.name.replace(f"_{code_str}_{old_label}", f"_{code_str}_{new_label}")
                     plan.append((f, f.with_name(new_name)))
 
@@ -460,7 +504,7 @@ class PoseService:
         renamed_count = 0
         for src, dst in plan:
             if src.exists() and not dst.exists():
-                src.rename(dst)
+                os.replace(src, dst)
                 renamed_count += 1
         return renamed_count
 

@@ -26,7 +26,6 @@ from plepa_engine.qa_validator import validate_generated_image
 from plepa_engine.config import (
     COMFY_HOST,
     DEFAULT_ENGINE,
-    DEFAULT_HEIGHT,
     DEFAULT_REF_WEIGHT,
     DEFAULT_ROSTER,
     DEFAULT_SDXL_CFG,
@@ -36,9 +35,6 @@ from plepa_engine.config import (
     DEFAULT_SDXL_SCHEDULER,
     DEFAULT_SDXL_STEPS,
     DEFAULT_SDXL_WIDTH,
-    DEFAULT_STEPS,
-    DEFAULT_UNET_GGUF,
-    DEFAULT_WIDTH,
     PROJECTS_DIR,
 )
 from plepa_engine.models import (
@@ -47,7 +43,7 @@ from plepa_engine.models import (
     GenerationTarget,
     PoseEntry,
 )
-from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
+from plepa_engine.prompt_builder import assemble_sdxl_prompt
 from plepa_engine.reporter import asset_filename, get_subfolder_for_code, get_legacy_subfolder_for_code, print_batch_summary, print_overall_batch_summary
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
@@ -55,7 +51,7 @@ from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.pose_background_service import default_pose_bg_service
 from plepa_engine.services.pose_service import default_pose_service
-from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
+from plepa_engine.workflow_templates import build_sdxl_workflow
 
 
 
@@ -131,6 +127,7 @@ class GenerationParams:
     prompt_alert_threshold: int = 2  # 연속 불량 시 프롬프트 점검 경고 발령 임계치
     reuse_seed: bool = False  # _batch_manifest.json의 이전 골든 시드 고정 재생성
     strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
+    anchor_fallback: bool = False  # 검열 탐지 실패 시 포즈 기반 안전 앵커 폴백 마스킹 (기본 False)
     seed: Optional[int] = None  # 특정 난수 시드 고정 생성
 
 
@@ -186,6 +183,13 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "default": False,
     },
     {
+        "field": "anchor_fallback",
+        "cli_flag": "--anchor-fallback",
+        "label": "안전 앵커 폴백",
+        "tooltip": "성기 미탐지 시 체위별 안전 앵커 좌표로 폴백 마스킹 (오검열 방지를 위해 기본 비활성)",
+        "default": False,
+    },
+    {
         "field": "censor_only",
         "cli_flag": "--censor-only",
         "label": "⚡ 0.2초 소급 검열 전용",
@@ -226,6 +230,37 @@ class GenerationService:
         self.asset_svc = asset_svc
         self.pose_bg_svc = pose_bg_svc
 
+    @staticmethod
+    def _apply_censor_to_asset(
+        origin_path: Path,
+        out_path: Path,
+        sub_origin_dir: Path,
+        params: GenerationParams,
+        pose_code: str,
+        roster: str,
+    ) -> bool:
+        """원본 백업(_origin)을 보존한 채 검열본을 원자적 임시파일로 생성하여 out_path를 안전 교체합니다."""
+        targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
+        tmp_censored = out_path.parent / f".tmp_{uuid.uuid4().hex[:6]}_{out_path.name}"
+        try:
+            c_res = censor_file(
+                origin_path,
+                dst_path=tmp_censored,
+                style=params.censor_style,
+                targets=targets,
+                pose_code=pose_code,
+                enable_anchor_fallback=params.anchor_fallback,
+                backup_dir=sub_origin_dir,
+                roster=roster,
+            )
+            if c_res and c_res.exists():
+                os.replace(tmp_censored, out_path)
+                return True
+            return False
+        finally:
+            if tmp_censored.exists():
+                tmp_censored.unlink(missing_ok=True)
+
     def run_batch(
         self,
         params: GenerationParams,
@@ -238,7 +273,7 @@ class GenerationService:
         진행 중 on_progress(현재_항목_인덱스, 전체_항목_수, 결과)를 호출합니다.
         is_cancelled()가 True를 반환하면 생성을 즉시 중단합니다.
         """
-        # 0. 단일 캐릭터인 경우 해당 캐릭터의 default_mode를 engine에 자동 반영 (키로 스타일)
+        # 0. 단일 캐릭터인 경우 해당 캐릭터의 default_mode 확인 (SDXL 단일화 정책에 따라 flux 지정 시 sdxl로 정규화)
         from plepa_engine.config import resolve_default_mode
         target_chars_preliminary = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
         if len(target_chars_preliminary) == 1:
@@ -246,95 +281,51 @@ class GenerationService:
             if hasattr(char_obj, 'default_mode') and char_obj.default_mode:
                 try:
                     resolved_engine = resolve_default_mode(char_obj.default_mode)
-                    if resolved_engine != params.engine:
+                    if resolved_engine != "sdxl":
                         if not quiet:
-                            print(f"  [INFO] 캐릭터 '{char_obj.prefix}'의 default_mode '{char_obj.default_mode}' → '{resolved_engine}' 자동 적용")
-                        params.engine = resolved_engine
+                            print(f"  [안내] 캐릭터 '{char_obj.prefix}'의 레거시 default_mode '{char_obj.default_mode}'는 SDXL 단일화 원칙에 따라 'sdxl'로 실행됩니다.")
+                        resolved_engine = "sdxl"
+                    params.engine = resolved_engine
                 except ValueError as ve:
                     if not quiet:
                         print(f"  [경고] 캐릭터 default_mode '{char_obj.default_mode}' 무효: {ve}")
 
-        # 1. 전역 설정(Config) 최신값 조회 및 해상도/샘플러 산출
+        if params.engine != "sdxl":
+            if not quiet:
+                print(f"  [안내] 레거시 엔진 '{params.engine}' 요청은 SDXL 단일 파이프라인으로 자동 정규화됩니다.")
+            params.engine = "sdxl"
+
+        # 1. 전역 설정(Config) 최신값 조회 및 해상도/샘플러 산출 (SDXL 단일 SSOT)
         conf = default_config_service.get_config()
-        if params.engine == "sdxl":
-            ckpt_name = params.ckpt or conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
-            
-            # 체크포인트 프로필 자동 적용
-            checkpoint_svc = CheckpointService()
-            profile = checkpoint_svc.get_profile_for_checkpoint(ckpt_name)
-            
-            # 우선순위: 사용자 명시 > 프로필 값 > Config 설정 > 기본값
-            width = params.width if params.width is not None else profile.width
-            height = params.height if params.height is not None else profile.height
-            steps = params.steps if params.steps is not None else profile.steps
-            cfg = params.cfg if params.cfg is not None else profile.cfg
-            sampler = params.sampler if params.sampler is not None else profile.sampler
-            scheduler = params.scheduler if params.scheduler is not None else profile.scheduler
-            
-            if not quiet and params.ckpt:
-                print(f"  체크포인트 프로필: '{profile.name}' 자동 적용")
-        else:
-            width = params.width if params.width is not None else int(conf.get("flux_width", DEFAULT_WIDTH))
-            height = params.height if params.height is not None else int(conf.get("flux_height", DEFAULT_HEIGHT))
-            steps = params.steps if params.steps is not None else int(conf.get("flux_steps", DEFAULT_STEPS))
-            cfg = params.cfg if params.cfg is not None else float(conf.get("flux_guidance", 3.5))
-            sampler = params.sampler if params.sampler is not None else conf.get("flux_sampler", "euler")
-            scheduler = params.scheduler if params.scheduler is not None else conf.get("flux_scheduler", "simple")
-            unet_name = params.unet or conf.get("flux_unet", DEFAULT_UNET_GGUF)
-            ckpt_name = None  # FLUX 모드에서는 체크포인트 미사용
+        ckpt_name = params.ckpt or conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
+        checkpoint_svc = CheckpointService()
+        profile = checkpoint_svc.get_profile_for_checkpoint(ckpt_name)
+
+        # 우선순위: 사용자 명시 > 프로필 값 > Config 설정 > 기본값
+        width = params.width if params.width is not None else profile.width
+        height = params.height if params.height is not None else profile.height
+        steps = params.steps if params.steps is not None else profile.steps
+        cfg = params.cfg if params.cfg is not None else profile.cfg
+        sampler = params.sampler if params.sampler is not None else profile.sampler
+        scheduler = params.scheduler if params.scheduler is not None else profile.scheduler
+
+        if not quiet and params.ckpt:
+            print(f"  체크포인트 프로필: '{profile.name}' 자동 적용")
 
         # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
-        db = self.pose_svc.load_pose_db(engine=params.engine, roster=params.roster)
+        db = self.pose_svc.load_pose_db(engine="sdxl", roster=params.roster)
         target_chars = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
         codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db, roster=params.roster)
-        
-        # 2-1. 젠더별 포즈 필터링 + 로스터 전용 포즈 필터링
+
+        # 2-1. 젠더별 포즈 필터링 + 로스터 전용 포즈 필터링 (PoseService SSOT 공용 위임)
         def filter_codes_by_gender_and_roster(base_codes: List[str], char_obj, current_roster: str) -> List[str]:
             """포즈 메타데이터(section, target_gender, allowed_rosters) 기반 데이터 주도형 필터링"""
-            filtered = []
-            pose_restrictions = getattr(char_obj, 'pose_restrictions', {})
-            campus_only_poses = set(pose_restrictions.get('campus_only', []))
-
-            for code in base_codes:
-                pose_entry = db.get(code)
-                target_gender = getattr(pose_entry, 'target_gender', None) if pose_entry else None
-                allowed_rosters = getattr(pose_entry, 'allowed_rosters', None) if pose_entry else None
-                section = getattr(pose_entry, 'section', '') if pose_entry else ''
-
-                # 1. 로스터별 전용 포즈 필터링
-                if allowed_rosters and current_roster not in allowed_rosters:
-                    continue
-                # 레거시 campus_only 제약: 타 로스터에서 자체 오버라이드 없이 캠퍼스 전용 코드가 유입되는 경우 방어
-                if code in campus_only_poses and current_roster != 'campus':
-                    if not allowed_rosters or current_roster not in allowed_rosters:
-                        continue
-
-
-                # 2. 메타데이터(target_gender / section) 기반 젠더 필터링
-                if target_gender:
-                    if target_gender == "otokonoko" and char_obj.gender != "otokonoko":
-                        continue
-                    if target_gender in ("female", "girl") and char_obj.gender == "otokonoko":
-                        continue
-                elif section in ("scenes_otokonoko", "special_otokonoko") and char_obj.gender != "otokonoko":
-                    continue
-                elif section in ("h_scenes", "special_h") and char_obj.gender == "otokonoko":
-                    continue
-                else:
-                    # 하위 호환 및 숫자 대역 기반 젠더 필터링 (V3 공식 규격)
-                    try:
-                        code_num = int(code)
-                        # 여성 성인/특수 대역 (080~139): 오토코노코 제외
-                        if char_obj.gender == "otokonoko" and 80 <= code_num <= 139:
-                            continue
-                        # 오토코노코 성인/특수 대역 (133~135, 150~209): 여성 제외
-                        elif char_obj.gender != "otokonoko" and ((133 <= code_num <= 135) or (150 <= code_num <= 209)):
-                            continue
-                    except ValueError:
-                        pass
-
-                filtered.append(code)
-            return filtered
+            return [
+                code for code in base_codes
+                if self.pose_svc.is_pose_allowed_for_character(
+                    db.get(code), char_obj, roster=current_roster, code=code
+                )
+            ]
 
 
         if params.profile:
@@ -362,13 +353,12 @@ class GenerationService:
 
         if not quiet:
             print("=" * 60)
-            engine_title = f"SDXL ({params.ckpt})" if params.engine == "sdxl" else f"FLUX.1 [dev] (GGUF: {params.unet})"
-            print(f"  [플에파] 듀얼 엔진 가동 모드: {engine_title}")
+            print(f"  [플에파] SDXL 단일 파이프라인 가동 모드: {ckpt_name}")
             print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
             print(f"  젠더별 포즈 필터링:")
             for char, _ in target_chars:
                 pose_count = len(char_pose_map[char.prefix])
-                gender_label = "오토코노코(140번대)" if char.gender == "otokonoko" else f"{char.gender}(40번대)"
+                gender_label = "오토코노코(150~209)" if char.gender == "otokonoko" else f"{char.gender}(V3 표준)"
                 print(f"    - {char.name} ({char.prefix}): {pose_count}개 [{gender_label}]")
             print(f"  총 생성 에셋: {total_items}개")
             print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
@@ -376,18 +366,16 @@ class GenerationService:
                 print(f"  프로필: '{params.profile}' 적용")
             if params.bg:
                 print(f"  즉석 배경: '{params.bg}'")
-            if params.custom_neg and params.engine == "sdxl":
+            if params.custom_neg:
                 print(f"  추가 네거티브: '{params.custom_neg}'")
             if params.mock:
                 print("  시뮬레이션: --mock 모드 활성화 (초고속 더미 생성)")
-            if params.engine == "flux":
-                print(f"  LoRA: {params.lora} (강도: {params.lora_weight})")
             print(f"  작업 모드: {'강제 덮어쓰기 (--overwrite / -f)' if params.overwrite else '빈칸 채우기 (기본: 기존 파일 보존)'}")
             print(f"  파일명 형식: {params.naming}")
             fd_active = True if params.face_detailer is None else params.face_detailer
             print(f"  보정 옵션: Face Detailer={'활성' if fd_active else '비활성'}, Hand Detailer={'활성' if params.hand_detailer else '비활성'}, Upscale={'활성' if params.upscale else '비활성'}")
             if params.censor:
-                print(f"  자동 검열: 활성 (스타일: {params.censor_style}, 대상: {params.censor_targets})")
+                print(f"  자동 검열: 활성 (스타일: {params.censor_style}, 대상: {params.censor_targets}, 앵커폴백: {params.anchor_fallback})")
             print("=" * 60)
 
         session_cm = client.session() if (not params.dry_run and not params.mock and not params.censor_only) else nullcontext()
@@ -399,7 +387,7 @@ class GenerationService:
                         print("\n[알림] 사용자에 의해 배치가 취소되었습니다.")
                     break
     
-                bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine=params.engine)
+                bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine="sdxl")
                 # --ckpt-tag 지정 시 체크포인트 비교용 서브폴더에 저장
                 if params.ckpt_tag:
                     output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix / f"ckpt_{params.ckpt_tag}"
@@ -423,7 +411,7 @@ class GenerationService:
                 # IP-Adapter 참조 이미지 탐색 및 업로드
                 ref_file_name = None
                 ref_weight = params.ref_weight if params.ref_weight is not None else getattr(char, "ref_weight", DEFAULT_REF_WEIGHT)
-                if params.engine == "sdxl" and not params.no_ref and ref_weight > 0.0:
+                if not params.no_ref and ref_weight > 0.0:
                     ref_path = self.asset_svc.find_reference_image(char.prefix, actual_roster, custom_path=params.ref_image)
                     if ref_path:
                         if not params.dry_run and not params.mock and not params.censor_only:
@@ -500,79 +488,58 @@ class GenerationService:
                     if params.bg:
                         effective_bg_prompt = params.bg.strip()
                     elif params.bg_preset and params.bg_preset not in ("default", "auto", ""):
-                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine=params.engine)
+                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine="sdxl")
                     else:
                         pose_bg_key = self.pose_bg_svc.get_background_for_pose(actual_roster, code)
-                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=pose_bg_key, engine=params.engine)
+                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=pose_bg_key, engine="sdxl")
 
-                    if params.engine == "sdxl":
-                        pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
-                            char, pose, bg_prompt=effective_bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg,
-                            checkpoint_name=ckpt_name
-                        )
-                        display_prompt = pos_prompt
+                    pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
+                        char, pose, bg_prompt=effective_bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg,
+                        checkpoint_name=ckpt_name
+                    )
+                    display_prompt = pos_prompt
 
-                        # IP-Adapter 2-Track 하이브리드 모드 판별:
-                        # - "full": 정적 1인 착의 씬 (emotions 000~019 등)
-                        # - "face_only": 역동적 포즈, 테마 의상 스왑, 탈의/H-씬, 2인 모브 등장 씬 전체
-                        two_person_tokens = (
-                            "1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry",
-                            "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl",
-                            "fellatio", "cunnilingus", "paizuri"
-                        )
-                        p_low = pose.prompt.lower()
-                        from plepa_engine.prompt_builder import resolve_pose_outfit_slot
-                        outfit_slot = resolve_pose_outfit_slot(pose)
-                        if is_nude or outfit_slot != "default" or pose.section not in ("emotions", "genit_emotions") or any(kw in p_low for kw in two_person_tokens):
-                            ref_mode = "face_only"
-                        else:
-                            ref_mode = "full"
-
-                        eff_w, eff_h = get_optimal_resolution_for_pose(
-                            pose, width, height, engine=params.engine,
-                            user_specified=(params.width is not None or params.height is not None)
-                        )
-                        sdxl_seed = params.seed if params.seed is not None else -1
-                        workflow = build_sdxl_workflow(
-                            positive_prompt=pos_prompt,
-                            negative_prompt=neg_prompt,
-                            output_prefix=f"{char.prefix}_{code}",
-                            seed=sdxl_seed,
-                            width=eff_w,
-                            height=eff_h,
-                            steps=steps,
-                            cfg=cfg,
-                            sampler=sampler,
-                            scheduler=scheduler,
-                            ckpt_name=ckpt_name,
-                            use_face_detailer=params.face_detailer,
-                            use_hand_detailer=params.hand_detailer,
-                            use_freeu=params.freeu,
-                            use_upscale=params.upscale,
-                            ref_image_name=ref_file_name,
-                            ref_weight=ref_weight,
-                            ref_mode=ref_mode,
-                        )
+                    # IP-Adapter 2-Track 하이브리드 모드 판별:
+                    # - "full": 정적 1인 착의 씬 (emotions 000~019 등)
+                    # - "face_only": 역동적 포즈, 테마 의상 스왑, 탈의/H-씬, 2인 모브 등장 씬 전체
+                    two_person_tokens = (
+                        "1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry",
+                        "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl",
+                        "fellatio", "cunnilingus", "paizuri"
+                    )
+                    p_low = pose.prompt.lower()
+                    from plepa_engine.prompt_builder import resolve_pose_outfit_slot
+                    outfit_slot = resolve_pose_outfit_slot(pose)
+                    if is_nude or outfit_slot != "default" or pose.section not in ("emotions", "genit_emotions") or any(kw in p_low for kw in two_person_tokens):
+                        ref_mode = "face_only"
                     else:
-                        prompt, is_nude = assemble_flux_prompt(char, pose, bg_prompt=effective_bg_prompt)
-                        display_prompt = prompt
-                        final_prompt = prompt
-                        if params.lora and params.lora.lower() != "none" and "modern-anime" in params.lora.lower():
-                            if "modern anime style" not in final_prompt.lower():
-                                final_prompt = f"modern anime style, {final_prompt}"
-    
-                        workflow = build_flux_workflow(
-                            prompt=final_prompt,
-                            output_prefix=f"{char.prefix}_{code}",
-                            width=width,
-                            height=height,
-                            steps=steps,
-                            use_face_detailer=params.face_detailer,
-                            use_upscale=params.upscale,
-                            unet_name=unet_name,
-                            lora_name=params.lora if (params.lora and params.lora.lower() != "none") else None,
-                            lora_weight=params.lora_weight,
-                        )
+                        ref_mode = "full"
+
+                    eff_w, eff_h = get_optimal_resolution_for_pose(
+                        pose, width, height, engine="sdxl",
+                        user_specified=(params.width is not None or params.height is not None)
+                    )
+                    sdxl_seed = params.seed if params.seed is not None else -1
+                    workflow = build_sdxl_workflow(
+                        positive_prompt=pos_prompt,
+                        negative_prompt=neg_prompt,
+                        output_prefix=f"{char.prefix}_{code}",
+                        seed=sdxl_seed,
+                        width=eff_w,
+                        height=eff_h,
+                        steps=steps,
+                        cfg=cfg,
+                        sampler=sampler,
+                        scheduler=scheduler,
+                        ckpt_name=ckpt_name,
+                        use_face_detailer=params.face_detailer,
+                        use_hand_detailer=params.hand_detailer,
+                        use_freeu=params.freeu,
+                        use_upscale=params.upscale,
+                        ref_image_name=ref_file_name,
+                        ref_weight=ref_weight,
+                        ref_mode=ref_mode,
+                    )
     
                     # 워크플로우 시드 추출 및 reuse_seed 처리
                     current_seed = None
@@ -642,31 +609,16 @@ class GenerationService:
                                 # 1. 무검열 원본을 _origin 폴더에 100% 무조건 선제 백업
                                 if not origin_path.exists():
                                     shutil.copy2(src_path, origin_path)
-                                targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                tmp_censored = out_path.parent / f".tmp_{out_name}"
-                                c_res = censor_file(
-                                    origin_path,
-                                    dst_path=tmp_censored,
-                                    style=params.censor_style,
-                                    targets=targets,
-                                    pose_code=pose.code,
-                                    enable_anchor_fallback=True,
-                                    backup_dir=sub_origin_dir,
+                                applied = self._apply_censor_to_asset(
+                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
                                 )
-                                if c_res and c_res.exists():
-                                    # 2. 메인 에셋 경로(out_path)에 검열 완성본을 원자적으로 교체 배치
-                                    if out_path.exists():
-                                        out_path.unlink()
-                                    tmp_censored.rename(out_path)
+                                if applied:
                                     if not quiet:
                                         print(f" [검열본 적용: assets/{char.prefix}/{out_name} (원본: {char.prefix}_origin/)]")
-                                    res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
                                 else:
-                                    if tmp_censored.exists():
-                                        tmp_censored.unlink()
                                     if not quiet:
                                         print(" [검열 대상 미감지(원본 유지, _origin 백업 완비)]")
-                                    res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
+                                res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
                             else:
                                 if not quiet:
                                     print(" [비-H씬(검열 대상 아님): 건너뜀]")
@@ -697,25 +649,11 @@ class GenerationService:
                             sub_origin_dir.mkdir(parents=True, exist_ok=True)
                             if not origin_path.exists():
                                 shutil.copy2(out_path, origin_path)
-                            targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                            tmp_censored = out_path.parent / f".tmp_{out_path.name}"
-                            c_res = censor_file(
-                                origin_path,
-                                dst_path=tmp_censored,
-                                style=params.censor_style,
-                                targets=targets,
-                                pose_code=pose.code,
-                                enable_anchor_fallback=True,
-                                backup_dir=sub_origin_dir,
+                            applied = self._apply_censor_to_asset(
+                                origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
                             )
-                            if c_res and c_res.exists():
-                                if out_path.exists():
-                                    out_path.unlink()
-                                tmp_censored.rename(out_path)
-                                if not quiet:
-                                    print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                            elif tmp_censored.exists():
-                                tmp_censored.unlink()
+                            if applied and not quiet:
+                                print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
                         if not quiet:
                             print()
                         res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -742,25 +680,11 @@ class GenerationService:
                                 sub_origin_dir.mkdir(parents=True, exist_ok=True)
                                 if not origin_path.exists():
                                     shutil.copy2(out_path, origin_path)
-                                targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                tmp_censored = out_path.parent / f".tmp_{out_path.name}"
-                                c_res = censor_file(
-                                    origin_path,
-                                    dst_path=tmp_censored,
-                                    style=params.censor_style,
-                                    targets=targets,
-                                    pose_code=pose.code,
-                                    enable_anchor_fallback=True,
-                                    backup_dir=sub_origin_dir,
+                                applied = self._apply_censor_to_asset(
+                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
                                 )
-                                if c_res and c_res.exists():
-                                    if out_path.exists():
-                                        out_path.unlink()
-                                    tmp_censored.rename(out_path)
-                                    if not quiet:
-                                        print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                                elif tmp_censored.exists():
-                                    tmp_censored.unlink()
+                                if applied and not quiet:
+                                    print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
                             if not quiet:
                                 print()
                             res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
@@ -891,26 +815,12 @@ class GenerationService:
                             origin_path = sub_origin_dir / out_path.name
                             # 신규 생성된 무검열 원본을 100% 무조건 선제 백업
                             shutil.copy2(out_path, origin_path)
-                            targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
                             try:
-                                tmp_censored = out_path.parent / f".tmp_{out_path.name}"
-                                c_path = censor_file(
-                                    origin_path,
-                                    dst_path=tmp_censored,
-                                    style=params.censor_style,
-                                    targets=targets,
-                                    pose_code=pose.code,
-                                    enable_anchor_fallback=True,
-                                    backup_dir=sub_origin_dir,
+                                applied = self._apply_censor_to_asset(
+                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
                                 )
-                                if c_path and c_path.exists():
-                                    if out_path.exists():
-                                        out_path.unlink()
-                                    tmp_censored.rename(out_path)
-                                    if not quiet:
-                                        print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                                elif tmp_censored.exists():
-                                    tmp_censored.unlink()
+                                if applied and not quiet:
+                                    print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
                             except Exception as ce:
                                 if not quiet:
                                     print(f" [검열 실패: {ce}]", end="")

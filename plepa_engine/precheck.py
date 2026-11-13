@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from plepa_engine.config import PROJECTS_DIR
+from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.prompt_builder import (
     assemble_sdxl_prompt,
     resolve_pose_outfit_slot,
@@ -201,13 +201,41 @@ def run_pregeneration_check(roster: str = "campus") -> PrecheckReport:
         # ---------------------------------------------------------------------
         # [3~5단계] 전 포즈 조립 시뮬레이션: 착의 고정 / H씬 알몸 전환 / 테마 의상 격리
         # ---------------------------------------------------------------------
-        sig_tokens = _SPY_SIGNATURE_OUTFIT_TOKENS.get(pfx)
-        if sig_tokens is None:
-            outfit_desc = getattr(char.appearance, "outfit", "") or ""
-            if not outfit_desc and char.sdxl_positive and " BREAK " in char.sdxl_positive:
-                outfit_desc = char.sdxl_positive.split(" BREAK ")[1]
-            extracted = [t.strip().translate(str.maketrans("", "", "()[]{}")).split(":")[0] for t in outfit_desc.split(",") if len(t.strip()) > 3]
-            sig_tokens = tuple(extracted[:3])
+        explicit_sig = getattr(char, "signature_outfit_tokens", None)
+        if explicit_sig:
+            sig_tokens = tuple(explicit_sig)
+        else:
+            from plepa_engine.prompt_builder import strip_sdxl_outfit_tags
+
+            pos_body = (
+                char.sdxl_positive.split(" BREAK ", 1)[1]
+                if char.sdxl_positive and " BREAK " in char.sdxl_positive
+                else (char.sdxl_positive or "")
+            )
+            if pos_body:
+                stripped_body = strip_sdxl_outfit_tags(pos_body)
+                kept_tags = {
+                    t.strip().translate(str.maketrans("", "", "()[]{}")).split(":")[0].strip().lower()
+                    for t in stripped_body.split(",")
+                    if t.strip()
+                }
+                excluded_clothed_h_fragments = (
+                    "unbuttoned", "open shirt", "clothes open",
+                    "garter", "thighhigh", "stocking", "pantyhose", "panties", "underwear",
+                )
+                extracted = []
+                for raw_t in pos_body.split(","):
+                    clean_t = raw_t.strip().translate(str.maketrans("", "", "()[]{}")).split(":")[0].strip()
+                    low_t = clean_t.lower()
+                    if (
+                        len(clean_t) > 3
+                        and low_t not in kept_tags
+                        and not any(frag in low_t for frag in excluded_clothed_h_fragments)
+                    ):
+                        extracted.append(clean_t)
+                sig_tokens = tuple(extracted[:3])
+            else:
+                sig_tokens = _SPY_SIGNATURE_OUTFIT_TOKENS.get(pfx, ())
         for code, pose in sdxl_db.items():
             report.total_combinations_checked += 1
             slot = resolve_pose_outfit_slot(pose)
@@ -296,7 +324,7 @@ if __name__ == "__main__":
         sys.stderr.reconfigure(encoding="utf-8")
 
     parser = argparse.ArgumentParser(description="플에파 이미지 생산 사전 점검기 (Pre-Generation Validator)")
-    parser.add_argument("-r", "--roster", default="spy", help="점검할 로스터 이름 (기본값: spy)")
+    parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"점검할 로스터 이름 (기본값: {DEFAULT_ROSTER})")
     args = parser.parse_args()
 
     rep = run_pregeneration_check(args.roster)

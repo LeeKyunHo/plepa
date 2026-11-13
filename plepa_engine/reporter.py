@@ -6,6 +6,18 @@ plepa_engine.reporter
 from __future__ import annotations
 
 import os
+import sys
+
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 from plepa_engine.models import GenerationResult, PoseEntry
@@ -69,7 +81,8 @@ def asset_filename(
         code_str = f"{int(code):03d}"
     except ValueError:
         code_str = str(code).strip().upper()
-    clean_label = label.strip().replace(" ", "_").replace("/", "_")
+    import re
+    clean_label = re.sub(r'[<>:"/\\|?*\x00-\x1f\s]+', "_", label.strip()).strip("_")
     if naming == "code" or not clean_label:
         return f"{prefix}_{code_str}.webp"
     elif naming == "label":
@@ -116,13 +129,13 @@ def print_batch_summary(
     print("\n" + SEPARATOR)
     print(f"  [플에파] {display_name} 배치 생성 완료 보고서")
     print(SEPARATOR)
-    print(f"• 저장 경로: {save_dir}")
-    print(f"• 생성 결과: 성공 {success_count}개 / 실패 {fail_count}개 (총 {len(results)}개)")
+    print(f"- 저장 경로: {save_dir}")
+    print(f"- 생성 결과: 성공 {success_count}개 / 실패 {fail_count}개 (총 {len(results)}개)")
     if qc_problem_count > 0:
-        print(f"• ⚠️ Auto-QC 결함(재시도 한도 초과): {qc_problem_count}개 이미지에서 문제 발생")
+        print(f"- ⚠️ Auto-QC 결함(재시도 한도 초과): {qc_problem_count}개 이미지에서 문제 발생")
     else:
-        print(f"• Auto-QC 상태: 전수 정상 합격 (결함 0개)")
-    print(f"• 총 소요 시간: {total_duration_sec:.1f}초 (평균 장당 {total_duration_sec/max(1, len(results)):.1f}초)")
+        print(f"- Auto-QC 상태: 전수 정상 합격 (결함 0개)")
+    print(f"- 총 소요 시간: {total_duration_sec:.1f}초 (평균 장당 {total_duration_sec/max(1, len(results)):.1f}초)")
 
     if fail_count > 0:
         print("\n[생성 실패 목록]")
@@ -172,9 +185,9 @@ def print_overall_batch_summary(
     print("\n" + banner)
     print("  [플에파] 전체 캐릭터 에셋 제작 최종 종합 보고서")
     print(banner)
-    print(f"• 작업 대상 캐릭터: 총 {total_chars}명 ({chars_desc})")
-    print(f"• 총 생성 이미지: {total_images}개 (정상: {total_success - total_qc_problems}개, QC 결함 경고: {total_qc_problems}개, 생성 실패: {total_fails}개)")
-    print(f"• 전체 소요 시간: {total_duration_sec:.1f}초")
+    print(f"- 작업 대상 캐릭터: 총 {total_chars}명 ({chars_desc})")
+    print(f"- 총 생성 이미지: {total_images}개 (정상: {total_success - total_qc_problems}개, QC 결함 경고: {total_qc_problems}개, 생성 실패: {total_fails}개)")
+    print(f"- 전체 소요 시간: {total_duration_sec:.1f}초")
 
     # 문제가 있는 캐릭터별 분류
     chars_with_qc_issues: Dict[str, List[GenerationResult]] = {}
@@ -193,7 +206,7 @@ def print_overall_batch_summary(
         print(f"❌ [생성 실패 에셋 목록] (총 {sum(len(v) for v in chars_with_failures.values())}건)")
         for prefix, fails in chars_with_failures.items():
             c_name = char_names.get(prefix, prefix)
-            print(f"  • {c_name} ({prefix}) - {len(fails)}건 실패:")
+            print(f"  - {c_name} ({prefix}) - {len(fails)}건 실패:")
             for r in fails:
                 print(f"    - [{r.target.code}] {r.target.label}: {r.error_message}")
 
@@ -202,7 +215,7 @@ def print_overall_batch_summary(
         print(f"⚠️ [Auto-QC 리롤 한도 초과 결함 목록 (포즈 수정 강력 권장)] (총 {total_qc_problems}건)")
         for prefix, issues in chars_with_qc_issues.items():
             c_name = char_names.get(prefix, prefix)
-            print(f"  • {c_name} ({prefix}) - 총 {len(issues)}건 결함 발생:")
+            print(f"  - {c_name} ({prefix}) - 총 {len(issues)}건 결함 발생:")
             for r in issues:
                 print(f"    - [{r.target.code}] {r.target.label}: {r.qc_reason} (최대 재시도 초과 후 저장됨)")
 

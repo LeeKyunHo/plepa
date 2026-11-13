@@ -9,34 +9,37 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from plepa_engine.config import ROOT_DIR
+from plepa_engine.config import (
+    COMFY_HOST,
+    DEFAULT_ENGINE,
+    DEFAULT_REF_WEIGHT,
+    DEFAULT_ROSTER,
+    DEFAULT_SDXL_CFG,
+    DEFAULT_SDXL_CKPT,
+    DEFAULT_SDXL_HEIGHT,
+    DEFAULT_SDXL_SAMPLER,
+    DEFAULT_SDXL_SCHEDULER,
+    DEFAULT_SDXL_STEPS,
+    DEFAULT_SDXL_WIDTH,
+    ROOT_DIR,
+)
 from plepa_engine.services.repository import Repository, default_repo
 
 CONFIG_FILE = ROOT_DIR / ".plepa_state" / "config.json"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "comfy_host": "127.0.0.1:8188",
-    "default_engine": "sdxl",
-    "default_roster": "don",
+    "comfy_host": COMFY_HOST,
+    "default_engine": DEFAULT_ENGINE,
+    "default_roster": DEFAULT_ROSTER,
     # SDXL 설정
-    "sdxl_ckpt": "unholyDesireMixSinister_v90.safetensors",
-    "sdxl_steps": 30,
-    "sdxl_cfg": 5.0,
-    "sdxl_sampler": "dpmpp_2m",
-    "sdxl_scheduler": "karras",
-    "sdxl_width": 832,
-    "sdxl_height": 1216,
-    "sdxl_ref_weight": 0.5,
-    # FLUX 설정
-    "flux_unet": "flux1-dev-Q6_K.gguf",
-    "flux_steps": 20,
-    "flux_guidance": 3.5,
-    "flux_sampler": "euler",
-    "flux_scheduler": "simple",
-    "flux_width": 896,
-    "flux_height": 1152,
-    "flux_lora": "modern-anime-lora.safetensors",
-    "flux_lora_weight": 0.9,
+    "sdxl_ckpt": DEFAULT_SDXL_CKPT,
+    "sdxl_steps": DEFAULT_SDXL_STEPS,
+    "sdxl_cfg": DEFAULT_SDXL_CFG,
+    "sdxl_sampler": DEFAULT_SDXL_SAMPLER,
+    "sdxl_scheduler": DEFAULT_SDXL_SCHEDULER,
+    "sdxl_width": DEFAULT_SDXL_WIDTH,
+    "sdxl_height": DEFAULT_SDXL_HEIGHT,
+    "sdxl_ref_weight": DEFAULT_REF_WEIGHT,
     # 업스케일러 및 보정
     "upscaler": "4x-UltraSharp.pth",
 }
@@ -99,8 +102,6 @@ class ConfigService:
             cfg.DEFAULT_SDXL_WIDTH = int(conf["sdxl_width"])
         if "sdxl_height" in conf:
             cfg.DEFAULT_SDXL_HEIGHT = int(conf["sdxl_height"])
-        if "flux_unet" in conf:
-            cfg.DEFAULT_UNET_GGUF = conf["flux_unet"]
 
 
 default_config_service = ConfigService()

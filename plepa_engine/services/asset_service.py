@@ -5,7 +5,10 @@ plepa_engine.services.asset_service
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -188,17 +191,20 @@ class AssetService:
 
     def restore_asset_bundle(self, moved_list: List[Dict[str, str]]) -> bool:
         """휴지통으로 이동되었던 에셋 번들을 원래 위치로 복원(Undo)합니다."""
-        import shutil
+        projects_root = PROJECTS_DIR.resolve()
         success = True
         for item in moved_list:
-            trash_p = Path(item["trash"])
-            orig_p = Path(item["original"])
-            if trash_p.is_file():
-                try:
+            try:
+                trash_p = Path(item["trash"]).resolve()
+                orig_p = Path(item["original"]).resolve()
+                if not trash_p.is_relative_to(projects_root) or not orig_p.is_relative_to(projects_root):
+                    success = False
+                    continue
+                if trash_p.is_file():
                     orig_p.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(trash_p), str(orig_p))
-                except Exception:
-                    success = False
+            except Exception:
+                success = False
         return success
 
     def get_missing_poses_by_character(self, roster: str = DEFAULT_ROSTER) -> Dict[str, List[str]]:
@@ -210,32 +216,26 @@ class AssetService:
 
         chars = default_character_service.list_characters(roster=roster)
         pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
-        all_codes = set(pose_db.keys())
-
-        otokonoko_range = {f"{i:03d}" for i in range(150, 210)} | {"133", "134", "135"}
-        female_h_range = {f"{i:03d}" for i in range(80, 140)}
+        expected_base_codes = default_pose_service.resolve_pose_codes("all", pose_db, roster=roster)
 
         missing_map: Dict[str, List[str]] = {}
 
         for char_item in chars:
             if isinstance(char_item, tuple):
-                prefix, char_obj = char_item[0], char_item[1]
+                # list_characters returns Tuple[roster_name, CharacterConfig, Path]
+                char_obj = char_item[1]
+                prefix = getattr(char_obj, "prefix", str(char_item[0]))
             else:
                 prefix, char_obj = char_item.prefix, char_item
             existing_assets = self.list_character_assets(prefix, roster)
             existing_codes = {a["code"] for a in existing_assets}
 
-            is_otoko = getattr(char_obj, "gender", "") == "otokonoko"
-            expected_codes = set()
-            for c in all_codes:
-                if is_otoko:
-                    if c in female_h_range:
-                        continue
-                    expected_codes.add(c)
-                else:
-                    if c in otokonoko_range:
-                        continue
-                    expected_codes.add(c)
+            expected_codes = {
+                c for c in expected_base_codes
+                if default_pose_service.is_pose_allowed_for_character(
+                    pose_db.get(c), char_obj, roster=roster, code=c
+                )
+            }
 
             missing_codes = sorted(list(expected_codes - existing_codes))
             missing_map[prefix] = missing_codes
@@ -338,7 +338,14 @@ class AssetService:
             sub_asset_dir.mkdir(parents=True, exist_ok=True)
             dst_file = sub_asset_dir / src_file.name
 
-        shutil.copy2(src_file, dst_file)
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+        temp_dst = dst_file.with_name(f".{dst_file.stem}_{uuid.uuid4().hex[:6]}.tmp{dst_file.suffix}")
+        try:
+            shutil.copy2(src_file, temp_dst)
+            os.replace(temp_dst, dst_file)
+        finally:
+            if temp_dst.exists():
+                temp_dst.unlink(missing_ok=True)
         return True
 
     def audit_roster_assets(self, roster: str = DEFAULT_ROSTER) -> List[Dict[str, Any]]:
@@ -356,17 +363,6 @@ class AssetService:
         pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
         expected_codes = default_pose_service.resolve_pose_codes("all", pose_db, roster=roster)
 
-        # 오토코노코 전용 V3 오프셋 매핑 셋 (기본 성인 080~139: +70 -> 150~209)
-        otokonoko_offset_map = {
-            f"{i:03d}": f"{i+70:03d}" for i in range(80, 140)
-        }
-        # 레거시 하위 호환
-        otokonoko_offset_map.update({
-            "130": "200",
-            "131": "201",
-            "132": "202",
-        })
-
         results = []
         char_files = sorted(char_dir.glob("*.json"))
 
@@ -377,16 +373,14 @@ class AssetService:
                 continue
 
             prefix = char_obj.prefix
-            is_otokonoko = (getattr(char_obj, "gender", "") or "").lower() == "otokonoko"
 
-            # 캐릭터 젠더별 맞춤 기대 코드 계산 (V3 규격)
-            otokonoko_range = {f"{i:03d}" for i in range(150, 210)} | {"133", "134", "135"}
-            female_h_range = {f"{i:03d}" for i in range(80, 140)}
-
-            if is_otokonoko:
-                char_expected_codes = [c for c in expected_codes if c not in female_h_range]
-            else:
-                char_expected_codes = [c for c in expected_codes if c not in otokonoko_range]
+            # 캐릭터 젠더 및 메타데이터 기반 기대 코드 동적 계산
+            char_expected_codes = [
+                c for c in expected_codes
+                if default_pose_service.is_pose_allowed_for_character(
+                    pose_db.get(c), char_obj, roster=roster, code=c
+                )
+            ]
 
             assets = self.list_character_assets(prefix, roster=roster)
             assets_by_code = {a["code"]: a for a in assets}
