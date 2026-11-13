@@ -42,14 +42,19 @@ class PoseItemSchema(BaseModel):
 
 
 class PoseDatabaseSchema(BaseModel):
-    """포즈 데이터베이스 전체 스키마 (emotions, poses, h_scenes, scenes_otokonoko)."""
+    """포즈 데이터베이스 전체 스키마 (emotions, daily, poses, romance, daily_events, h_scenes, special_h, scenes_otokonoko, otokonoko)."""
     model_config = ConfigDict(extra="allow")
 
     schema_info: Optional[Dict[str, Any]] = Field(default=None, alias="_schema")
     emotions: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    daily: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     poses: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    romance: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    daily_events: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     h_scenes: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    special_h: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     scenes_otokonoko: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    otokonoko: Dict[str, PoseItemSchema] = Field(default_factory=dict)
 
     @model_validator(mode="before")
     @classmethod

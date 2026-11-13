@@ -9,7 +9,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import plepa_engine.config as cfg
 from plepa_engine.config import ROOT_DIR
@@ -42,11 +42,11 @@ class CheckpointProfile:
 class CheckpointService:
     """체크포인트 프로필 관리 서비스"""
     
-    _instance: Optional['CheckpointService'] = None
-    _profiles: Dict[str, CheckpointProfile] = {}
-    _default_sdxl: Optional[CheckpointProfile] = None
-    _default_flux: Optional[CheckpointProfile] = None
-    _loaded: bool = False
+    _instance: ClassVar[Optional['CheckpointService']] = None
+    _profiles: ClassVar[Dict[str, CheckpointProfile]] = {}
+    _default_sdxl: ClassVar[Optional[CheckpointProfile]] = None
+    _default_flux: ClassVar[Optional[CheckpointProfile]] = None
+    _loaded: ClassVar[bool] = False
     
     def __new__(cls):
         """싱글톤 패턴 (앱 전역에서 한 번만 로드)"""

@@ -23,6 +23,7 @@ PLEPA 4대 체위 통계적 벤치마크 에셋 모바일 전용 인터랙티브
 
 import asyncio
 import base64
+from contextlib import asynccontextmanager
 import glob
 import hmac
 import html as html_lib
@@ -65,7 +66,13 @@ CF = ROOT / "cloudflared.exe"
 PORT = 8085
 ACCESS_TOKEN = os.environ.get("PLEPA_MOBILE_TOKEN", "").strip() or secrets.token_urlsafe(24)
 
-app = FastAPI(title="Plepa Benchmark Mobile Gallery")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    reroll_queue_mgr.start_worker()
+    yield
+
+
+app = FastAPI(title="Plepa Benchmark Mobile Gallery", lifespan=_lifespan)
 
 for _mount_path, _mount_dir, _mount_name, _allow_html in (
     ("/static", BENCHMARK_DIR, "static", False),
@@ -541,11 +548,6 @@ class RerollQueueManager:
 reroll_queue_mgr = RerollQueueManager()
 
 
-@app.on_event("startup")
-async def startup_event():
-    reroll_queue_mgr.start_worker()
-
-
 @app.post("/api/reroll_queue")
 async def enqueue_reroll_endpoint(req: RerollRequest, request: Request):
     """
@@ -970,7 +972,7 @@ def index_view():
   <header>
     <div class="header-title">
       <span>🔬 PLEPA 4대 체위 통계 벤치마크</span>
-      <span class="badge-summary">36장 실측 완비</span>
+      <span class="badge-summary">모바일 검수/벤치마크</span>
     </div>
     <div class="header-sub">
       RTX 4060 Ti | school 로스터 (dan, ena, ria) × 3시드 (1001, 1002, 1003)

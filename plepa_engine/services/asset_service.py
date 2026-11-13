@@ -5,6 +5,7 @@ plepa_engine.services.asset_service
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
@@ -14,6 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.services.repository import Repository, default_repo
+
+logger = logging.getLogger(__name__)
 
 
 class AssetService:
@@ -190,10 +193,11 @@ class AssetService:
         }
 
     def restore_asset_bundle(self, moved_list: List[Dict[str, str]]) -> bool:
-        """휴지통으로 이동되었던 에셋 번들을 원래 위치로 복원(Undo)합니다."""
+        """휴지통으로 이동되었던 에셋 번들을 원래 위치로 원자적으로 복원(Undo)합니다."""
         projects_root = PROJECTS_DIR.resolve()
         success = True
         for item in moved_list:
+            tmp_restore: Optional[Path] = None
             try:
                 trash_p = Path(item["trash"]).resolve()
                 orig_p = Path(item["original"]).resolve()
@@ -202,8 +206,18 @@ class AssetService:
                     continue
                 if trash_p.is_file():
                     orig_p.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.move(str(trash_p), str(orig_p))
-            except Exception:
+                    try:
+                        os.replace(trash_p, orig_p)
+                    except OSError:
+                        # 서로 다른 볼륨/파일시스템 간 이동 폴백: 동일 디렉터리 임시 파일 복사 후 원자적 교체
+                        tmp_restore = orig_p.parent / f".tmp_{uuid.uuid4().hex[:6]}_{orig_p.name}"
+                        shutil.copy2(trash_p, tmp_restore)
+                        os.replace(tmp_restore, orig_p)
+                        trash_p.unlink(missing_ok=True)
+            except Exception as exc:
+                logger.warning("에셋 복원 실패 (%s): %s", item.get("original"), exc)
+                if tmp_restore and tmp_restore.exists():
+                    tmp_restore.unlink(missing_ok=True)
                 success = False
         return success
 

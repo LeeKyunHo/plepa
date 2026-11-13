@@ -26,7 +26,6 @@ from plepa_engine.config import (
     PROJECTS_DIR,
     configure_stdio,
 )
-from plepa_engine.checkpoint_service import CheckpointService
 
 configure_stdio()
 from plepa_engine.models import (

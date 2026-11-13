@@ -7,6 +7,9 @@ plepa_gui.pages.gallery
 
 from __future__ import annotations
 
+import json
+import logging
+import mimetypes
 from pathlib import Path
 import threading
 import time
@@ -23,8 +26,16 @@ from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
 from plepa_gui.components.header import get_active_roster, render_header
 
-import mimetypes
 mimetypes.add_type("image/webp", ".webp")
+logger = logging.getLogger(__name__)
+
+
+def _safe_notify(msg: str, type: str = "info") -> None:
+    """UI 컨텍스트 유무와 무관하게 알림을 안전하게 호출합니다."""
+    try:
+        ui.notify(msg, type=type)
+    except Exception as exc:
+        logger.debug("ui.notify skipped (%s): %s", type, exc)
 
 
 def detect_best_default_roster() -> str:
@@ -171,10 +182,7 @@ def render_gallery_page() -> None:
             target = PROJECTS_DIR / state["roster"] / "assets"
         target.mkdir(parents=True, exist_ok=True)
         open_in_explorer(target)
-        try:
-            ui.notify(f"📂 PC 파일 탐색기에서 폴더를 열었습니다: {target.name}", type="positive")
-        except Exception:
-            pass
+        _safe_notify(f"📂 PC 파일 탐색기에서 폴더를 열었습니다: {target.name}", type="positive")
 
     def open_genit_export_dialog():
         """Genit 규격({{url}}캐릭터코드/상황코드.webp) 내보내기 모달 다이얼로그."""
@@ -483,79 +491,68 @@ def render_gallery_page() -> None:
             state["selected_chars"].remove(prefix)
         render_content()
 
-    def select_murim_all_preset():
-        try:
-            ui.notify("🏮 무협 10인 전원 선택 완료!", type="positive")
-        except Exception:
-            pass
-        murim_chars = ["aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj"]
+    def _apply_char_preset(
+        notify_msg: str,
+        prefixes: List[str],
+        pose_set: Optional[str] = None,
+        selected_codes: Optional[List[str]] = None,
+    ) -> None:
+        _safe_notify(notify_msg, type="positive")
         counts = get_character_asset_counts(state["roster"])
-        state["selected_chars"] = [p for p in murim_chars if p in counts]
+        state["selected_chars"] = [p for p in prefixes if p in counts]
+        if pose_set is not None:
+            state["pose_set"] = pose_set
+        if selected_codes is not None:
+            state["selected_codes"] = selected_codes
         update_control_bars()
         render_content()
+
+    def select_murim_all_preset():
+        _apply_char_preset(
+            "🏮 무협 10인 전원 선택 완료!",
+            ["aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj"],
+        )
 
     def select_murim_orthodox_preset():
-        try:
-            ui.notify("🗡️ 정파 3인 (aa, bb, cc) 선택 완료!", type="positive")
-        except Exception:
-            pass
-        ortho = ["aa", "bb", "cc"]
-        counts = get_character_asset_counts(state["roster"])
-        state["selected_chars"] = [p for p in ortho if p in counts]
-        update_control_bars()
-        render_content()
+        _apply_char_preset("🗡️ 정파 3인 (aa, bb, cc) 선택 완료!", ["aa", "bb", "cc"])
 
     def select_quadruplets_preset():
-        try:
-            ui.notify("🌸 네쌍둥이 4인 (전체 포즈) 선택 완료!", type="positive")
-        except Exception:
-            pass
         counts = get_character_asset_counts(state["roster"])
-        quad_prefixes = ["yua", "serin", "sia", "hayul"] if any(k in counts for k in ["yua", "serin"]) else ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]
-        state["selected_chars"] = [p for p in quad_prefixes if p in counts]
-        state["pose_set"] = "all"
-        state["selected_codes"] = sorted(all_poses.keys())
-        update_control_bars()
-        render_content()
+        quad_prefixes = (
+            ["yua", "serin", "sia", "hayul"]
+            if any(k in counts for k in ["yua", "serin"])
+            else ["ykn_1st", "ykn_2nd", "ykn_3rd", "ykn_4th"]
+        )
+        _apply_char_preset(
+            "🌸 네쌍둥이 4인 (전체 포즈) 선택 완료!",
+            quad_prefixes,
+            pose_set="all",
+            selected_codes=sorted(all_poses.keys()),
+        )
 
     def select_ykn_braid_preset():
-        try:
-            ui.notify("유키노 땋은머리 샘플 3종 (#000 평상) 선택 완료!", type="positive")
-        except Exception:
-            pass
-        braid_prefixes = ["ykn_brd_a", "ykn_brd_b", "ykn_brd_c"]
-        counts = get_character_asset_counts(state["roster"])
-        state["selected_chars"] = [p for p in braid_prefixes if p in counts]
-        state["pose_set"] = "all"
-        state["selected_codes"] = ["000"]
-        update_control_bars()
-        render_content()
+        _apply_char_preset(
+            "유키노 땋은머리 샘플 3종 (#000 평상) 선택 완료!",
+            ["ykn_brd_a", "ykn_brd_b", "ykn_brd_c"],
+            pose_set="all",
+            selected_codes=["000"],
+        )
 
     def select_ykn_preset():
-        try:
-            ui.notify("유키노 성인 5대 체형 및 업스케일 6종 선택 완료!", type="positive")
-        except Exception:
-            pass
-        ykn_prefixes = ["ykn_sle", "ykn_std", "ykn_mat", "ykn_crv", "ykn_gla", "ykn_gla_up"]
-        counts = get_character_asset_counts(state["roster"])
-        state["selected_chars"] = [p for p in ykn_prefixes if p in counts]
-        state["pose_set"] = "adult_testing"
-        state["selected_codes"] = [f"{i:03d}" for i in range(24, 60)]
-        update_control_bars()
-        render_content()
+        _apply_char_preset(
+            "유키노 성인 5대 체형 및 업스케일 6종 선택 완료!",
+            ["ykn_sle", "ykn_std", "ykn_mat", "ykn_crv", "ykn_gla", "ykn_gla_up"],
+            pose_set="adult_testing",
+            selected_codes=[f"{i:03d}" for i in range(24, 60)],
+        )
 
     def select_ykn_outfit_preset():
-        try:
-            ui.notify("유키노 신규 테마 의상 6종 선택 완료!", type="positive")
-        except Exception:
-            pass
-        ykn_outfits = ["ykn_bun", "ykn_nur", "ykn_mai", "ykn_swm", "ykn_qip", "ykn_gya"]
-        counts = get_character_asset_counts(state["roster"])
-        state["selected_chars"] = [p for p in ykn_outfits if p in counts]
-        state["pose_set"] = "adult_testing"
-        state["selected_codes"] = [f"{i:03d}" for i in range(24, 60)]
-        update_control_bars()
-        render_content()
+        _apply_char_preset(
+            "유키노 신규 테마 의상 6종 선택 완료!",
+            ["ykn_bun", "ykn_nur", "ykn_mai", "ykn_swm", "ykn_qip", "ykn_gya"],
+            pose_set="adult_testing",
+            selected_codes=[f"{i:03d}" for i in range(24, 60)],
+        )
 
     def select_has_assets():
         counts = get_character_asset_counts(state["roster"])
@@ -687,7 +684,8 @@ def render_gallery_page() -> None:
                                     char_obj, _ = default_character_service.find_character(prefix, roster=state["roster"])
                                     ui.label(char_obj.name).classes("text-sm font-bold text-amber-300")
                                     ui.label(f"[{prefix}]").classes("text-xs text-slate-500 font-mono")
-                                except Exception:
+                                except Exception as exc:
+                                    logger.debug("캐릭터 조회 폴백 (%s): %s", prefix, exc)
                                     ui.label(prefix).classes("text-sm text-slate-300")
 
                             # 행(캐릭터)별 존재하는 이미지 목록
@@ -804,8 +802,8 @@ def render_gallery_page() -> None:
                         with open(manifest_p, "r", encoding="utf-8") as f:
                             m_json = json.load(f)
                             manifest_item = m_json.get("items", {}).get(f"{prefix_val}_{code_val}", {})
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("매니페스트 로드 스킵 (%s): %s", manifest_p, exc)
 
                 seed_val = manifest_item.get("seed") or "미기록"
                 ts_val = manifest_item.get("timestamp", "-")
@@ -1016,10 +1014,7 @@ def render_gallery_page() -> None:
 
                         def handle_open_folder():
                             open_in_explorer(curr["path"])
-                            try:
-                                ui.notify(f"🖥️ PC 파일 탐색기를 열었습니다: {curr['path'].name}", type="positive")
-                            except Exception:
-                                pass
+                            _safe_notify(f"🖥️ PC 파일 탐색기를 열었습니다: {curr['path'].name}", type="positive")
 
                         ui.button(icon="folder", on_click=handle_open_folder).props(
                             "flat dense size=sm color=slate-300"

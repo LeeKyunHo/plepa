@@ -5,6 +5,7 @@ plepa_engine.services.upscale_service
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 import uuid
@@ -16,6 +17,8 @@ from PIL import Image
 from plepa_engine.comfy_client import ComfyClient, ComfyClientError
 from plepa_engine.config import COMFY_HOST, DEFAULT_UPSCALER
 from plepa_engine.workflow_templates import build_standalone_upscale_workflow
+
+logger = logging.getLogger(__name__)
 
 
 class UpscaleService:
@@ -116,6 +119,14 @@ class UpscaleService:
 
         new_dims = self.get_image_dimensions(output_path)
         new_w, new_h = new_dims if new_dims else (0, 0)
+        logger.info(
+            "4K 업스케일 완료 (%s): %dx%d -> %dx%d",
+            output_path.name,
+            orig_w,
+            orig_h,
+            new_w,
+            new_h,
+        )
         return output_path
 
     def upscale_batch(

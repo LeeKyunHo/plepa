@@ -11,26 +11,37 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 1. CPU 스레드 자동 제한 (전체 스레드 수 - 2) & 2. 프로세스 우선순위 하향 (Below Normal)
-# 딥러닝 감지기 추론 중 CPU 100% 점유로 인한 윈도우 UI/마우스/브라우저 버벅임을 원천 방지합니다.
-# ──────────────────────────────────────────────────────────────────────────────
-usable_threads = max(2, (os.cpu_count() or 4) - 2)
-os.environ["OMP_NUM_THREADS"] = str(usable_threads)
-os.environ["MKL_NUM_THREADS"] = str(usable_threads)
+_RUNTIME_CONFIGURED = False
 
-try:
-    import torch
-    torch.set_num_threads(usable_threads)
-except Exception:
-    pass
 
-try:
-    import psutil
-    p = psutil.Process(os.getpid())
-    p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-except Exception:
-    pass
+def configure_qa_runtime(force: bool = False) -> int:
+    """
+    딥러닝 감지기 추론 중 CPU 스레드 자동 제한 및 프로세스 우선순위 하향 설정.
+    모듈 import 시점이 아닌 최초 검증 시점에 지연 적용해 웹 GUI/테스트 프로세스 간섭을 방지합니다.
+    """
+    global _RUNTIME_CONFIGURED
+    usable_threads = max(2, (os.cpu_count() or 4) - 2)
+    if _RUNTIME_CONFIGURED and not force:
+        return usable_threads
+
+    os.environ["OMP_NUM_THREADS"] = str(usable_threads)
+    os.environ["MKL_NUM_THREADS"] = str(usable_threads)
+
+    try:
+        import torch
+        torch.set_num_threads(usable_threads)
+    except Exception:
+        pass
+
+    try:
+        import psutil
+        p = psutil.Process(os.getpid())
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+    except Exception:
+        pass
+
+    _RUNTIME_CONFIGURED = True
+    return usable_threads
 
 from PIL import Image
 
@@ -91,6 +102,8 @@ def validate_generated_image(
         "faces": 0,
         "blur_score": 0.0,
     }
+
+    configure_qa_runtime()
 
     if not HAS_IMGUTILS:
         # 감지기가 없으면 안전 통과

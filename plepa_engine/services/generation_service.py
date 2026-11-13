@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import os
 import random
 import shutil
@@ -53,6 +54,9 @@ from plepa_engine.services.pose_background_service import default_pose_bg_servic
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.workflow_templates import build_sdxl_workflow
 
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_optimal_resolution_for_pose(
@@ -229,6 +233,23 @@ class GenerationService:
         self.bg_svc = bg_svc
         self.asset_svc = asset_svc
         self.pose_bg_svc = pose_bg_svc
+
+    @staticmethod
+    def _resolve_origin_path(
+        filename: str,
+        sub_origin_dir: Path,
+        legacy_sub_origin: Optional[Path],
+        origin_dir: Path,
+    ) -> Path:
+        """2대/6대/플랫 구조 호환 원본(_origin) 백업 경로를 우선순위에 따라 탐색합니다."""
+        candidates = [sub_origin_dir / filename]
+        if legacy_sub_origin is not None:
+            candidates.append(legacy_sub_origin / filename)
+        candidates.append(origin_dir / filename)
+        for cand in candidates:
+            if cand.exists():
+                return cand
+        return sub_origin_dir / filename
 
     @staticmethod
     def _apply_censor_to_asset(
@@ -590,18 +611,15 @@ class GenerationService:
                         track_info = f" [IP-A: {ref_mode}]" if (params.engine == "sdxl" and ref_file_name) else ""
                         print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}){track_info} -> {out_name}", end="", flush=True)
     
-                    should_censor = params.censor and is_pose_censor_required(pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path)
+                    should_censor = params.censor and is_pose_censor_required(
+                        pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster
+                    )
 
                     # 0. CENSOR-ONLY (기존 이미지 소급 검열 모드: 검열본은 assets/{prefix}/에 교체 배치, 원본은 assets/{prefix}_origin/에 보존)
                     if params.censor_only:
-                        if (sub_origin_dir / out_name).exists():
-                            origin_path = sub_origin_dir / out_name
-                        elif (legacy_sub_origin / out_name).exists():
-                            origin_path = legacy_sub_origin / out_name
-                        elif (origin_dir / out_name).exists():
-                            origin_path = origin_dir / out_name
-                        else:
-                            origin_path = sub_origin_dir / out_name
+                        origin_path = self._resolve_origin_path(
+                            out_name, sub_origin_dir, legacy_sub_origin, origin_dir
+                        )
                         src_path = origin_path if (origin_path.exists() and origin_path.stat().st_size > 0) else out_path
                         if src_path.exists() and src_path.stat().st_size > 0:
                             if should_censor:
@@ -638,14 +656,9 @@ class GenerationService:
                         if not quiet:
                             print(" [기존 파일 보존: 건너뜀]", end="")
                         if should_censor:
-                            if (sub_origin_dir / out_path.name).exists():
-                                origin_path = sub_origin_dir / out_path.name
-                            elif (legacy_sub_origin / out_path.name).exists():
-                                origin_path = legacy_sub_origin / out_path.name
-                            elif (origin_dir / out_path.name).exists():
-                                origin_path = origin_dir / out_path.name
-                            else:
-                                origin_path = sub_origin_dir / out_path.name
+                            origin_path = self._resolve_origin_path(
+                                out_path.name, sub_origin_dir, legacy_sub_origin, origin_dir
+                            )
                             sub_origin_dir.mkdir(parents=True, exist_ok=True)
                             if not origin_path.exists():
                                 shutil.copy2(out_path, origin_path)
@@ -671,12 +684,9 @@ class GenerationService:
                             if not quiet:
                                 print(" [기존 원본에서 하이브리드 사본 복제 완료]", end="")
                             if should_censor:
-                                if (sub_origin_dir / out_path.name).exists():
-                                    origin_path = sub_origin_dir / out_path.name
-                                elif (origin_dir / out_path.name).exists():
-                                    origin_path = origin_dir / out_path.name
-                                else:
-                                    origin_path = sub_origin_dir / out_path.name
+                                origin_path = self._resolve_origin_path(
+                                    out_path.name, sub_origin_dir, None, origin_dir
+                                )
                                 sub_origin_dir.mkdir(parents=True, exist_ok=True)
                                 if not origin_path.exists():
                                     shutil.copy2(out_path, origin_path)
@@ -887,8 +897,8 @@ class GenerationService:
                     for item in old_data.get("items", []):
                         if "code" in item:
                             existing_items[str(item["code"]).strip()] = item
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("기존 배치 매니페스트 로드 실패 (%s): %s", manifest_path, exc)
 
         for r in results:
             t = r.target

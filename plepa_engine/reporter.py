@@ -6,18 +6,7 @@ plepa_engine.reporter
 from __future__ import annotations
 
 import os
-import sys
-
-if sys.stdout and hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
-if sys.stderr and hasattr(sys.stderr, "reconfigure"):
-    try:
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 from plepa_engine.models import GenerationResult, PoseEntry
@@ -81,7 +70,6 @@ def asset_filename(
         code_str = f"{int(code):03d}"
     except ValueError:
         code_str = str(code).strip().upper()
-    import re
     clean_label = re.sub(r'[<>:"/\\|?*\x00-\x1f\s]+', "_", label.strip()).strip("_")
     if naming == "code" or not clean_label:
         return f"{prefix}_{code_str}.webp"
