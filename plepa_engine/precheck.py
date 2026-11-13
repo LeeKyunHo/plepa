@@ -83,8 +83,8 @@ _FORBIDDEN_LEAK_TOKENS_IN_NUDE: Tuple[str, ...] = (
 )
 
 
-def run_pregeneration_check(roster: str = "campus") -> PrecheckReport:
-    """지정된 로스터와 SDXL V2 포즈 DB에 대해 5단계 이미지 생산 사전 점검을 수행합니다."""
+def run_pregeneration_check(roster: str = "campus", check_comfy: bool = False) -> PrecheckReport:
+    """지정된 로스터와 SDXL V2 포즈 DB에 대해 이미지 생산 사전 점검을 수행합니다."""
     report = PrecheckReport(roster=roster)
 
     sdxl_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
@@ -312,6 +312,24 @@ def run_pregeneration_check(roster: str = "campus") -> PrecheckReport:
         except Exception as e:
             report.errors.append(f"[배경매핑규칙] {roster}/pose_background_mapping.json 파싱 실패: {e}")
 
+    # -------------------------------------------------------------------------
+    # [6단계] ComfyUI 필수 커스텀 노드 사전 검증 (Pre-flight Inspection, 선택)
+    # -------------------------------------------------------------------------
+    if check_comfy:
+        try:
+            from plepa_engine.comfy_client import verify_required_nodes
+            ok, missing = verify_required_nodes()
+            if not ok:
+                if "SERVER_UNREACHABLE" in missing:
+                    report.warnings.append(f"[ComfyUI점검] {missing['SERVER_UNREACHABLE']}")
+                else:
+                    for node, pack in missing.items():
+                        report.errors.append(
+                            f"[ComfyUI점검] 필수 커스텀 노드 '{node}'가 누락되었습니다! (필요 확장팩: {pack})"
+                        )
+        except Exception as e:
+            report.warnings.append(f"[ComfyUI점검] 노드 사전 검증 중 예외 발생: {e}")
+
     return report
 
 
@@ -325,9 +343,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="플에파 이미지 생산 사전 점검기 (Pre-Generation Validator)")
     parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"점검할 로스터 이름 (기본값: {DEFAULT_ROSTER})")
+    parser.add_argument("--check-comfy", action="store_true", help="ComfyUI 서버의 필수 커스텀 노드(Impact Pack 등) 설치 여부를 사전 검증합니다.")
     args = parser.parse_args()
 
-    rep = run_pregeneration_check(args.roster)
+    rep = run_pregeneration_check(args.roster, check_comfy=args.check_comfy)
     print("=" * 68)
     print(f"  [플에파] 이미지 생산 6단계 사전 점검 보고서 (로스터: {rep.roster})")
     print("=" * 68)

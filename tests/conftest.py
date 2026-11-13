@@ -4,8 +4,15 @@ tests/conftest.py
 포즈 DB, 로스터, 캐릭터, 프리셋이 변경되면 모든 테스트에 실시간으로 자동 반영됩니다.
 """
 
+import sys
 from pathlib import Path
 from typing import Dict, List
+
+# PYTHONPATH 없이도 프로젝트 루트를 패키지 검색 경로에 안전하게 삽입
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import pytest
 
 from plepa_engine.config import PROJECTS_DIR

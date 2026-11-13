@@ -29,6 +29,19 @@ from plepa_engine.legacy.flux_workflows import build_flux_workflow
 from plepa_engine.graph_builder import WorkflowGraph
 
 
+# ComfyUI 파이프라인 구동에 필수적인 외부 커스텀 노드 및 해당 확장 팩 매핑
+REQUIRED_CUSTOM_NODES: Dict[str, str] = {
+    # ComfyUI-Impact-Pack (얼굴/손 정밀 보정 및 세그먼트 디텍터)
+    "FaceDetailer": "ComfyUI-Impact-Pack",
+    "UltralyticsDetectorProvider": "ComfyUI-Impact-Pack",
+    "SEGSOrderedFilterDetailerHookProvider": "ComfyUI-Impact-Pack",
+    # ComfyUI_IPAdapter_plus (캐릭터 레퍼런스 스타일 주입)
+    "IPAdapterUnifiedLoader": "ComfyUI_IPAdapter_plus",
+    "PrepImageForClipVision": "ComfyUI_IPAdapter_plus",
+    "IPAdapterAdvanced": "ComfyUI_IPAdapter_plus",
+}
+
+
 def build_sdxl_workflow(
     positive_prompt: str,
     negative_prompt: str,

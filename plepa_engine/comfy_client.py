@@ -146,6 +146,43 @@ class ComfyClient:
         result["upscalers"] = fetch_node_options("UpscaleModelLoader", "model_name")
         return result
 
+    def get_registered_node_names(self) -> set[str]:
+        """ComfyUI 서버에 등록된 전체 노드 클래스명 집합을 조회합니다."""
+        if not self.check_connection():
+            return set()
+        try:
+            req = urllib.request.Request(f"{self.base_url}/object_info")
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return set(data.keys())
+        except Exception:
+            return set()
+
+    def check_missing_custom_nodes(
+        self, required_nodes: Optional[Dict[str, str]] = None
+    ) -> Dict[str, str]:
+        """
+        필수 커스텀 노드가 ComfyUI 서버에 실제로 등록되어 있는지 검증합니다.
+        누락된 노드가 있을 경우 {노드클래스명: 확장팩이름} 딕셔너리를 반환합니다.
+        서버 미가동이거나 모두 등록되어 있으면 빈 딕셔너리를 반환합니다.
+        """
+        if required_nodes is None:
+            from plepa_engine.workflow_templates import REQUIRED_CUSTOM_NODES
+            required_nodes = REQUIRED_CUSTOM_NODES
+
+        if not self.check_connection():
+            return {}
+
+        registered = self.get_registered_node_names()
+        if not registered:
+            return {}
+
+        missing: Dict[str, str] = {}
+        for node_name, pack_name in required_nodes.items():
+            if node_name not in registered:
+                missing[node_name] = pack_name
+        return missing
+
     def upload_image(self, file_path: Path, overwrite: bool = True) -> str:
         """
         로컬 이미지 파일을 ComfyUI input 디렉토리로 업로드합니다.
@@ -401,3 +438,25 @@ class ComfyClient:
             raise ComfyClientError(f"이미지 저장 실패 ({output_path.name}): {se}") from se
 
         return output_path
+
+
+def verify_required_nodes(
+    host: str = COMFY_HOST,
+    required_nodes: Optional[Dict[str, str]] = None,
+) -> Tuple[bool, Dict[str, str]]:
+    """
+    ComfyUI 서버에 필수 커스텀 노드가 모두 등록되어 있는지 확인하는 경량 헬퍼 함수.
+    반환값: (모두_존재_여부, 누락된_노드_딕셔너리)
+    - ComfyUI 미가동 시: (False, {"SERVER_UNREACHABLE": f"ComfyUI 서버({host}) 미가동"})
+    - 노드 누락 시: (False, {노드명: 확장팩명})
+    - 정상 구동 시: (True, {})
+    """
+    client = ComfyClient(host=host)
+    if not client.check_connection():
+        return False, {"SERVER_UNREACHABLE": f"ComfyUI 서버({host})에 연결할 수 없습니다."}
+
+    missing = client.check_missing_custom_nodes(required_nodes=required_nodes)
+    if missing:
+        return False, missing
+    return True, {}
+
