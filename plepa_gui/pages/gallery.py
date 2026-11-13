@@ -21,6 +21,12 @@ from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.reporter import open_in_explorer
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.config_service import default_config_service
+from plepa_engine.services.generation_service import (
+    GENERATION_OPTION_SPECS,
+    GenerationParams,
+    default_generation_service,
+)
 from plepa_engine.services.genit_exporter import default_genit_exporter
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
@@ -74,6 +80,9 @@ def render_gallery_page() -> None:
     if not available_rosters:
         available_rosters = [default_roster]
 
+    conf = default_config_service.get_config()
+    censor_spec_map = {s["field"]: s for s in GENERATION_OPTION_SPECS if s["field"] in ("censor_style", "censor_targets")}
+
     state = {
         "view_mode": "matrix",  # 'matrix', 'single', 'misc'
         "roster": default_roster,
@@ -83,7 +92,13 @@ def render_gallery_page() -> None:
         "pose_set": "all",
         "misc_filter": "all",
         "single_sort": "mtime_desc",  # 'mtime_desc' (최신 생성순), 'code_asc' (포즈 번호순)
+        "censor_style": conf.get("censor_style", "white_silhouette"),
+        "censor_targets": conf.get("censor_targets", "penis"),
     }
+
+    def _update_censor_setting(field: str, value: str) -> None:
+        state[field] = value
+        default_config_service.save_config({field: value})
 
     with ui.column().classes("w-full max-w-[1550px] mx-auto p-6 gap-6"):
         # 상단 통합 컨트롤 바
@@ -111,6 +126,16 @@ def render_gallery_page() -> None:
                         on_change=lambda e: on_roster_changed(e.value)
                     ).props("dense outlined dark options-dense").classes("w-36 text-sm")
 
+                    for c_field, w_cls in (("censor_style", "w-36"), ("censor_targets", "w-32")):
+                        c_spec = censor_spec_map.get(c_field)
+                        if c_spec:
+                            ui.select(
+                                options=c_spec["choices"],
+                                value=state[c_field],
+                                label=c_spec["label"],
+                                on_change=lambda e, fld=c_field: _update_censor_setting(fld, e.value),
+                            ).props("dense outlined dark options-dense").classes(f"{w_cls} text-xs").tooltip(c_spec["tooltip"])
+
                 with ui.row().classes("items-center gap-2"):
                     async def quick_fill_missing():
                         missing_map = default_asset_service.get_missing_poses_by_character(state["roster"])
@@ -128,6 +153,8 @@ def render_gallery_page() -> None:
                                 roster=state["roster"],
                                 overwrite=False,
                                 censor=True,
+                                censor_style=state["censor_style"],
+                                censor_targets=state["censor_targets"],
                             )
                             run.io_bound(default_generation_service.run_batch, g_params)
                         ui.notify(f"🚀 총 {tot}개 누락 포즈 생성이 시작되었습니다.", type="positive")
@@ -312,6 +339,8 @@ def render_gallery_page() -> None:
                                             pose_expr=",".join(miss_codes),
                                             roster=state["roster"],
                                             censor=True,
+                                            censor_style=state["censor_style"],
+                                            censor_targets=state["censor_targets"],
                                         )
                                         await run.io_bound(default_generation_service.run_batch, m_params)
                                         ui.notify(f"🎉 {char_p} 결손 에셋 생성 완료!", type="positive")
@@ -862,6 +891,8 @@ def render_gallery_page() -> None:
                                         roster=state["roster"],
                                         overwrite=True,
                                         censor=True,
+                                        censor_style=state["censor_style"],
+                                        censor_targets=state["censor_targets"],
                                         reuse_seed=reuse_seed,
                                     )
                                     done_event = threading.Event()

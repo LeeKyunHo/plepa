@@ -20,7 +20,7 @@ from pathlib import Path
 
 from typing import Callable, Dict, List, Optional, Tuple
 
-from plepa_engine.censor import censor_file, is_pose_censor_required
+from plepa_engine.censor import censor_file, is_pose_censor_required, unload_censor_models
 from plepa_engine.checkpoint_service import CheckpointService
 from plepa_engine.comfy_client import ComfyClient, ComfyClientError
 from plepa_engine.qa_validator import validate_generated_image
@@ -173,6 +173,38 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "default": True,
     },
     {
+        "field": "censor_style",
+        "cli_flag": "--censor-style",
+        "label": "검열 스타일",
+        "tooltip": "자동 검열 시 적용할 마스킹 스타일",
+        "default": "white_silhouette",
+        "widget": "select",
+        "choices": {
+            "white_silhouette": "화이트 실루엣",
+            "black_silhouette": "블랙 실루엣",
+            "silhouette": "실루엣(기본)",
+            "bar": "와이드 솔리드 바",
+            "wide_bar": "와이드 바",
+            "slim_bar": "슬림 사선 바",
+            "shadow": "그림자 음영",
+            "mosaic": "모자이크",
+            "debug_bbox": "디버그 BBox",
+        },
+    },
+    {
+        "field": "censor_targets",
+        "cli_flag": "--censor-targets",
+        "label": "검열 대상",
+        "tooltip": "검열 탐지 및 마스킹 대상 부위",
+        "default": "penis",
+        "widget": "select",
+        "choices": {
+            "penis": "남성기 (penis)",
+            "pussy": "여성기 (pussy)",
+            "all": "전체 (all)",
+        },
+    },
+    {
         "field": "reuse_seed",
         "cli_flag": "--reuse-seed",
         "label": "🔒 골든 시드 고정",
@@ -255,12 +287,19 @@ class GenerationService:
     def _apply_censor_to_asset(
         origin_path: Path,
         out_path: Path,
-        sub_origin_dir: Path,
+        sub_origin_dir: Optional[Path],
         params: GenerationParams,
         pose_code: str,
         roster: str,
+        src_for_backup: Optional[Path] = None,
+        overwrite_origin: bool = False,
     ) -> bool:
-        """원본 백업(_origin)을 보존한 채 검열본을 원자적 임시파일로 생성하여 out_path를 안전 교체합니다."""
+        """단일 무검열 원본(_origin) 백업을 보장한 뒤 검열본을 원자적 임시파일로 생성하여 out_path를 안전 교체합니다."""
+        backup_source = src_for_backup or out_path
+        if (overwrite_origin or not origin_path.exists()) and backup_source.exists():
+            origin_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(backup_source, origin_path)
+
         targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
         tmp_censored = out_path.parent / f".tmp_{uuid.uuid4().hex[:6]}_{out_path.name}"
         try:
@@ -271,7 +310,7 @@ class GenerationService:
                 targets=targets,
                 pose_code=pose_code,
                 enable_anchor_fallback=params.anchor_fallback,
-                backup_dir=sub_origin_dir,
+                backup_dir=None,
                 roster=roster,
             )
             if c_res and c_res.exists():
@@ -623,12 +662,14 @@ class GenerationService:
                         src_path = origin_path if (origin_path.exists() and origin_path.stat().st_size > 0) else out_path
                         if src_path.exists() and src_path.stat().st_size > 0:
                             if should_censor:
-                                sub_origin_dir.mkdir(parents=True, exist_ok=True)
-                                # 1. 무검열 원본을 _origin 폴더에 100% 무조건 선제 백업
-                                if not origin_path.exists():
-                                    shutil.copy2(src_path, origin_path)
                                 applied = self._apply_censor_to_asset(
-                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
+                                    origin_path,
+                                    out_path,
+                                    sub_origin_dir,
+                                    params,
+                                    pose.code,
+                                    actual_roster,
+                                    src_for_backup=src_path,
                                 )
                                 if applied:
                                     if not quiet:
@@ -659,9 +700,6 @@ class GenerationService:
                             origin_path = self._resolve_origin_path(
                                 out_path.name, sub_origin_dir, legacy_sub_origin, origin_dir
                             )
-                            sub_origin_dir.mkdir(parents=True, exist_ok=True)
-                            if not origin_path.exists():
-                                shutil.copy2(out_path, origin_path)
                             applied = self._apply_censor_to_asset(
                                 origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
                             )
@@ -687,9 +725,6 @@ class GenerationService:
                                 origin_path = self._resolve_origin_path(
                                     out_path.name, sub_origin_dir, None, origin_dir
                                 )
-                                sub_origin_dir.mkdir(parents=True, exist_ok=True)
-                                if not origin_path.exists():
-                                    shutil.copy2(out_path, origin_path)
                                 applied = self._apply_censor_to_asset(
                                     origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
                                 )
@@ -798,11 +833,17 @@ class GenerationService:
 
                                 # Strict Censor QC: 성인 노출 필수 씬에서 성기 미탐지 시 리롤
                                 if should_censor and params.strict_censor_qc:
-                                    from plepa_engine.censor import POSE_SAFE_ANCHORS, detect_genitals
+                                    from plepa_engine.censor import POSE_SAFE_ANCHORS, detect_genitals, get_pose_category
                                     code_norm = str(target.code).strip()
-                                    if code_norm in POSE_SAFE_ANCHORS:
+                                    pose_cat = get_pose_category(code_norm, roster=actual_roster)
+                                    if pose_cat in POSE_SAFE_ANCHORS:
                                         c_targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                        boxes = detect_genitals(str(out_path), targets=c_targets, pose_code=code_norm)
+                                        boxes = detect_genitals(
+                                            str(out_path),
+                                            targets=c_targets,
+                                            pose_code=code_norm,
+                                            roster=actual_roster,
+                                        )
                                         if not boxes:
                                             final_qc_fail = "필수 성인 씬 성기 미탐지(구도 불량)"
                                             if attempt < params.max_retries:
@@ -821,13 +862,16 @@ class GenerationService:
                         if not quiet:
                             print(f" [완료: {duration:.1f}초]", end="")
                         if should_censor:
-                            sub_origin_dir.mkdir(parents=True, exist_ok=True)
                             origin_path = sub_origin_dir / out_path.name
-                            # 신규 생성된 무검열 원본을 100% 무조건 선제 백업
-                            shutil.copy2(out_path, origin_path)
                             try:
                                 applied = self._apply_censor_to_asset(
-                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
+                                    origin_path,
+                                    out_path,
+                                    sub_origin_dir,
+                                    params,
+                                    pose.code,
+                                    actual_roster,
+                                    overwrite_origin=True,
                                 )
                                 if applied and not quiet:
                                     print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
@@ -867,7 +911,10 @@ class GenerationService:
 
                 # 배치 매니페스트 저널 원자적 기록 (_batch_manifest.json)
                 self._save_batch_manifest(output_dir, char, actual_roster, params, char_results)
-    
+
+        if params.censor or params.censor_only:
+            unload_censor_models()
+
         if not quiet and all_results:
             total_elapsed = time.time() - total_batch_start if "total_batch_start" in locals() else 0.0
             print_overall_batch_summary(all_results, total_elapsed)

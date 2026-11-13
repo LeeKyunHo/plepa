@@ -108,7 +108,8 @@ def render_generate_page() -> None:
     }
     # GENERATION_OPTION_SPECS 레지스트리 기반 옵션 자동 바인딩
     for spec in GENERATION_OPTION_SPECS:
-        state[spec["field"]] = spec["default"]
+        f = spec["field"]
+        state[f] = conf.get(f, spec["default"]) if spec.get("widget") == "select" else spec["default"]
 
     available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
     if not available_rosters:
@@ -214,15 +215,34 @@ def render_generate_page() -> None:
 
             model_select_container = ui.column().classes("w-full mb-3")
 
-            # 레지스트리 기반 옵션 체크박스 동적 렌더링
-            with ui.row().classes("w-full items-center gap-3 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 mb-6 flex-wrap"):
-                for spec in GENERATION_OPTION_SPECS:
+            # 레지스트리 기반 옵션 체크박스 및 선택형 위젯 동적 렌더링
+            def _on_option_changed(field_name: str, value: object, persist: bool = False) -> None:
+                state.update({field_name: value})
+                if persist:
+                    default_config_service.save_config({field_name: value})
+
+            checkbox_specs = [s for s in GENERATION_OPTION_SPECS if s.get("widget") != "select"]
+            select_specs = [s for s in GENERATION_OPTION_SPECS if s.get("widget") == "select"]
+
+            with ui.row().classes("w-full items-center gap-3 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 mb-3 flex-wrap"):
+                for spec in checkbox_specs:
                     f = spec["field"]
                     ui.checkbox(
                         spec["label"],
                         value=state[f],
-                        on_change=lambda e, field=f: state.update({field: e.value})
+                        on_change=lambda e, field=f: _on_option_changed(field, e.value),
                     ).props("dark dense").tooltip(spec["tooltip"])
+
+            if select_specs:
+                with ui.row().classes("w-full items-center gap-3 p-2.5 bg-slate-800/30 rounded-lg border border-slate-700/40 mb-6 flex-wrap"):
+                    for spec in select_specs:
+                        f = spec["field"]
+                        ui.select(
+                            options=spec["choices"],
+                            value=state[f],
+                            label=spec["label"],
+                            on_change=lambda e, field=f: _on_option_changed(field, e.value, persist=True),
+                        ).props("dense outlined dark options-dense").classes("w-44 text-xs").tooltip(spec["tooltip"])
 
             # 생성 시작 및 취소 버튼
             with ui.row().classes("w-full justify-between items-center"):

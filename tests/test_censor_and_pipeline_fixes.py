@@ -211,3 +211,210 @@ def test_underdesk_prompt_female_floor_and_clothed_partner():
     assert "white shirt" in pos.lower()
     assert "female sitting on chair" in neg.lower()
     assert "shirtless male" in neg.lower()
+
+
+def test_strict_censor_qc_reroll_and_single_backup_and_unload(monkeypatch, tmp_path):
+    """C2-1: strict_censor_qc=True 시 088 포즈에서 detect_genitals 정상 호출, 미탐지 리롤, 단일 백업 및 unload 검증."""
+    from contextlib import nullcontext
+    from plepa_engine.services import generation_service as gs_mod
+
+    monkeypatch.setattr(gs_mod, "PROJECTS_DIR", tmp_path)
+
+    char = CharacterConfig(
+        prefix="tst",
+        name="테스트",
+        gender="female",
+        appearance=CharacterAppearance(
+            face_and_hair="black hair",
+            physique="average",
+            outfit="uniform",
+        ),
+        sdxl_positive="masterpiece BREAK 1girl, black hair",
+        sdxl_negative="worst quality",
+    )
+    pose_088 = PoseEntry(code="088", section="h_scenes", label="후배위", prompt="doggystyle, 1boy, penis, sex")
+
+    class _FakeCharSvc:
+        def resolve_characters(self, expr, roster=None):
+            return [(char, roster or "campus")]
+
+    class _FakePoseSvc:
+        def load_pose_db(self, engine="sdxl", roster=None):
+            return {"088": pose_088}
+
+        def resolve_pose_codes(self, expr, db, roster=None):
+            return ["088"]
+
+        def is_pose_allowed_for_character(self, pose, char_obj, roster=None, code=None):
+            return True
+
+    class _FakeBgSvc:
+        def get_preset(self, roster, key="auto", engine="sdxl"):
+            return "bedroom"
+
+    class _FakePoseBgSvc:
+        def get_background_for_pose(self, roster, code):
+            return "default"
+
+    class _FakeAssetSvc:
+        def find_reference_image(self, prefix, roster, custom_path=None):
+            return None
+
+    class _FakeClient:
+        def __init__(self, *a, **kw):
+            self.calls = 0
+
+        def check_connection(self):
+            return True
+
+        def session(self):
+            return nullcontext()
+
+        def generate_image(self, workflow, output_path, **kw):
+            self.calls += 1
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            _make_skin_image(128, 128).save(output_path, "WEBP")
+
+    fake_client = _FakeClient()
+    monkeypatch.setattr(gs_mod, "ComfyClient", lambda *a, **kw: fake_client)
+    monkeypatch.setattr(gs_mod, "validate_generated_image", lambda *a, **kw: (True, "OK", {}))
+
+    detect_calls = []
+    # 1차 시도: 미탐지([]) -> 리롤 트리거, 2차 시도: 탐지 성공
+    def _fake_detect_genitals(img_path, targets=("penis",), min_confidence=0.22, pose_code=None, roster=None, **kw):
+        detect_calls.append({"pose_code": pose_code, "targets": list(targets), "roster": roster})
+        if len(detect_calls) == 1:
+            return []
+        return [((20, 40, 80, 100), "penis", 0.91)]
+
+    monkeypatch.setattr(censor, "detect_genitals", _fake_detect_genitals)
+
+    censor_file_kwargs = []
+
+    def _fake_censor_file(src_path, dst_path=None, **kw):
+        censor_file_kwargs.append(kw)
+        dst = Path(dst_path)
+        _make_skin_image(128, 128).save(dst, "WEBP")
+        return dst
+
+    monkeypatch.setattr(gs_mod, "censor_file", _fake_censor_file)
+
+    unload_calls = []
+    monkeypatch.setattr(gs_mod, "unload_censor_models", lambda: unload_calls.append(True))
+
+    svc = gs_mod.GenerationService(
+        character_svc=_FakeCharSvc(),
+        pose_svc=_FakePoseSvc(),
+        bg_svc=_FakeBgSvc(),
+        asset_svc=_FakeAssetSvc(),
+        pose_bg_svc=_FakePoseBgSvc(),
+    )
+    params = gs_mod.GenerationParams(
+        character_expr="tst",
+        pose_expr="088",
+        roster="campus",
+        censor=True,
+        censor_style="bar",
+        censor_targets="penis,pussy",
+        strict_censor_qc=True,
+        auto_qc=True,
+        max_retries=1,
+        overwrite=True,
+    )
+    results = svc.run_batch(params, quiet=True)
+    assert len(results) == 1
+    assert results[0].success is True
+    assert results[0].qc_passed is True
+    assert results[0].retries == 1
+    assert fake_client.calls == 2
+    assert len(detect_calls) == 2
+    assert detect_calls[0]["pose_code"] == "088"
+    assert detect_calls[0]["targets"] == ["penis", "pussy"]
+    assert detect_calls[0]["roster"] == "campus"
+    assert len(censor_file_kwargs) == 1
+    assert censor_file_kwargs[0]["backup_dir"] is None
+    assert censor_file_kwargs[0]["style"] == "bar"
+    assert len(unload_calls) == 1
+
+    # 최대 재시도(max_retries=0 -> 1회만 시도)에서도 계속 미탐지 시 qc_passed=False 판정 검증
+    detect_calls.clear()
+    monkeypatch.setattr(censor, "detect_genitals", lambda *a, **kw: [])
+    params_fail = gs_mod.GenerationParams(
+        character_expr="tst",
+        pose_expr="088",
+        roster="campus",
+        censor=True,
+        strict_censor_qc=True,
+        auto_qc=True,
+        max_retries=0,
+        overwrite=True,
+    )
+    fail_res = svc.run_batch(params_fail, quiet=True)
+    assert fail_res[0].qc_passed is False
+    assert "미탐지" in (fail_res[0].qc_reason or "")
+
+
+def test_detect_target_candidates_iou_merge_priority_and_tiny_noise_filter(monkeypatch):
+    """C2-2: IoU > 0.45 다중 박스 병합 시 penis 우선순위 보존 및 < 12px 극소 노이즈 기각 검증."""
+    monkeypatch.setattr(censor, "HAS_IMGUTILS", True)
+    skin_img = _make_skin_image(832, 832)
+
+    def _fake_detect(im, conf_threshold=0.16):
+        if im.size != (832, 832):
+            return []
+        return [
+            ((150, 350, 158, 358), "penis", 0.95),   # 8x8 px 극소 노이즈 (< 12px) -> 기각
+            ((200, 400, 320, 540), "pussy", 0.88),   # 큰 박스 1
+            ((205, 405, 325, 545), "penis", 0.72),   # IoU > 0.45 겹치는 penis -> 병합 후 라벨은 penis
+        ]
+
+    monkeypatch.setattr(censor, "detect_censors", _fake_detect)
+    merged = censor._detect_target_candidates(skin_img, targets=("all",), min_confidence=0.16)
+    assert len(merged) == 1
+    box, lbl, score = merged[0]
+    assert box == (200, 400, 325, 545)
+    assert lbl == "penis"
+    assert score >= 0.88
+
+
+def test_censor_file_and_run_batch_filesystem_contracts(monkeypatch, tmp_path):
+    """C2-3: _origin/_censored 스킵, 미탐지 시 파일 미생성 보장, .png/.jpg/.webp 확장자 정상 인코딩 검증."""
+    monkeypatch.setattr(censor, "HAS_IMGUTILS", True)
+
+    # 1. 미탐지(count == 0) 시 출력 파일 미생성 보장
+    monkeypatch.setattr(censor, "detect_censors", lambda *a, **kw: [])
+    src_zero = tmp_path / "aya_088_doggystyle.webp"
+    dst_zero = tmp_path / "aya_088_doggystyle_out.webp"
+    _make_skin_image(400, 400).save(src_zero, "WEBP")
+    assert censor.censor_file(src_zero, dst_path=dst_zero, pose_code="088") is None
+    assert not dst_zero.exists()
+
+    # 2. 탐지 성공 시 .png / .jpg / .webp 각 포맷 정상 인코딩 검증
+    monkeypatch.setattr(
+        censor,
+        "detect_censors",
+        lambda im, conf_threshold=0.16: [((120, 160, 240, 300), "penis", 0.92)] if im.size == (400, 400) else [],
+    )
+    for ext, expected_fmt in ((".png", "PNG"), (".jpg", "JPEG"), (".webp", "WEBP")):
+        out_p = tmp_path / f"encoded_088{ext}"
+        res_p = censor.censor_file(src_zero, dst_path=out_p, style="bar", pose_code="088")
+        assert res_p == out_p and out_p.exists()
+        with Image.open(out_p) as saved_im:
+            assert saved_im.format == expected_fmt
+            assert saved_im.size == (400, 400)
+
+    # 3. run_batch_censor에서 _origin 폴더 및 *_censored.* 파일 자동 스킵 검증
+    origin_dir = tmp_path / "batch" / "_origin"
+    normal_dir = tmp_path / "batch" / "aya" / "02_h_scenes"
+    origin_dir.mkdir(parents=True)
+    normal_dir.mkdir(parents=True)
+
+    _make_skin_image(400, 400).save(origin_dir / "aya_088_origin.webp", "WEBP")
+    _make_skin_image(400, 400).save(normal_dir / "aya_088_censored.webp", "WEBP")
+    _make_skin_image(400, 400).save(normal_dir / "aya_088_doggystyle.webp", "WEBP")
+
+    processed = censor.run_batch_censor(tmp_path / "batch", overwrite=False)
+    assert processed == 1
+    assert not (origin_dir / "aya_088_origin_censored.webp").exists()
+    assert not (normal_dir / "aya_088_censored_censored.webp").exists()
+    assert (normal_dir / "aya_088_doggystyle_censored.webp").exists()

@@ -227,7 +227,7 @@ def create_parser() -> argparse.ArgumentParser:
         default="hybrid",
         help="에셋 파일명 형식 (hybrid: prefix_000_라벨.webp [기본값], code: prefix_000.webp, label: prefix_라벨.webp)"
     )
-    parser.add_argument("--censor", action="store_true", help="2D 애니 성기 자동 검열 활성화 (무검열 원본과 함께 _censored.webp 추가 생성)")
+    parser.add_argument("--censor", action="store_true", help="2D 애니 성기 자동 검열 활성화 (무검열 원본은 {char}_origin/에 백업 보존하고 메인 에셋 경로에 검열본 저장)")
     parser.add_argument(
         "--censor-style",
         choices=["white_silhouette", "black_silhouette", "silhouette", "bar", "wide_bar", "slim_bar", "shadow", "mosaic", "debug_bbox"],

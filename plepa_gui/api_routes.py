@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.services.asset_service import default_asset_service
+from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.generation_service import GenerationParams
 from plepa_engine.services.job_manager import global_job_manager
 
@@ -58,11 +59,17 @@ class RerollRequest(BaseModel):
     code: str
     roster: str = DEFAULT_ROSTER
     reuse_seed: bool = False
+    censor: bool = True
+    censor_style: Optional[str] = None
+    censor_targets: Optional[str] = None
 
 
 class FillMissingRequest(BaseModel):
     roster: str = DEFAULT_ROSTER
     char: Optional[str] = None
+    censor: bool = True
+    censor_style: Optional[str] = None
+    censor_targets: Optional[str] = None
 
 
 @api_router.post("/delete")
@@ -104,12 +111,15 @@ async def api_missing_summary(roster: str = DEFAULT_ROSTER) -> Dict[str, Any]:
 async def api_reroll_asset(req: RerollRequest) -> Dict[str, Any]:
     """단일 컷 백그라운드 리롤(재생성) - GlobalJobManager FIFO 대기열 직렬화."""
     safe_roster = _validate_roster_name(req.roster)
+    conf = default_config_service.get_config()
     params = GenerationParams(
         character_expr=req.char,
         pose_expr=req.code,
         roster=safe_roster,
         overwrite=True,
-        censor=True,
+        censor=req.censor,
+        censor_style=req.censor_style or conf.get("censor_style", "white_silhouette"),
+        censor_targets=req.censor_targets or conf.get("censor_targets", "penis"),
         reuse_seed=req.reuse_seed,
     )
     started, queue_pos = global_job_manager.enqueue_job(params, label=f"리롤 {req.char}:{req.code}")
@@ -132,6 +142,9 @@ async def api_reroll_asset(req: RerollRequest) -> Dict[str, Any]:
 async def api_fill_missing(req: FillMissingRequest) -> Dict[str, Any]:
     """비어있는(누락된) 포즈만 자동 선별하여 GlobalJobManager FIFO 대기열에 직렬 등록."""
     safe_roster = _validate_roster_name(req.roster)
+    conf = default_config_service.get_config()
+    censor_style = req.censor_style or conf.get("censor_style", "white_silhouette")
+    censor_targets = req.censor_targets or conf.get("censor_targets", "penis")
     missing_map = default_asset_service.get_missing_poses_by_character(safe_roster)
 
     target_chars = [req.char] if req.char else list(missing_map.keys())
@@ -149,7 +162,9 @@ async def api_fill_missing(req: FillMissingRequest) -> Dict[str, Any]:
             pose_expr=",".join(codes),
             roster=safe_roster,
             overwrite=False,  # 기존 파일 절대 덮어쓰지 않고 누락된 포즈만 채움
-            censor=True,
+            censor=req.censor,
+            censor_style=censor_style,
+            censor_targets=censor_targets,
         )
         global_job_manager.enqueue_job(params, label=f"누락채우기 {char_pfx} ({len(codes)}종)")
 
