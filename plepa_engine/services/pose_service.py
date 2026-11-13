@@ -591,5 +591,35 @@ class PoseService:
         filtered = [s for s in current_sets if s.id != set_id]
         self.save_all_pose_sets(filtered)
 
+    def check_pose_doc_sync(
+        self,
+        doc_path: Optional[Path] = None,
+        engine: str = "sdxl",
+    ) -> Tuple[bool, List[str]]:
+        """
+        포즈 데이터베이스(SSOT)와 포즈 매핑 문서(POSE_MAPPING.md) 간의 포즈 코드 동기화 상태를 검증합니다.
+        반환값: (동기화_일치_여부, 문서_누락_코드_목록)
+        """
+        import re
+
+        target_doc = doc_path or (ROOT_DIR / "POSE_MAPPING.md")
+        if not target_doc.exists():
+            return False, [f"문서 파일 없음: {target_doc}"]
+
+        raw_db = self.repo.read_json(SDXL_POSE_DB_PATH if engine == "sdxl" else FLUX_POSE_DB_PATH)
+        core_codes = set()
+        if isinstance(raw_db, dict):
+            for k, v in raw_db.items():
+                if isinstance(v, dict) and not k.startswith("_"):
+                    for code_key in v.keys():
+                        if len(code_key) == 3 and code_key.isdigit():
+                            core_codes.add(code_key)
+
+        doc_text = target_doc.read_text(encoding="utf-8")
+        doc_codes = set(re.findall(r"(?<!\d)(\d{3})(?!\d)", doc_text)) & core_codes
+
+        missing_in_doc = sorted(list(core_codes - doc_codes))
+        return len(missing_in_doc) == 0, missing_in_doc
+
 
 default_pose_service = PoseService()

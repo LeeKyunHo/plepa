@@ -21,12 +21,13 @@ from plepa_engine.config import (
 )
 
 
-# ── 레거시 FLUX 워크플로우 (plepa_engine.legacy.flux_workflows로 분리 격리됨) ──
-from plepa_engine.legacy.flux_workflows import build_flux_workflow
-
-
-
 from plepa_engine.graph_builder import WorkflowGraph
+
+
+def build_flux_workflow(*args: Any, **kwargs: Any) -> Dict[str, Any]:
+    """[DEPRECATED] 레거시 FLUX 워크플로우 빌더 (plepa_engine.legacy로 격리됨)."""
+    from plepa_engine.legacy.flux_workflows import build_flux_workflow as _legacy_build
+    return _legacy_build(*args, **kwargs)
 
 
 # ComfyUI 파이프라인 구동에 필수적인 외부 커스텀 노드 및 해당 확장 팩 매핑

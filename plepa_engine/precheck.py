@@ -330,6 +330,18 @@ def run_pregeneration_check(roster: str = "campus", check_comfy: bool = False) -
         except Exception as e:
             report.warnings.append(f"[ComfyUI점검] 노드 사전 검증 중 예외 발생: {e}")
 
+    # -------------------------------------------------------------------------
+    # [7단계] 포즈 DB ↔ POSE_MAPPING.md 문서 동기화 전수 검증 (GEMINI.md 제3조)
+    # -------------------------------------------------------------------------
+    try:
+        ok_sync, missing_in_doc = default_pose_service.check_pose_doc_sync()
+        if not ok_sync:
+            report.errors.append(
+                f"[문서동기화규칙] POSE_MAPPING.md에 포즈 코드 {len(missing_in_doc)}개가 누락되었습니다: {missing_in_doc}"
+            )
+    except Exception as e:
+        report.warnings.append(f"[문서동기화규칙] POSE_MAPPING.md 동기화 검증 실패: {e}")
+
     return report
 
 

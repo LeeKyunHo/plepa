@@ -115,8 +115,10 @@ def _is_no_background(bg_prompt: str) -> bool:
     return False
 
 
-# ── 레거시 FLUX 프롬프트 빌더 (plepa_engine.legacy.flux_prompt_builder로 분리 격리됨) ──
-from plepa_engine.legacy.flux_prompt_builder import assemble_flux_prompt
+def assemble_flux_prompt(*args: Any, **kwargs: Any) -> Tuple[str, str]:
+    """[DEPRECATED] 레거시 FLUX 프롬프트 빌더 (plepa_engine.legacy로 격리됨)."""
+    from plepa_engine.legacy.flux_prompt_builder import assemble_flux_prompt as _legacy_assemble
+    return _legacy_assemble(*args, **kwargs)
 
 
 _OUTFIT_KEYWORDS = frozenset({
