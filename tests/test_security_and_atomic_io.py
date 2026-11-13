@@ -38,6 +38,7 @@ def test_serve_benchmark_auth_origin_and_cookie(monkeypatch, tmp_path):
     monkeypatch.setattr(sbm, "ACCESS_TOKEN", "test-secret-token-42")
     monkeypatch.setattr(sbm, "INSPECT_BATCH", tmp_path / "inspect")
     monkeypatch.setattr(sbm, "BENCHMARK_DIR", tmp_path / "benchmarks")
+    monkeypatch.setattr(sbm, "PROJECTS_DIR", tmp_path / "projects")
 
     target = sbm.INSPECT_BATCH / "aya" / "01_normal" / "aya_001_smile.webp"
     target.parent.mkdir(parents=True, exist_ok=True)
