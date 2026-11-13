@@ -45,8 +45,9 @@ class TestQAValidator(unittest.TestCase):
         import os
         import torch
         import psutil
+        from plepa_engine.qa_validator import configure_qa_runtime
 
-        expected_threads = max(2, (os.cpu_count() or 4) - 2)
+        expected_threads = configure_qa_runtime(force=True)
         self.assertEqual(os.environ.get("OMP_NUM_THREADS"), str(expected_threads))
         self.assertEqual(os.environ.get("MKL_NUM_THREADS"), str(expected_threads))
         self.assertEqual(torch.get_num_threads(), expected_threads)

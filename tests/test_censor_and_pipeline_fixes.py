@@ -194,3 +194,20 @@ def test_dynamic_genit_exporter_and_mobile_viewer_non_campus(monkeypatch, tmp_pa
     html_out = mobile_viewer.generate_mobile_viewer_html(roster="nebula")
     assert "제트" in html_out
     assert "아야" not in html_out
+
+
+def test_underdesk_prompt_female_floor_and_clothed_partner():
+    """ADR-93: 책상밑 포즈(#126) 조립 시 여성 의자 태그 배제 및 파트너 상의 착의 주입 검증."""
+    from plepa_engine.services.character_service import default_character_service
+    from plepa_engine.services.pose_service import default_pose_service
+    from plepa_engine.prompt_builder import assemble_sdxl_prompt
+
+    char, _ = default_character_service.find_character("mai", roster="campus")
+    pose = default_pose_service.load_pose_db("sdxl")["126"]
+    pos, neg, is_nude = assemble_sdxl_prompt(char, pose, bg_prompt="")
+
+    assert is_nude is False
+    assert "clothed male partner" in pos.lower()
+    assert "white shirt" in pos.lower()
+    assert "female sitting on chair" in neg.lower()
+    assert "shirtless male" in neg.lower()
