@@ -20,7 +20,7 @@
 | **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
 | **모바일 원격 검수 서버 기동** | `.\.venv\Scripts\python.exe scripts/serve_benchmark_mobile.py` | 로컬 Wi-Fi IP 및 Cloudflare 터널 토큰 URL(`?token=...`) 동시 출력 |
 | **모바일 갤러리 HTML 갱신** | `.\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py` | `inspection_batch/index.html` 최신 에셋 동적 조립 |
-| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `120 passed (100% ALL PASS)` |
+| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `121 passed (100% ALL PASS)` |
 
 
 ---
@@ -89,8 +89,9 @@ python batch_generator.py -r campus -c aya -p all --censor-only --censor-style d
 # 1) 모바일 검수 갤러리 및 Cloudflare 공인 터널 서버 구동 (포트 8085)
 python scripts/serve_benchmark_mobile.py
 
-# 2) 전수 재검열 및 갤러리 HTML 갱신 단독 실행
-python scripts/recensor_inspection_batch.py
+# 2) (신규) 검수 뷰어 HTML 갱신 및 모바일 서버 가동
+.\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py
+# (구버전 아카이브: python scripts/archive/recensor_inspection_batch.py)
 `
 
 ### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프
