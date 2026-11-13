@@ -7,7 +7,7 @@ GEMINI.md 제3조(포즈 매핑 문서 실시간 동기화 원칙) 준수 여부
 from pathlib import Path
 from plepa_engine.config import ROOT_DIR
 from plepa_engine.services.pose_service import default_pose_service
-from plepa_engine.precheck import run_pregeneration_check
+from plepa_engine.precheck import check_pose_doc_sync, run_pregeneration_check
 
 
 def test_root_pose_mapping_sync():
@@ -46,6 +46,28 @@ def test_check_pose_doc_sync_detects_missing(tmp_path):
 
 def test_precheck_includes_doc_sync():
     """precheck 실행 시 문서 동기화 검증이 정상 통과하는지 확인."""
+    ok, missing = check_pose_doc_sync()
+    assert ok and missing == []
+
     report = run_pregeneration_check("campus")
     doc_sync_errors = [err for err in report.errors if "[문서동기화규칙]" in err]
     assert len(doc_sync_errors) == 0, f"사전 점검에서 문서 동기화 위반 감지: {doc_sync_errors}"
+
+
+def test_legacy_flux_isolated_from_core_top_level():
+    """SDXL 메인 모듈 최상단에서 레거시 FLUX 모듈을 즉시 import하지 않는지 검증."""
+    for rel_path in (
+        "batch_generator.py",
+        "plepa_engine/prompt_builder.py",
+        "plepa_engine/workflow_templates.py",
+    ):
+        content = (ROOT_DIR / rel_path).read_text(encoding="utf-8")
+        top_level_legacy_imports = [
+            line
+            for line in content.splitlines()
+            if not line.startswith((" ", "\t", "#"))
+            and "plepa_engine.legacy" in line
+            and ("import " in line or "from " in line)
+        ]
+        assert not top_level_legacy_imports, f"{rel_path} 최상단에 레거시 import 잔존: {top_level_legacy_imports}"
+

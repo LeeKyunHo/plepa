@@ -9,7 +9,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.prompt_builder import (
@@ -81,6 +81,14 @@ _FORBIDDEN_LEAK_TOKENS_IN_NUDE: Tuple[str, ...] = (
     "leather micro shorts",
     "ankle boots",
 )
+
+
+def check_pose_doc_sync(
+    doc_path: Optional[Path] = None,
+    engine: str = "sdxl",
+) -> Tuple[bool, List[str]]:
+    """SDXL 포즈 DB와 포즈 매핑 문서 간 포즈 코드 동기화 여부를 검증합니다."""
+    return default_pose_service.check_pose_doc_sync(doc_path=doc_path, engine=engine)
 
 
 def run_pregeneration_check(roster: str = "campus", check_comfy: bool = False) -> PrecheckReport:
@@ -334,7 +342,7 @@ def run_pregeneration_check(roster: str = "campus", check_comfy: bool = False) -
     # [7단계] 포즈 DB ↔ POSE_MAPPING.md 문서 동기화 전수 검증 (GEMINI.md 제3조)
     # -------------------------------------------------------------------------
     try:
-        ok_sync, missing_in_doc = default_pose_service.check_pose_doc_sync()
+        ok_sync, missing_in_doc = check_pose_doc_sync()
         if not ok_sync:
             report.errors.append(
                 f"[문서동기화규칙] POSE_MAPPING.md에 포즈 코드 {len(missing_in_doc)}개가 누락되었습니다: {missing_in_doc}"

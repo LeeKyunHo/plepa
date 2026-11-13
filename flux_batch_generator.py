@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from batch_generator import *  # noqa: F401, F403
 from batch_generator import main
