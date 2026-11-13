@@ -1,7 +1,7 @@
 {
   "_schema_version": "4.0.0",
   "_description": "플에파 SDXL 단일화 및 1:1 대칭형(+70) 포즈 데이터베이스 (V2 전면 개편)",
-  "_total_poses": 176,
+  "_total_poses": 183,
   "_structure": {
     "emotions": "000~019 (20종, 기본 감정 및 표정)",
     "events": "040~059 (13종, 일상 및 스토리 이벤트)",
@@ -159,7 +159,7 @@
     "028": {
       "label": "엉덩이애무",
       "description": "파트너와 마주 안겨 밀착한 상태에서 상대의 손이 엉덩이를 감싸 쥐는 농밀한 스킨십 포즈.",
-      "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, (hugging partner:1.15), (facing partner:1.15), intimate embrace, (from behind:1.15), (turned back:1.15), back view, (ass grab:1.15), (butt grab:1.15), (fondling buttocks:1.15), groping, hands on buttocks, partner hands on ass, (looking back over shoulder:1.15), looking at viewer, arched back, faceless male, light blush, rosy cheeks, bedroom eyes, parted lips, breathless moaning, trembling with pleasure, seductive look"
+      "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, (hugging partner:1.15), intimate embrace, (from behind:1.15), (turned back:1.15), back view, (ass grab:1.15), (butt grab:1.15), (fondling buttocks:1.15), groping, hands on buttocks, partner hands on ass, (looking back over shoulder:1.15), looking at viewer, arched back, faceless male, light blush, rosy cheeks, bedroom eyes, parted lips, breathless moaning, trembling with pleasure, seductive look"
     },
     "029": {
       "label": "엎드려유혹",
@@ -290,17 +290,17 @@
     },
     "049": {
       "label": "전라",
-      "description": "완전한 나체 상태에서 뒤돌아보며 매혹적인 시선으로 전신을 드러내는 전라 스냅 포즈",
+      "description": "완전한 나체 상태에서 뒤돌아보며 매혹적인 시선으로 전신을 드러내는 전라 스냅 포즈 (모던 럭셔리 욕실)",
       "required_outfit": "nude",
-      "prompt": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, soft lighting",
-      "prompt_female": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, soft lighting",
-      "prompt_otokonoko": "cowboy shot, (centered composition:1.15), crossdressing, otokonoko, completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, soft lighting",
+      "prompt": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, modern luxury bathroom, marble tile walls, vanity mirror in background, warm indirect lighting, soft ambient light",
+      "prompt_female": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, modern luxury bathroom, marble tile walls, vanity mirror in background, warm indirect lighting, soft ambient light",
+      "prompt_otokonoko": "cowboy shot, (centered composition:1.15), crossdressing, otokonoko, completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, modern luxury bathroom, marble tile walls, vanity mirror in background, warm indirect lighting, soft ambient light",
       "section": "poses"
     },
     "050": {
       "label": "야경테라스",
-      "description": "범용 일상: 발코니 난간에 기대어 부드러운 바람을 맞으며 먼 곳을 바라보는 감성 포즈",
-      "prompt": "cowboy shot, (centered composition:1.15), leaning on balcony railing, hair fluttering, gentle breeze, looking away softly, upper body, night lighting",
+      "description": "범용 일상: 발코니 난간에 기대어 반짝이는 도시 야경과 부드러운 밤바람을 맞는 감성 야경 포즈",
+      "prompt": "cowboy shot, (centered composition:1.15), leaning on balcony railing, outdoor balcony terrace, city night view, glowing city lights, dark night sky, hair fluttering, gentle breeze, looking away softly, upper body, atmospheric night lighting",
       "required_outfit": "default",
       "section": "poses"
     }
@@ -336,8 +336,8 @@
       "section": "romance"
     },
     "063": {
-      "label": "스푸닝 (밀착수면)",
-      "description": "침대에 옆으로 나란히 누워 뒤에서 부드럽게 감싸 안기며 잠드는 포근한 밀착 수면 체위",
+      "label": "스푸닝애무",
+      "description": "침대에 옆으로 나란히 누워 뒤에서 부드럽게 감싸 안기며 나누는 포근한 밀착 애무 체위",
       "prompt": "cowboy shot, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, lying on side on bed, spooning position, partner arm around waist, intimate embrace, heavy body blush, intensely flushed face and neck, head tilted back, parted lips soft moaning, heavy-lidded eyes half-closed in bliss, trembling with arousal, sensual pleasure expression, breathless",
       "prompt_female": "cowboy shot, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, lying on side on bed, spooning position, partner arm around waist, intimate embrace, heavy body blush, intensely flushed face and neck, head tilted back, parted lips soft moaning, heavy-lidded eyes half-closed in bliss, trembling with arousal, sensual pleasure expression, breathless",
       "prompt_otokonoko": "cowboy shot, (centered composition:1.15), 2boys, completely nude, full nudity, bare skin, lying on side on bed, spooning position, partner arm around waist, intimate embrace, heavy body blush, intensely flushed face and neck, head tilted back, parted lips soft moaning, heavy-lidded eyes half-closed in bliss, trembling with arousal, sensual pleasure expression, breathless",
@@ -349,149 +349,149 @@
       "description": "탈의 구강: 알몸으로 무릎 꿇고 중심부를 혀로 조심스럽게 핥으며 올려다보는 봉사 포즈",
       "required_outfit": "nude",
       "section": "romance",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((large thick erect penis:1.25)), ((impressive large manhood, prominent thick shaft:1.25)), mouth open, ((licking tip of large penis with pink tongue:1.25)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((large thick erect penis:1.25)), ((impressive large manhood, prominent thick shaft:1.25)), mouth open, ((licking tip of large penis with pink tongue:1.25)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((large thick erect penis:1.25)), mouth open, ((licking tip of large penis with pink tongue:1.3)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
+      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((large thick erect penis:1.25)), mouth open, ((licking tip of large penis with pink tongue:1.3)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((large thick erect penis:1.25)), ((impressive large manhood, prominent thick shaft:1.25)), mouth open, ((licking tip of large penis with pink tongue:1.25)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
-      "negative_add": "(small penis:1.25), (thin penis:1.25), (micropenis:1.25), (sharp teeth:1.25)"
+      "negative_add": "(small penis:1.25), (thin penis:1.25), (micropenis:1.25), (clothes, clothing, shirt, blouse, pants, trousers, jeans, slacks:1.4), (wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (solo:1.3), (empty mouth:1.2)"
     },
     "065": {
       "label": "탈의펠라약",
       "description": "탈의 구강: 알몸으로 무릎 꿇고 부드럽게 감싸쥐고 입에 머금는 구강 봉사 (약)",
       "required_outfit": "nude",
       "section": "romance",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, loving moist eyes, saliva trail, intimate bedroom close-up",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, loving moist eyes, saliva trail, intimate bedroom close-up",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((deep fellatio, blowjob:1.3)), ((taking shaft into mouth:1.3)), cheeks flushed, loving moist eyes, saliva trail, intimate bedroom close-up",
+      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((deep fellatio, blowjob:1.3)), ((taking shaft into mouth:1.3)), cheeks flushed, loving moist eyes, saliva trail, intimate bedroom close-up",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, loving moist eyes, saliva trail, intimate bedroom close-up",
-      "negative_add": "(clothes, clothing, shirt, blouse:1.25), (wearing pants over crotch:1.25), (zipper on mouth:1.25), (face on clothes:1.25), (denim:1.25), (standing male legs:1.25), (pants:1.25)"
+      "negative_add": "(clothes, clothing, shirt, blouse, pants, trousers, jeans, slacks:1.4), (wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (solo:1.3), (empty mouth:1.3)"
     },
     "066": {
       "label": "탈의펠라강",
       "description": "탈의 구강: 알몸으로 파트너를 정면으로 마주보고 무릎 꿇어 깊숙이 물고 타액을 흘리며 올려다보는 격렬한 펠라 씬 (강)",
       "required_outfit": "nude",
       "section": "romance",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling facing male partner:1.25)), ((between standing partner legs:1.25)), ((looking up at male partner in front:1.25)), ((deep fellatio, oral sex:1.25)), ((mouth wide open taking shaft:1.25)), throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate lighting",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling facing male partner:1.25)), ((between standing partner legs:1.25)), ((looking up at male partner in front:1.25)), ((deep fellatio, oral sex:1.25)), ((mouth wide open taking shaft:1.25)), throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate lighting",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling facing male partner:1.3)), ((between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((looking up at male partner in front:1.25)), ((deep fellatio, oral sex:1.3)), ((mouth wide open taking shaft:1.3)), throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate lighting",
+      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, solo focus, ((kneeling facing male partner:1.3)), ((between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((looking up at male partner in front:1.25)), ((deep fellatio, oral sex:1.3)), ((mouth wide open taking shaft:1.3)), throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate lighting",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, solo focus, ((kneeling facing male partner:1.25)), ((between standing partner legs:1.25)), ((looking up at male partner in front:1.25)), ((deep fellatio, oral sex:1.25)), ((mouth wide open taking shaft:1.25)), throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate lighting",
-      "negative_add": "(clothes, clothing, shirt, blouse:1.25), (partner behind:1.25), (male behind:1.25), (from behind:1.25), (behind female:1.25), (doggystyle:1.25), (looking at viewer:1.25), (wearing pants over crotch:1.25), (zipper on mouth:1.25), (standing male legs:1.25), (pants:1.25)"
+      "negative_add": "(clothes, clothing, shirt, blouse, pants, trousers, jeans, slacks:1.4), (wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (partner behind:1.25), (male behind:1.25), (doggystyle:1.25), (solo:1.3), (empty mouth:1.3)"
     },
     "067": {
       "label": "딥스로트",
       "description": "착의 구강: 옷을 입은 채 상의 옷깃을 흐트러뜨리고 목구멍 끝까지 삼키며 눈물을 흘리는 딥스로트 씬",
       "required_outfit": "default",
       "section": "romance",
-      "prompt": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 1girl, 1boy, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), warm rim lighting",
-      "prompt_female": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 1girl, 1boy, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), warm rim lighting",
+      "prompt": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.25), 1girl, 1boy, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), warm rim lighting",
+      "prompt_female": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.25), 1girl, 1boy, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), warm rim lighting",
       "prompt_otokonoko": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 2boys, crossdressing, otokonoko, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), warm rim lighting",
-      "negative_add": "(facing right:1.25), (looking right:1.25), (profile from left:1.25), (partner on right:1.25), (standing male legs:1.25), (pants around ankles:1.25), (ball gag, gag, muzzle:1.25), (kneeling wide view:1.25)"
+      "negative_add": "(facing right:1.25), (looking right:1.25), (profile from left:1.25), (partner on right:1.25), (standing male legs:1.25), (pants:1.35), (wearing pants over crotch:1.35), (ball gag, gag, muzzle:1.25)"
     },
     "068": {
       "label": "착의펠라약",
       "description": "착의 구강: 상의는 흐트러뜨려 쇄골을 노출하고 올려다보며 부드럽게 봉사하는 착의 펠라 씬 (약)",
       "required_outfit": "default",
       "section": "romance",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled clothing, unbuttoned top slipping off shoulder, exposed collarbone:1.25)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, flushed cheeks, saliva trail, intimate bedroom angle",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled clothing, unbuttoned top slipping off shoulder, exposed collarbone:1.25)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, flushed cheeks, saliva trail, intimate bedroom angle",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled clothing, unbuttoned top slipping off shoulder, exposed collarbone:1.25)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, flushed cheeks, saliva trail, intimate bedroom angle",
+      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled clothing, unbuttoned top slipping off shoulder, exposed collarbone:1.25)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, flushed cheeks, saliva trail, intimate bedroom angle",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled clothing, unbuttoned top slipping off shoulder, exposed collarbone:1.25)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, flushed cheeks, saliva trail, intimate bedroom angle",
-      "negative_add": "(wearing pants over crotch:1.25), (zipper on mouth:1.25), (face on clothes:1.25), (standing male legs:1.25), (male lower body:1.25), (pants:1.25)"
+      "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (male lower body:1.25), (solo:1.3), (empty mouth:1.2)"
     },
     "069": {
       "label": "착의펠라강",
       "description": "착의 구강: 흐트러진 옷매무새로 격렬하게 봉사하며 절정에 달하는 착의 펠라 씬 (강)",
       "required_outfit": "default",
       "section": "romance",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled unbuttoned shirt, bare shoulders, exposed collarbone:1.25)), intense clothed blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled unbuttoned shirt, bare shoulders, exposed collarbone:1.25)), intense clothed blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled unbuttoned shirt, bare shoulders, exposed collarbone:1.25)), ((intense clothed blowjob:1.3)), ((mouth around thick erect shaft:1.3)), head moving along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
+      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled unbuttoned shirt, bare shoulders, exposed collarbone:1.25)), ((intense clothed blowjob:1.3)), ((mouth around thick erect shaft:1.3)), head moving along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, solo focus, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled unbuttoned shirt, bare shoulders, exposed collarbone:1.25)), intense clothed blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
-      "negative_add": "(wearing pants over crotch:1.25), (zipper on mouth:1.25), (face on clothes:1.25), (standing male legs:1.25), (male lower body:1.25), (pants:1.25)"
+      "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (male lower body:1.25), (solo:1.3), (empty mouth:1.3), (licking air:1.3)"
     },
     "070": {
       "label": "펠라후 청소",
       "description": "착의 구강 청소: 입가와 가슴에 분비흔이 묻은 채 파트너 중심부에 남은 흔적을 정성스레 핥아내며 올려다보는 사후 청소 씬",
       "required_outfit": "default",
       "section": "romance",
-      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling facing partner:1.25)), ((between partner legs:1.25)), ((upper body, bust portrait:1.25)), ((cleaning up after fellatio:1.25)), ((licking partner penis tip clean:1.25)), ((tongue extended licking remaining cum:1.25)), ((cum on lips, cum on chin, cum on chest, cum on collarbone:1.25)), looking up at partner with adoring sweet smile, heavily flushed cheeks, breathless dazed expression, ((disheveled top, messy clothing:1.25)), intimate bedroom lighting",
-      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling facing partner:1.25)), ((between partner legs:1.25)), ((upper body, bust portrait:1.25)), ((cleaning up after fellatio:1.25)), ((licking partner penis tip clean:1.25)), ((tongue extended licking remaining cum:1.25)), ((cum on lips, cum on chin, cum on chest, cum on collarbone:1.25)), looking up at partner with adoring sweet smile, heavily flushed cheeks, breathless dazed expression, ((disheveled top, messy clothing:1.25)), intimate bedroom lighting",
+      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((upper body, bust portrait:1.25)), ((cleaning up after fellatio:1.3)), ((licking partner erect penis tip clean:1.3)), ((pink tongue extended touching shaft tip:1.3)), ((cum on lips, cum on chin, cum on chest, cum on collarbone:1.25)), looking up at partner with adoring sweet smile, heavily flushed cheeks, breathless dazed expression, ((disheveled top, messy clothing:1.25)), intimate bedroom lighting",
+      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling between standing partner legs:1.3)), ((partner standing directly in front:1.25)), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((upper body, bust portrait:1.25)), ((cleaning up after fellatio:1.3)), ((licking partner erect penis tip clean:1.3)), ((pink tongue extended touching shaft tip:1.3)), ((cum on lips, cum on chin, cum on chest, cum on collarbone:1.25)), looking up at partner with adoring sweet smile, heavily flushed cheeks, breathless dazed expression, ((disheveled top, messy clothing:1.25)), intimate bedroom lighting",
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 1boy, crossdressing, otokonoko, solo focus, ((kneeling facing partner:1.25)), ((between partner legs:1.25)), ((upper body, bust portrait:1.25)), ((cleaning up after fellatio:1.25)), ((licking partner penis tip clean:1.25)), ((tongue extended licking remaining cum:1.25)), ((cum on lips, cum on chin, cum on chest, cum on collarbone:1.25)), looking up at partner with adoring sweet smile, heavily flushed cheeks, breathless dazed expression, ((disheveled top, messy clothing:1.25)), intimate bedroom lighting",
-      "negative_add": "(partner behind:1.25), (male behind:1.25), (from behind:1.25), (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25)"
+      "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (male lower body:1.25), (solo:1.3), (partner behind:1.25)"
     },
     "071": {
       "label": "대딸",
-      "description": "착의 손 봉사: 파트너 곁에 무릎 꿇고 양손으로 중심부를 감싸쥐어 위아래로 쓸어올리는 확실한 핸드잡 씬 (착의)",
+      "description": "착의 손 봉사: 파트너 시점(POV)에서 다리 사이에 무릎 꿇고 앞으로 숙여 정성껏 쓸어올리는 정면 밀착 핸드잡 씬 (착의)",
       "required_outfit": "default",
       "section": "romance",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling beside standing partner:1.25)), ((waist shot, hands focus:1.25)), ((handjob:1.25)), ((holding penis with both hands:1.25)), ((two hands gripping penis shaft:1.25)), ((stroking penis between partner legs:1.25)), hands on crotch, ((disheveled top, exposed collarbone:1.2)), looking up at partner, loving affectionate smile, heavy blush, pre-cum glistening, intimate bedroom lighting",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, solo focus, ((kneeling beside standing partner:1.25)), ((waist shot, hands focus:1.25)), ((handjob:1.25)), ((holding penis with both hands:1.25)), ((two hands gripping penis shaft:1.25)), ((stroking penis between partner legs:1.25)), hands on crotch, ((disheveled top, exposed collarbone:1.2)), looking up at partner, loving affectionate smile, heavy blush, pre-cum glistening, intimate bedroom lighting",
-      "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, solo focus, ((kneeling beside standing partner:1.25)), ((waist shot, hands focus:1.25)), ((handjob:1.25)), ((holding penis with both hands:1.25)), ((two hands gripping penis shaft:1.25)), ((stroking penis between partner legs:1.25)), hands on crotch, ((disheveled top, exposed collarbone:1.2)), looking up at partner, loving affectionate smile, heavy blush, pre-cum glistening, intimate bedroom lighting",
-      "negative_add": "(hands on chest:1.25), (hands at sides:1.25), (empty hands:1.25), (hands hidden:1.25), (hands away from crotch:1.25), (hands out of frame:1.25), (partner behind:1.25), (standing male legs:1.25), (male lower body:1.25), (pants:1.25)"
+      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, pov, (view from between partner legs:1.25), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((handjob:1.3)), ((visibly gripping and stroking shaft:1.3)), ((hands on penis:1.25)), girl kneeling beside partner, leaning forward, ((disheveled top, open collar, exposed collarbone:1.2)), heavy cleavage, breasts focus, looking down at viewer, loving affectionate smile, bedroom eyes, soft pink blush, parted lips, pre-cum glistening, delicate anime coloring, natural pale skin, soft bedroom lighting",
+      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, pov, (view from between partner legs:1.25), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((handjob:1.3)), ((visibly gripping and stroking shaft:1.3)), ((hands on penis:1.25)), girl kneeling beside partner, leaning forward, ((disheveled top, open collar, exposed collarbone:1.2)), heavy cleavage, breasts focus, looking down at viewer, loving affectionate smile, bedroom eyes, soft pink blush, parted lips, pre-cum glistening, delicate anime coloring, natural pale skin, soft bedroom lighting",
+      "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, solo focus, pov, (view from between partner legs:1.25), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((handjob:1.3)), ((visibly gripping and stroking shaft:1.3)), ((hands on penis:1.25)), girl kneeling beside partner, leaning forward, ((disheveled top, open collar, exposed collarbone:1.2)), heavy cleavage, breasts focus, looking down at viewer, loving affectionate smile, bedroom eyes, soft pink blush, parted lips, pre-cum glistening, natural skin tone, intimate bedroom lighting",
+      "negative_add": "(standing male legs:1.35), (male lower body:1.25), (standing partner:1.35), (standing male:1.35), (wearing pants over crotch:1.35), (pants:1.35), (empty hands:1.3), (hands away from crotch:1.3)"
     },
     "072": {
       "label": "파이즈리약",
       "description": "가슴으로 부드럽게 감싸 안고 자극하는 파이즈리 연출",
       "required_outfit": "nude",
-      "prompt": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression",
+      "prompt": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "section": "romance",
-      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (profile view:1.25), (turned away:1.25), (side view:1.25)",
-      "prompt_female": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression",
+      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (profile view:1.25), (turned away:1.25), (side view:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
+      "prompt_female": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "prompt_otokonoko": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression"
     },
     "073": {
       "label": "파이즈리펠라",
       "description": "가슴 사이에 밀착한 채 입술과 혀로 동시에 정성껏 봉사하며 올려다보는 매혹적인 연출",
       "required_outfit": "nude",
-      "prompt": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, solo focus, completely nude, full nudity, bare skin, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, saliva trail, upper body, close-up, intimate bedroom lighting",
+      "prompt": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, solo focus, completely nude, full nudity, bare skin, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, soft pink blush, parted lips, saliva trail, upper body, close-up, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "section": "romance",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
-      "prompt_female": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, solo focus, completely nude, full nudity, bare skin, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, saliva trail, upper body, close-up, intimate bedroom lighting",
+      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
+      "prompt_female": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, solo focus, completely nude, full nudity, bare skin, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, soft pink blush, parted lips, saliva trail, upper body, close-up, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "prompt_otokonoko": "otokonoko, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, solo focus, completely nude, full nudity, bare skin, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, saliva trail, upper body, close-up, intimate bedroom lighting"
     },
     "074": {
       "label": "가슴사정",
       "description": "가슴 부위 봉사 후 사정된 흔적을 보며 사랑스러운 눈빛으로 올려다보는 연출",
       "required_outfit": "nude",
-      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, pov, from above, solo focus, looking up at viewer, paizuri titfuck climax, intimate close-up, (excessive cum:1.15), (huge cumshot:1.15), cum on breasts and cleavage, cum dripping down chest, loving gaze upward, tender affectionate smile, gentle smile, soft loving eyes, sweet fond expression, blushing softly, flushed cheeks, parted lips, pleased and devoted, upper body close-up",
+      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, pov, from above, solo focus, looking up at viewer, paizuri titfuck climax, intimate close-up, (cum on breasts and cleavage:1.2), (cum dripping down chest:1.15), loving gaze upward, tender affectionate smile, gentle smile, soft loving dark gray eyes, sweet fond expression, blushing softly, parted lips, pleased and devoted, delicate anime coloring, natural pale skin, soft romantic lighting",
       "section": "romance",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
-      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, pov, from above, solo focus, looking up at viewer, paizuri titfuck climax, intimate close-up, (excessive cum:1.15), (huge cumshot:1.15), cum on breasts and cleavage, cum dripping down chest, loving gaze upward, tender affectionate smile, gentle smile, soft loving eyes, sweet fond expression, blushing softly, flushed cheeks, parted lips, pleased and devoted, upper body close-up",
+      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
+      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, pov, from above, solo focus, looking up at viewer, paizuri titfuck climax, intimate close-up, (cum on breasts and cleavage:1.2), (cum dripping down chest:1.15), loving gaze upward, tender affectionate smile, gentle smile, soft loving dark gray eyes, sweet fond expression, blushing softly, parted lips, pleased and devoted, delicate anime coloring, natural pale skin, soft romantic lighting",
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, pov, from above, solo focus, looking up at viewer, paizuri titfuck climax, intimate close-up, (excessive cum:1.15), (huge cumshot:1.15), cum on breasts and cleavage, cum dripping down chest, loving gaze upward, tender affectionate smile, gentle smile, soft loving eyes, sweet fond expression, blushing softly, flushed cheeks, parted lips, pleased and devoted, upper body close-up"
     },
     "075": {
       "label": "누드대딸",
       "description": "알몸 상태에서 침대에 나란히 앉거나 무릎 꿇고 손으로 정성껏 봉사해 주는 밀착 연출",
       "required_outfit": "nude",
-      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), girl kneeling beside partner, leaning forward, heavy cleavage, breasts focus, looking down at viewer, seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, natural skin tone, intimate bedroom lighting",
+      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), girl kneeling beside partner, leaning forward, heavy cleavage, breasts focus, looking down at viewer, seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "section": "romance",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25)",
-      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), girl kneeling beside partner, leaning forward, heavy cleavage, breasts focus, looking down at viewer, seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, natural skin tone, intimate bedroom lighting",
+      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
+      "prompt_female": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, solo focus, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), girl kneeling beside partner, leaning forward, heavy cleavage, breasts focus, looking down at viewer, seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, solo focus, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), girl kneeling beside partner, leaning forward, heavy cleavage, breasts focus, looking down at viewer, seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, natural skin tone, intimate bedroom lighting"
     },
     "076": {
       "label": "수유대딸",
       "description": "무릎베개 상태에서 가슴을 물리고 부드럽게 쓰다듬으며 동시에 손으로 봉사해 주는 모성적 연출",
       "required_outfit": "nude",
-      "prompt": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, tender bedroom intimacy",
+      "prompt": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, delicate anime coloring, natural pale skin, tender bedroom intimacy",
       "section": "romance",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (detailed male face:1.25), (visible male eyes:1.25)",
-      "prompt_female": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, tender bedroom intimacy",
+      "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (detailed male face:1.25), (visible male eyes:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
+      "prompt_female": "1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, delicate anime coloring, natural pale skin, tender bedroom intimacy",
       "prompt_otokonoko": "otokonoko, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, tender bedroom intimacy"
     },
     "077": {
       "label": "풋잡",
       "description": "소파나 침대에 기대어 매끄러운 발바닥과 발가락으로 장난스럽게 자극하는 발 봉사 연출",
       "required_outfit": "nude",
-      "prompt": "cowboy shot, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner",
+      "prompt": "cowboy shot, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner, delicate anime coloring, natural pale skin, soft lighting",
       "section": "romance",
-      "negative_add": " (shoes, boots, sandals:1.25)",
-      "prompt_female": "cowboy shot, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner",
+      "negative_add": "(shoes, boots, sandals:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (pants:1.35), (wearing pants:1.35), (wearing pants over crotch:1.35), (standing male legs:1.25)",
+      "prompt_female": "cowboy shot, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner, delicate anime coloring, natural pale skin, soft lighting",
       "prompt_otokonoko": "cowboy shot, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner"
     },
     "078": {
       "label": "웨딩펠라",
       "description": "순백의 웨딩드레스와 면사포를 착용한 신부 상태에서 얌전히 무릎 꿇고 올려다보며 구강 봉사하는 순애 연출",
       "required_outfit": "wedding",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, bridal blush, flushed cheeks, ((wearing ornate white wedding dress, delicate bridal veil, sheer white lace stockings:1.25)), bride, pure and passionate, romantic soft wedding suite lighting, intimate atmosphere",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, (gentle soft blush:1.1), tender affectionate smile, ((wearing ornate pure white wedding dress, delicate sheer bridal veil, sheer white lace stockings:1.25)), bride, delicate anime coloring, natural pale skin, soft romantic lighting",
       "section": "romance",
-      "negative_add": " (completely nude:1.25), (standing male legs:1.25), (pants:1.25), (exposed buttocks:1.25)",
-      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, bridal blush, flushed cheeks, ((wearing ornate white wedding dress, delicate bridal veil, sheer white lace stockings:1.25)), bride, pure and passionate, romantic soft wedding suite lighting, intimate atmosphere",
+      "negative_add": "(completely nude:1.25), (standing male legs:1.25), (pants:1.25), (exposed buttocks:1.25), (pink hair, purple hair, blonde hair, brown hair:1.35), (oversaturated, red tint, heavy makeup:1.35), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
+      "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, (gentle soft blush:1.1), tender affectionate smile, ((wearing ornate pure white wedding dress, delicate sheer bridal veil, sheer white lace stockings:1.25)), bride, delicate anime coloring, natural pale skin, soft romantic lighting",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, bridal blush, flushed cheeks, ((wearing ornate white wedding dress, delicate bridal veil, sheer white lace stockings:1.25)), bride, pure and passionate, romantic soft wedding suite lighting, intimate atmosphere"
     },
     "079": {
@@ -501,7 +501,8 @@
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between her thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed",
       "section": "romance",
       "prompt_female": "cowboy shot, from side profile view, (facing left:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between her thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed",
-      "prompt_otokonoko": "cowboy shot, from side profile view, (facing left:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between her thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed"
+      "prompt_otokonoko": "cowboy shot, from side profile view, (facing left:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between her thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed",
+      "negative_add": "(pants:1.35), (wearing pants:1.35), (wearing pants over crotch:1.35), (standing male legs:1.25)"
     }
   },
   "h_scenes": {
@@ -603,29 +604,30 @@
       "label": "웨딩섹스",
       "description": "순백의 웨딩드레스 치마를 허리까지 걷어올리고 면사포와 가터벨트, 레이스 스타킹 착의 상태로 신혼 첫날밤을 치르는 정통 웨딩 착의 본방 체위 결합 연출",
       "required_outfit": "wedding",
-      "prompt": "cowboy shot, (centered vertical composition:1.15), 1girl, 1boy, ((missionary position, sex from front, passionate intimacy:1.25)), ((lying on back across luxurious bridal bed:1.25)), ((wearing pure white wedding dress, bridal dress lifted up to waist:1.25)), ((bridal veil, white lace garter belt, white sheer lace stockings:1.25)), bride, legs spread, flushed blushing face, intense breathless blissful expression, parted lips, ((looking directly at viewer, making loving eye contact:1.25)), soft romantic bedroom lighting",
+      "prompt": "tight bust portrait, chest focus, (looking directly up at camera:1.2), 1girl, 1boy, ((missionary position, passionate intimacy:1.25)), ((lying on back across luxurious bridal bed:1.25)), ((wedding dress unfastened, white bridal corset pushed down, exposed breasts:1.25)), ((white bridal veil, tiara:1.15)), ((white bridal gloves, lace garters, white stockings:1.15)), ((bottomless male partner:1.25)), ((erect penis entering pussy:1.25)), ((vaginal penetration:1.25)), hands gripping bridal bedsheet, heavy bridal blush, loving moist bedroom eyes, sweet parted lips, ((intimate warm bedroom lighting:1.2)), ((soft shaded warm skin:1.15))",
       "section": "h_scenes",
-      "negative_add": " (completely nude:1.25), (bare shoulders without dress:1.2), (street clothes:1.25)",
+      "negative_add": "(completely nude:1.25), (street clothes:1.25), (cool lighting:1.3), (blue tint:1.3), (pale skin:1.3), (cold tone:1.3), (pants:1.35), (trousers:1.35), (wearing pants:1.35), (black pants:1.35), (red eyeglasses, red frame glasses, dark frames, thick glasses:1.4), (pink hair, purple hair, violet hair:1.35), (oversaturated, saturated, high contrast, heavy makeup, red tint, purple tint, burnt skin:1.35)",
       "legacy_labels": [
         "파이즈리약"
-      ]
+      ],
+      "prompt_female": "tight bust portrait, chest focus, (looking directly up at camera:1.2), 1girl, 1boy, ((missionary position, passionate intimacy:1.25)), ((lying on back across luxurious bridal bed:1.25)), ((wedding dress unfastened, white bridal corset pushed down, exposed breasts:1.25)), ((white bridal veil, tiara:1.15)), ((white bridal gloves, lace garters, white stockings:1.15)), ((bottomless male partner:1.25)), ((erect penis entering pussy:1.25)), ((vaginal penetration:1.25)), hands gripping bridal bedsheet, heavy bridal blush, loving moist bedroom eyes, sweet parted lips, ((intimate warm bedroom lighting:1.2)), ((soft shaded warm skin:1.15))"
     },
     "099": {
-      "label": "펠라치오약",
+      "label": "펠라치오_시작",
       "description": "무릎 꿇고 봉사를 시작하며 올려다보는 펠라치오 (약)",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((, fellatio:1.25)), ((looking up submissively with deeply devoted affectionate gaze:1.25)), open mouth, licking tip, saliva trail, heavy facial blush, teary eyes, intimate tender bedroom atmosphere, upper body close-up",
+      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((fellatio:1.25)), ((looking up submissively with deeply devoted affectionate gaze:1.25)), open mouth, licking tip, saliva trail, heavy facial blush, teary eyes, intimate tender bedroom atmosphere, upper body close-up",
       "section": "h_scenes",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
     },
     "100": {
-      "label": "펠라치오강",
+      "label": "펠라치오_절정",
       "description": "깊은 몰입과 빠른 봉사로 진행되는 펠라치오 (강)",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, fellatio oral sex, ((deep blowjob, head bobbing:1.25)), mouth wide open taking shaft, looking up at partner, heavy-lidded intoxicated gaze, heavily flushed face, tears at corner of eyes, intense, saliva dripping, heavily aroused, upper body close-up, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest, covered in abundant cum:1.25))",
       "section": "h_scenes",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
     },
     "101": {
-      "label": "펠라사후",
+      "label": "펠라치오_사후",
       "description": "구강 봉사 후 입가에 백탁의 액체를 묻히고 혀를 내밀어 만족스레 올려다보는 사후 여운 (키로 055, 피니시)",
       "prompt": "1girl, ((upper body close-up, bust shot, face focus:1.25)), solo, completely nude, full nudity, bare skin, oral aftermath, hands on mattress, head tilted up, looking up at viewer, (excessive cum:1.15), (thick cum overflowing from mouth, dripping from chin down chest:1.15), cum on breasts, cum on collarbone, completely dazed expression, heavy-lidded gazing at viewer with pleasure, open mouth, tongue out, saliva and cum dripping, tears of ecstasy, heavy body blush, messy hair, exhausted from overwhelming pleasure, upper body portrait",
       "section": "h_scenes",
@@ -687,21 +689,21 @@
       "section": "h_scenes"
     },
     "112": {
-      "label": "착의섹스 전",
+      "label": "착의섹스_시작",
       "description": "옷을 입은 채 벽이나 책상에 밀착되어 행위 직전 서로를 갈망하며 열띤 숨결과 긴장감을 나누는 초밀착 전희 씬",
       "prompt": "cowboy shot, (centered composition:1.15), 1girl, 1boy, ((passionate foreplay before clothed sex:1.25)), ((intensely leaning close, face-to-face:1.25)), ((fully clothed top, wearing shirt, skirt lifted, underwear aside:1.25)), ((steamy heavy breathing, whispering into ear, parted lips gasping softly:1.25)), (hands gripping clothes, pinned against wall or desk:1.25), ((intensely flushed face, wet glossy parted lips, half-closed lustful eyes, breathless longing gaze, anticipation expression:1.25)), trembling with sweet tension, disheveled clothing, thrilling secret encounter, heated intimate atmosphere, dramatic warm rim lighting",
       "required_outfit": "default",
       "section": "h_scenes"
     },
     "113": {
-      "label": "착의섹스 본편",
+      "label": "착의섹스_절정",
       "description": "옷깃이 흐트러진 채 책상이나 벽에서 진행되는 착의 씬 (중)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, ((intense clothed sex:1.25)), ((fully clothed except bottom, wearing clothes, top on:1.25)), skirt hiked up, bent over desk or against wall, rapid panting, disheveled clothing, heavy blush, desperate moaning, overwhelming arousal, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
       "required_outfit": "default",
       "section": "h_scenes"
     },
     "114": {
-      "label": "착의섹스 후",
+      "label": "착의섹스_사후",
       "description": "착의 행위 후 옷과 치마를 벌리고 속옷을 살짝 당겨 내부에 가득 고인 분비흔을 확인시켜주는 도발적 사후 씬",
       "prompt": "cowboy shot, (centered composition:1.15), 1girl, ((clothed sex aftermath:1.25)), ((lifting skirt, holding clothes open to reveal inner:1.25)), ((pulling front waistband of panties down slightly:1.25)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.25)), ((white liquid dripping and running down inner thighs:1.25)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting",
       "required_outfit": "default",
@@ -741,7 +743,7 @@
       "section": "h_scenes"
     },
     "123": {
-      "label": "전라유혹",
+      "label": "배복종자세",
       "description": "배를 보이고 드러누워 복종을 맹세하는 배복종 자세 (N37)",
       "prompt": "cowboy shot, (centered vertical composition:1.15), 1girl, completely nude, full nudity, bare skin, solo, belly exposure, lying on back, submissive pose, hands up, showing stomach, adoring smile",
       "section": "h_scenes"
@@ -805,14 +807,6 @@
       "status": "deprecated",
       "canonical_code": "071"
     },
-    "121": {
-      "label": "뒷스마타",
-      "description": "엎드린 채 허벅지 사이에 끼워 마찰하는 뒷스마타 (N35)",
-      "prompt": "cowboy shot, from side profile view, (facing left:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between her thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed",
-      "section": "h_scenes",
-      "status": "deprecated",
-      "canonical_code": "071"
-    },
     "125": {
       "label": "풋잡",
       "description": "발가락과 발바닥으로 능숙하게 비비는 풋잡 (N43)",
@@ -822,24 +816,26 @@
       "canonical_code": "071"
     },
     "126": {
-      "label": "착의펠라약",
+      "label": "책상밑펠라_약",
       "description": "단정한 옷차림으로 책상 아래 무릎 꿇고 진행하는 착의 펠라 (약: N72)",
-      "prompt": "1girl, ((upper body close-up, bust shot, face focus:1.25)), 1boy, ((clothed fellatio:1.25)), ((fully clothed, wearing clothes, top on:1.25)), blowjob under desk, ((looking up submissively with deeply devoted affectionate gaze:1.25)), open mouth, licking tip, saliva trail, ((heavy facial blush:1.2)), ((moist emotional eyes:1.2)), teary eyes, intimate tender atmosphere, upper body",
+      "prompt": "cowboy shot, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up submissively from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), oral service under desk, mouth around shaft, saliva trail, looking up devotedly, heavy facial blush, moist emotional eyes, dim office lighting under desk",
       "required_outfit": "default",
       "section": "h_scenes",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "negative_add": " (female sitting:1.4), (female sitting on chair:1.4), (female on chair:1.4), (chair under desk:1.4), (stool:1.4), (female on stool:1.4), (bench:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25)",
       "status": "deprecated",
-      "canonical_code": "068"
+      "canonical_code": "068",
+      "prompt_female": "cowboy shot, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up submissively from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), oral service under desk, mouth around shaft, saliva trail, looking up devotedly, heavy facial blush, moist emotional eyes, dim office lighting under desk"
     },
     "127": {
-      "label": "착의펠라강",
+      "label": "책상밑펠라_강",
       "description": "옷을 입은 채 깊이 삼키는 착의 딥스로트 (강: N73)",
-      "prompt": "1girl, ((upper body close-up, bust shot, face focus:1.25)), 1boy, ((clothed fellatio:1.25)), ((fully clothed, wearing clothes, top on:1.25)), deepthroat, teary eyes, intense, devoted, upper body, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest, covered in abundant cum:1.25))",
+      "prompt": "cowboy shot, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), intense deep oral service under desk, deepthroat, head moving along shaft, tears of intense pleasure, intensely flushed face, saliva dripping, dim office lighting under desk, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest:1.20))",
       "required_outfit": "default",
       "section": "h_scenes",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "negative_add": " (female sitting:1.4), (female sitting on chair:1.4), (female on chair:1.4), (chair under desk:1.4), (stool:1.4), (female on stool:1.4), (bench:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25)",
       "status": "deprecated",
-      "canonical_code": "069"
+      "canonical_code": "069",
+      "prompt_female": "cowboy shot, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), intense deep oral service under desk, deepthroat, head moving along shaft, tears of intense pleasure, intensely flushed face, saliva dripping, dim office lighting under desk, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest:1.20))"
     }
   },
   "special_h": {
@@ -984,21 +980,21 @@
       "description": "양손으로 감싸 쥐고 혀끝으로 귀두를 핥으며 올려다보는 밀착 구강 봉사"
     },
     "169": {
-      "label": "펠라치오약",
+      "label": "펠라치오_시작",
       "description": "무릎 꿇고 봉사를 시작하며 올려다보는 펠라치오 (약)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, completely nude, full nudity, bare skin, ((fellatio, oral service:1.25)), ((looking up submissively with deeply devoted affectionate gaze:1.25)), open mouth, licking tip, saliva trail, heavy facial blush, teary eyes, intimate tender bedroom atmosphere, upper body close-up",
       "section": "scenes_otokonoko",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
     },
     "170": {
-      "label": "펠라치오강",
+      "label": "펠라치오_절정",
       "description": "깊은 몰입과 빠른 봉사로 진행되는 펠라치오 (강)",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, otokonoko, completely nude, full nudity, bare skin, fellatio oral sex, ((deep blowjob, head bobbing:1.25)), mouth wide open taking shaft, looking up at partner, heavy-lidded intoxicated gaze, heavily flushed face, tears at corner of eyes, intense, saliva dripping, heavily aroused, upper body close-up, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest, covered in abundant cum:1.25))",
       "section": "scenes_otokonoko",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
     },
     "171": {
-      "label": "펠라사후",
+      "label": "펠라치오_사후",
       "description": "구강 봉사 직후 입가에 백탁의 액체를 묻힌 채 혀를 내밀고 만족스레 올려다보는 사후 여운.",
       "prompt": "((upper body close-up, bust shot, face focus:1.25)), 1boy, otokonoko, solo, completely nude, full nudity, bare skin, oral aftermath, hands on mattress, head tilted up, looking up at viewer, (excessive cum:1.15), (thick cum overflowing from mouth, dripping from chin down chest:1.15), cum on flat chest, cum on collarbone, completely dazed expression, heavy-lidded gazing at viewer with pleasure, open mouth, tongue out, saliva and cum dripping, tears of ecstasy, heavy body blush, messy hair, exhausted from overwhelming pleasure, upper body portrait",
       "section": "scenes_otokonoko",
@@ -1060,19 +1056,19 @@
       "section": "scenes_otokonoko"
     },
     "182": {
-      "label": "착의섹스_전",
+      "label": "착의섹스_시작",
       "required_outfit": "default",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, ((passionate foreplay before clothed anal sex:1.25)), ((intensely leaning close, face-to-face:1.25)), ((fully clothed top, wearing shirt, skirt or shorts lifted, underwear aside:1.25)), ((steamy heavy breathing, whispering into ear, parted lips gasping softly:1.25)), (hands gripping clothes, pinned against wall or desk, size difference:1.25), ((intensely flushed face, wet glossy parted lips, half-closed lustful eyes, breathless longing gaze, anticipation expression:1.25)), trembling with sweet tension, disheveled clothing, thrilling secret encounter, heated intimate atmosphere, dramatic warm rim lighting",
       "description": "의상을 입은 채 벽이나 책상에 밀착해 거친 숨을 몰아쉬는 삽입 직전의 긴장감"
     },
     "183": {
-      "label": "착의섹스_본편",
+      "label": "착의섹스_절정",
       "required_outfit": "default",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, ((intense clothed anal sex:1.25)), ((fully clothed except bottom, wearing clothes, top on:1.25)), bottoms pulled aside or skirt hiked up, bent over desk or against wall, single male partner behind, size difference, rapid panting, disheveled clothing, heavy blush, desperate moaning, overwhelming arousal, cowboy shot, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
       "description": "상의를 입은 채 하의만 젖히고 격렬하게 결합하는 착의 본방 씬"
     },
     "184": {
-      "label": "착의섹스_후",
+      "label": "착의섹스_사후",
       "required_outfit": "default",
       "prompt": "cowboy shot, (centered composition:1.15), 1boy, otokonoko, solo, ((clothed sex aftermath:1.25)), ((lifting hem of clothes to reveal inner:1.25)), ((pulling front waistband of underwear down slightly:1.25)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.25)), ((white liquid dripping and running down inner thighs:1.25)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting",
       "description": "착의 정사 직후 흐트러진 옷차림으로 속옷 안과 허벅지를 타고 흐르는 여운을 보여주는 씬"
@@ -1159,22 +1155,22 @@
       "canonical_code": "071"
     },
     "196": {
-      "label": "착의펠라약",
+      "label": "책상밑펠라_약",
       "description": "단정한 옷차림으로 책상 아래 무릎 꿇고 진행하는 착의 펠라 (약: N72)",
-      "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, ((upper body close-up, bust shot)), clothed fellatio, blowjob under desk, ((looking up submissively with deeply devoted affectionate gaze:1.25)), open mouth, licking tip, saliva trail, ((heavy facial blush:1.2)), ((moist emotional eyes:1.2)), teary eyes, intimate tender atmosphere, upper body",
+      "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, ((male partner sitting on chair in front of desk:1.25)), ((otokonoko completely under wooden desk:1.35)), ((kneeling low on wooden floor between male thighs under desk:1.35)), ((underside of wooden desk directly above head:1.3)), ((cramped space under desk:1.25)), ((looking up submissively from under desk:1.25)), clothed fellatio under desk, mouth around shaft, saliva trail, ((heavy facial blush:1.2)), ((moist emotional eyes:1.2)), teary eyes, dim office lighting under desk",
       "required_outfit": "default",
       "section": "scenes_otokonoko",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "negative_add": " (otokonoko sitting on chair:1.4), (otokonoko on chair:1.4), (chair under desk:1.4), (stool:1.4), (otokonoko on stool:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (wide shot:1.25)",
       "status": "deprecated",
       "canonical_code": "068"
     },
     "197": {
-      "label": "착의펠라강",
+      "label": "책상밑펠라_강",
       "description": "옷을 입은 채 깊이 삼키는 착의 딥스로트 (강: N73)",
-      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, otokonoko, ((upper body close-up, bust shot, face focus:1.25)), clothed fellatio, deepthroat, teary eyes, intense, devoted, upper body, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest, covered in abundant cum:1.25))",
+      "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, ((male partner sitting on chair in front of desk:1.25)), ((otokonoko completely under wooden desk:1.35)), ((kneeling low on wooden floor between male thighs under desk:1.35)), ((underside of wooden desk directly above head:1.3)), ((cramped space under desk:1.25)), ((looking up from under desk:1.25)), clothed fellatio under desk, deepthroat, teary eyes, intense, devoted, dim office lighting under desk, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest, covered in abundant cum:1.25))",
       "required_outfit": "default",
       "section": "scenes_otokonoko",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "negative_add": " (otokonoko sitting on chair:1.4), (otokonoko on chair:1.4), (chair under desk:1.4), (stool:1.4), (otokonoko on stool:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (wide shot:1.25)",
       "status": "deprecated",
       "canonical_code": "069"
     }
