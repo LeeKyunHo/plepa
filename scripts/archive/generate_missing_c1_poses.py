@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 scripts/generate_missing_c1_poses.py
 화풍 불일치(#076, #095, #106) 및 모브남 필로우토크(#115) 4종 포즈에 대해
@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from plepa_engine.services.generation_service import GenerationParams, GenerationService
 from plepa_engine.reporter import get_subfolder_for_code
-from scripts.run_full_inspection_batch import (
+from scripts.archive.run_full_inspection_batch import (
     C1_ARTIST_TAG,
     TARGET_CHARACTERS,
     get_contextual_quality_tag,

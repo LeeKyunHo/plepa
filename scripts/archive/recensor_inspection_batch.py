@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 scripts/recensor_inspection_batch.py
 신규 정밀 검열(귀두 노출 방지 + 여성 부위 배제 + 비노출 100% 원본 보존)을
@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image
 from plepa_engine.censor import censor_image
-from scripts.run_full_inspection_batch import generate_html_viewer
+from scripts.archive.run_full_inspection_batch import generate_html_viewer
 INSPECT_DIR = ROOT / "output" / "inspection_batch"
 
 TARGETS = [
