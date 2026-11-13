@@ -134,21 +134,23 @@ flowchart TD
   1. **헤더 내 맨위로 버튼**: 상단 헤더 우측에 `🔝 맨위로` 컴팩트 버튼 배치.
   2. **플로팅 탑 버튼 (`#floating-top-btn`)**: 280px 이상 스크롤 시 화면 우측 하단에 자동으로 떠오르는 원형 알약 버튼 (`▲ TOP`).
 
-### 3.2 카드별 2-Button 액션 행
-각 이미지 카드 하단에 2개의 직관적인 액션 버튼을 나란히 배치합니다:
+### 3.2 카드별 3-Button 액션 행 및 상단 검열 옵션 툴바
+* **상단 검열 툴바 (`.censor-toolbar`)**: 전역 `censor_style`(`white_silhouette`, `black_silhouette`, `mosaic`, `bar`, `slim_bar`, `shadow`, `debug_bbox`) 셀렉터 및 `anchor_fallback` 토글 제공 (`⚡ 재검열` 및 `🎲 리롤` 시 선택 옵션 자동 전달).
+* 각 이미지 카드 하단에 3개의 직관적인 액션 버튼을 나란히 배치합니다:
 ```html
 <div class="card-btn-row">
-  <button class="action-btn retouch-btn" onclick="openRetouch(event, '{item.path}', '{item.code}', '{item.label}')">✏️ 덧칠</button>
-  <button class="action-btn origin-btn" onclick="restoreOrigin(event, '{item.path}', '{item.code}', '{item.label}')">🔄 원본</button>
+  <button class="action-btn retouch-btn" onclick="openRetouch(event, ...)">✏️ 덧칠</button>
+  <button class="action-btn recensor-btn" onclick="reapplyCensor(event, ...)">⚡ 재검열</button>
+  <button class="action-btn origin-btn" onclick="restoreOrigin(event, ...)">🔄 원본</button>
 </div>
 ```
 
 ---
 
-## 4. 백엔드 API 명세 (`serve_benchmark_mobile.py`)
+## 4. 백엔드 API 명세 (`serve_benchmark_mobile.py` & `plepa_gui`)
 
 ### 4.1 터치 덧칠 검열 저장 (`POST /api/retouch_censor`)
-* **목적**: 스마트폰 터치 드로잉으로 사후 보정한 검열 마스크 이미지를 저장하고 Ground Truth로 아카이브.
+* **목적**: 스마트폰 터치 드로잉으로 사후 보정한 검열 마스크 이미지를 저장하고 본체 에셋 및 Ground Truth에 동시 동기화.
 * **요청 바디**:
   ```json
   {
@@ -157,10 +159,11 @@ flowchart TD
   }
   ```
 * **처리 절차**:
-  1. Base64 디코딩 후 PIL RGB 이미지 변환.
-  2. `output/inspection_batch/{file_path}`에 95% 품질 WEBP 저장.
-  3. `output/benchmarks/ground_truth/{folder}/`에 인간 검수 정답 세트로 자동 미러링.
-* **응답**: `{"success": true, "message": "성공적으로 저장되었습니다!", "file_name": "...", "timestamp": 1794375904}`
+  1. Base64 디코딩 후 PIL RGB 이미지 변환 (`_origin` 경로 덮어쓰기 차단).
+  2. `output/inspection_batch/{file_path}`에 95% 품질 WEBP 원자적 저장(`_atomic_save_webp`).
+  3. 매핑되는 `projects/{roster}/assets/{file_path}` 본체 에셋에도 원자적 자동 동기화 (`synced_asset` 플래그 반환).
+  4. `output/benchmarks/ground_truth/{folder}/`에 인간 검수 정답 세트로 자동 미러링.
+* **응답**: `{"success": true, "synced_asset": true, "message": "성공적으로 저장되었습니다!", "file_name": "...", "timestamp": 1794375904}`
 
 ### 4.2 오리지널 원본 이미지 즉시 복원 (`POST /api/restore_origin`)
 * **목적**: 검열이 과도하거나 훼손된 이미지를 단 한 번의 터치로 무검열 원본(`_origin`)으로 되돌림.
@@ -172,26 +175,48 @@ flowchart TD
   ```
 * **처리 절차**:
   1. 경로에서 캐릭터 코드(`aya`), 서브폴더(`02_h_scenes`), 파일명 분리.
-  2. 원본 백업 디렉토리 탐색 (`projects/campus/assets/{c_code}_origin/` 등).
-  3. 무검열 원본을 `output/inspection_batch/` 및 `projects/.../assets/`에 동시 덮어쓰기 복사.
+  2. 원본 백업 디렉토리 탐색 (`projects/{roster}/assets/{c_code}_origin/` 등).
+  3. 무검열 원본을 `output/inspection_batch/` 및 `projects/.../assets/`에 원자적 복사(`synced_asset` 반환).
 * **프론트엔드 연동**:
   - 오클릭 방지를 위한 브라우저 `confirm` 팝업 구비.
   - 성공 시 `?t=timestamp` 캐시 버스팅을 적용하여 화면상의 이미지를 즉시 새로고침.
 
-### 4.3 비동기 FIFO 순차 작업 큐 기반 실시간 리롤 (`POST /api/reroll_queue`, `GET /api/reroll_queue_status`)
+### 4.3 0.2초 즉시 재검열 API (`POST /api/reapply_censor`)
+* **목적**: ComfyUI 재생성 없이 무검열 원본(`_origin`)을 읽어 `plepa_engine.censor.censor_image()`로 즉시 재검열한 뒤 `output/inspection_batch/`와 `projects/{roster}/assets/` 양쪽에 원자적으로 덮어씁니다. (`_require_auth(..., check_origin=True)` 적용)
+* **요청 바디 (`ReapplyCensorRequest`)**:
+  ```json
+  {
+    "file_path": "aya/02_h_scenes/aya_064_남근핥기.webp",
+    "char_code": "aya",
+    "pose_code": "064",
+    "censor_style": "mosaic",
+    "censor_targets": "penis",
+    "min_confidence": 0.16,
+    "enable_anchor_fallback": false
+  }
+  ```
+* **응답**: `{"success": true, "censor_style": "mosaic", "detected_count": 1, "synced_asset": true}`
+
+### 4.4 비동기 FIFO 순차 작업 큐 기반 실시간 리롤 (`POST /api/reroll_queue`, `GET /api/reroll_queue_status`)
 * **목적**: 모바일 검수 중 마음에 들지 않는 이미지를 여러 장 연속으로 리롤할 때, ComfyUI VRAM 충돌이나 요청 유실 없이 **안전하게 1건씩 순차 처리(FIFO)**하는 대기열 시스템.
 * **엔드포인트 1: 작업 등록 (`POST /api/reroll_queue`)**:
-  - 요청: `{"file_path": "aya/01_normal/aya_001_미소.webp", "char_code": "aya", "pose_code": "001", "label": "미소"}`
+  - 요청: `{"file_path": "aya/01_normal/aya_001_미소.webp", "char_code": "aya", "pose_code": "001", "label": "미소", "censor_style": "white_silhouette", "censor_targets": "penis", "min_confidence": 0.16, "enable_anchor_fallback": false}`
   - 즉시 응답(0.01초): `{"success": true, "job": {"job_id": "job_...", "queue_position": 1, "status": "queued"}, "is_new": true}`
   - **중복 방지 (Deduplication)**: 동일한 이미지가 이미 대기 중이거나 처리 중인 경우, 중복 등록하지 않고 기존 작업 순번을 반환하여 오클릭 연타 방어.
 * **엔드포인트 2: 대기열 상태 실시간 조회 (`GET /api/reroll_queue_status`)**:
   - 응답: `{"success": true, "data": {"total_pending": 2, "queued_count": 1, "processing_count": 1, "active_job": {...}, "jobs": {...}}}`
 * **백엔드 단일 워커 루프 (`_worker_loop`)**:
   - `asyncio.Queue` 기반으로 큐에서 작업을 1개씩 꺼내 `asyncio.to_thread`로 블로킹 없이 격리 실행.
-  - ComfyUI 신규 랜덤 시드 생성 ➔ `{char}_origin` 무검열 원본 백업 ➔ ADR-86(콤팩트 언더마스킹) 검열 적용 ➔ `inspection_batch` 및 정규 에셋 덮어쓰기 순차 완결.
+  - ComfyUI 신규 랜덤 시드 생성 ➔ `{char}_origin` 무검열 원본 백업 ➔ 전달된 검열 옵션(`censor_style`, `censor_targets`, `min_confidence`, `enable_anchor_fallback`) 적용 ➔ `inspection_batch` 및 정규 에셋 덮어쓰기 순차 완결.
 * **프론트엔드 실시간 UX 연동**:
   - **상단 고정 바**: 대기열 발생 시 `⏳ 대기열 2건 (진행 1건 | 대기 1건)` 앰버색 펄스 배지 자동 표출.
   - **에셋 카드 우상단 버튼**: `🎲 리롤` ➔ `⏳ 대기 #N` ➔ `⚙️ 생성중` ➔ `✅ 완료!` ➔ 새 이미지 캐시버스팅 리로드 후 3초 뒤 기본 상태 복귀.
+
+### 4.5 8080 스튜디오 브릿지 및 선택적 토큰 보호 (`plepa_gui`)
+* **공용 REST API 통일 (`/api/assets/restore-origin`, `/api/assets/reapply-censor`)**: 8080 모바일 뷰어([📱 8080 모바일 뷰어](http://localhost:8080/mobile))에서도 8085와 동일하게 무검열 원본 복원 및 0.2초 즉시 재검열 수행.
+* **선택적 `PLEPA_MOBILE_TOKEN` 보안 가드**:
+  - 환경변수 `PLEPA_MOBILE_TOKEN`이 설정된 경우(예: `scripts/start_remote.py` 원격 터널 기동 시 자동 발급) `?token=` 진입 시 `HttpOnly; SameSite=Lax` 쿠키(`plepa_token`)를 발급하고, 외부 변경 API(`/api/assets/*`) 호출 시 토큰(`X-Plepa-Token` / `Authorization: Bearer` / 쿠키) 및 `Origin`을 검증합니다.
+  - 환경변수 미설정 시(로컬 PC 단독 구동·오프라인 테스트)에는 인증 없이 기존과 동일하게 동작합니다.
 
 ---
 
