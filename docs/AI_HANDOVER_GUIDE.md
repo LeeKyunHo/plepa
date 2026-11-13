@@ -6,6 +6,7 @@
 > - ⚙️ 파이프라인 인터페이스 및 CLI 규격 → [`플에파_기능명세.md`](플에파_기능명세.md)  
 > - 🎨 캐릭터 & 포즈 프롬프트 제작 규칙 → [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)  
 > - 📋 전체 80종 포즈 카탈로그 및 2~6글자 명칭 가이드 → [`POSE_CATALOG.md`](POSE_CATALOG.md)  
+> - 📱 모바일 원격 검수 갤러리 및 원격 접속 가이드 → [`REMOTE_INSPECTION_GUIDE.md`](REMOTE_INSPECTION_GUIDE.md)  
 > - 📚 문서 작성 요령 및 푸시 프로토콜 → [`DOCUMENTATION_GUIDE.md`](DOCUMENTATION_GUIDE.md)  
 > - 📓 일자별 개발 로그 및 트러블슈팅 → [`개발일지.md`](개발일지.md)  
 > - 🤖 에이전트 행동 지침 → [`GEMINI.md`](GEMINI.md)  
@@ -30,8 +31,11 @@
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
-6. **정밀 외곽선 화이트 실루엣 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py))**:
-   - 기본 스타일 `white_silhouette` (`#FFFFFF`), `penis` 단일 타겟 기본(여캐 신체 오검열 원천 방지) + 인공 타원 코어 배제 순수 MobileSAM 외곽선 렌더링 + 입술/혀 HSV 보호 & Hole Filling + `POSE_SAFE_ANCHORS` 폴백.
+6. **ADR-86 콤팩트 언더마스킹 & 인간-AI 협업 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py))**:
+   - '애매하면 모자라게' 콤팩트 언더마스킹 원칙 확정. BBox 경계선 내측 8% 안전 수축(`Inner Inset 8%`) 및 모서리 40% 라운딩 소프트 캡슐 타원 렌더링.
+   - 주변 신체(허벅지/가슴/입술/턱) 사각 침범 결함 0% 원천 방어.
+   - 미탐지 시 억지 사각 앵커 투척(`enable_anchor_fallback=False`) 영구 비활성화로 비노출 씬 및 주변 살 오검열 0% 유지.
+   - 살짝 모자란 부분은 모바일/웹 검수 갤러리 캔버스 에디터에서 사용자가 1~2초 만에 `[✏️ 터치 덧칠]` 마감하여 `output/benchmarks/ground_truth/`로 자동 아카이브.
 7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
    - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
 8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
@@ -47,8 +51,16 @@
     - 구조 변경(폴더명/규격), 마이그레이션 범위, 생성 옵션 등 디테일 결정이 필요한 지시를 수행할 때는 독단적 결정을 금지하고, 반드시 작업 착수 전에 추천안(`(Recommended)`)과 대안들을 `ask_question` 선택지로 구성하여 사용자 확인 및 선택을 받은 후 안전하게 작업을 개시함.
 13. **객관적 실증 및 허위·과장 보고 엄격 금지 (Empirical Rigor & Zero Exaggeration Rule)**:
     - 단일 시드나 1~2개 표본만으로 "완벽 수렴/방어" 등의 과장 보고 엄격 금지. 통계적 다중 표본 기반 측정과 모델 실제 탐지 vs 앵커 폴백의 명확한 분리 집계, 엔진 파이프라인 제약(`clamp_sdxl_weights`) 사전 검증 의무화.
-14. **절차적 무결성 및 단계별 승인 게이트 의무화 (Strict Approval Gate & Semantic Preservation)**:
+14. **절차적 무결성, 승인 게이트 & 3단계 시퀀스 표준화 (Strict Approval Gate & 3-Step Sequence)**:
     - 질문 후 사용자 명시적 승인 전 임의 선행 작업 및 푸시 엄격 금지. 포즈 매핑 문서(`POSE_MAPPING.md`, `docs/POSE_MAPPING_V2.md`) 실시간 동기화 및 포즈 원래 문맥(사후 여운, 전희 등) 보존 의무화.
+    - 체위 H씬 시퀀스는 **`시작 ➔ 절정 ➔ 사후`** 표준 3단계 규격을 엄격히 준수함 (예: `#112 착의섹스 시작`, `#113 착의섹스 절정`, `#114 착의섹스 사후`, `#099 펠라치오 시작`, `#100 펠라치오 절정`, `#101 펠라치오 사후`).
+15. **원클릭 하이퍼링크 의무화 (Hyperlink over Raw Text)**:
+    - 모든 웹/터널/대시보드 URL은 사용자가 모바일/PC에서 복사·붙여넣기 없이 즉시 원클릭으로 열 수 있도록 반드시 마크다운 하이퍼링크(`[라벨](URL)`) 형태로 제공함.
+16. **모바일 원격 검수 2-Track & 원클릭 복원 시스템 ([`docs/REMOTE_INSPECTION_GUIDE.md`](REMOTE_INSPECTION_GUIDE.md))**:
+    - 집 안 Wi-Fi 로컬 IP(`http://<LAN_IP>:8085/inspect`) 항시 접속 및 집 밖 LTE/5G Cloudflare Tunnel 이원화 지원.
+    - 상단 고정(Sticky Header Wrap) 네비게이션, 캐릭터 전환 시 자동 최상단 부드러운 스크롤, 플로팅 Top 버튼.
+    - 각 카드별 `[✏️ 덧칠]`(ADR-86 캔버스 에디터) 및 `[🔄 원본]`(무검열 `_origin` 즉시 복원 API) 원클릭 연동.
+    - 비동기 FIFO 작업 큐 기반 `[🎲 리롤]`(ADR-89): 여러 장 연속 리롤 시 단일 워커 순차 처리 및 상단/카드별 실시간 상태 배지 전환.
 
 ---
 
@@ -1560,7 +1572,7 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   1. **6대 결함 카테고리 추가 및 안전 앵커 확장 (censor.py)**:
      - standing, shower, cunnilingus, handjob, ootjob, spanking 6개 전문 카테고리 신설 및 전용 정규화 앵커 좌표 등록.
      - 얼굴 침범 방지 상단 가드(y1 = max(y1, int(img_h * 0.07))) 적용.
-  2. **안전 앵커 폴백 전면 활성화 (generation_service.py)**:
+  2. **안전 앵커 폴백 전면 활성화 (generation_service.py) [DEPRECATED: 거대 사각 오버마스킹 침범 문제로 ADR-86에 의해 공식 폐기 및 False 고정]**:
      - 미탐지 시 원본 노출을 방지하기 위해 enable_anchor_fallback=True로 전환하여 100% 안전 실루엣 마스킹 보장.
      - 전역 에셋(369장) 회귀 재검열 결과 H씬 미탐지 결함 0건 달성 (OK: 368 ➔ 393장 증가).
   3. **포즈 구도 규격화(Blueprint) 방향성 불변 토큰 체계 파일럿 검증 및 한계 규명**:
@@ -1602,4 +1614,113 @@ ude 슬롯으로 강제 지정하여 엔진의 strip_sdxl_outfit_tags 및 sdxl_n
   3. **필로우토크(#115/#185) 품 안착형 단일 캐릭터 규격 및 C-1 화풍 정규화 완결**:
      - #115/#185 프롬프트를 남성 품 안착형 구도(lying on partner muscular chest, male head out of frame)로 전면 개편하여 2girls 여성 복제 버그 및 미소년 파트너 얼굴 노출 박멸.
      - 과거 믹스 잔재 배제 및 #076, #095, #106 C-1 화풍으로 복귀 완료.
+### ADR-87: 체위 H씬 3단계 표준 시퀀스(시작 ➔ 절정 ➔ 사후) 규격 정립 및 검수 갤러리 동적 다중 캐릭터 렌더링 구축 (2026-11-10)
+- **배경**:
+  - H씬 포즈 라벨 중 113번이 '착의섹스 본편'으로 오표기되어 사용자가 3단계 시퀀스(전/절정/후)와의 불일치를 지적함.
+  - 모바일 검수 갤러리(generate_html_viewer)가 과거 2인(har, hay) 전용으로 하드코딩되어 있어, 캠퍼스 로스터 6인 에셋이 존재함에도 갤러리 뷰어에 탭이 노출되지 않는 결함 발생.
+- **결정 사항**:
+  1. **체위 3단계 표준 시퀀스(시작 ➔ 절정 ➔ 사후) 공식 제정**:
+     - #112 착의섹스 시작, #113 착의섹스 절정, #114 착의섹스 사후
+     - #099 펠라치오 시작, #100 펠라치오 절정, #101 펠라치오 사후
+     - 오토코노코 대칭(+70) #182~#184, #169~#171 동일 적용.
+     - 단일 진실 공급원(data/sdxl_pose_database.json) 및 매핑 문서 세트 동기화 완료. 기존 프로덕션 파일명은 무손실 보존(Rule 6) 준수.
+  2. **모바일 검수 갤러리 동적 캐릭터 스캔 리팩토링 (scripts/generate_inspection_viewer.py)**:
+     - 하드코딩 완전 철폐(Rule 6). 디렉토리에 존재하는 모든 캐릭터(ya, har, kao, mai, shz, yur, hay 등)를 자동 탐색하여 모바일 상단에 스와이프 가능한 원터치 탭 자동 생성.
+     - 갤러리 렌더러가 단일 진실 공급원(DB)에서 최신 표준 라벨을 실시간 조회하여 렌더링하도록 일원화.
+  3. **원클릭 하이퍼링크 의무화 (GEMINI.md 제1조 제정)**:
+     - 모든 웹/터널 URL은 복사·붙여넣기 없이 즉시 클릭/터치할 수 있도록 마크다운 하이퍼링크([라벨](URL))로만 제공.
+
+### ADR-88: 모바일 검수 갤러리 상단 고정(Sticky) & 무검열 원본 복원 원클릭 시스템 구축 (2026-11-11)
+- **배경**:
+  - 장시간 모바일 검수 시 스크롤을 내리면 캐릭터 탭과 필터가 화면 상단 밖으로 사라져 상단 이동 피로도가 높았음.
+  - 검열이 불필요하거나 과도하게 마스킹된 이미지를 원본으로 즉시 복원할 수 있는 편의 기능이 부재함.
+- **결정 사항**:
+  1. **상단 고정 네비게이션 & 스크롤 편의성**:
+     - .sticky-top-container로 헤더, 탭 바, 서브필터를 상단 고정.
+     - 캐릭터 전환 시 window.scrollTo 부드러운 스크롤 및 화면 우하단 플로팅 ▲ TOP 버튼 연동.
+  2. **무검열 원본 복원 API (POST /api/restore_origin)**:
+     - 카드 하단 [🔄 원본] 버튼 클릭 시 0.1초 내 _origin/ 백업 파일로 덮어쓰기 복원 및 캐시버스팅 반영.
+
+### ADR-89: ComfyUI 실시간 리롤 비동기 FIFO 작업 큐 구축 (2026-11-11)
+- **배경**:
+  - 모바일 검수 중 마음에 들지 않는 카드를 연속으로 리롤할 때 동시 요청으로 인한 ComfyUI VRAM 충돌 및 모바일 브라우저 타임아웃 위험 발생.
+- **결정 사항**:
+  1. **단일 워커 순차 처리 FIFO 작업 큐 (RerollQueueManager)**:
+     - POST /api/reroll_queue로 0.01초 논블로킹 즉시 접수 및 중복 등록 방지.
+     - 백그라운드 단일 워커가 1건씩 안전하게 순차 처리하여 GPU 과부하 및 소켓 경합 원천 차단.
+  2. **실시간 대기열 시각화**:
+     - 상단 고정 헤더에 대기열 펄스 배지(⏳ 진행 1건 | 대기 N건) 및 카드별 4단계 상태 배지(🎲 리롤 ➔ ⏳ 대기 #N ➔ ⚙️ 생성중 ➔ ✅ 완료!) 표출.
+
+### ADR-90: #049(전라) 심플 무배경 격리 및 #050(야경테라스) 도시 야경 정규화 (2026-11-11)
+- **배경**:
+  - #049(전라)가 문예부 동아리방(har_club)으로 매핑되어 나체 상태에서 교실 책상/칠판이 잔재하는 결함 발생.
+  - #050(야경테라스)이 주간 산책로(campus_street)로 오매핑되어 야경 콘셉트가 훼손됨.
+- **결정 사항**:
+  1. **배경 매핑 정규화**:
+     - #049: 
+one(심플 무배경 스튜디오 화보) + 실내 가구 전역 네거티브.
+     - #050: 
+ight_terrace(도시 야경 발코니 난간).
+  2. **캠퍼스 6인 전수 재생성 완결**:
+     - 비동기 대기열 큐를 통해 6인 전원의 #049, #050 총 12장 일괄 생성 완료.
+
+### ADR-91: #126/#127 정통 언더데스크(책상밑) 공간 기하학 개편 및 라벨 정규화 (2026-11-12)
+- **배경**:
+  - #126(책상밑_펠라), #127(책상밑_컨택트)이 라벨 명칭과 달리 책상 가구가 전혀 없는 일반 바닥 얼굴 클로즈업으로 생성되는 결함 접수.
+  - #063, #123 라벨 뉘앙스 정비 및 오토코노코(+70) 1:1 대칭 정합화 필요성 대두.
+- **결정 사항**:
+  1. **정통 언더데스크 기하학 앵커 주입 및 오피스 배경 매핑**:
+     - crouching under wooden desk, cramped narrow space under desk, underside of wooden desk above head, partner sitting on chair at desk 등 3차원 기하학 태그 주입 및 mai_office 배경 매핑.
+     - 머리 위 원목 상판, 책상 지지대, 의자 오브젝트 가시화 실증 후 캠퍼스 6인 전원 총 12장 일괄 생성 완결.
+  2. **#063, #123 라벨 정규화 및 에셋 96건 일괄 리네이밍**:
+     - #063 ➔ 스푸닝애무, #123 ➔ 배복종자세(오토 193번과 1:1 대칭)로 통일.
+     - output/inspection_batch/, projects/campus/, projects/ykn/, projects/school/, projects/sns/ 내 96개 파일 일괄 2-Pass 안전 리네이밍 완료.
+  3. **#125 / #040 라벨 및 불변 관점 유지**:
+     - #125 풋잡 라벨 복원 및 프롬프트 보존, #040 침대 덮쳐짐 1인칭 관점 유지.
+### ADR-92: 봉사 포즈 7종 본래 간결 명칭 전면 복원 및 3단계 시퀀스/책상밑 언더바(_) 정규화 (2026-11-12)
+- **배경**:
+  - 21차 중복 슬롯 분리 과정에서 붙었던 불필요한 수식어(아이컨택, 여운, 분출, 소파 등)로 인해 갤러리/챗봇 호출 시 가독성이 저하되고 기존 명칭과 혼선 발생.
+  - 3단계 체위 시퀀스에서 착의섹스_시작은 언더바가 있고 펠라치오시작은 언더바가 없는 등 표기 비일관성 존재.
+- **결정 사항**:
+  1. **봉사 포즈 7종 본래 간결 명칭 복원**:
+     - 073번 파이즈리펠라, 064번 남근핥기, 067번 딥스로트, 074번 가슴사정, 075번 누드대딸, 076번 수유대딸, 077번 풋잡으로 전면 복원.
+  2. **체위 3단계 시퀀스 & 책상밑 포즈 언더바(_) 통일**:
+     - 펠라치오_시작, 펠라치오_절정, 펠라치오_사후 및 착의섹스_시작, 착의섹스_절정, 착의섹스_사후 (+70 오토코노코 대칭 동일).
+     - 126번 책상밑펠라_약, 127번 책상밑펠라_강으로 언더바 직관화.
+  3. **전체 프로젝트 에셋 416건 무손실 일괄 동기화**:
+     - scripts/rename_standardized_labels.py를 통해 5대 프로젝트 내 416건 에셋 2-Pass 안전 리네이밍 완결.
+
+### ADR-93: #126/#127 언더데스크 여성 의자 왜곡 박멸(바닥 무릎 착지) 및 파트너 상체 셔츠 착의 연출 확립 (2026-11-13)
+- **배경**:
+  - #126(`책상밑펠라_약`), #127(`책상밑펠라_강`) 포즈 생성 시 여성 캐릭터 엉덩이 밑에 엉뚱한 의자/스툴이 생성되어 걸터앉는 다중 인물 속성 누수(Cross-Attention Leakage) 결함 발생.
+  - 성인 씬 판정 시 파트너 남성이 일률적으로 상의 탈의(shirtless) 나체로 나와 학교 연구실/오피스 책상 밑 상황극의 개연성이 훼손됨.
+- **결정 사항**:
+  1. **여성 포즈 블록 내 착석/의자 태그 완전 박멸**:
+     - `data/sdxl_pose_database.json` 여성 블록에서 `sitting`, `chair` 전면 삭제 및 `crouching low on wooden floor under desk`, `kneeling on wooden floor between thighs`로 바닥 착지 일원화.
+     - 네거티브에 `(female sitting:1.4), (female sitting on chair:1.4), (female on chair:1.4), (chair under desk:1.4), (stool:1.4)` 보강.
+  2. **파트너 단정한 화이트 셔츠 착의 분리 주입**:
+     - `plepa_engine/prompt_pipeline.py`의 5단계 모브 주입기에서 `is_underdesk_scene` 판정을 신설하여 파트너 상의 탈의를 억제하고 `((clothed male partner:1.20)), ((wearing collared shirt, white shirt:1.20))` 주입.
+  3. **캠퍼스 6인 전원 12장 일괄 양산 완결**:
+     - 마이 파일럿 2종 검증 후 캠퍼스 5인 10종을 비동기 대기열 큐(`POST /api/reroll_queue`)로 일괄 생성 완료 (10/10 100% 성공).
+
+### ADR-94: 코드 품질·보안·원자적 I/O·삼위일체 동기화 및 동적 로스터 탐색 아키텍처 정비 (2026-11-13)
+- **배경**:
+  - 원격 검수 서버/갤러리/GUI API의 경로 이탈, 인증 부재, HTML/JS XSS 취약점과 파일 덮어쓰기 전 선행 `unlink()`로 인한 데이터 유실 위험을 제거해야 했음.
+  - 엔진 코어(`censor.py`, `prompt_pipeline.py`, `comfy_client.py`, `checkpoint_service.py`)와 CLI/GUI 간 기본값 불일치, 하드코딩된 로스터/포즈 참조, 다중 워커/큐 비직렬화 경쟁 상태를 일괄 정비할 필요가 있었음.
+- **결정 사항**:
+  1. **원격/웹 보안 및 리소스 안정성 (C1, C4)**:
+     - `scripts/serve_benchmark_mobile.py`에 `ACCESS_TOKEN` 인증(`X-Plepa-Token`, `Authorization: Bearer`, `?token=` 경유 `HttpOnly` 쿠키), `Origin` 헤더 검증, `_resolve_safe_subpath` 경로 차단, `RerollQueueManager.MAX_COMPLETED_JOBS = 200` 상한 및 `with open(...)` 리소스 관리를 적용.
+     - `scripts/mobile_gallery.py`, `scripts/generate_inspection_viewer.py`, `plepa_gui/api_routes.py`에 경로 정규화(`.resolve().is_relative_to(...)`), `html.escape` 및 `dataset` 바인딩, 로스터 정규식 검증 적용. Import 시점 디렉토리 생성(`.mkdir()`)을 실행 시점으로 이동.
+  2. **원자적 파일 교체 및 SSOT 통합 (C2, C3, C5)**:
+     - `upscale_service.py`, `censor.py`, `comfy_client.py`, `genit_exporter.py`, `generation_service.py`, `asset_service.py`, `validate_genit_work.py` 전반에서 `unlink()` 선행 삭제를 제거하고 `_atomic_replace_with_retry` / `_atomic_save_webp` 등 임시 파일 기반 원자적 교체로 통일.
+     - `sdxl_pose_database.json` 단일 진실 공급원(SSOT) 기준 동기화 및 Gen-IT 5탭 무결성 검증(100% PASS) 완결.
+  3. **엔진·파이프라인·삼위일체·큐 직렬화 및 동적 탐색 (H1~H6)**:
+     - `censor.py`: `import re` 및 `is_pose_censor_required(..., roster=None)` 시그니처 보완, 로스터별 DB 캐시 격리, `targets` 존중 및 `enable_anchor_fallback=False` 기본화·삼위일체 옵션 연동.
+     - `prompt_pipeline.py`: 커스텀/포즈 네거티브 격리 및 `_strip_tags_preserving_parens`로 괄호 균형 파괴 방지.
+     - `checkpoint_service.py`: `import plepa_engine.config as cfg` 실시간 참조 전환으로 `config_service` 런타임 오버라이드(`DEFAULT_SDXL_*`)와 100% 정합화.
+     - `comfy_client.py`: 타임아웃·재연결·`/history` 폴백 및 스레드 안전 `mtime/size` 업로드 캐시 무효화.
+     - `plepa_gui` + `job_manager.py` FIFO 큐 직렬화, 하드코딩된 캐릭터/포즈 분기(`049` 등) 제거 및 `default_character_service.list_characters(roster)` 동적 탐색 전환.
+  4. **회귀 테스트 및 전수 검증**:
+     - `tests/test_security_and_atomic_io.py`, `tests/test_censor_and_pipeline_fixes.py`, `tests/test_comfy_and_job_queue.py` 15건 신규 추가 후 전체 `pytest` 120건, `precheck -r campus` 0위반, `validate_genit_work.py --force` ALL PASS 확인.
+
 

@@ -3,13 +3,17 @@
 ## 1. 기본 언어 및 커뮤니케이션 (Language & Communication)
 - **응답 언어**: 사용자와의 모든 대화, 코드 설명, 계획 수립, 터미널 실행 결과 보고는 **항상 한국어**로 작성합니다.
 - **용어 표기**: 코드 심볼, 파일명, CLI 명령어, 파이썬 식별자, 기술 전문 용어(ComfyUI, GGUF, NF4, LoRA, VRAM, Face Detailer 등)는 원래의 영문 표기를 유지하되 설명은 한국어로 진행합니다.
+- **원클릭 하이퍼링크 의무화 (Hyperlink over Raw Text/Codeblock)**:
+  - 사용자가 모바일 및 PC 브라우저에서 번거로운 복사·붙여넣기 없이 즉시 원클릭(원터치)으로 접속할 수 있도록, **모든 웹/터널/로컬 URL은 절대 백틱 인라인 코드(``)나 일반 텍스트로 노출하지 않고 반드시 클릭 가능한 마크다운 하이퍼링크(`[링크 라벨](URL)`) 형태로 제공**합니다.
+  - 예시: `[📱 모바일 검수 갤러리 바로가기](https://representation-renew-exercise-medicaid.trycloudflare.com/inspect)`
 
 ## 2. 깃 커밋 가이드라인 (Git Commit Guidelines)
 - 커밋 메시지는 **민감한 세부 내용을 배제하고 무엇을 어떻게 수정했는지 사무적이고 기술적인 한국어 서술**(`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`)을 사용합니다.
 - 성인물 관련 표현, 신체 부위, 성적 행동 묘사 등 민감한 세부 내용은 절대 커밋 메시지에 포함하지 않습니다.
 - 예시:
   - `feat: ComfyUI GGUF + Face Detailer 연동 비동기 워크플로우 클라이언트 구현`
-  - `refactor: 플럭스 전용 영문 서술형 포즈 프롬프트 80종 데이터베이스 구조화`
+  - `refactor: 3단계 표준 시퀀스(시작/절정/사후) 포즈 데이터베이스 정비`
+  - `feat: 콤팩트 언더마스킹(ADR-86) 및 모바일 1초 덧칠 캔버스 에디터 연동`
   - `fix: ComfyUI 웹소켓 응답 파싱 및 이미지 저장 예외 처리 개선`
   - `docs: 다중 PC 이식 및 모델 다운로드 체크리스트 문서화`
 
@@ -17,9 +21,8 @@
 - 기존 주석 및 독스트링을 임의로 훼손하지 않습니다.
 - 프롬프트 데이터는 `data/` (`data/sdxl_pose_database.json`, `data/themes/`)에, 파이프라인 로직은 `plepa_engine/`에 철저히 격리합니다.
 - **FLUX 완전 배제 및 SDXL 단일화 원칙 (Token Optimization)**:
-  - 플에파는 SDXL 단일 파이프라인(Danbooru 쉼표 태그, BREAK 문법, 6대 Mutator 체인)으로 확정되었습니다.
-  - FLUX는 `data/legacy/` 및 `plepa_engine/legacy/`로 완전 격리·아카이브되었습니다.
-  - **포즈 추가/수정, 캐릭터 프롬프트 튜닝, 기능 수정 시 FLUX 관련 파일(`data/legacy/flux_pose_database.json`, `flux_*.py`)을 일체 열람·수정하거나 동기화하지 마십시오.** (토큰 낭비 및 불필요한 이중 작업 엄격 금지)
+  - 플에파는 SDXL 단일 파이프라인(Danbooru 쉼표 태그, BREAK 문법, 6대 Mutator 체인)으로 영구 일원화되었습니다.
+  - FLUX 관련 파일(`data/legacy/`, `plepa_engine/legacy/`)은 일체 열람·수정하거나 동기화하지 마십시오. (토큰 낭비 및 불필요한 이중 작업 엄격 금지)
   - 모든 포즈 작업의 단일 진실 공급원(SSOT)은 오직 **`data/sdxl_pose_database.json`** 하나입니다.
 - **CLI · Engine · GUI 삼위일체 동기화 원칙 (Trinity Sync Rule)**:
   - `plepa_engine/services/`에 새로운 파라미터나 생성 옵션을 추가·수정할 때는 반드시 **① `plepa_engine` (`GENERATION_OPTION_SPECS` / `GenerationParams`) ➔ ② `batch_generator.py` (CLI 옵션) ➔ ③ `plepa_gui` (Web UI 자동 렌더링) ➔ ④ `tests/test_cli_gui_sync.py`** 4곳을 한 세트로 묶어 동기화하며, 어느 한쪽에만 기능을 방치하지 않습니다.

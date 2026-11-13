@@ -13,6 +13,7 @@
     - ⚙️ 파이프라인/엔진 기술 명세서      → docs/플에파_기능명세.md
     - 📋 V2 포즈 카탈로그 (000~200)      → docs/POSE_CATALOG.md
     - 🖥️ 웹 GUI 가이드 및 아키텍처 명세서 → docs/GUI_GUIDE.md
+    - 📱 모바일 원격 검수 갤러리 가이드   → docs/REMOTE_INSPECTION_GUIDE.md
     - 📘 아키텍처 결정(ADR) & 인계서     → docs/AI_HANDOVER_GUIDE.md
 
 
@@ -21,6 +22,12 @@
 ==============================================================================
 
   ── [0] ⚡ 실전 핵심 치트코드 원클릭 모음 (전 로스터 순회 · 골든 시드 · 엄격 리롤 · 전수 감사) ──
+  # 📱 [모바일 원격 검수] 로컬 Wi-Fi 및 Cloudflare Tunnel 2-Track 인터랙티브 갤러리 기동 (상단고정/터치덧칠/원본복원)
+  python scripts/serve_benchmark_mobile.py
+  # (접속: 집 안 Wi-Fi → http://<LAN_IP>:8085/inspect | 외부망 → 터널 HTTPS URL)
+
+  # 📑 [검수 뷰어 재빌드] inspection_batch 디렉토리 에셋 스캔 및 index.html 최신 갱신
+  python scripts/generate_inspection_viewer.py
   # 🌐 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 기준점 1장(000)만 초고속 생성 (외형/화풍 전수 점검)
   python batch_generator.py -r all --all-chars -p 000 --censor
 
