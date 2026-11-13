@@ -82,3 +82,8 @@ projects/*/otoko_benchmark/
 
 # Benchmark Outputs
 output/
+
+# Archived Binary Assets & Benchmarks (Local backup only)
+docs/archive/assets/
+docs/archive/benchmarks/
+
