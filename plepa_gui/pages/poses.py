@@ -114,11 +114,10 @@ def render_poses_page() -> None:
         state["details"] = details
         flags = dict(details.get("flags") or {})
 
-        # 입력 필드 상태 바인딩
+        # 입력 필드 상태 바인딩 (SDXL 단일 진실 공급원)
         fields = {
             "label": details["label"],
             "description": details["description"],
-            "flux_prompt": details["flux_prompt"],
             "sdxl_prompt": details["sdxl_prompt"],
             "nude": flags.get("nude", False) or False,
             "scene_type": flags.get("scene_type") or "solo",
@@ -176,7 +175,7 @@ def render_poses_page() -> None:
             code=code,
             section=state["current_section"],
             label=fields["label"],
-            prompt=fields["sdxl_prompt"] or fields["flux_prompt"],
+            prompt=fields["sdxl_prompt"],
             description=fields["description"]
         )
         open_prompt_inspector_dialog(sample_char, p_entry)
@@ -204,7 +203,6 @@ def render_poses_page() -> None:
                 label=new_label,
                 description=fields["description"],
                 flags=new_flags,
-                flux_prompt=fields["flux_prompt"],
                 sdxl_prompt=fields["sdxl_prompt"]
             )
             ui.notify(f"#{code} '{new_label}' 포즈가 SDXL DB에 안전하게 저장되었습니다.", type="positive")
@@ -231,7 +229,6 @@ def render_poses_page() -> None:
                         label=new_label,
                         description=fields["description"],
                         flags=flags,
-                        flux_prompt=fields["flux_prompt"],
                         sdxl_prompt=fields["sdxl_prompt"]
                     )
                     renamed_cnt = 0
@@ -254,7 +251,7 @@ def render_poses_page() -> None:
         dialog.open()
 
     # 최초 실행 시 현재 섹션의 첫 번째 코드 자동 선택
-    init_db = default_pose_service.load_pose_db(engine="flux")
+    init_db = default_pose_service.load_pose_db(engine="sdxl")
     init_codes = [c for c, e in init_db.items() if e.section == state["current_section"]]
     if init_codes:
         state["selected_code"] = sorted(init_codes)[0]

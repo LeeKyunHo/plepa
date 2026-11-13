@@ -1,7 +1,7 @@
 """
-flux_batch_generator.py
-플럭스(FLUX.1 [dev]) 및 SDXL 기반 캐릭터 에셋 배치 생성기 (플에파 / PLEPA) - CLI 진입점.
-CLI 인터페이스 및 하위 호환성을 100% 유지하며, 실제 처리는 서비스 레이어(plepa_engine.services)에 위임합니다.
+batch_generator.py
+SDXL 단일 파이프라인(Unholy Desire Mix / Pony / Illustrious) 기반 캐릭터 에셋 배치 생성기 (플에파 / PLEPA) - CLI 진입점.
+CLI 인터페이스 및 하위 호환성을 유지하며, 실제 처리는 서비스 레이어(plepa_engine.services)에 위임합니다.
 """
 
 from __future__ import annotations
@@ -16,8 +16,13 @@ from plepa_engine.config import (
     COMFY_HOST,
     DEFAULT_ENGINE,
     DEFAULT_ROSTER,
+    DEFAULT_SDXL_CFG,
     DEFAULT_SDXL_CKPT,
-    DEFAULT_UNET_GGUF,
+    DEFAULT_SDXL_HEIGHT,
+    DEFAULT_SDXL_SAMPLER,
+    DEFAULT_SDXL_SCHEDULER,
+    DEFAULT_SDXL_STEPS,
+    DEFAULT_SDXL_WIDTH,
     PROJECTS_DIR,
     configure_stdio,
 )
@@ -30,7 +35,7 @@ from plepa_engine.models import (
     GenerationTarget,
     PoseEntry,
 )
-from plepa_engine.prompt_builder import assemble_flux_prompt, assemble_sdxl_prompt
+from plepa_engine.prompt_builder import assemble_sdxl_prompt
 from plepa_engine.reporter import asset_filename, open_in_explorer
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
@@ -45,7 +50,7 @@ from plepa_engine.services.health_service import (
     format_diagnostics_table,
 )
 from plepa_engine.services.pose_service import default_pose_service
-from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_workflow
+from plepa_engine.workflow_templates import build_sdxl_workflow
 
 
 
@@ -53,8 +58,8 @@ from plepa_engine.workflow_templates import build_flux_workflow, build_sdxl_work
 # 기존 모듈 하위 호환성 유지 래퍼 함수들
 # ==========================================
 
-def load_pose_db(engine: str = "flux", path: Optional[Path] = None) -> Dict[str, PoseEntry]:
-    """엔진(flux / sdxl)에 맞는 포즈 데이터베이스 로드 및 PoseEntry 딕셔너리로 변환."""
+def load_pose_db(engine: str = DEFAULT_ENGINE, path: Optional[Path] = None) -> Dict[str, PoseEntry]:
+    """포즈 데이터베이스 로드 및 PoseEntry 딕셔너리로 변환 (기본: sdxl)."""
     return default_pose_service.load_pose_db(engine=engine, path=path)
 
 
@@ -177,8 +182,8 @@ def run_self_test() -> int:
 def create_parser() -> argparse.ArgumentParser:
     """배치 생성기 CLI ArgumentParser 생성 (단일 진실 공급원)."""
     parser = argparse.ArgumentParser(
-        prog="flux_batch_generator",
-        description="플럭스(FLUX.1 [dev]) 및 SDXL(Unholy Desire Mix) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
+        prog="batch_generator",
+        description="SDXL 단일 파이프라인(Unholy Desire Mix / Pony / Illustrious) 캐릭터 에셋 배치 생성기 (플에파 / PLEPA)"
     )
     parser.add_argument("-c", "--character", "--char", help="생성할 캐릭터 이름 (예: bjh, sample_character, all)")
     parser.add_argument("-p", "--pose", "--codes", default="all", help="생성할 포즈 코드/범위 (all, emotions, 000..019, 000,001 등)")
@@ -186,8 +191,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
     parser.add_argument("-l", "--list", action="store_true", help="로스터 내 등록된 캐릭터 프로필 목록을 콘솔 테이블로 출력")
     parser.add_argument("--profile", default=None, help="캐릭터 프로필/의상 선택 (JSON 내 profiles 섹션)")
-    parser.add_argument("--engine", choices=["sdxl", "flux"], default=DEFAULT_ENGINE, help=f"이미지 생성 엔진 (기본: {DEFAULT_ENGINE} [고속 2D 애니 체크포인트], flux: FLUX.1 [dev] GGUF)")
-    parser.add_argument("--ckpt", default=None, help=f"SDXL 모드에서 사용할 체크포인트 파일명 (기본: 설정값 또는 {DEFAULT_SDXL_CKPT})")
+    parser.add_argument("--engine", choices=["sdxl"], default=DEFAULT_ENGINE, help=f"이미지 생성 엔진 (기본: {DEFAULT_ENGINE} [SDXL 단일 파이프라인])")
+    parser.add_argument("--ckpt", default=None, help=f"SDXL 체크포인트 파일명 (기본: 설정값 또는 {DEFAULT_SDXL_CKPT})")
     parser.add_argument("--ckpt-tag", default=None, dest="ckpt_tag", help="체크포인트 비교용 서브폴더 태그 (예: wai, unholy) - 지정 시 assets/prefix/ckpt_태그/ 폴더에 저장")
     parser.add_argument("--bg", default=None, help="즉석 배경 프롬프트 직접 주입 (지정 시 --bg-preset 보다 우선 적용)")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
@@ -208,15 +213,15 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--freeu", dest="freeu", action="store_true", default=True, help="ComfyUI FreeU_Advanced 노드로 SDXL 선명도 및 질감 부스팅 (기본: 활성화)")
     parser.add_argument("--no-freeu", dest="freeu", action="store_false", help="FreeU 선명도 부스팅 비활성화")
     parser.add_argument("--upscale", action="store_true", help="4x AI 초고화질 업스케일러 활성화")
-    parser.add_argument("--steps", type=int, default=None, help="샘플링 스텝 수 (기본: flux=20, sdxl=25)")
-    parser.add_argument("--cfg", type=float, default=None, help="CFG 스케일 (기본: flux=3.5, sdxl=6.0)")
-    parser.add_argument("--sampler", default=None, help="샘플러 알고리즘 (기본: flux=euler, sdxl=euler_ancestral)")
-    parser.add_argument("--scheduler", default=None, help="스케줄러 (기본: flux=simple, sdxl=normal)")
-    parser.add_argument("--unet", default=None, help=f"FLUX 모드 GGUF UNet 모델 파일명 (기본: 설정값 또는 {DEFAULT_UNET_GGUF})")
-    parser.add_argument("--lora", default="modern-anime-lora.safetensors", help="FLUX 모드 LoRA 파일명 (기본: modern-anime-lora.safetensors, 해제: none)")
-    parser.add_argument("--lora-weight", type=float, default=0.9, help="LoRA 적용 강도 (기본: 0.9)")
-    parser.add_argument("--width", type=int, default=None, help="이미지 가로 폭 (기본: flux=896, sdxl=832)")
-    parser.add_argument("--height", type=int, default=None, help="이미지 세로 높이 (기본: flux=1152, sdxl=1216)")
+    parser.add_argument("--steps", type=int, default=None, help=f"샘플링 스텝 수 (기본: {DEFAULT_SDXL_STEPS})")
+    parser.add_argument("--cfg", type=float, default=None, help=f"CFG 스케일 (기본: {DEFAULT_SDXL_CFG})")
+    parser.add_argument("--sampler", default=None, help=f"샘플러 알고리즘 (기본: {DEFAULT_SDXL_SAMPLER})")
+    parser.add_argument("--scheduler", default=None, help=f"스케줄러 (기본: {DEFAULT_SDXL_SCHEDULER})")
+    parser.add_argument("--unet", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--lora", default="modern-anime-lora.safetensors", help=argparse.SUPPRESS)
+    parser.add_argument("--lora-weight", type=float, default=0.9, help=argparse.SUPPRESS)
+    parser.add_argument("--width", type=int, default=None, help=f"이미지 가로 폭 (기본: {DEFAULT_SDXL_WIDTH})")
+    parser.add_argument("--height", type=int, default=None, help=f"이미지 세로 높이 (기본: {DEFAULT_SDXL_HEIGHT})")
     parser.add_argument(
         "--naming",
         choices=["hybrid", "code", "label"],
@@ -235,6 +240,7 @@ def create_parser() -> argparse.ArgumentParser:
         default="penis",
         help="검열 대상 부위 (penis, pussy, all, 쉼표 구분 기본: penis)"
     )
+    parser.add_argument("--anchor-fallback", action="store_true", help="검열 탐지 0건 시 포즈 DB 앵커 좌표 폴백 마스킹 허용 (기본: False)")
     parser.add_argument("--censor-only", action="store_true", help="ComfyUI 호출 없이 기존 생성된 에셋들의 검열본만 초고속(0.2초) 일괄 갱신/생성")
     parser.add_argument("--seed", type=int, default=None, help="생성에 사용할 난수 시드 값 고정 (미지정 시 무작위)")
     parser.add_argument("--reuse-seed", action="store_true", help="_batch_manifest.json에 기록된 기존 골든 시드를 재사용하여 동일 구도로 의상/프롬프트 재생성")
@@ -346,6 +352,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             max_retries=args.max_retries,
             reuse_seed=args.reuse_seed,
             strict_censor_qc=args.strict_censor_qc,
+            anchor_fallback=args.anchor_fallback,
             seed=args.seed,
         )
 

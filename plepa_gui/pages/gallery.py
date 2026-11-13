@@ -8,12 +8,13 @@ plepa_gui.pages.gallery
 from __future__ import annotations
 
 from pathlib import Path
+import threading
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from nicegui import app, run, ui
-from plepa_engine.config import PROJECTS_DIR
+from nicegui import run, ui
+from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.reporter import open_in_explorer
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.character_service import default_character_service
@@ -25,16 +26,13 @@ from plepa_gui.components.header import get_active_roster, render_header
 import mimetypes
 mimetypes.add_type("image/webp", ".webp")
 
-# 정적 파일 서빙 등록
-app.add_static_files("/projects_static", str(PROJECTS_DIR))
-
 
 def detect_best_default_roster() -> str:
     """전역 활성 로스터를 기본값으로 사용하고 없을 시 자동 감지."""
     active_r = get_active_roster()
     if (PROJECTS_DIR / active_r).is_dir():
         return active_r
-    best_roster = "campus"
+    best_roster = DEFAULT_ROSTER
     max_count = 0
     for p in PROJECTS_DIR.iterdir():
         if not p.is_dir() or p.name.startswith("."):
@@ -856,9 +854,10 @@ def render_gallery_page() -> None:
 
                         if prefix_val and code_val:
                             async def run_reroll(reuse_seed: bool):
-                                ui.notify(f"🔄 #{code_val} {'골든 시드 고정' if reuse_seed else '새 시드'} 리롤 시작...", type="info")
                                 try:
-                                    from plepa_engine.services.generation_service import GenerationParams, default_generation_service
+                                    from plepa_engine.services.generation_service import GenerationParams
+                                    from plepa_engine.services.job_manager import global_job_manager
+
                                     r_params = GenerationParams(
                                         character_expr=prefix_val,
                                         pose_expr=code_val,
@@ -867,7 +866,30 @@ def render_gallery_page() -> None:
                                         censor=True,
                                         reuse_seed=reuse_seed,
                                     )
-                                    results = await run.io_bound(default_generation_service.run_batch, r_params)
+                                    done_event = threading.Event()
+                                    callback_holder: Dict[str, Any] = {"results": [], "error": None}
+
+                                    def _on_reroll_done(res_list, err):
+                                        callback_holder["results"] = res_list
+                                        callback_holder["error"] = err
+                                        done_event.set()
+
+                                    started, queue_pos = global_job_manager.enqueue_job(
+                                        r_params,
+                                        label=f"갤러리 리롤 {prefix_val}:{code_val}",
+                                        on_complete=_on_reroll_done,
+                                    )
+                                    if started:
+                                        ui.notify(f"🔄 #{code_val} {'골든 시드 고정' if reuse_seed else '새 시드'} 리롤 시작...", type="info")
+                                    else:
+                                        ui.notify(f"⏳ #{code_val} 리롤이 대기열 #{queue_pos}에 등록되었습니다.", type="info")
+
+                                    await run.io_bound(done_event.wait)
+                                    if callback_holder["error"] is not None:
+                                        ui.notify(f"⚠️ 리롤 중단/오류: {callback_holder['error']}", type="warning")
+                                        return
+
+                                    results = callback_holder["results"]
                                     if results and results[0].success:
                                         res_img = results[0].image_path
                                         curr["path"] = res_img

@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -99,13 +100,21 @@ def load_cache() -> Dict[str, Any]:
 
 
 def save_cache(cache: Dict[str, Any]) -> None:
-    """캐시 저장."""
+    """캐시 원자적 저장."""
+    temp_file: Optional[Path] = None
     try:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        temp_file = CACHE_DIR / f".{CACHE_FILE.name}.{uuid.uuid4().hex[:8]}.tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(cache, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_file, CACHE_FILE)
     except Exception as e:
         print(f"[WARN] 캐시 저장 실패: {e}")
+    finally:
+        if temp_file and temp_file.exists():
+            temp_file.unlink(missing_ok=True)
 
 
 def extract_code_blocks_after_header(text: str, header_pattern: str, count: int = 1) -> List[str]:
@@ -164,17 +173,15 @@ def validate_document(
     print(f"🔍 [Gen-IT 5탭 정합성 검증] 대상: {file_path.name} (로스터: {roster})")
     print("=" * 76)
 
-    # 1. 메인 프롬프트 및 시작 설정 1~4 추출
+    # 1. 메인 프롬프트 및 시작 설정 루트 동적 탐색
     main_blocks = extract_code_blocks_after_header(body, r"## 2-0\. \[메인 프롬프트\]", 1)
     main_prompt = main_blocks[0] if main_blocks else ""
     main_len = len(main_prompt)
 
-    routes = [
-        ("시작 설정 1 (아야메)", r"## 2-1\. \[시작 설정 1: 아야메 루트\]"),
-        ("시작 설정 2 (유리카)", r"## 2-2\. \[시작 설정 2: 유리카 루트\]"),
-        ("시작 설정 3 (카오루)", r"## 2-3\. \[시작 설정 3: 카오루 루트\]"),
-        ("시작 설정 4 (올스타)", r"## 2-4\. \[시작 설정 4: 올스타 조별과제 루트\]"),
-    ]
+    route_headers = re.findall(r"^(## 2-([1-9]\d*)\.\s*\[([^\]]+)\])", body, re.MULTILINE)
+    routes = [(label.strip(), re.escape(header_line.strip())) for header_line, _, label in route_headers]
+    if not routes:
+        errors.append("시작 설정 루트 헤더(## 2-1. [...])를 찾을 수 없습니다.")
 
     max_add_len = 0
     max_add_name = ""
@@ -220,9 +227,10 @@ def validate_document(
         re.DOTALL
     )
 
+    min_lorebooks = int(meta.get("min_lorebooks", 0) or (6 if roster == "campus" else 1))
     print("\n📚 [2] 설정집(Lorebook) 글자 수 및 키워드 한도 검증 (프롬프트 <= 500자, 키워드 <= 15자)")
-    if len(lorebook_matches) < 6:
-        errors.append(f"설정집 6개 항목 중 일부 파싱 실패 (발견: {len(lorebook_matches)}개)")
+    if len(lorebook_matches) < min_lorebooks:
+        errors.append(f"설정집 최소 기준({min_lorebooks}개) 미달 (발견: {len(lorebook_matches)}개)")
 
     for l_title, kw_b, prompt_b in lorebook_matches:
         l_title = l_title.strip()
@@ -234,7 +242,7 @@ def validate_document(
             errors.append(f"설정집 '{l_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
         print(f"  - {l_title}: 키워드 `{kw_b}` ({len(kw_b)}/15자) | 본문 ({len(prompt_b)}/500자)")
 
-    # 3. 캐릭터 6인 한도 검증
+    # 3. 캐릭터 한도 검증 (로스터 실제 캐릭터 수 기반 동적 검증)
     char_match = re.search(r"# 👥 \[탭 4: 캐릭터\].*?(?=# 🧩 \[탭 5: 에셋\]|$)", body, re.DOTALL)
     char_text = char_match.group(0) if char_match else body
 
@@ -244,9 +252,16 @@ def validate_document(
         re.DOTALL
     )
 
-    print("\n👥 [3] 캐릭터 6인 한도 및 키워드 중복 검증 (프롬프트 <= 500자, 소개 <= 300자, 키워드 <= 15자)")
-    if len(char_matches) < 6:
-        errors.append(f"캐릭터 6인 중 일부 파싱 실패 (발견: {len(char_matches)}명)")
+    roster_chars_dir = PROJECTS_DIR / roster / "characters"
+    expected_char_count = (
+        len([p for p in roster_chars_dir.glob("*.json") if not p.name.startswith("_")])
+        if roster_chars_dir.is_dir()
+        else 1
+    )
+    min_chars = int(meta.get("min_characters", 0) or max(1, expected_char_count))
+    print(f"\n👥 [3] 캐릭터 ({len(char_matches)}/{min_chars}명) 한도 및 키워드 중복 검증 (프롬프트 <= 500자, 소개 <= 300자, 키워드 <= 15자)")
+    if len(char_matches) < min_chars:
+        errors.append(f"캐릭터 최소 기준({min_chars}명) 중 일부 파싱 실패 (발견: {len(char_matches)}명)")
 
     all_char_kws: List[str] = []
     for c_title, name_b, kw_b, intro_b, prompt_b in char_matches:

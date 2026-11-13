@@ -67,14 +67,14 @@ def main():
         except Exception:
             pass
 
-    log_fp = open(log_file, "w", encoding="utf-8")
-    cf_proc = subprocess.Popen(
-        [str(CF), "tunnel", "--url", "http://127.0.0.1:8080"],
-        cwd=str(ROOT),
-        stdout=subprocess.DEVNULL,
-        stderr=log_fp,
-        creationflags=subprocess.DETACHED_PROCESS if os.name == "nt" else 0,
-    )
+    with open(log_file, "w", encoding="utf-8") as log_fp:
+        cf_proc = subprocess.Popen(
+            [str(CF), "tunnel", "--url", "http://127.0.0.1:8080"],
+            cwd=str(ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=log_fp,
+            creationflags=subprocess.DETACHED_PROCESS if os.name == "nt" else 0,
+        )
 
     tunnel_url = None
     pattern = re.compile(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com")

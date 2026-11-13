@@ -8,7 +8,18 @@ from __future__ import annotations
 
 from nicegui import ui
 from plepa_engine.comfy_client import ComfyClient
-from plepa_engine.config import PROJECTS_DIR
+from plepa_engine.config import (
+    COMFY_HOST,
+    DEFAULT_ROSTER,
+    DEFAULT_SDXL_CFG,
+    DEFAULT_SDXL_CKPT,
+    DEFAULT_SDXL_HEIGHT,
+    DEFAULT_SDXL_SAMPLER,
+    DEFAULT_SDXL_SCHEDULER,
+    DEFAULT_SDXL_STEPS,
+    DEFAULT_SDXL_WIDTH,
+    PROJECTS_DIR,
+)
 from plepa_engine.services.config_service import DEFAULT_CONFIG, default_config_service
 from plepa_gui.components.header import render_header
 
@@ -21,10 +32,10 @@ def render_settings_page() -> None:
 
     available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
     if not available_rosters:
-        available_rosters = ["don", "default"]
+        available_rosters = [DEFAULT_ROSTER]
 
     # ComfyUI 실시간 모델 목록 조회 (체크포인트, GGUF UNet, 업스케일러 등)
-    comfy_client = ComfyClient(host=config.get("comfy_host", "127.0.0.1:8188"))
+    comfy_client = ComfyClient(host=config.get("comfy_host", COMFY_HOST))
     discovered_models = comfy_client.get_available_models()
 
     def get_select_options(discovered: list, current_val: str) -> list:
@@ -36,7 +47,7 @@ def render_settings_page() -> None:
     # 폼 상태 바인딩
     form = dict(config)
 
-    ckpt_options = get_select_options(discovered_models.get("checkpoints", []), form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"))
+    ckpt_options = get_select_options(discovered_models.get("checkpoints", []), form.get("sdxl_ckpt", DEFAULT_SDXL_CKPT))
     upscaler_options = get_select_options(discovered_models.get("upscalers", []), form.get("upscaler", "4x-UltraSharp.pth"))
 
     with ui.column().classes("w-full max-w-5xl mx-auto p-6 gap-6"):
@@ -73,7 +84,7 @@ def render_settings_page() -> None:
 
                 ui.select(
                     options=available_rosters,
-                    value=form.get("default_roster", "campus"),
+                    value=form.get("default_roster", DEFAULT_ROSTER),
                     label="기본 로스터",
                     on_change=lambda e: form.update({"default_roster": e.value})
                 ).props("outlined dark dense options-dense").classes("w-40")
@@ -94,15 +105,15 @@ def render_settings_page() -> None:
 
                 def apply_unholy():
                     form.update({
-                        "sdxl_ckpt": "unholyDesireMixSinister_v90.safetensors",
-                        "sdxl_width": 832,
-                        "sdxl_height": 1216,
-                        "sdxl_steps": 30,
-                        "sdxl_cfg": 5.0,
-                        "sdxl_sampler": "dpmpp_2m",
-                        "sdxl_scheduler": "karras",
+                        "sdxl_ckpt": DEFAULT_SDXL_CKPT,
+                        "sdxl_width": DEFAULT_SDXL_WIDTH,
+                        "sdxl_height": DEFAULT_SDXL_HEIGHT,
+                        "sdxl_steps": DEFAULT_SDXL_STEPS,
+                        "sdxl_cfg": DEFAULT_SDXL_CFG,
+                        "sdxl_sampler": DEFAULT_SDXL_SAMPLER,
+                        "sdxl_scheduler": DEFAULT_SDXL_SCHEDULER,
                     })
-                    ui.notify("🔥 Unholy Desire v9.0 프로필 적용 완료 (832x1216, CFG 5.0, 30스텝)", type="positive")
+                    ui.notify(f"🔥 Unholy Desire v9.0 프로필 적용 완료 ({DEFAULT_SDXL_WIDTH}x{DEFAULT_SDXL_HEIGHT}, CFG {DEFAULT_SDXL_CFG}, {DEFAULT_SDXL_STEPS}스텝)", type="positive")
                     ui.navigate.reload()
 
                 def apply_wai():
@@ -120,7 +131,7 @@ def render_settings_page() -> None:
 
                 ui.button("🔥 Unholy Desire v9.0 (기본)", icon="bolt", on_click=apply_unholy).props(
                     "unelevated dense size=xs color=emerald-600 text-white font-bold"
-                ).tooltip("832x1216 | 30스텝 | CFG 5.0 | dpmpp_2m karras")
+                ).tooltip(f"{DEFAULT_SDXL_WIDTH}x{DEFAULT_SDXL_HEIGHT} | {DEFAULT_SDXL_STEPS}스텝 | CFG {DEFAULT_SDXL_CFG} | {DEFAULT_SDXL_SAMPLER} {DEFAULT_SDXL_SCHEDULER}")
                 ui.button("✨ WAI-Illustrious v16", icon="auto_awesome", on_click=apply_wai).props(
                     "unelevated dense size=xs color=indigo-600 text-white font-bold"
                 ).tooltip("896x1152 | 28스텝 | CFG 6.0 | euler_ancestral normal")
@@ -129,26 +140,26 @@ def render_settings_page() -> None:
                 if ckpt_options:
                     ui.select(
                         options=ckpt_options,
-                        value=form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
+                        value=form.get("sdxl_ckpt", DEFAULT_SDXL_CKPT),
                         label="SDXL 체크포인트 모델 선택 (models/checkpoints)",
                         on_change=lambda e: form.update({"sdxl_ckpt": e.value})
                     ).props("outlined dark dense options-dense use-input new-value-mode=add-unique").classes("w-full").tooltip("드롭다운에서 선택하거나 직접 입력할 수 있습니다.")
                 else:
                     ui.input(
                         "SDXL 체크포인트 모델명 (확장자 포함)",
-                        value=form.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
+                        value=form.get("sdxl_ckpt", DEFAULT_SDXL_CKPT),
                         on_change=lambda e: form.update({"sdxl_ckpt": e.value})
                     ).props("outlined dark dense").classes("w-full")
 
                 with ui.row().classes("w-full gap-4"):
-                    ui.number("기본 가로 해상도 (width)", value=form.get("sdxl_width", 832), on_change=lambda e: form.update({"sdxl_width": int(e.value) if e.value is not None else 832})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("기본 세로 해상도 (height)", value=form.get("sdxl_height", 1216), on_change=lambda e: form.update({"sdxl_height": int(e.value) if e.value is not None else 1216})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("샘플링 스텝 수 (steps)", value=form.get("sdxl_steps", 30), on_change=lambda e: form.update({"sdxl_steps": int(e.value) if e.value is not None else 30})).props("outlined dark dense").classes("w-1/4")
-                    ui.number("CFG 스케일 (cfg)", value=form.get("sdxl_cfg", 5.0), step=0.1, on_change=lambda e: form.update({"sdxl_cfg": float(e.value) if e.value is not None else 5.0})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("기본 가로 해상도 (width)", value=form.get("sdxl_width", DEFAULT_SDXL_WIDTH), on_change=lambda e: form.update({"sdxl_width": int(e.value) if e.value is not None else DEFAULT_SDXL_WIDTH})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("기본 세로 해상도 (height)", value=form.get("sdxl_height", DEFAULT_SDXL_HEIGHT), on_change=lambda e: form.update({"sdxl_height": int(e.value) if e.value is not None else DEFAULT_SDXL_HEIGHT})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("샘플링 스텝 수 (steps)", value=form.get("sdxl_steps", DEFAULT_SDXL_STEPS), on_change=lambda e: form.update({"sdxl_steps": int(e.value) if e.value is not None else DEFAULT_SDXL_STEPS})).props("outlined dark dense").classes("w-1/4")
+                    ui.number("CFG 스케일 (cfg)", value=form.get("sdxl_cfg", DEFAULT_SDXL_CFG), step=0.1, on_change=lambda e: form.update({"sdxl_cfg": float(e.value) if e.value is not None else DEFAULT_SDXL_CFG})).props("outlined dark dense").classes("w-1/4")
 
                 with ui.row().classes("w-full gap-4"):
-                    ui.input("샘플러 (sampler)", value=form.get("sdxl_sampler", "dpmpp_2m"), on_change=lambda e: form.update({"sdxl_sampler": e.value})).props("outlined dark dense").classes("w-1/2")
-                    ui.input("스케줄러 (scheduler)", value=form.get("sdxl_scheduler", "karras"), on_change=lambda e: form.update({"sdxl_scheduler": e.value})).props("outlined dark dense").classes("w-1/2")
+                    ui.input("샘플러 (sampler)", value=form.get("sdxl_sampler", DEFAULT_SDXL_SAMPLER), on_change=lambda e: form.update({"sdxl_sampler": e.value})).props("outlined dark dense").classes("w-1/2")
+                    ui.input("스케줄러 (scheduler)", value=form.get("sdxl_scheduler", DEFAULT_SDXL_SCHEDULER), on_change=lambda e: form.update({"sdxl_scheduler": e.value})).props("outlined dark dense").classes("w-1/2")
 
             # 4. 보정 및 업스케일러
             ui.label("✨ AI 보정 및 업스케일러").classes("text-sm font-bold text-indigo-400 mt-4 mb-2")

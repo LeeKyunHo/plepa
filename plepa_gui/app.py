@@ -7,8 +7,10 @@ plepa_gui.app
 from __future__ import annotations
 
 import argparse
+import html
 import sys
 from pathlib import Path
+from typing import Optional
 
 # 루트 디렉터리를 sys.path에 추가
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -37,7 +39,9 @@ mimetypes.add_type("image/jpeg", ".jpeg")
 
 from fastapi.responses import HTMLResponse
 from nicegui import app, ui
+from plepa_engine.config import PROJECTS_DIR
 from plepa_gui.api_routes import api_router
+from plepa_gui.components.header import get_active_roster
 from plepa_gui.pages.backgrounds import render_backgrounds_page
 from plepa_gui.pages.characters import render_characters_page
 from plepa_gui.pages.gallery import render_gallery_page
@@ -49,7 +53,8 @@ from plepa_gui.pages.settings import render_settings_page
 
 
 def setup_routes():
-    """페이지 라우트 및 REST API 등록."""
+    """페이지 라우트, 정적 리소스 마운트 및 REST API 등록."""
+    app.add_static_files("/projects_static", str(PROJECTS_DIR))
     app.include_router(api_router)
     @ui.page("/")
     def index():
@@ -88,9 +93,10 @@ def setup_routes():
 
     @app.get("/mobile", response_class=HTMLResponse)
     @app.get("/m", response_class=HTMLResponse)
-    def api_mobile_viewer():
+    def api_mobile_viewer(roster: Optional[str] = None):
         """스마트폰 전용 무경량 고속 터치 스와이프 뷰어 (Vue/Quasar 미로드, 덮어쓰기 버그 원천 차단)."""
-        return HTMLResponse(content=generate_mobile_viewer_html("campus"))
+        target_roster = roster or get_active_roster()
+        return HTMLResponse(content=generate_mobile_viewer_html(target_roster))
 
     @app.get("/otoko")
     @app.get("/o")
@@ -125,10 +131,17 @@ def setup_routes():
             function toggleZoom(el) { el.classList.toggle('zoomed'); }
         </script>
         """)
+        safe_src = src.strip()
+        is_allowed_src = safe_src.startswith("/projects_static/") and ".." not in safe_src
         with ui.column().classes("w-full min-h-screen items-center justify-center p-2 gap-2"):
             if name:
                 ui.label(name).classes("text-xs text-slate-400 font-mono")
-            ui.html(f'<img src="{src}" alt="{name}" class="img-stage" onclick="toggleZoom(this)" title="클릭하여 확대/축소 토글" />')
+            if is_allowed_src:
+                escaped_src = html.escape(safe_src, quote=True)
+                escaped_name = html.escape(name, quote=True)
+                ui.html(f'<img src="{escaped_src}" alt="{escaped_name}" class="img-stage" onclick="toggleZoom(this)" title="클릭하여 확대/축소 토글" />')
+            else:
+                ui.label("유효하지 않은 이미지 경로입니다.").classes("text-xs text-rose-400")
 
 
 setup_routes()

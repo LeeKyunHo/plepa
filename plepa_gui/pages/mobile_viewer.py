@@ -11,40 +11,48 @@ plepa_gui.pages.mobile_viewer
 
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import urllib.parse
 
 from fastapi.responses import HTMLResponse
 from nicegui import app, ui
-from plepa_engine.config import PROJECTS_DIR
+from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
+from plepa_engine.services.character_service import default_character_service
+from plepa_gui.components.header import get_active_roster
 
 
-def get_mobile_gallery_data(roster: str = "campus") -> Dict[str, Any]:
-    """모바일 갤러리용 에셋 메타데이터 수집."""
-    assets_dir = PROJECTS_DIR / roster / "assets"
+def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
+    """모바일 갤러리용 에셋 메타데이터 수집 (로스터 캐릭터 동적 로드)."""
+    target_roster = (roster or get_active_roster() or DEFAULT_ROSTER).strip()
+    assets_dir = PROJECTS_DIR / target_roster / "assets"
     if not assets_dir.is_dir():
-        return {"items": [], "chars": [], "total_missing": 0}
+        return {"items": [], "chars": [], "total_missing": 0, "roster": target_roster}
 
-    chars = ["aya", "har", "kao", "mai", "shz", "yur"]
-    recent_codes = {"112", "115", "131", "060", "064", "065", "066", "067", "068", "069", "071"}
+    char_entries = default_character_service.list_characters(target_roster)
+    char_defs = [
+        {"id": c.prefix, "name": f"{c.name} ({c.prefix})", "short_name": c.name}
+        for _, c, _ in char_entries
+    ]
+    if not char_defs:
+        # 캐릭터 JSON이 없어도 assets 하위 디렉터리에서 자동 탐색
+        discovered_dirs = sorted(
+            d.name for d in assets_dir.iterdir()
+            if d.is_dir() and not d.name.endswith("_origin") and not d.name.startswith("_")
+        )
+        char_defs = [{"id": pfx, "name": pfx, "short_name": pfx} for pfx in discovered_dirs]
 
-    char_names = {
-        "aya": "아야메 (Aya)",
-        "har": "하루 (Haru)",
-        "kao": "카오루 (Kaoru)",
-        "mai": "마이 (Mai)",
-        "shz": "시즈쿠 (Shizuku)",
-        "yur": "유리카 (Yurika)",
-    }
-
+    char_name_map = {c["id"]: c["name"] for c in char_defs}
     now_ts = time.time()
-    today_start = now_ts - (24 * 3600)  # 최근 24시간 이내
+    today_start = now_ts - (24 * 3600)      # 최근 24시간 이내
+    recent_start = now_ts - (7 * 24 * 3600)  # 최근 7일 이내
 
     items = []
-    for char in chars:
+    for c_info in char_defs:
+        char = c_info["id"]
         cdir = assets_dir / char
         if not cdir.is_dir():
             continue
@@ -59,12 +67,12 @@ def get_mobile_gallery_data(roster: str = "campus") -> Dict[str, Any]:
             web_url = "/projects_static/" + urllib.parse.quote(rel_to_projects, safe="/")
 
             mtime = f.stat().st_mtime
-            is_recent_mod = code in recent_codes
             is_newly_generated = mtime >= today_start
+            is_recent_mod = mtime >= recent_start
 
             items.append({
                 "char": char,
-                "char_name": char_names.get(char, char),
+                "char_name": char_name_map.get(char, char),
                 "code": code,
                 "label": label,
                 "filename": f.name,
@@ -76,21 +84,28 @@ def get_mobile_gallery_data(roster: str = "campus") -> Dict[str, Any]:
             })
 
     from plepa_engine.services.asset_service import default_asset_service
-    missing_map = default_asset_service.get_missing_poses_by_character(roster)
+    missing_map = default_asset_service.get_missing_poses_by_character(target_roster)
     total_missing = sum(len(v) for v in missing_map.values())
 
     return {
         "items": items,
-        "chars": [{"id": c, "name": char_names.get(c, c)} for c in chars],
+        "chars": char_defs,
         "total_missing": total_missing,
-        "roster": roster,
+        "roster": target_roster,
     }
 
 
-def generate_mobile_viewer_html(roster: str = "campus") -> str:
+def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
     """순수 독립형 모바일 갤러리 HTML 문서 생성."""
     data = get_mobile_gallery_data(roster)
-    data_json = json.dumps(data, ensure_ascii=False)
+    data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    recent_count = sum(1 for item in data["items"] if item.get("is_recent"))
+    initial_mode = "recent" if recent_count > 0 else "all"
+    char_buttons_html = "\n".join(
+        f'                <button class="btn-chip" id="char_{html.escape(c["id"], quote=True)}" '
+        f'onclick="setCharFilter({json.dumps(c["id"])})">{html.escape(c.get("short_name", c["id"]))}</button>'
+        for c in data.get("chars", [])
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -225,17 +240,12 @@ def generate_mobile_viewer_html(roster: str = "campus") -> str:
             </div>
             <!-- Filter Chips -->
             <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
-                <button class="btn-chip active" id="chipRecent" onclick="setMode('recent')">✨ 최근수정본 (66)</button>
+                <button class="btn-chip {'active' if initial_mode == 'recent' else ''}" id="chipRecent" onclick="setMode('recent')">✨ 최근수정본 ({recent_count})</button>
                 <button class="btn-chip" id="chipNew" onclick="setMode('new')">🆕 방금생성됨</button>
-                <button class="btn-chip" id="chipAll" onclick="setMode('all')">📂 전체</button>
+                <button class="btn-chip {'active' if initial_mode == 'all' else ''}" id="chipAll" onclick="setMode('all')">📂 전체</button>
                 <div style="width: 1px; background: rgba(71,85,105,0.4); margin: 0 4px;"></div>
                 <button class="btn-chip" id="char_all" onclick="setCharFilter('all')">전체캐릭</button>
-                <button class="btn-chip" id="char_aya" onclick="setCharFilter('aya')">아야메</button>
-                <button class="btn-chip" id="char_har" onclick="setCharFilter('har')">하루</button>
-                <button class="btn-chip" id="char_kao" onclick="setCharFilter('kao')">카오루</button>
-                <button class="btn-chip" id="char_mai" onclick="setCharFilter('mai')">마이</button>
-                <button class="btn-chip" id="char_shz" onclick="setCharFilter('shz')">시즈쿠</button>
-                <button class="btn-chip" id="char_yur" onclick="setCharFilter('yur')">유리카</button>
+{char_buttons_html}
             </div>
         </div>
 
@@ -276,7 +286,7 @@ def generate_mobile_viewer_html(roster: str = "campus") -> str:
 
     <script>
         const rawData = {data_json};
-        let currentMode = 'recent'; // 'recent', 'new', 'all'
+        let currentMode = '{initial_mode}'; // 'recent', 'new', 'all'
         let currentChar = 'all';
         let filteredItems = [];
         let currentIndex = 0;
@@ -321,7 +331,8 @@ def generate_mobile_viewer_html(roster: str = "campus") -> str:
 
         function setCharFilter(charId) {{
             currentChar = charId;
-            ['all', 'aya', 'har', 'kao', 'mai', 'shz', 'yur'].forEach(c => {{
+            const charIds = ['all'].concat((rawData.chars || []).map(c => c.id));
+            charIds.forEach(c => {{
                 const el = document.getElementById('char_' + c);
                 if (el) el.classList.toggle('active', c === charId);
             }});
@@ -529,7 +540,7 @@ def generate_mobile_viewer_html(roster: str = "campus") -> str:
 </html>"""
 
 
-def render_mobile_viewer_page() -> None:
+def render_mobile_viewer_page(roster: Optional[str] = None) -> None:
     """하위 호환용 NiceGUI 페이지 래퍼."""
-    html_content = generate_mobile_viewer_html("campus")
+    html_content = generate_mobile_viewer_html(roster or get_active_roster())
     ui.html(html_content)

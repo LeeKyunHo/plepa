@@ -15,7 +15,7 @@ from plepa_engine.services.health_service import (
 )
 from plepa_engine.services.job_manager import global_job_manager
 
-_ACTIVE_ROSTER = {"value": "campus"}
+_ACTIVE_ROSTER = {"value": DEFAULT_ROSTER}
 
 
 def get_available_rosters() -> List[str]:
@@ -29,8 +29,8 @@ def get_active_roster() -> str:
     available = get_available_rosters()
     if _ACTIVE_ROSTER["value"] in available:
         return _ACTIVE_ROSTER["value"]
-    if "campus" in available:
-        _ACTIVE_ROSTER["value"] = "campus"
+    if DEFAULT_ROSTER in available:
+        _ACTIVE_ROSTER["value"] = DEFAULT_ROSTER
     elif available:
         _ACTIVE_ROSTER["value"] = available[0]
     return _ACTIVE_ROSTER["value"]

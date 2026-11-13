@@ -12,7 +12,17 @@ from typing import List, Optional
 
 from nicegui import run, ui
 from plepa_engine.comfy_client import ComfyClient
-from plepa_engine.config import DEFAULT_ENGINE, DEFAULT_ROSTER, PROJECTS_DIR
+from plepa_engine.config import (
+    COMFY_HOST,
+    DEFAULT_ENGINE,
+    DEFAULT_ROSTER,
+    DEFAULT_SDXL_CFG,
+    DEFAULT_SDXL_CKPT,
+    DEFAULT_SDXL_HEIGHT,
+    DEFAULT_SDXL_STEPS,
+    DEFAULT_SDXL_WIDTH,
+    PROJECTS_DIR,
+)
 from plepa_engine.models import GenerationResult
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
@@ -33,7 +43,7 @@ def render_generate_page() -> None:
     render_header("/generate")
 
     conf = default_config_service.get_config()
-    comfy_client = ComfyClient(host=conf.get("comfy_host", "127.0.0.1:8188"))
+    comfy_client = ComfyClient(host=conf.get("comfy_host", COMFY_HOST))
     discovered_models = comfy_client.get_available_models()
 
     def get_select_options(discovered: list, current_val: str) -> list:
@@ -42,7 +52,7 @@ def render_generate_page() -> None:
             opts.insert(0, current_val)
         return opts
 
-    ckpt_options = get_select_options(discovered_models.get("checkpoints", []), conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"))
+    ckpt_options = get_select_options(discovered_models.get("checkpoints", []), conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT))
 
     def get_bg_options(r: str, eng: str = "sdxl") -> dict:
         bgs = default_background_service.get_backgrounds(r, engine=eng)
@@ -90,8 +100,8 @@ def render_generate_page() -> None:
         "pose_selection_mode": "set",  # 'set' or 'custom'
         "selected_pose_set": "sample10",
         "custom_pose_expr": "000..019",
-        "engine": "sdxl",
-        "sdxl_ckpt": conf.get("sdxl_ckpt", "unholyDesireMixSinister_v90.safetensors"),
+        "engine": DEFAULT_ENGINE,
+        "sdxl_ckpt": conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT),
         "bg_preset": "auto",
         "is_running": False,
         "cancel_requested": False,
@@ -261,14 +271,6 @@ def render_generate_page() -> None:
             ui.notify("선택 해제 완료", type="info")
         refresh_char_checkboxes(keep_selection=True)
 
-    def select_all_80_poses():
-        state["pose_selection_mode"] = "set"
-        state["selected_pose_set"] = "all_80"
-        mode_set_btn.value = "포즈 세트 사용"
-        on_pose_mode_changed("포즈 세트 사용")
-        auto_match_background()
-        ui.notify("⭐ 기본 80종 포즈 (000~159) 선택 완료!", type="positive")
-
     def select_genit_set(set_id: str, label_name: str):
         state["pose_selection_mode"] = "set"
         state["selected_pose_set"] = set_id
@@ -336,10 +338,10 @@ def render_generate_page() -> None:
 
     def update_config_badge():
         conf = default_config_service.get_config()
-        cfg_v = conf.get("sdxl_cfg", 5.0)
-        steps_v = conf.get("sdxl_steps", 30)
-        w_v = conf.get("sdxl_width", 832)
-        h_v = conf.get("sdxl_height", 1216)
+        cfg_v = conf.get("sdxl_cfg", DEFAULT_SDXL_CFG)
+        steps_v = conf.get("sdxl_steps", DEFAULT_SDXL_STEPS)
+        w_v = conf.get("sdxl_width", DEFAULT_SDXL_WIDTH)
+        h_v = conf.get("sdxl_height", DEFAULT_SDXL_HEIGHT)
         config_badge.set_text(f"⚙️ SDXL 설정: CFG {cfg_v} | {steps_v}스텝 | {w_v}x{h_v}")
 
     def render_model_selector():
@@ -354,6 +356,13 @@ def render_generate_page() -> None:
             ).props("dense outlined dark options-dense use-input new-value-mode=add-unique").classes("w-full text-xs").tooltip("ComfyUI models/checkpoints 폴더 내 모델을 선택하거나 직접 입력합니다.")
         update_config_badge()
 
+    def _on_char_checkbox_change(prefix: str, checked: bool) -> None:
+        if checked:
+            if prefix not in state["selected_chars"]:
+                state["selected_chars"].append(prefix)
+        elif prefix in state["selected_chars"]:
+            state["selected_chars"].remove(prefix)
+
     def refresh_char_checkboxes(keep_selection: bool = False):
         chars_box.clear()
         chars = default_character_service.list_characters(roster=state["roster"])
@@ -363,17 +372,10 @@ def render_generate_page() -> None:
         with chars_box:
             for _, c, _ in chars:
                 is_chk = c.prefix in state["selected_chars"]
-
-                def toggle_char(prefix=c.prefix):
-                    if prefix in state["selected_chars"]:
-                        state["selected_chars"].remove(prefix)
-                    else:
-                        state["selected_chars"].append(prefix)
-
                 ui.checkbox(
                     f"{c.name} ({c.prefix})",
                     value=is_chk,
-                    on_change=lambda e, p=c.prefix: (state["selected_chars"].append(p) if e.value else state["selected_chars"].remove(p))
+                    on_change=lambda e, p=c.prefix: _on_char_checkbox_change(p, bool(e.value))
                 ).props("dark dense").classes("text-xs text-slate-200")
 
     def on_pose_set_selected(new_set_id: str):
@@ -386,7 +388,6 @@ def render_generate_page() -> None:
         set_options = {}
         for s in sets:
             set_options[s.id] = f"{s.name} ({len(s.codes)}종)"
-        set_options["all_80"] = "⭐ 전체 80종 포즈 (000~159) [레거시]"
 
         if state["selected_pose_set"] not in set_options and set_options:
             state["selected_pose_set"] = next(iter(set_options.keys()))
@@ -424,15 +425,12 @@ def render_generate_page() -> None:
 
         # 포즈 표현식 산출
         if state["pose_selection_mode"] == "set":
-            if state["selected_pose_set"] == "all_80":
-                pose_expr = "all"
-            else:
-                sets = default_pose_service.load_pose_sets()
-                target_set = next((s for s in sets if s.id == state["selected_pose_set"]), None)
-                if not target_set or not target_set.codes:
-                    ui.notify("선택된 포즈 세트에 포즈가 없습니다.", type="warning")
-                    return
-                pose_expr = ",".join(target_set.codes)
+            sets = default_pose_service.load_pose_sets()
+            target_set = next((s for s in sets if s.id == state["selected_pose_set"]), None)
+            if not target_set or not target_set.codes:
+                ui.notify("선택된 포즈 세트에 포즈가 없습니다.", type="warning")
+                return
+            pose_expr = ",".join(target_set.codes)
         else:
             pose_expr = state["custom_pose_expr"].strip()
             if not pose_expr:

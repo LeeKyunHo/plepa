@@ -1,35 +1,92 @@
-import os
 import glob
+import html
+import os
+import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
+from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.pose_service import default_pose_service
+
 app = FastAPI(title="Plepa Realtime Mobile Gallery")
 
-BENCH1_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark"
-BENCH2_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark_v2"
-BENCH_RATATATA_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "artist_benchmark_ratatata"
-BENCH_RATATATA_DIR.mkdir(parents=True, exist_ok=True)
-if BENCH1_DIR.exists():
+
+def _resolve_active_roster() -> str:
+    env_roster = os.environ.get("PLEPA_MOBILE_ROSTER", "").strip()
+    if env_roster:
+        return env_roster
+    if (PROJECTS_DIR / DEFAULT_ROSTER / "assets").is_dir():
+        return DEFAULT_ROSTER
+    for r in default_character_service.list_rosters():
+        if (PROJECTS_DIR / r / "assets").is_dir():
+            return r
+    return DEFAULT_ROSTER
+
+
+ACTIVE_ROSTER = _resolve_active_roster()
+BENCH1_DIR = PROJECTS_DIR / ACTIVE_ROSTER / "artist_benchmark"
+BENCH2_DIR = PROJECTS_DIR / ACTIVE_ROSTER / "artist_benchmark_v2"
+BENCH_RATATATA_DIR = PROJECTS_DIR / ACTIVE_ROSTER / "artist_benchmark_ratatata"
+if BENCH1_DIR.is_dir():
     app.mount("/bench1", StaticFiles(directory=BENCH1_DIR, html=True), name="bench1")
-if BENCH2_DIR.exists():
+if BENCH2_DIR.is_dir():
     app.mount("/bench2", StaticFiles(directory=BENCH2_DIR, html=True), name="bench2")
-if BENCH_RATATATA_DIR.exists():
+if BENCH_RATATATA_DIR.is_dir():
     app.mount("/bench_ratatata", StaticFiles(directory=BENCH_RATATATA_DIR, html=True), name="bench_ratatata")
 
-ASSETS_DIR = Path(__file__).resolve().parent.parent / "projects" / "ykn" / "assets"
-TOTAL_TARGET = 476
+ASSETS_DIR = PROJECTS_DIR / ACTIVE_ROSTER / "assets"
 
-CHAR_NAMES = {
+LEGACY_CHAR_NAMES: Dict[str, str] = {
     "hay": "설하율 (4녀)",
     "ser": "설세린 (2녀)",
     "sia": "설시아 (3녀)",
-    "yua": "설유아 (1녀)"
+    "yua": "설유아 (1녀)",
 }
+
+
+def _load_char_names(roster: str) -> Dict[str, str]:
+    names: Dict[str, str] = {}
+    try:
+        for _, c, _ in default_character_service.list_characters(roster):
+            code = str(getattr(c, "prefix", "") or "").lower()
+            if not code:
+                continue
+            if code in LEGACY_CHAR_NAMES:
+                names[code] = LEGACY_CHAR_NAMES[code]
+            else:
+                char_name = str(getattr(c, "name", "") or "").strip()
+                names[code] = f"{char_name} ({code})" if char_name and char_name != code else code.upper()
+    except Exception:
+        pass
+    if not names and roster == "ykn":
+        return dict(LEGACY_CHAR_NAMES)
+    return names
+
+
+CHAR_NAMES = _load_char_names(ACTIVE_ROSTER)
+
+
+def _calc_total_target(roster: str, char_count: int) -> int:
+    try:
+        pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
+        if pose_db and char_count > 0:
+            return char_count * len(pose_db)
+    except Exception:
+        pass
+    return max(char_count * 100, 1)
+
+
+TOTAL_TARGET = _calc_total_target(ACTIVE_ROSTER, len(CHAR_NAMES))
 
 @app.get("/api/status")
 def get_status(char: Optional[str] = None):
@@ -38,7 +95,8 @@ def get_status(char: Optional[str] = None):
     all_files = glob.glob(pattern, recursive=True)
     
     items = []
-    char_counts = {c: 0 for c in CHAR_NAMES}
+    char_names = dict(CHAR_NAMES) if CHAR_NAMES else _load_char_names(ACTIVE_ROSTER)
+    char_counts = {c: 0 for c in char_names}
     
     for f in all_files:
         if "_origin" in f or "새 폴더" in f or "ckpt_" in f:
@@ -49,8 +107,10 @@ def get_status(char: Optional[str] = None):
         if not parts:
             continue
         c_code = parts[0].lower()
-        if c_code in char_counts:
-            char_counts[c_code] += 1
+        if c_code not in char_counts:
+            char_counts[c_code] = 0
+            char_names.setdefault(c_code, LEGACY_CHAR_NAMES.get(c_code, c_code.upper()))
+        char_counts[c_code] += 1
             
         mtime = os.path.getmtime(f)
         
@@ -72,7 +132,7 @@ def get_status(char: Optional[str] = None):
         items.append({
             "filename": filename,
             "char": c_code,
-            "char_name": CHAR_NAMES.get(c_code, c_code),
+            "char_name": char_names.get(c_code, c_code),
             "display_name": display_name,
             "subfolder": parts[1] if len(parts) > 2 else "",
             "url": f"/asset/{rel.as_posix()}",
@@ -84,31 +144,49 @@ def get_status(char: Optional[str] = None):
     items.sort(key=lambda x: x["mtime"], reverse=True)
     
     total_count = sum(char_counts.values())
-    progress_pct = round((total_count / TOTAL_TARGET) * 100, 1)
+    target_count = _calc_total_target(ACTIVE_ROSTER, len(char_counts)) if TOTAL_TARGET <= 1 else TOTAL_TARGET
+    progress_pct = round((total_count / max(target_count, 1)) * 100, 1)
     
     return {
+        "roster": ACTIVE_ROSTER,
         "total_count": total_count,
-        "target": TOTAL_TARGET,
+        "target": target_count,
         "progress_pct": progress_pct,
+        "char_names": char_names,
         "char_counts": char_counts,
         "images": items
     }
 
 @app.get("/asset/{file_path:path}")
 def serve_asset(file_path: str):
-    target = ASSETS_DIR / file_path
-    if not target.exists():
+    try:
+        base_dir = ASSETS_DIR.resolve()
+        target = (base_dir / file_path).resolve()
+        if not target.is_relative_to(base_dir):
+            return HTMLResponse("Forbidden", status_code=403)
+    except Exception:
+        return HTMLResponse("Invalid Path", status_code=400)
+    if "_origin" in target.parts:
+        return HTMLResponse("Forbidden", status_code=403)
+    if not target.exists() or not target.is_file():
         return HTMLResponse("File Not Found", status_code=404)
     return FileResponse(target, media_type="image/webp")
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return """<!DOCTYPE html>
+    safe_roster = html.escape(ACTIVE_ROSTER.upper())
+    initial_tabs = ['<button class="tab-btn active" data-char="all">전체 (0)</button>']
+    for c_code, c_label in CHAR_NAMES.items():
+        initial_tabs.append(
+            f'<button class="tab-btn" data-char="{html.escape(c_code, quote=True)}">{html.escape(c_label)} (0)</button>'
+        )
+    tabs_markup = "\n            ".join(initial_tabs)
+    html_doc = """<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>플에파 YKN 실시간 모바일 갤러리</title>
+    <title>플에파 __ROSTER__ 실시간 모바일 갤러리</title>
     <style>
         :root {
             --bg-color: #0f1117;
@@ -336,7 +414,7 @@ def index():
     <header>
         <div class="header-top">
             <div class="header-title">
-                🌸 YKN 실시간 갤러리
+                🌸 __ROSTER__ 실시간 갤러리
                 <span class="live-badge">LIVE</span>
             </div>
             <div style="font-size: 11px; color: var(--text-sub);" id="last-update">대기 중...</div>
@@ -353,11 +431,7 @@ def index():
         </div>
 
         <div class="char-tabs" id="char-tabs">
-            <button class="tab-btn active" data-char="all">전체 (0)</button>
-            <button class="tab-btn" data-char="hay">설하율 (0)</button>
-            <button class="tab-btn" data-char="ser">설세린 (0)</button>
-            <button class="tab-btn" data-char="sia">설시아 (0)</button>
-            <button class="tab-btn" data-char="yua">설유아 (0)</button>
+            __TABS__
         </div>
     </header>
 
@@ -388,13 +462,33 @@ def index():
                 document.getElementById('progress-fill').style.width = `${Math.min(data.progress_pct, 100)}%`;
                 document.getElementById('last-update').innerText = new Date().toLocaleTimeString();
 
-                // Update Tab counts
-                const tabs = document.querySelectorAll('.tab-btn');
-                tabs[0].innerText = `전체 (${data.total_count})`;
-                tabs[1].innerText = `설하율 (${data.char_counts.hay || 0})`;
-                tabs[2].innerText = `설세린 (${data.char_counts.ser || 0})`;
-                tabs[3].innerText = `설시아 (${data.char_counts.sia || 0})`;
-                tabs[4].innerText = `설유아 (${data.char_counts.yua || 0})`;
+                // Update Tab counts dynamically
+                const tabContainer = document.getElementById('char-tabs');
+                const counts = data.char_counts || {};
+                const names = data.char_names || {};
+                const codes = Object.keys(counts);
+                if (tabContainer) {
+                    const existing = {};
+                    tabContainer.querySelectorAll('.tab-btn[data-char]').forEach(btn => {
+                        existing[btn.getAttribute('data-char')] = btn;
+                    });
+                    if (existing['all']) {
+                        existing['all'].innerText = `전체 (${data.total_count})`;
+                    }
+                    codes.forEach(code => {
+                        const label = names[code] || code.toUpperCase();
+                        const count = counts[code] || 0;
+                        let btn = existing[code];
+                        if (!btn) {
+                            btn = document.createElement('button');
+                            btn.className = 'tab-btn';
+                            btn.setAttribute('data-char', code);
+                            if (currentChar === code) btn.classList.add('active');
+                            tabContainer.appendChild(btn);
+                        }
+                        btn.innerText = `${label} (${count})`;
+                    });
+                }
 
                 if (data.total_count > lastCount && !isFirstLoad) {
                     showToast(`새 이미지 추가됨! (+${data.total_count - lastCount}장)`);
@@ -408,6 +502,15 @@ def index():
             }
         }
 
+        function escapeHtml(val) {
+            return String(val ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function renderGrid(images) {
             const grid = document.getElementById('grid');
             if (images.length === 0) {
@@ -415,15 +518,15 @@ def index():
                 return;
             }
             grid.innerHTML = images.map(img => `
-                <div class="card" onclick="openModal('${img.url}', '${img.display_name} - ${img.char_name}')">
+                <div class="card" data-url="${escapeHtml(img.url)}" data-title="${escapeHtml(img.display_name + ' - ' + img.char_name)}" onclick="openModal(this.dataset.url, this.dataset.title)">
                     <div class="card-img-wrap">
-                        <img class="card-img" src="${img.url}" loading="lazy" alt="${img.display_name}">
+                        <img class="card-img" src="${escapeHtml(img.url)}" loading="lazy" alt="${escapeHtml(img.display_name)}">
                     </div>
                     <div class="card-info">
-                        <div class="card-title">${img.display_name}</div>
+                        <div class="card-title">${escapeHtml(img.display_name)}</div>
                         <div class="card-meta">
-                            <span class="tag-char">${img.char.toUpperCase()}</span>
-                            <span>${img.mtime_str}</span>
+                            <span class="tag-char">${escapeHtml((img.char || '').toUpperCase())}</span>
+                            <span>${escapeHtml(img.mtime_str)}</span>
                         </div>
                     </div>
                 </div>
@@ -438,8 +541,9 @@ def index():
         }
 
         function openModal(url, title) {
+            if (!url || !String(url).startsWith('/asset/')) return;
             document.getElementById('modal-img').src = url;
-            document.getElementById('modal-info').innerText = title;
+            document.getElementById('modal-info').innerText = title || '';
             document.getElementById('modal').classList.add('open');
         }
 
@@ -463,6 +567,8 @@ def index():
     </script>
 </body>
 </html>"""
+    return html_doc.replace("__ROSTER__", safe_roster).replace("__TABS__", tabs_markup)
 
 if __name__ == "__main__":
+    BENCH_RATATATA_DIR.mkdir(parents=True, exist_ok=True)
     uvicorn.run(app, host="0.0.0.0", port=8080, log_level="warning")

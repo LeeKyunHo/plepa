@@ -21,41 +21,179 @@ PLEPA 4대 체위 통계적 벤치마크 에셋 모바일 전용 인터랙티브
 
 
 
+import asyncio
+import base64
 import glob
+import hmac
+import html as html_lib
+import io
 import os
 import re
+import secrets
+import shutil
 import socket
 import subprocess
 import time
+import uuid
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from PIL import Image
 import uvicorn
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
+from plepa_engine.services.character_service import default_character_service
+
 BENCHMARK_DIR = ROOT / "output" / "benchmarks"
+INSPECT_BATCH = ROOT / "output" / "inspection_batch"
+ARTIST_BENCH1 = PROJECTS_DIR / "ykn" / "artist_benchmark"
+ARTIST_BENCH2 = PROJECTS_DIR / "ykn" / "artist_benchmark_v2"
+ARTIST_RATATATA = PROJECTS_DIR / "ykn" / "artist_benchmark_ratatata"
+HYBRID_BENCH = PROJECTS_DIR / "ykn" / "artist_benchmark_hybrid"
+C_TUNING_BENCH = PROJECTS_DIR / "ykn" / "artist_benchmark_c_tuning"
+CAMPUS_BENCH = PROJECTS_DIR / "campus" / "artist_benchmark_c1_c2"
 CF = ROOT / "cloudflared.exe"
 PORT = 8085
+ACCESS_TOKEN = os.environ.get("PLEPA_MOBILE_TOKEN", "").strip() or secrets.token_urlsafe(24)
 
 app = FastAPI(title="Plepa Benchmark Mobile Gallery")
 
-import base64
-import io
-from pydantic import BaseModel
-from PIL import Image
+for _mount_path, _mount_dir, _mount_name, _allow_html in (
+    ("/static", BENCHMARK_DIR, "static", False),
+    ("/artist1", ARTIST_BENCH1, "artist1", True),
+    ("/artist2", ARTIST_BENCH2, "artist2", True),
+    ("/ratatata", ARTIST_RATATATA, "ratatata", True),
+    ("/hybrid", HYBRID_BENCH, "hybrid", True),
+    ("/c_tuning", C_TUNING_BENCH, "c_tuning", True),
+    ("/campus_bench", CAMPUS_BENCH, "campus_bench", True),
+    ("/inspect", INSPECT_BATCH, "inspect", True),
+):
+    if _mount_dir.is_dir():
+        app.mount(_mount_path, StaticFiles(directory=_mount_dir, html=_allow_html), name=_mount_name)
+
+
+@app.middleware("http")
+async def attach_token_cookie(request: Request, call_next):
+    response = await call_next(request)
+    q_token = request.query_params.get("token", "").strip()
+    if q_token and ACCESS_TOKEN and hmac.compare_digest(q_token, ACCESS_TOKEN):
+        is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+        response.set_cookie(
+            key="plepa_token",
+            value=ACCESS_TOKEN,
+            httponly=True,
+            samesite="lax",
+            secure=is_https,
+            path="/",
+        )
+    return response
+
+
+def _extract_request_token(request: Request) -> str:
+    header_tok = request.headers.get("X-Plepa-Token", "").strip()
+    if header_tok:
+        return header_tok
+    auth_header = request.headers.get("Authorization", "").strip()
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    return request.cookies.get("plepa_token", "").strip()
+
+
+def _require_auth(request: Request, check_origin: bool = False) -> None:
+    expected = ACCESS_TOKEN or ""
+    candidate = _extract_request_token(request)
+    if not expected or not candidate or not hmac.compare_digest(candidate, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized: missing or invalid access token")
+    if check_origin:
+        origin = request.headers.get("origin", "").strip()
+        if origin:
+            parsed = urlparse(origin)
+            host_header = request.headers.get("host", "").strip()
+            if parsed.netloc and host_header and parsed.netloc != host_header:
+                raise HTTPException(status_code=403, detail="Forbidden origin")
+
+
+def _resolve_safe_subpath(base_dir: Path, raw_path: str) -> tuple[str, Path]:
+    clean_path = raw_path.replace("\\", "/").lstrip("/")
+    parts = clean_path.split("/")
+    if not clean_path or any(part in ("", ".", "..") for part in parts):
+        raise HTTPException(status_code=403, detail="Invalid file path")
+    if "_origin" in parts:
+        raise HTTPException(status_code=403, detail="Forbidden path segment")
+    resolved_base = base_dir.resolve()
+    resolved_target = (resolved_base / clean_path).resolve()
+    if not resolved_target.is_relative_to(resolved_base):
+        raise HTTPException(status_code=403, detail="Path traversal rejected")
+    return clean_path, resolved_target
+
+
+def _atomic_save_webp(img: Image.Image, target_path: Path) -> None:
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = target_path.parent / f".{target_path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+    try:
+        img.save(tmp_path, "WEBP", quality=95)
+        os.replace(tmp_path, target_path)
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+
+def _atomic_copy_file(src_path: Path, target_path: Path) -> None:
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = target_path.parent / f".{target_path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+    try:
+        shutil.copy2(src_path, tmp_path)
+        os.replace(tmp_path, target_path)
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+
+def _list_all_rosters() -> List[str]:
+    rosters = list(default_character_service.list_rosters())
+    if PROJECTS_DIR.is_dir():
+        for d in sorted(PROJECTS_DIR.iterdir()):
+            if d.is_dir() and d.name not in rosters:
+                rosters.append(d.name)
+    return rosters
+
+
+def _resolve_char_roster(char_code: str) -> str:
+    target = char_code.lower()
+    for r in _list_all_rosters():
+        try:
+            chars = default_character_service.list_characters(r)
+            if any(str(getattr(c, "prefix", "")).lower() == target for _, c, _ in chars):
+                return r
+        except Exception:
+            continue
+    return DEFAULT_ROSTER
+
 
 class RetouchRequest(BaseModel):
     file_path: str
     image_base64: str
 
 @app.post("/api/retouch_censor")
-async def save_retouch(req: RetouchRequest):
+async def save_retouch(req: RetouchRequest, request: Request):
+    _require_auth(request, check_origin=True)
+    clean_path, target_path = _resolve_safe_subpath(INSPECT_BATCH, req.file_path)
     try:
-        clean_path = req.file_path.replace("\\", "/").lstrip("/")
-        target_path = INSPECT_BATCH / clean_path
         if not target_path.exists():
             return {"success": False, "error": f"File not found: {clean_path}"}
 
@@ -65,13 +203,11 @@ async def save_retouch(req: RetouchRequest):
         img_bytes = base64.b64decode(raw_b64)
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        img.save(target_path, "WEBP", quality=95)
+        _atomic_save_webp(img, target_path)
 
         # Step 3: 인간 검수 완료본을 Ground Truth(정답 세트)로 자동 아카이브
-        gt_dir = ROOT / "output" / "benchmarks" / "ground_truth" / target_path.parent.name
-        gt_dir.mkdir(parents=True, exist_ok=True)
-        img.save(gt_dir / target_path.name, "WEBP", quality=95)
+        gt_dir = BENCHMARK_DIR / "ground_truth" / target_path.parent.name
+        _atomic_save_webp(img, gt_dir / target_path.name)
 
         return {
             "success": True,
@@ -83,36 +219,402 @@ async def save_retouch(req: RetouchRequest):
         return {"success": False, "error": str(e)}
 
 
-# 정적 파일 서빙
-if BENCHMARK_DIR.exists():
-    app.mount("/static", StaticFiles(directory=BENCHMARK_DIR), name="static")
+class RestoreOriginRequest(BaseModel):
+    file_path: str
 
-ARTIST_BENCH1 = ROOT / "projects" / "ykn" / "artist_benchmark"
-ARTIST_BENCH2 = ROOT / "projects" / "ykn" / "artist_benchmark_v2"
-ARTIST_RATATATA = ROOT / "projects" / "ykn" / "artist_benchmark_ratatata"
 
-if ARTIST_BENCH1.exists():
-    app.mount("/artist1", StaticFiles(directory=ARTIST_BENCH1, html=True), name="artist1")
-if ARTIST_BENCH2.exists():
-    app.mount("/artist2", StaticFiles(directory=ARTIST_BENCH2, html=True), name="artist2")
-if ARTIST_RATATATA.exists():
-    app.mount("/ratatata", StaticFiles(directory=ARTIST_RATATATA, html=True), name="ratatata")
+@app.post("/api/restore_origin")
+async def restore_origin_endpoint(req: RestoreOriginRequest, request: Request):
+    """
+    검열 또는 덧칠된 에셋을 {char}_origin 폴더 내의 무검열 원본 이미지로 즉시 교체/복원합니다.
+    - 대상 1: output/inspection_batch/{char}/{subfolder}/{file}
+    - 대상 2: 동적 탐색된 로스터의 projects/{roster}/assets/{char}/{subfolder}/{file}
+    """
+    _require_auth(request, check_origin=True)
+    clean_path, target_inspect = _resolve_safe_subpath(INSPECT_BATCH, req.file_path)
+    try:
+        parts = clean_path.split("/")
+        if len(parts) < 3:
+            return {"success": False, "error": f"잘못된 파일 경로 형식입니다: {clean_path}"}
 
-HYBRID_BENCH = ROOT / "projects" / "ykn" / "artist_benchmark_hybrid"
-HYBRID_BENCH.mkdir(parents=True, exist_ok=True)
-app.mount("/hybrid", StaticFiles(directory=HYBRID_BENCH, html=True), name="hybrid")
+        c_code = parts[0]
+        subfolder = parts[1]
+        filename = parts[2]
 
-C_TUNING_BENCH = ROOT / "projects" / "ykn" / "artist_benchmark_c_tuning"
-C_TUNING_BENCH.mkdir(parents=True, exist_ok=True)
-app.mount("/c_tuning", StaticFiles(directory=C_TUNING_BENCH, html=True), name="c_tuning")
+        rosters = _list_all_rosters()
+        origin_candidates: List[Path] = []
+        for proj in rosters:
+            assets_base = (PROJECTS_DIR / proj / "assets").resolve()
+            origin_candidates.append((assets_base / f"{c_code}_origin" / subfolder / filename).resolve())
+            origin_candidates.append((assets_base / c_code / "_origin" / subfolder / filename).resolve())
 
-CAMPUS_BENCH = ROOT / "projects" / "campus" / "artist_benchmark_c1_c2"
-CAMPUS_BENCH.mkdir(parents=True, exist_ok=True)
-app.mount("/campus_bench", StaticFiles(directory=CAMPUS_BENCH, html=True), name="campus_bench")
+        found_origin = None
+        proj_root_resolved = PROJECTS_DIR.resolve()
+        for cand in origin_candidates:
+            if cand.is_relative_to(proj_root_resolved) and cand.exists() and cand.is_file():
+                found_origin = cand
+                break
 
-INSPECT_BATCH = ROOT / "output" / "inspection_batch"
-INSPECT_BATCH.mkdir(parents=True, exist_ok=True)
-app.mount("/inspect", StaticFiles(directory=INSPECT_BATCH, html=True), name="inspect")
+        if not found_origin:
+            return {
+                "success": False,
+                "error": f"오리지널 원본({c_code}_origin/{subfolder}/{filename})을 찾을 수 없습니다."
+            }
+
+        # 1. inspection_batch에 원자적 덮어쓰기
+        _atomic_copy_file(found_origin, target_inspect)
+
+        # 2. 정규 에셋(projects/{roster}/assets)에도 원자적 복원
+        for proj in rosters:
+            reg_p = (PROJECTS_DIR / proj / "assets" / c_code / subfolder / filename).resolve()
+            if reg_p.is_relative_to(proj_root_resolved) and reg_p.parent.exists():
+                _atomic_copy_file(found_origin, reg_p)
+
+        return {
+            "success": True,
+            "message": "오리지널 원본 이미지로 성공적으로 복원되었습니다!",
+            "file_name": filename,
+            "timestamp": int(time.time()),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+class RerollRequest(BaseModel):
+    file_path: str
+    char_code: str
+    pose_code: str
+    label: Optional[str] = ""
+
+
+class RerollJob:
+    def __init__(self, job_id: str, file_path: str, char_code: str, pose_code: str, label: str = ""):
+        self.job_id = job_id
+        self.file_path = file_path
+        self.char_code = char_code.lower()
+        norm_pose = str(pose_code or "").strip()
+        self.pose_code = norm_pose.zfill(3) if norm_pose.isdigit() else norm_pose.upper()
+        self.label = label
+        self.status = "queued"  # queued | processing | done | failed
+        self.created_at = time.time()
+        self.started_at: Optional[float] = None
+        self.finished_at: Optional[float] = None
+        self.new_seed: Optional[int] = None
+        self.error: Optional[str] = None
+
+    def to_dict(self, queue_pos: int = 0) -> dict:
+        return {
+            "job_id": self.job_id,
+            "file_path": self.file_path,
+            "char_code": self.char_code,
+            "pose_code": self.pose_code,
+            "label": self.label,
+            "status": self.status,
+            "queue_position": queue_pos,
+            "created_at": self.created_at,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+            "new_seed": self.new_seed,
+            "error": self.error,
+        }
+
+
+def _execute_reroll_job(job: RerollJob) -> tuple[bool, Optional[int], Optional[str]]:
+    """
+    ComfyUI 호출 및 무검열 원본 보존, ADR-86 검열 덮어쓰기를 순차 동기 처리합니다.
+    """
+    try:
+        import random
+        from plepa_engine.services.generation_service import GenerationParams, GenerationService
+        from plepa_engine.censor import censor_image
+        from PIL import Image
+
+        clean_path, target_inspect = _resolve_safe_subpath(INSPECT_BATCH, job.file_path)
+        parts = clean_path.split("/")
+        if len(parts) < 3:
+            return False, None, f"잘못된 파일 경로 형식: {clean_path}"
+
+        c_code = job.char_code.lower()
+        p_code = job.pose_code
+        subfolder = parts[1]
+        raw_filename = parts[2]
+
+        # 디스크의 실제 파일명 자동 탐색 및 보정
+        target_dir = (INSPECT_BATCH / c_code / subfolder).resolve()
+        if not target_dir.is_relative_to(INSPECT_BATCH.resolve()):
+            return False, None, f"허용되지 않은 대상 경로입니다: {target_dir}"
+        if (target_dir / raw_filename).exists():
+            filename = raw_filename
+        else:
+            matches = list(target_dir.glob(f"*{p_code}*.webp")) if target_dir.exists() else []
+            if matches:
+                filename = matches[0].name
+                clean_path = f"{c_code}/{subfolder}/{filename}"
+                job.file_path = clean_path
+            else:
+                filename = re.sub(r'[\\/*?:"<>|]', '_', raw_filename)
+                clean_path = f"{c_code}/{subfolder}/{filename}"
+                job.file_path = clean_path
+
+        # 로스터 동적 판별
+        roster = _resolve_char_roster(c_code)
+
+        new_seed = random.randint(1000, 999999)
+        ckpt_tag = f"reroll_{c_code}_{p_code}"
+
+        service = GenerationService()
+        if hasattr(service, "pose_bg_svc") and hasattr(service.pose_bg_svc, "cache"):
+            service.pose_bg_svc.cache.clear()
+
+        params = GenerationParams(
+            character_expr=c_code,
+            pose_expr=p_code,
+            roster=roster,
+            ckpt_tag=ckpt_tag,
+            overwrite=True,
+            engine="sdxl",
+            censor=False,
+            seed=new_seed,
+            no_ref=True,
+            custom_neg=None,
+        )
+
+        res = service.run_batch(params, quiet=True)
+        if not res or not res[0].success or not res[0].image_path:
+            err = res[0].error_message if res else "Unknown generation error"
+            return False, None, f"ComfyUI 재생성 실패: {err}"
+
+        gen_p = Path(res[0].image_path)
+        if not gen_p.exists():
+            return False, None, "생성된 이미지 파일이 디스크에 존재하지 않습니다."
+
+        # 1. 무검열 원본 원자적 백업
+        origin_dir = PROJECTS_DIR / roster / "assets" / f"{c_code}_origin" / subfolder
+        origin_path = origin_dir / filename
+        _atomic_copy_file(gen_p, origin_path)
+
+        # 2. ADR-86 검열 적용 (폴백 앵커는 명시 요청 외 비활성화)
+        img = Image.open(gen_p).convert("RGB")
+        censored_img, mask_cnt = censor_image(
+            img,
+            style="white_silhouette",
+            pose_code=p_code,
+            enable_anchor_fallback=False,
+            roster=roster,
+        )
+
+        # 3. inspection_batch 및 정규 에셋 원자적 덮어쓰기
+        _, safe_target_inspect = _resolve_safe_subpath(INSPECT_BATCH, clean_path)
+        _atomic_save_webp(censored_img, safe_target_inspect)
+
+        reg_asset_p = PROJECTS_DIR / roster / "assets" / c_code / subfolder / filename
+        if reg_asset_p.parent.exists():
+            _atomic_save_webp(censored_img, reg_asset_p)
+
+        # 4. 임시 생성 폴더 정리
+        tmp_dir = gen_p.parent.parent
+        if tmp_dir.name.startswith("ckpt_reroll_"):
+            try:
+                shutil.rmtree(tmp_dir)
+            except Exception:
+                pass
+
+        return True, new_seed, None
+    except Exception as e:
+        return False, None, str(e)
+
+
+class RerollQueueManager:
+    MAX_COMPLETED_JOBS = 200
+
+    def __init__(self):
+        self.queue: asyncio.Queue[str] = asyncio.Queue()
+        self.jobs: Dict[str, RerollJob] = {}
+        self.active_job: Optional[RerollJob] = None
+        self._worker_task: Optional[asyncio.Task] = None
+        self._counter = 0
+
+    def _prune_completed_jobs(self) -> None:
+        completed_ids = [j_id for j_id, j in self.jobs.items() if j.status in ("done", "failed")]
+        excess = len(completed_ids) - self.MAX_COMPLETED_JOBS
+        if excess > 0:
+            for j_id in completed_ids[:excess]:
+                self.jobs.pop(j_id, None)
+
+    def start_worker(self):
+        if self._worker_task is None or self._worker_task.done():
+            try:
+                loop = asyncio.get_running_loop()
+                self._worker_task = loop.create_task(self._worker_loop())
+            except RuntimeError:
+                pass
+
+    def _calc_queue_pos(self, target_job_id: str) -> int:
+        if self.active_job and self.active_job.job_id == target_job_id:
+            return 0  # 0: 현재 처리 중 (Processing)
+
+        pos = 1
+        for j_id, j in self.jobs.items():
+            if j.status == "queued":
+                if j_id == target_job_id:
+                    return pos
+                pos += 1
+        return pos
+
+    async def enqueue(self, req: RerollRequest) -> tuple[dict, bool]:
+        clean_path = req.file_path.replace("\\", "/").lstrip("/")
+
+        # 중복 방지 (이미 큐에 있거나 처리 중인 동일 파일)
+        for job in self.jobs.values():
+            if job.status in ["queued", "processing"]:
+                if job.file_path.replace("\\", "/").lstrip("/") == clean_path:
+                    pos = self._calc_queue_pos(job.job_id)
+                    return job.to_dict(queue_pos=pos), False
+
+        self._counter += 1
+        job_id = f"job_{int(time.time()*1000)}_{self._counter}"
+        job = RerollJob(
+            job_id=job_id,
+            file_path=clean_path,
+            char_code=req.char_code,
+            pose_code=req.pose_code,
+            label=req.label or "",
+        )
+        self.jobs[job_id] = job
+        await self.queue.put(job_id)
+
+        self.start_worker()
+        pos = self._calc_queue_pos(job_id)
+        return job.to_dict(queue_pos=pos), True
+
+    def get_status(self) -> dict:
+        queued_count = sum(1 for j in self.jobs.values() if j.status == "queued")
+        processing_count = 1 if self.active_job and self.active_job.status == "processing" else 0
+        total_pending = queued_count + processing_count
+
+        active_info = self.active_job.to_dict(queue_pos=0) if self.active_job else None
+
+        # 최근 40개 작업 정보 반환
+        recent_jobs = {}
+        for j_id, j in list(self.jobs.items())[-40:]:
+            pos = self._calc_queue_pos(j_id)
+            recent_jobs[j_id] = j.to_dict(queue_pos=pos)
+
+        return {
+            "total_pending": total_pending,
+            "queued_count": queued_count,
+            "processing_count": processing_count,
+            "active_job": active_info,
+            "jobs": recent_jobs,
+        }
+
+    async def _worker_loop(self):
+        while True:
+            job_id = await self.queue.get()
+            job = self.jobs.get(job_id)
+            if not job:
+                self.queue.task_done()
+                continue
+
+            self.active_job = job
+            job.status = "processing"
+            job.started_at = time.time()
+
+            try:
+                success, new_seed, err = await asyncio.to_thread(_execute_reroll_job, job)
+                if success:
+                    job.status = "done"
+                    job.new_seed = new_seed
+                else:
+                    job.status = "failed"
+                    job.error = err
+            except Exception as e:
+                job.status = "failed"
+                job.error = str(e)
+            finally:
+                job.finished_at = time.time()
+                self.active_job = None
+                self._prune_completed_jobs()
+                self.queue.task_done()
+
+
+reroll_queue_mgr = RerollQueueManager()
+
+
+@app.on_event("startup")
+async def startup_event():
+    reroll_queue_mgr.start_worker()
+
+
+@app.post("/api/reroll_queue")
+async def enqueue_reroll_endpoint(req: RerollRequest, request: Request):
+    """
+    새로운 리롤 작업을 대기열에 등록합니다 (논블로킹 즉시 응답).
+    """
+    _require_auth(request, check_origin=True)
+    _resolve_safe_subpath(INSPECT_BATCH, req.file_path)
+    try:
+        reroll_queue_mgr.start_worker()
+        job_data, is_new = await reroll_queue_mgr.enqueue(req)
+        return {
+            "success": True,
+            "job": job_data,
+            "is_new": is_new,
+            "message": "대기열에 성공적으로 등록되었습니다." if is_new else "이미 대기열에 등록되어 처리 중입니다.",
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/reroll_queue_status")
+async def reroll_queue_status_endpoint(request: Request):
+    """
+    현재 리롤 대기열 현황 및 활성/완료 작업 상태를 반환합니다.
+    """
+    _require_auth(request)
+    try:
+        return {"success": True, "data": reroll_queue_mgr.get_status()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/reroll_pose")
+async def reroll_pose_endpoint(req: RerollRequest, request: Request):
+    """
+    (하위 호환) 대기열에 등록한 후 완료될 때까지 비동기 대기하여 최종 결과를 반환합니다.
+    """
+    _require_auth(request, check_origin=True)
+    _resolve_safe_subpath(INSPECT_BATCH, req.file_path)
+    try:
+        reroll_queue_mgr.start_worker()
+        job_data, _ = await reroll_queue_mgr.enqueue(req)
+        job_id = job_data["job_id"]
+
+        # 최대 180초 대기
+        for _ in range(360):
+            await asyncio.sleep(0.5)
+            job = reroll_queue_mgr.jobs.get(job_id)
+            if not job:
+                break
+            if job.status == "done":
+                clean_path = job.file_path.replace("\\", "/").lstrip("/")
+                filename = clean_path.split("/")[-1]
+                return {
+                    "success": True,
+                    "message": f"#{job.pose_code} 리롤 생성 완료 (seed: {job.new_seed})",
+                    "seed": job.new_seed,
+                    "file_name": filename,
+                    "timestamp": int(time.time()),
+                }
+            elif job.status == "failed":
+                return {"success": False, "error": job.error or "리롤 생성 실패"}
+
+        return {"success": False, "error": "리롤 대기 시간 초과 (Timeout)"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# 정적 디렉토리 마운트는 모듈 상단에서 임포트 부작용 없이 수행됨
 
 
 def get_local_ip() -> str:
@@ -509,13 +1011,16 @@ def index_view():
       <div class="contact-grid">
 """
     for cs in data["contact_sheets"]:
+        safe_code = html_lib.escape(str(cs["code"]), quote=True)
+        safe_label = html_lib.escape(str(cs["label"]), quote=True)
+        safe_url = html_lib.escape(str(cs["url"]), quote=True)
         html += f"""
         <div class="contact-card">
           <div class="contact-card-header">
-            <span>#{cs['code']} [{cs['label']}] 3x3 컨택트 시트</span>
+            <span>#{safe_code} [{safe_label}] 3x3 컨택트 시트</span>
             <span style="font-size:0.75rem; color:#818cf8;">터치 시 원본 확대</span>
           </div>
-          <img src="{cs['url']}" alt="{cs['label']}" onclick="openLightbox(this.src)" loading="lazy">
+          <img src="{safe_url}" alt="{safe_label}" onclick="openLightbox(this.src)" loading="lazy">
         </div>
         """
 
@@ -526,8 +1031,9 @@ def index_view():
     <!-- 2. 개별 포즈별 뷰 -->
 """
     for code, pinfo in data["poses"].items():
+        safe_pose_code = html_lib.escape(str(code), quote=True)
         html += f"""
-    <div id="view-{code}" class="tab-content" style="display:none;">
+    <div id="view-{safe_pose_code}" class="tab-content" style="display:none;">
       <div class="asset-grid">
 """
         for itm in pinfo["items"]:
@@ -535,17 +1041,20 @@ def index_view():
             status_text = meta.get("status", "")
             is_fallback = "FALLBACK" in status_text
             badge_class = "badge-fallback" if is_fallback else "badge-detect"
-            badge_label = "폴백 앵커" if is_fallback else f"YOLO {meta.get('conf', '')}"
-            coords = meta.get("center", "")
+            badge_label = html_lib.escape("폴백 앵커" if is_fallback else f"YOLO {meta.get('conf', '')}", quote=True)
+            coords = html_lib.escape(str(meta.get("center", "")), quote=True)
+            safe_url = html_lib.escape(str(itm["url"]), quote=True)
+            safe_stem = html_lib.escape(str(itm["stem"]), quote=True)
+            safe_title = html_lib.escape(str(itm["stem"]).replace("_" + code + "_", " ").upper(), quote=True)
             
             html += f"""
         <div class="asset-card">
           <div class="asset-img-wrap">
-            <img src="{itm['url']}" alt="{itm['stem']}" onclick="openLightbox(this.src)" loading="lazy">
+            <img src="{safe_url}" alt="{safe_stem}" onclick="openLightbox(this.src)" loading="lazy">
           </div>
           <div class="asset-info">
             <div class="asset-name">
-              <span>{itm['stem'].replace('_' + code + '_', ' ').upper()}</span>
+              <span>{safe_title}</span>
               <span class="asset-badge {badge_class}">{badge_label}</span>
             </div>
             <div class="asset-coords">{coords}</div>
@@ -563,22 +1072,26 @@ def index_view():
       <div class="asset-grid">
 """
     for code, pinfo in data["poses"].items():
+        safe_pose_code = html_lib.escape(str(code), quote=True)
         for itm in pinfo["items"]:
             meta = itm["meta"]
             status_text = meta.get("status", "")
             is_fallback = "FALLBACK" in status_text
             badge_class = "badge-fallback" if is_fallback else "badge-detect"
-            badge_label = "폴백" if is_fallback else f"YOLO {meta.get('conf', '')}"
-            coords = meta.get("center", "")
+            badge_label = html_lib.escape("폴백" if is_fallback else f"YOLO {meta.get('conf', '')}", quote=True)
+            coords = html_lib.escape(str(meta.get("center", "")), quote=True)
+            safe_url = html_lib.escape(str(itm["url"]), quote=True)
+            safe_stem = html_lib.escape(str(itm["stem"]), quote=True)
+            safe_char = html_lib.escape(str(itm["stem"]).split("_")[0].upper(), quote=True)
             
             html += f"""
         <div class="asset-card">
           <div class="asset-img-wrap">
-            <img src="{itm['url']}" alt="{itm['stem']}" onclick="openLightbox(this.src)" loading="lazy">
+            <img src="{safe_url}" alt="{safe_stem}" onclick="openLightbox(this.src)" loading="lazy">
           </div>
           <div class="asset-info">
             <div class="asset-name">
-              <span>#{code} {itm['stem'].split('_')[0].upper()}</span>
+              <span>#{safe_pose_code} {safe_char}</span>
               <span class="asset-badge {badge_class}">{badge_label}</span>
             </div>
             <div class="asset-coords">{coords}</div>
@@ -638,11 +1151,13 @@ def index_view():
 
 
 def start_server_and_tunnel():
+    for _dir in (BENCHMARK_DIR, INSPECT_BATCH, HYBRID_BENCH, C_TUNING_BENCH, CAMPUS_BENCH):
+        _dir.mkdir(parents=True, exist_ok=True)
     local_ip = get_local_ip()
     print("=" * 70)
     print("  [MOBILE BENCHMARK GALLERY] 모바일 뷰어 서버 준비 중...")
-    print(f"  로컬 Wi-Fi 접속: http://{local_ip}:{PORT}")
-    print(f"  로컬 PC 브라우저: http://127.0.0.1:{PORT}")
+    print(f"  로컬 Wi-Fi 접속: http://{local_ip}:{PORT}?token={ACCESS_TOKEN}")
+    print(f"  로컬 PC 브라우저: http://127.0.0.1:{PORT}?token={ACCESS_TOKEN}")
     print("=" * 70)
 
     # Cloudflare Quick Tunnel 기동
@@ -656,14 +1171,14 @@ def start_server_and_tunnel():
             except Exception:
                 pass
 
-        log_fp = open(log_file, "w", encoding="utf-8")
-        cf_proc = subprocess.Popen(
-            [str(CF), "tunnel", "--url", f"http://127.0.0.1:{PORT}"],
-            cwd=str(ROOT),
-            stdout=subprocess.DEVNULL,
-            stderr=log_fp,
-            creationflags=subprocess.DETACHED_PROCESS if os.name == "nt" else 0,
-        )
+        with open(log_file, "w", encoding="utf-8") as log_fp:
+            cf_proc = subprocess.Popen(
+                [str(CF), "tunnel", "--url", f"http://127.0.0.1:{PORT}"],
+                cwd=str(ROOT),
+                stdout=subprocess.DEVNULL,
+                stderr=log_fp,
+                creationflags=subprocess.DETACHED_PROCESS if os.name == "nt" else 0,
+            )
 
         pattern = re.compile(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com")
         for _ in range(35):
@@ -681,9 +1196,10 @@ def start_server_and_tunnel():
 
     print("\n" + "=" * 70)
     if tunnel_url:
-        print(f"  📱 [스마트폰 모바일 링크 (공인)]:  {tunnel_url}")
-    print(f"  📶 [동일 Wi-Fi 내부망 링크]:        http://{local_ip}:{PORT}")
-    print(f"  💻 [로컬 PC 링크]:                 http://127.0.0.1:{PORT}")
+        print(f"  📱 [스마트폰 모바일 링크 (공인)]:  {tunnel_url}/inspect/?token={ACCESS_TOKEN}")
+        print(f"  🔬 [벤치마크 대시보드 (공인)]:     {tunnel_url}?token={ACCESS_TOKEN}")
+    print(f"  📶 [동일 Wi-Fi 내부망 링크]:        http://{local_ip}:{PORT}/inspect/?token={ACCESS_TOKEN}")
+    print(f"  💻 [로컬 PC 링크]:                 http://127.0.0.1:{PORT}/inspect/?token={ACCESS_TOKEN}")
     print("=" * 70 + "\n")
 
     # FastAPI 기동
