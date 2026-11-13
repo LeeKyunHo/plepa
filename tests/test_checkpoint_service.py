@@ -3,6 +3,7 @@ tests/test_checkpoint_service.py
 checkpoint_profiles.json의 모든 프로필에 대한 동적 무결성 및 매칭 계약 검증 테스트.
 """
 
+import plepa_engine.config as cfg
 from plepa_engine.checkpoint_service import (
     CheckpointService,
     get_profile_for_checkpoint,
@@ -80,12 +81,12 @@ def test_profile_application():
     first_ckpt, first_profile = next(iter(service._profiles.items()))
 
     default_options = {
-        "width": 832,
-        "height": 1216,
-        "steps": 25,
-        "cfg": 6.5,
-        "sampler": "dpmpp_sde",
-        "scheduler": "karras",
+        "width": cfg.DEFAULT_SDXL_WIDTH,
+        "height": cfg.DEFAULT_SDXL_HEIGHT,
+        "steps": cfg.DEFAULT_SDXL_STEPS,
+        "cfg": cfg.DEFAULT_SDXL_CFG,
+        "sampler": cfg.DEFAULT_SDXL_SAMPLER,
+        "scheduler": cfg.DEFAULT_SDXL_SCHEDULER,
     }
 
     updated_options = service.apply_profile_to_options(

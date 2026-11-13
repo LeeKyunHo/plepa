@@ -108,33 +108,30 @@ class TestGuiAllFeatures(unittest.TestCase):
         self.assertTrue(callable(getattr(p_set, "render_settings_page", None)))
 
     def test_gui_poses_page_tabs_and_sections_sync(self):
-        """GUI 포즈 페이지의 SECTION_LABELS와 실제 포즈 DB 및 pose_service.SECTION_NAMES 간의 동기화 무결성 검증."""
+        """GUI 포즈 페이지의 SECTION_LABELS와 실제 SDXL 포즈 DB 및 pose_service.SECTION_NAMES 간의 동기화 무결성 검증."""
         from plepa_engine.services.pose_service import SECTION_NAMES
         from plepa_gui.pages.poses import SECTION_LABELS
 
         for sec in SECTION_NAMES:
             self.assertIn(sec, SECTION_LABELS, f"포즈 서비스의 섹션 '{sec}'이 poses.py의 SECTION_LABELS에 누락되었습니다.")
 
-        for engine in ("flux", "sdxl"):
-            db = default_pose_service.load_pose_db(engine=engine)
-            db_sections = {e.section for e in db.values() if e.section}
-            for sec in db_sections:
-                self.assertIn(sec, SECTION_NAMES, f"[{engine}] 포즈 DB의 섹션 '{sec}'이 pose_service.SECTION_NAMES에 등록되지 않았습니다.")
-                self.assertIn(sec, SECTION_LABELS, f"[{engine}] 포즈 DB의 섹션 '{sec}'이 poses.py의 SECTION_LABELS에 누락되었습니다.")
+        db = default_pose_service.load_pose_db(engine="sdxl")
+        db_sections = {e.section for e in db.values() if e.section}
+        for sec in db_sections:
+            self.assertIn(sec, SECTION_NAMES, f"[sdxl] 포즈 DB의 섹션 '{sec}'이 pose_service.SECTION_NAMES에 등록되지 않았습니다.")
+            self.assertIn(sec, SECTION_LABELS, f"[sdxl] 포즈 DB의 섹션 '{sec}'이 poses.py의 SECTION_LABELS에 누락되었습니다.")
 
     def test_all_poses_details_rendering_safety(self):
-        """DB에 등록된 모든 포즈의 get_pose_details() 조회가 예외 없이 100% 성공하는지 전수 검증."""
-        for engine in ("flux", "sdxl"):
-            db = default_pose_service.load_pose_db(engine=engine)
-            self.assertGreater(len(db), 0, f"[{engine}] 포즈 DB가 비어있습니다.")
-            for code in db:
-                try:
-                    details = default_pose_service.get_pose_details(code)
-                    self.assertEqual(details["code"], code)
-                    self.assertIn("flux_prompt", details)
-                    self.assertIn("sdxl_prompt", details)
-                except Exception as ex:
-                    self.fail(f"[{engine}] 포즈 코드 '{code}' 상세 조회 중 예외 발생: {ex}")
+        """SDXL SSOT DB에 등록된 모든 포즈의 get_pose_details() 조회가 예외 없이 100% 성공하는지 전수 검증."""
+        db = default_pose_service.load_pose_db(engine="sdxl")
+        self.assertGreater(len(db), 0, "[sdxl] 포즈 DB가 비어있습니다.")
+        for code in db:
+            try:
+                details = default_pose_service.get_pose_details(code)
+                self.assertEqual(details["code"], code)
+                self.assertIn("sdxl_prompt", details)
+            except Exception as ex:
+                self.fail(f"[sdxl] 포즈 코드 '{code}' 상세 조회 중 예외 발생: {ex}")
 
     def test_active_sections_dynamic_metadata_contract(self):
         """get_active_sections()가 활성 섹션의 카운트와 라벨을 메타데이터와 결합하여 정상 반환하는지 검증."""
