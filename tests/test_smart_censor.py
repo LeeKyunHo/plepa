@@ -283,7 +283,7 @@ def test_manga_bar_and_manga_glow_diagonal_masking():
 
 
 def test_adr86_restoration_and_hand_negative_points(monkeypatch):
-    """ADR-86 내측 8% 수축 기준선 복원, 반실사 음영 비파편화, 겹친 손(detect_hands) 네거티브 포인트 주입을 검증합니다."""
+    """Phase P0 인셋 해제(0%), 누수 시 조건부 라운드 가드, 반실사 음영 비파편화 및 겹친 손 네거티브 포인트 주입을 검증합니다."""
     import imgutils.detect as img_detect
     import plepa_engine.censor as censor
 
@@ -293,11 +293,11 @@ def test_adr86_restoration_and_hand_negative_points(monkeypatch):
     skin_color = (238, 188, 168)
     img = Image.new("RGB", (400, 400), skin_color)
     draw = ImageDraw.Draw(img)
-    # 반실사 물광/음영 패턴을 중앙부에 그려도 C5 선화 장벽이 동작하지 않으므로 구멍 없이 덮여야 함
+    # 반실사 물광/음영 패턴을 중앙부에 그려도 파편화 없이 덮여야 함
     draw.rectangle([185, 130, 215, 270], fill=(255, 250, 245), outline=(85, 45, 35), width=2)
     draw.line([(195, 140), (195, 260)], fill=(255, 255, 255), width=3)
 
-    bbox = (140, 100, 260, 300)  # bw=120, bh=200 -> 8% inset => ex1=149, ey1=116, ex2=251, ey2=284
+    bbox = (140, 100, 260, 300)  # Phase P0: 내측 8% 수축 없이 원본 BBox 그대로 사용 (ex1=140, ey1=100)
     captured_calls = []
 
     class _FakeMaskData:
@@ -312,6 +312,7 @@ def test_adr86_restoration_and_hand_negative_points(monkeypatch):
 
     class _FakeRes:
         def __init__(self, w, h):
+            # 전체 패딩 크롭을 1.0으로 채워 Leakage Guard 발동 상황도 동시 검증
             self.masks = type("_M", (), {"data": _FakeMaskData(np.ones((1, h, w), dtype=np.float32))})()
 
     def _fake_sam(crop_pil, **kw):
@@ -332,12 +333,13 @@ def test_adr86_restoration_and_hand_negative_points(monkeypatch):
 
     out = apply_silhouette(img, [(bbox, "penis", 0.94)], color="white")
 
-    # 1) 손 바깥 비가려짐 코어(상단 200, 150 및 좌측 180, 200)는 C5 파편화 없이 순백색으로 덮임
+    # 1) 손 바깥 비가려짐 코어 및 기존 8% 인셋으로 잘리던 좌측 BBox 내부 경계부(144, 200)가 순백색으로 덮임
     assert out.getpixel((200, 150)) == (255, 255, 255)
     assert out.getpixel((180, 200)) == (255, 255, 255)
-    # 2) ADR-86 8% 내측 수축으로 BBox 최외곽 경계부는 허벅지 보호(원본 색 유지)
-    assert out.getpixel((142, 200)) == skin_color
-    assert out.getpixel((258, 200)) == skin_color
+    assert out.getpixel((144, 200)) == (255, 255, 255)
+    # 2) SAM 전체 크롭 누수(Leakage) 상황에서는 조건부 라운드 가드로 최외곽 코너(142, 102)와 BBox 바깥 여백 보호
+    assert out.getpixel((142, 102)) == skin_color
+    assert out.getpixel((132, 200)) == skin_color
     # 3) 성기 SAM 호출에 겹친 손 중심점(negative label=0)이 주입되었고, 원거리 손(20, 20)은 제외됨
     genital_calls = [c for c in captured_calls if (c["bboxes"][0][2] - c["bboxes"][0][0]) >= 90]
     assert len(genital_calls) >= 1
@@ -346,9 +348,9 @@ def test_adr86_restoration_and_hand_negative_points(monkeypatch):
     pts = first_call["points"][0]
     lbls = first_call["labels"][0]
     assert lbls[0] == 1 and 0 in lbls
-    # local_bbox = [ex1-rx1, ey1-ry1, ...], ex1=149 => rx1 = ex1 - lb[0]
-    rx1 = 149 - lb[0]
-    ry1 = 116 - lb[1]
+    # local_bbox = [ex1-rx1, ey1-ry1, ...], ex1=140, ey1=100 => rx1 = ex1 - lb[0]
+    rx1 = 140 - lb[0]
+    ry1 = 100 - lb[1]
     assert [230 - rx1, 200 - ry1] in pts
     neg_idx = pts.index([230 - rx1, 200 - ry1])
     assert lbls[neg_idx] == 0
@@ -595,8 +597,8 @@ def test_mutually_exclusive_hand_occlusion_and_hole_preservation(monkeypatch):
 
         for gc in genital_calls:
             lb = gc["kwargs"]["bboxes"][0]
-            rx1 = 149 - lb[0]
-            ry1 = 99 - lb[1]
+            rx1 = 140 - lb[0]
+            ry1 = 80 - lb[1]
             pts = gc["kwargs"]["points"][0]
             lbls = gc["kwargs"]["labels"][0]
             for pt, lbl in zip(pts, lbls):
@@ -618,8 +620,8 @@ def test_mutually_exclusive_hand_occlusion_and_hole_preservation(monkeypatch):
     def _hole_sam(crop_pil, **kw):
         cw, ch = crop_pil.size
         lb = kw["bboxes"][0]
-        rx1 = 149 - lb[0]
-        ry1 = 99 - lb[1]
+        rx1 = 140 - lb[0]
+        ry1 = 80 - lb[1]
         m = np.zeros((ch, cw), dtype=np.float32)
         m[max(0, lb[1]):min(ch, lb[3]), max(0, lb[0]):min(cw, lb[2])] = 1.0
         # 중앙 (180..220, 180..220) 위치에 40x40 내부 구멍 생성
@@ -632,5 +634,130 @@ def test_mutually_exclusive_hand_occlusion_and_hole_preservation(monkeypatch):
     assert out_hole.getpixel((200, 200)) == skin_color
 
 
+def test_extract_black_censor_mask_and_restore_skin():
+    """kiro 단일 완성본의 솔리드 블랙 마스크 추출 및 피부 톤 인페인팅 역복원 검증."""
+    from scripts.extract_censor_seg_dataset import extract_black_censor_mask_and_restore_skin
 
+    skin_color = (238, 188, 168)
+    img = Image.new("RGB", (400, 400), skin_color)
+    draw = ImageDraw.Draw(img)
+    # 타겟 영역(중심 200, 220)에 수작업 솔리드 블랙 실루엣 그리기
+    draw.rounded_rectangle([165, 130, 235, 310], radius=24, fill=(0, 0, 0))
+    # 상단 머리카락 경계(y <= 60)는 비검열 영역으로 배제되어야 함
+    draw.rectangle([0, 0, 400, 50], fill=(0, 0, 0))
+
+    restored_arr, mask, lines = extract_black_censor_mask_and_restore_skin(img, class_id=0)
+    assert mask.shape == (400, 400)
+    assert mask[220, 200] == 255
+    assert mask[25, 200] == 0
+    assert len(lines) == 1
+
+    # 복원 이미지에서 원래 검은색이던 타겟 중심 픽셀이 주변 피부 톤으로 역복원되어야 함
+    center_rgb = restored_arr[220, 200]
+    assert int(center_rgb[0]) > 150 and int(center_rgb[1]) > 100
+
+
+def test_p0_lineart_outer_snap_respects_protection_mask():
+    """Line-Art Outer Snap absorbs adjacent dark line-art while guaranteeing 0px intrusion into protection_mask."""
+    import numpy as np
+    from plepa_engine import censor
+
+    h, w = 200, 200
+    img_np = np.full((h, w, 3), (240, 200, 180), dtype=np.uint8)
+
+    # Core foreground mask: [70:130, 80:120]
+    mask = np.zeros((h, w), dtype=np.uint8)
+    mask[70:130, 80:120] = 255
+
+    # Draw 2px dark line-art outline on left (x=78..79) and right (x=120..121)
+    img_np[70:130, 78:80] = (25, 20, 20)
+    img_np[70:130, 120:122] = (25, 20, 20)
+
+    # Protect the right edge (simulating foreground hand/lip mask)
+    protection_mask = np.zeros((h, w), dtype=bool)
+    protection_mask[:, 120:] = True
+
+    snapped = censor._snap_to_outer_lineart(
+        mask, img_np, scale=1.0, protection_mask=protection_mask, max_steps=2
+    )
+
+    assert snapped.dtype == np.uint8
+    # Unprotected left dark line-art (x=79) should be absorbed
+    assert snapped[100, 79] > 128
+    # Bright background beyond dark line-art (x=76) must remain unmasked
+    assert snapped[100, 76] == 0
+    # Protected zone (x>=120) must have 0px intrusion even with dark line-art
+    assert not np.any(snapped[:, 120:] > 0)
+
+
+def test_p0_bottom_edge_false_positive_gate():
+    """Bottom-edge gate drops low-conf / flat sliver / fluid artifacts while keeping real vertical targets."""
+    import numpy as np
+    from plepa_engine import censor
+
+    img_w, img_h = 832, 1216
+    img_rgb = np.full((img_h, img_w, 3), (225, 180, 160), dtype=np.uint8)
+    skin_mask = np.full((img_h, img_w), 255, dtype=np.uint8)
+
+    # Bright white splash/fluid region at bottom left-center
+    img_rgb[1100:1216, 300:460] = (250, 250, 250)
+    skin_mask[1100:1216, 300:460] = 0
+
+    candidates = [
+        # Primary upper target
+        ((320, 420, 450, 780), "penis", 0.84),
+        # Low-confidence isolated bottom blob -> should drop
+        ((330, 1120, 430, 1214), "penis", 0.25),
+        # Tiny flat sliver clipped to bottom border (<14% primary area) -> should drop
+        ((280, 1175, 450, 1216), "penis", 0.55),
+        # Bright fluid bottom region with zero skin ratio -> should drop
+        ((310, 1105, 450, 1216), "penis", 0.72),
+    ]
+    kept = censor._filter_bottom_edge_false_positives(
+        candidates, img_w=img_w, img_h=img_h, img_rgb_np=img_rgb, skin_mask_np=skin_mask
+    )
+    assert len(kept) == 1
+    assert kept[0][0] == (320, 420, 450, 780)
+
+    # Genuine vertical secondary target with real skin and strong score should survive
+    candidates_multi = [
+        ((370, 725, 473, 971), "penis", 0.81),
+        ((358, 988, 487, 1197), "penis", 0.83),
+    ]
+    kept_multi = censor._filter_bottom_edge_false_positives(
+        candidates_multi,
+        img_w=img_w,
+        img_h=img_h,
+        img_rgb_np=np.full((img_h, img_w, 3), (215, 165, 145), dtype=np.uint8),
+        skin_mask_np=np.full((img_h, img_w), 255, dtype=np.uint8),
+    )
+    assert len(kept_multi) == 2
+
+
+def test_p0_benchmark_metrics_helpers():
+    """Verify Mask IoU and Boundary IoU helper behaviors for P4 evaluation."""
+    import numpy as np
+    from scripts.benchmark_censor_metrics import compute_mask_iou, compute_boundary_iou
+
+    gt = np.zeros((256, 256), dtype=bool)
+    gt[60:180, 90:150] = True
+
+    assert compute_mask_iou(gt, gt) == 1.0
+    assert compute_boundary_iou(gt, gt) == 1.0
+
+    empty = np.zeros((256, 256), dtype=bool)
+    assert compute_mask_iou(empty, gt) == 0.0
+    assert compute_boundary_iou(empty, gt) == 0.0
+
+    eroded_1px = np.zeros((256, 256), dtype=bool)
+    eroded_1px[61:179, 91:149] = True
+    m_iou = compute_mask_iou(eroded_1px, gt)
+    b_iou = compute_boundary_iou(eroded_1px, gt)
+    assert 0.0 < b_iou < m_iou < 1.0
+
+    # Eroded by 4px exceeds 2px boundary band on 256x256 -> Boundary IoU drops to 0 while Mask IoU remains high
+    eroded_4px = np.zeros((256, 256), dtype=bool)
+    eroded_4px[64:176, 94:146] = True
+    assert compute_boundary_iou(eroded_4px, gt) == 0.0
+    assert compute_mask_iou(eroded_4px, gt) > 0.8
 
