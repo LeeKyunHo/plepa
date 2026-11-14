@@ -80,19 +80,22 @@ python batch_generator.py -r campus -c aya -p all --censor-only --censor-style d
 ```
 
 
-### 2.4 모바일 인터랙티브 검수 갤러리 및 원클릭 터치 덧칠 에디터 (ADR-86)
+### 2.4 모바일 인터랙티브 검수 갤러리, 원클릭 터치 덧칠 에디터 및 정량 벤치마크 (ADR-86 / ADR-95)
 - **동작 원리**:
-  - '애매하면 모자라게(콤팩트 언더마스킹)' 기본 정책에 따라 침범률(오버마스킹)을 0%로 한정.
+  - Phase P0 외곽 선화 스냅(`_snap_to_outer_lineart`, +1~3px 먹선 흡수) 및 전경 손/얼굴 `protection_mask` 침범 `0px` 원칙을 유지하면서, 미흡 구간만 모바일 터치 브러시로 보완.
   - 모바일 검수 갤러리(port: 8085)에서 에셋별 [✏️ 터치 덧칠] 버튼을 탭하여 풀스크린 캔버스 에디터 진입.
   - 사용자가 스마트폰 화면에서 터치 브러시로 모자란 부분을 1~2초 덧칠하고 [💾 저장 완료] 시 POST /api/retouch_censor를 통해 원본 파일 영구 덮어쓰기 저장 및 output/benchmarks/ground_truth/ 정답 데이터 자동 아카이브.
-`powershell
+  - 정량 검증기(`scripts/benchmark_censor_metrics.py`)로 Hold-out 정답셋 대비 Mask IoU / Boundary IoU A/B 비교 및 `test_c4` 비교 갤러리 생성 지원.
+```powershell
 # 1) 모바일 검수 갤러리 및 Cloudflare 공인 터널 서버 구동 (포트 8085)
 python scripts/serve_benchmark_mobile.py
 
-# 2) (신규) 검수 뷰어 HTML 갱신 및 모바일 서버 가동
+# 2) 검수 뷰어 HTML 갱신 및 모바일 서버 가동
 .\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py
-# (구버전 아카이브: python scripts/archive/recensor_inspection_batch.py)
-`
+
+# 3) Hold-out 정답셋 기반 정량 Mask/Boundary IoU 벤치마크 실행 및 비교
+.\.venv\Scripts\python.exe scripts/benchmark_censor_metrics.py --label P0 --out-json output/benchmarks/p4_p0_result.json --compare-json output/benchmarks/p4_c7_baseline.json
+```
 
 ### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프
 - 생성 직후 [`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py)가 4대 결함(① 색감 과포화 Color Burn, ② 남성 모브 분신 2명 이상, ③ 단독/여운 씬 남성 난입, ④ 9~10등신 기형 장신)을 검사하여 불량 시 새 시드로 자동 재시도합니다(기본 3회):

@@ -31,8 +31,8 @@
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
-6. **ADR-86 콤팩트 언더마스킹 & 인간-AI 협업 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py))**:
-   - '애매하면 모자라게' 콤팩트 언더마스킹 원칙 확정. BBox 경계선 내측 8% 안전 수축(`Inner Inset 8%`) 및 모서리 40% 라운딩 소프트 캡슐 타원 렌더링.
+6. **ADR-86 → Phase P0 외곽 선화 정밀 스냅 & 인간-AI 협업 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95)**:
+   - 기존 ADR-86('애매하면 모자라게' BBox 내측 8% 수축 + 40% 라운딩 + 이중 침식)의 외곽 살색 림(Halo) 노출 한계를 **Phase P0**에서 해체·개선. 내측 강제 수축(`0%`)·조건부 Leakage 라운드 가드·단일 경계 안티에일리어싱 및 `protection_mask`(전경 손/얼굴 보호) `0px` 침범 불변식 위에서 **외곽 선화 스냅(`_snap_to_outer_lineart`, +1~3px 어두운 먹선 흡수)**과 하단 경계 오탐 게이트(`_filter_bottom_edge_false_positives`)를 공식 탑재함.
    - 주변 신체(허벅지/가슴/입술/턱) 사각 침범 결함 0% 원천 방어.
    - 미탐지 시 억지 사각 앵커 투척(`enable_anchor_fallback=False`) 영구 비활성화로 비노출 씬 및 주변 살 오검열 0% 유지.
    - 살짝 모자란 부분은 모바일/웹 검수 갤러리 캔버스 에디터에서 사용자가 1~2초 만에 `[✏️ 터치 덧칠]` 마감하여 `output/benchmarks/ground_truth/`로 자동 아카이브.
@@ -1722,5 +1722,20 @@ ight_terrace(도시 야경 발코니 난간).
      - `plepa_gui` + `job_manager.py` FIFO 큐 직렬화, 하드코딩된 캐릭터/포즈 분기(`049` 등) 제거 및 `default_character_service.list_characters(roster)` 동적 탐색 전환.
   4. **회귀 테스트 및 전수 검증**:
      - `tests/test_security_and_atomic_io.py`, `tests/test_censor_and_pipeline_fixes.py`, `tests/test_comfy_and_job_queue.py` 15건 신규 추가 후 전체 `pytest` 120건, `precheck -r campus` 0위반, `validate_genit_work.py --force` ALL PASS 확인.
+
+### ADR-95: 검열 실루엣 4중 수축 해제, 외곽 선화 스냅(Outer Line-Art Snap), 하단 오탐 게이트 및 정량 벤치마크 체계 확립 (2026-11-15)
+- **배경**:
+  - 기존 ADR-86 기준선(BBox 내측 8% 수축 + `0.40` 모서리 강제 절단 + 루프 내/외 이중 `3x3` 침식 + `140` 하드 클리핑)이 세그멘테이션 결과의 외곽과 상·하단 끝단을 불필요하게 깎아내어 외곽 살색 림(Halo) 노출 및 Boundary IoU 저하를 유발함.
+  - 정성적 육안 판단이나 소수 표본에 의존하지 않고, Hold-out 정답셋 대비 Mask IoU / Boundary IoU를 정량 측정하는 검증 프레임워크가 요구됨.
+- **결정 사항**:
+  1. **4중 수축 해제 및 외곽 선화 스냅 (`plepa_engine/censor.py`)**:
+     - `apply_silhouette()`의 내측 수축(`0%`), 조건부 Leakage 라운드 가드(`_build_rounded_box_guard` / `_is_sam_mask_leaky`), 중복 `3x3 erode` 제거 및 중립 임계치(`115`)·얇은 페더링(`_finalize_and_blend_silhouette`) 적용.
+     - `_snap_to_outer_lineart()`를 통해 전경 손/얼굴 `protection_mask` 침범 `0px`를 보장하는 조건 아래 마스크 외곽 인접 `+1~3px`(해상도 스케일 비례) 구간의 어두운 윤곽 선화(Line-art)만 선택적으로 흡수.
+  2. **하단 경계 및 체액/조각 오탐 게이트 (`_filter_bottom_edge_false_positives`)**:
+     - `_detect_target_candidates()` 종료 단계에서 저신뢰 하단/고립 박스(`score < 0.35`), 최하단 작은 수평 파편(`y2 >= 0.94*H` 및 주 타겟 대비 `<14%` 면적 등), 저피부·고휘도 체액 덩어리(`skin < 0.25` 또는 `bright >= 0.28`)를 필터링하되 수직형 실제 다중 타겟은 보존.
+     - 단, DeepGHS 1차 탐지기가 `0.76+` 고신뢰로 오탐하는 일부 하단 영역(`test_c4` 5건)은 향후 P2 전용 디텍터 파인튜닝 과제로 분리 관리.
+  3. **전용 학습/추출 스크립트 정비 및 정량 벤치마크 (`scripts/benchmark_censor_metrics.py`)**:
+     - `scripts/extract_censor_seg_dataset.py`·`scripts/train_censor_seg.py`에 기존 수작업 정답셋 복원/추출 및 `gt_oversample` 파이프라인 통합.
+     - `scripts/benchmark_censor_metrics.py` 신설로 C7 → P0 정량 실측 검증 완료 (`02_h_scenes` N=25 Mask IoU `0.4187 → 0.5887` (+0.1700), Boundary IoU `0.1461 → 0.2732` (+0.1271) / `spy_holdout` N=40 Mask IoU `0.5695 → 0.7479` (+0.1784), Boundary IoU `0.2697 → 0.5132` (+0.2435) / `test_c4` N=20 MultiBox `6 → 5`).
 
 
