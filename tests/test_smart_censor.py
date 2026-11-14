@@ -282,3 +282,108 @@ def test_manga_bar_and_manga_glow_diagonal_masking():
     assert out_glow.getpixel((265, 100)) == (180, 180, 180)
 
 
+def test_lineart_barrier_prevents_thigh_bleed_and_preserves_base(monkeypatch):
+    """2D 선화 장벽이 동일 피부톤 허벅지 번짐을 차단하고 낭심 하단까지 깔끔히 덮는지 검증합니다."""
+    import plepa_engine.censor as censor
+
+    skin_color = (245, 200, 180)
+    line_color = (15, 15, 15)
+    img = Image.new("RGB", (400, 400), skin_color)
+    draw = ImageDraw.Draw(img)
+
+    # 닫힌 2D 먹선 윤곽(두께 3px): 위쪽 기둥(x=180..220, y=102..240) + 아래쪽 낭심(154..246, 222..306)
+    draw.rectangle([178, 102, 222, 250], fill=skin_color, outline=line_color, width=3)
+    draw.ellipse([154, 224, 246, 308], fill=skin_color, outline=line_color, width=3)
+    # 기둥과 낭심 내부 연결부 먹선만 피부색으로 열어 단일 폐곡선 형성
+    draw.rectangle([181, 222, 219, 255], fill=skin_color)
+
+    bbox = (110, 90, 290, 320)
+
+    # 1) _clamp_mask_by_lineart_and_base 직접 검증: 허벅지까지 번진 전체 1 마스크 전달
+    roi_rgb = np.array(img.crop(bbox), dtype=np.uint8)
+    roi_skin = censor.get_skin_mask(roi_rgb)
+    wide_sam = np.full((bbox[3] - bbox[1], bbox[2] - bbox[0]), 255, dtype=np.uint8)
+    clamped = censor._clamp_mask_by_lineart_and_base(wide_sam, roi_rgb, roi_skin, scale=0.5)
+
+    # 기둥 내부(200-110=90, 150-90=60) 및 낭심 내부(90, 180)는 보존, 선화 바깥 허벅지(15, 60)는 차단
+    assert clamped[60, 90] == 255
+    assert clamped[180, 90] == 255
+    assert clamped[60, 15] == 0
+    assert clamped[60, 165] == 0
+
+    # 2) apply_silhouette 통합 검증: MobileSAM이 ROI 전체를 잡았다고 가정해도 선화 바깥 허벅지 비침범
+    class _FakeMaskData:
+        def __init__(self, arr):
+            self._arr = arr
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._arr
+
+    class _FakeRes:
+        def __init__(self, w, h):
+            self.masks = type("_M", (), {"data": _FakeMaskData(np.ones((1, h, w), dtype=np.float32))})()
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: (lambda crop_pil, **kw: [_FakeRes(crop_pil.width, crop_pil.height)]))
+
+    out = apply_silhouette(img, [(bbox, "penis", 0.92)], color="white")
+    # 기둥 중앙 및 낭심 내부는 순백색 검열
+    assert out.getpixel((200, 160)) == (255, 255, 255)
+    assert out.getpixel((200, 270)) == (255, 255, 255)
+    # 기존 8% 수축 시 잘리던 낭심 하단부(295) 근처도 보호되어 검열 유지
+    assert min(out.getpixel((200, 294))) >= 245
+    # 선화 바깥쪽 동일 피부톤 허벅지 영역은 침범 없이 원본 유지
+    assert out.getpixel((125, 160)) == skin_color
+    assert out.getpixel((275, 160)) == skin_color
+    assert out.getpixel((125, 265)) == skin_color
+    assert out.getpixel((275, 265)) == skin_color
+
+
+def test_extract_yolo_seg_polygons_from_diff(tmp_path):
+    """원본·검열본 픽셀 차분 기반 YOLO-seg 폴리곤 추출 및 빈 ground_truth 안전 종료를 검증합니다."""
+    from scripts.extract_censor_seg_dataset import build_yolo_seg_dataset, extract_yolo_seg_polygons_from_diff, main
+
+    origin_img = Image.new("RGB", (400, 400), (235, 190, 170))
+    censored_img = origin_img.copy()
+    draw = ImageDraw.Draw(censored_img)
+    draw.rounded_rectangle([150, 120, 250, 280], radius=18, fill=(255, 255, 255))
+
+    mask, lines = extract_yolo_seg_polygons_from_diff(origin_img, censored_img, class_id=0, diff_thresh=18)
+    assert mask.shape == (400, 400)
+    assert mask[200, 200] == 255
+    assert mask[20, 20] == 0
+    assert len(lines) == 1
+
+    tokens = lines[0].split()
+    assert tokens[0] == "0"
+    coords = [float(v) for v in tokens[1:]]
+    assert len(coords) >= 6 and len(coords) % 2 == 0
+    assert all(0.0 <= c <= 1.0 for c in coords)
+
+    # 1) 비어 있는 ground_truth에서도 에러 없이 0 pairs processed 반환
+    empty_gt = tmp_path / "empty_gt"
+    empty_out = tmp_path / "empty_ds"
+    assert main(["--gt-dir", str(empty_gt), "--projects-dir", str(tmp_path / "proj"), "--out-dir", str(empty_out)]) == 0
+    assert (empty_out / "images").is_dir() and (empty_out / "labels").is_dir()
+
+    # 2) 실제 매칭 쌍이 있을 때 images/ 및 labels/*.txt 생성 검증
+    gt_dir = tmp_path / "gt"
+    proj_dir = tmp_path / "projects"
+    orig_dir = proj_dir / "campus" / "assets" / "aya_origin" / "02_h_scenes"
+    orig_dir.mkdir(parents=True, exist_ok=True)
+    gt_dir.mkdir(parents=True, exist_ok=True)
+
+    origin_img.save(orig_dir / "aya_086_정상위강.webp", "WEBP")
+    censored_img.save(gt_dir / "aya_086_정상위강.webp", "WEBP")
+
+    out_ds = tmp_path / "yolo_ds"
+    stats = build_yolo_seg_dataset(gt_dir, proj_dir, out_ds)
+    assert stats["processed"] == 1
+    assert (out_ds / "images" / "aya_086_정상위강.webp").exists()
+    assert (out_ds / "labels" / "aya_086_정상위강.txt").exists()
+    assert (out_ds / "data.yaml").exists()
+
+
+

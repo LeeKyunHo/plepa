@@ -131,6 +131,133 @@ def get_skin_mask(img_np: np.ndarray) -> np.ndarray:
     return cv2.bitwise_or(mask1, mask2)
 
 
+def _extract_lineart_barrier(roi_rgb: np.ndarray, scale: float) -> np.ndarray:
+    """
+    2D 일러스트 ROI에서 검은 먹선/윤곽선(Line-Art) 마스크를 추출하고,
+    미세한 1~2px 끊김을 폐합해 허벅지/배경 번짐을 막는 선화 장벽(Barrier)을 생성합니다.
+    """
+    if roi_rgb.size == 0:
+        return np.zeros((0, 0), dtype=np.uint8)
+    gray = cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2GRAY)
+    blur_k = _odd_kernel(3, scale, minimum=3)
+    blurred = cv2.GaussianBlur(gray, (blur_k, blur_k), 0.8)
+
+    block_sz = _odd_kernel(11, scale, minimum=7)
+    adap = cv2.adaptiveThreshold(
+        blurred,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        block_sz,
+        7,
+    )
+    canny = cv2.Canny(blurred, 55, 145)
+    raw_barrier = cv2.bitwise_or(adap, canny)
+    if np.count_nonzero(raw_barrier) == 0:
+        return raw_barrier
+
+    close_sz = _odd_kernel(3, scale, minimum=3)
+    k_close = cv2.getStructuringElement(cv2.MORPH_RECT, (close_sz, close_sz))
+    return cv2.morphologyEx(raw_barrier, cv2.MORPH_CLOSE, k_close, iterations=1)
+
+
+def _snap_seed_to_fillable(fillable: np.ndarray, px: int, py: int, max_radius: int = 8) -> Optional[Tuple[int, int]]:
+    """시드 좌표가 선화 위 등에 걸린 경우 반경 내에서 유효 `fillable > 0` 픽셀로 스냅합니다."""
+    rh, rw = fillable.shape[:2]
+    if rh == 0 or rw == 0:
+        return None
+    px = max(0, min(rw - 1, int(px)))
+    py = max(0, min(rh - 1, int(py)))
+    if fillable[py, px] > 0:
+        return px, py
+
+    for r in range(1, max_radius + 1):
+        y0, y1 = max(0, py - r), min(rh, py + r + 1)
+        x0, x1 = max(0, px - r), min(rw, px + r + 1)
+        ys, xs = np.nonzero(fillable[y0:y1, x0:x1] > 0)
+        if len(xs) > 0:
+            d2 = (xs + x0 - px) ** 2 + (ys + y0 - py) ** 2
+            best = int(np.argmin(d2))
+            return int(xs[best] + x0), int(ys[best] + y0)
+    return None
+
+
+def _label_border_touch_ratio(labels: np.ndarray, label_id: int) -> float:
+    """연결 성분 `label_id`가 ROI 외곽 1px 둘레를 차지하는 비율(0.0~1.0)을 반환합니다."""
+    rh, rw = labels.shape[:2]
+    if rh < 2 or rw < 2:
+        return 1.0
+    perim = np.concatenate([labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]])
+    return float(np.count_nonzero(perim == label_id)) / float(max(1, perim.size))
+
+
+def _clamp_mask_by_lineart_and_base(
+    sam_mask: np.ndarray,
+    roi_rgb: np.ndarray,
+    roi_skin: Optional[np.ndarray],
+    scale: float,
+    pose_cat: Optional[str] = None,
+) -> np.ndarray:
+    """
+    2D 선화 장벽(`_extract_lineart_barrier`)과 기둥·낭심 전경 시드를 결합해
+    선화 바깥(허벅지/사타구니/입술/손)으로 번진 마스크를 절단하고, 선화 위(1~2px)까지만 매끈히 채웁니다.
+    """
+    rh, rw = sam_mask.shape[:2]
+    if rh == 0 or rw == 0 or np.count_nonzero(sam_mask) == 0:
+        return sam_mask
+
+    barrier = _extract_lineart_barrier(roi_rgb, scale)
+    if np.count_nonzero(barrier) < 6:
+        return sam_mask
+
+    sam_bin = (sam_mask > 127).astype(np.uint8) * 255
+    fillable = cv2.bitwise_and(sam_bin, cv2.bitwise_not(barrier))
+    if np.count_nonzero(fillable) < max(16, int(rh * rw * 0.02)):
+        return sam_mask
+
+    geom = _estimate_penis_axis_and_base(roi_rgb, (0, 0, rw, rh), skin_np=roi_skin, pose_cat=pose_cat)
+    num_labels, labels = cv2.connectedComponents((fillable > 0).astype(np.uint8), connectivity=4)
+    if num_labels <= 1:
+        return sam_mask
+
+    # 기둥 중심(ROI 중앙 + PCA 중심) 및 낭심 중심(base_center)에서 유효 시드 컴포넌트 탐색
+    cand_pts = [
+        (int(round(geom["center"][0])), int(round(geom["center"][1]))),
+        (rw // 2, rh // 2),
+    ]
+    center_label = 0
+    for cpx, cpy in cand_pts:
+        snapped = _snap_seed_to_fillable(fillable, cpx, cpy, max_radius=max(6, int(min(rw, rh) * 0.08)))
+        if snapped is not None:
+            lbl = int(labels[snapped[1], snapped[0]])
+            if lbl > 0:
+                center_label = lbl
+                break
+
+    if center_label == 0:
+        return sam_mask
+
+    # 중심 구획이 ROI 둘레 대부분(>60%)을 감싸는 외곽 배경인 경우는 선화 폐곡선이 없는 씬이므로 원 마스크 유지
+    if _label_border_touch_ratio(labels, center_label) > 0.60:
+        return sam_mask
+
+    keep_mask = (labels == center_label).astype(np.uint8) * 255
+
+    # 낭심(Base Bulb)이 별도 선화 구획으로 분리되어 있을 경우 외곽 배경이 아닐 때만 병합
+    bx, by = int(round(geom["base_center"][0])), int(round(geom["base_center"][1]))
+    base_snapped = _snap_seed_to_fillable(fillable, bx, by, max_radius=max(5, int(min(rw, rh) * 0.06)))
+    if base_snapped is not None:
+        base_lbl = int(labels[base_snapped[1], base_snapped[0]])
+        if base_lbl > 0 and base_lbl != center_label and _label_border_touch_ratio(labels, base_lbl) < 0.42:
+            keep_mask = cv2.bitwise_or(keep_mask, (labels == base_lbl).astype(np.uint8) * 255)
+
+    # 장벽 추출로 비어 있던 검은 선화 두께(1~2px) 자체만 덮고, 선화 바깥 구획에는 넘치지 않게 제약
+    dil_sz = _odd_kernel(3, scale, minimum=3)
+    k_dil = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dil_sz, dil_sz))
+    dilated = cv2.dilate(keep_mask, k_dil, iterations=1)
+    allowed_zone = cv2.bitwise_or(keep_mask, barrier)
+    return cv2.bitwise_and(dilated, allowed_zone)
+
 
 def apply_silhouette(
     img: Image.Image,
@@ -184,16 +311,28 @@ def apply_silhouette(
         bw = max(1, x2 - x1)
         bh = max(1, y2 - y1)
 
-        # 사용자 확정 정책: '애매하면 모자라게' 콤팩트 언더마스킹 (Under-Masking)
-        # 주변 신체/가슴/입술/턱/허벅지 침범을 0%로 원천 차단하기 위해 외측 확장을 전면 철회하고
-        # BBox 경계선 내측 6~10% 안전 수축(Inner Inset)을 적용하여 핵심 접점 중심만 콤팩트하게 덮습니다.
-        # 모자란 부분은 모바일/웹 검수 갤러리 캔버스 에디터에서 사용자가 1~2초 만에 터치 덧칠 마감합니다.
-        inset_x = int(bw * 0.08)
-        inset_y = int(bh * 0.08)
-        ex1 = max(0, x1 + inset_x)
-        ey1 = max(0, y1 + inset_y)
-        ex2 = min(w, x2 - inset_x)
-        ey2 = min(h, y2 - inset_y)
+        # Phase C5: 선화 장벽이 허벅지 번짐을 막아주므로 내측 수축을 8% -> 2% 수준으로 완화하고
+        # _estimate_penis_axis_and_base()로 추정된 낭심(Base) 방향 끝단은 수축하지 않도록 보호
+        geom = _estimate_penis_axis_and_base(
+            img_np, (x1, y1, x2, y2), skin_np=eff_skin_np, pose_cat=pose_cat
+        )
+        bx_g, by_g = geom["base_center"]
+        cx_g, cy_g = geom["center"]
+        dx_b, dy_b = bx_g - cx_g, by_g - cy_g
+
+        base_in_x = max(0, int(round(bw * 0.02)))
+        base_in_y = max(0, int(round(bh * 0.02)))
+        in_left = 0 if dx_b < -bw * 0.10 else base_in_x
+        in_right = 0 if dx_b > bw * 0.10 else base_in_x
+        in_top = 0 if dy_b < -bh * 0.10 else base_in_y
+        in_bottom = 0 if dy_b > bh * 0.10 else base_in_y
+
+        ex1 = max(0, x1 + in_left)
+        ey1 = max(0, y1 + in_top)
+        ex2 = min(w, x2 - in_right)
+        ey2 = min(h, y2 - in_bottom)
+        if ex2 <= ex1 or ey2 <= ey1:
+            ex1, ey1, ex2, ey2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
 
         ebw = max(1, ex2 - ex1)
         ebh = max(1, ey2 - ey1)
@@ -268,7 +407,7 @@ def apply_silhouette(
 
                 sam_union = np.zeros((h, w), dtype=np.uint8)
                 crop_mask = np.zeros((h, w), dtype=np.uint8)
-                rad = max(_scale_int(4, scale, 3), int(min(ebw, ebh) * 0.40))
+                rad = max(_scale_int(4, scale, 3), int(min(ebw, ebh) * 0.18))
                 sub_c = np.zeros((ebh, ebw), dtype=np.uint8)
                 if ebw > rad * 2 and ebh > rad * 2:
                     cv2.rectangle(sub_c, (rad, 0), (ebw - rad, ebh), 255, -1)
@@ -333,50 +472,57 @@ def apply_silhouette(
                     sam_union = np.clip(sam_union.astype(np.float32) * void_weight, 0, 255).astype(np.uint8)
                     _, sam_union = cv2.threshold(sam_union, 127, 255, cv2.THRESH_BINARY)
 
-                # BBox 내부 엄격 클리핑 및 스케일 대응 미세 침식
+                # BBox 내부 엄격 클리핑 + 2D 선화 장벽(Line-Art Barrier) 기반 허벅지·배경 번짐 차단
                 sam_union = cv2.bitwise_and(sam_union, crop_mask)
-                k_er_sz = _odd_kernel(3, scale)
-                k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_er_sz, k_er_sz))
-                sam_union = cv2.erode(sam_union, k_erode, iterations=1)
+                roi_clamped = _clamp_mask_by_lineart_and_base(
+                    sam_union[ey1:ey2, ex1:ex2],
+                    roi_rgb,
+                    eff_skin_np[ey1:ey2, ex1:ex2],
+                    scale,
+                    pose_cat=pose_cat,
+                )
+                sam_union[ey1:ey2, ex1:ex2] = roi_clamped
 
                 contours, _ = cv2.findContours(sam_union, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 if contours:
                     max_area = max(cv2.contourArea(c) for c in contours)
-                    min_cnt_area = max(_scale_int(60, scale * scale, minimum=25), max_area * 0.15)
+                    min_cnt_area = max(_scale_int(60, scale * scale, minimum=25), max_area * 0.12)
                     for c in contours:
                         if cv2.contourArea(c) >= min_cnt_area:
                             cv2.drawContours(sub_m, [c], -1, 255, -1)
-                    if np.count_nonzero(sub_m) >= (bw * bh * 0.08):
+                    if np.count_nonzero(sub_m) >= (bw * bh * 0.04):
                         sam_succeeded = True
             except Exception as e:
                 logger.warning(f"[Censor] MobileSAM fallback: {e}")
 
-        # MobileSAM이 실패한 경우에만 솔리드 타원 캡슐로 폴백 (SAM 성공 시 원형 윤곽 보존)
+        # MobileSAM이 실패한 경우에만 솔리드 타원 캡슐로 폴백 (+ 선화 장벽 클램핑 동일 적용)
         if not sam_succeeded:
             bcx = int((ex1 + ex2) / 2)
             bcy = int((ey1 + ey2) / 2)
-            erx = min(int(w * 0.12), max(_scale_int(4, scale, 3), int(ebw * 0.40)))
-            ery = min(int(h * 0.16), max(_scale_int(4, scale, 3), int(ebh * 0.46)))
+            erx = min(int(w * 0.14), max(_scale_int(4, scale, 3), int(ebw * 0.44)))
+            ery = min(int(h * 0.18), max(_scale_int(4, scale, 3), int(ebh * 0.48)))
             cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
+            sub_m[ey1:ey2, ex1:ex2] = _clamp_mask_by_lineart_and_base(
+                sub_m[ey1:ey2, ex1:ex2],
+                img_np[ey1:ey2, ex1:ex2],
+                eff_skin_np[ey1:ey2, ex1:ex2],
+                scale,
+                pose_cat=pose_cat,
+            )
 
         final_mask = np.maximum(final_mask, sub_m)
 
     if np.count_nonzero(final_mask) == 0:
         return img
 
-    # 5. 모폴로지 닫힘 + 가우시안 스무딩으로 선화 내부 빈틈을 메우고 과장 없는 날렵한 외곽선 완성
-    # 사용자 가이드라인: 밖으로 부풀어 오르지 않도록 dilate를 제거하고 미세 침식(erode) 적용
-    ke = _odd_kernel(3, scale)
-    kernel_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ke, ke))
-    eroded = cv2.erode(final_mask, kernel_erode, iterations=1)
-
-    kc = _odd_kernel(5, scale)
+    # 5. 모폴로지 닫힘 + 경계 스무딩으로 선화 내부 빈틈을 메우고 깔끔한 망가풍 실루엣 완성
+    kc = _odd_kernel(5, scale, minimum=3)
     kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kc, kc))
-    closed = cv2.morphologyEx(eroded, cv2.MORPH_CLOSE, kernel_close)
+    closed = cv2.morphologyEx(final_mask, cv2.MORPH_CLOSE, kernel_close)
 
-    ks = _odd_kernel(5, scale)
-    smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 1.2 * scale)
-    _, smoothed = cv2.threshold(smooth_blur, 140, 255, cv2.THRESH_BINARY)
+    ks = _odd_kernel(3, scale, minimum=3)
+    smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 0.9 * scale)
+    _, smoothed = cv2.threshold(smooth_blur, 127, 255, cv2.THRESH_BINARY)
 
     # 얼굴 상단(눈/이마 38%) 보호 레이어 차감
     if np.count_nonzero(protection_mask) > 0:
@@ -385,9 +531,9 @@ def apply_silhouette(
     if np.count_nonzero(smoothed) == 0:
         return img
 
-    # 6. 경계 블러 페더링 (웹소설/상업 출판 표준: 소프트 에지 캡슐 페더링)
-    kf = _odd_kernel(9, scale)
-    blurred = cv2.GaussianBlur(smoothed, (kf, kf), 2.5 * scale)
+    # 6. 최소 경계 안티에일리어싱 페더링 (1~2px 수준의 깔끔한 망가풍 에지)
+    kf = _odd_kernel(5, scale, minimum=3)
+    blurred = cv2.GaussianBlur(smoothed, (kf, kf), 1.0 * scale)
 
     # 색상 레이어 합성 (블랙 실루엣은 애니메이션 먹선 톤 (12, 12, 16) 적용)
     if isinstance(color, str):
