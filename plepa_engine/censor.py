@@ -78,24 +78,52 @@ def _restore_alpha(rgb_img: Image.Image, alpha: Optional[Image.Image]) -> Image.
     return rgba
 
 
+def _extract_sam_mask_data(results: Any) -> Optional[np.ndarray]:
+    """SAM/SAM2 추론 결과에서 마스크 numpy 배열을 안전하게 추출합니다 (빈 텐서·테스트 모의 객체 겸용)."""
+    if not results or getattr(results[0], "masks", None) is None:
+        return None
+    raw_data = getattr(results[0].masks, "data", None)
+    if raw_data is None:
+        return None
+    arr = raw_data.cpu().numpy() if hasattr(raw_data, "cpu") else np.asarray(raw_data)
+    if arr is None or len(arr) == 0:
+        return None
+    return arr
+
+
 def get_sam_model():
-    """MobileSAM 세그멘테이션 모델을 스레드 안전하게 싱글톤 로드합니다."""
+    """SAM 2.1(sam2.1_s.pt) 우선 및 MobileSAM 폴백 세그멘테이션 모델을 스레드 안전하게 싱글톤 로드합니다."""
     global _SAM_MODEL
     if _SAM_MODEL is not None:
         return _SAM_MODEL if _SAM_MODEL is not False else None
 
     with _SAM_MODEL_LOCK:
         if _SAM_MODEL is None:
-            try:
-                from plepa_engine.config import ROOT_DIR
-                from ultralytics import SAM
+            from plepa_engine.config import ROOT_DIR
 
-                candidate_pt = ROOT_DIR / "mobile_sam.pt"
-                sam_path = str(candidate_pt) if candidate_pt.exists() else "mobile_sam.pt"
-                _SAM_MODEL = SAM(sam_path)
-                logger.info(f"[Censor] MobileSAM 모델 로드 완료 ({sam_path})")
-            except Exception as e:
-                logger.warning(f"[Censor] MobileSAM 로드 실패, OpenCV 폴백 모드로 동작합니다: {e}")
+            req_name = os.environ.get("PLEPA_SAM_MODEL", "sam2.1_s.pt").strip() or "sam2.1_s.pt"
+            candidates: List[str] = [req_name]
+            if req_name != "mobile_sam.pt":
+                candidates.append("mobile_sam.pt")
+
+            loaded = None
+            for idx, cand in enumerate(candidates):
+                try:
+                    from ultralytics import SAM
+
+                    cand_path = ROOT_DIR / cand
+                    sam_path = str(cand_path) if cand_path.is_file() else cand
+                    loaded = SAM(sam_path)
+                    logger.info(f"[Censor] SAM 세그멘테이션 모델 로드 완료 ({sam_path})")
+                    break
+                except Exception as e:
+                    next_hint = f" -> 폴백({candidates[idx + 1]}) 시도" if idx + 1 < len(candidates) else ""
+                    logger.warning(f"[Censor] SAM({cand}) 로드 실패: {e}{next_hint}")
+
+            if loaded is not None:
+                _SAM_MODEL = loaded
+            else:
+                logger.warning("[Censor] 사용 가능한 SAM 모델이 없어 OpenCV 폴백 모드로 동작합니다.")
                 _SAM_MODEL = False
     return _SAM_MODEL if _SAM_MODEL is not False else None
 
@@ -657,9 +685,9 @@ def _extract_hand_occlusion_mask(
                     except Exception:
                         results = sam(crop_pil, bboxes=[local_hbox], verbose=False)
 
-                if results and results[0].masks is not None:
-                    m_data = results[0].masks.data.cpu().numpy()
-                    crop_m = (m_data[0] * 255).astype(np.uint8)
+                m_data = _extract_sam_mask_data(results)
+                if m_data is not None:
+                    crop_m = (m_data[0].astype(np.float32) * 255.0).clip(0, 255).astype(np.uint8)
                     if crop_m.shape != (ch, cw):
                         crop_m = cv2.resize(crop_m, (cw, ch), interpolation=cv2.INTER_NEAREST)
                     raw_m = np.zeros((h, w), dtype=np.uint8)
@@ -719,6 +747,113 @@ def _build_rounded_box_guard(
     return guard
 
 
+def _extract_semantic_sam_prompts(
+    yolo_prior_mask: np.ndarray,
+    target_box: Tuple[int, int, int, int],
+    context_box: Optional[Tuple[int, int, int, int]],
+    skin_bool: np.ndarray,
+    hand_boxes: Sequence[Tuple[int, int, int, int]],
+    scale: float,
+) -> Tuple[List[List[int]], List[List[int]], np.ndarray]:
+    """
+    YOLO-seg 폴리곤 마스크(yolo_prior_mask)를 기반으로 SAM 2.1용 시맨틱 프롬프트를 산출합니다.
+    - Positive(1): 손 영역을 제외한 prior 마스크의 cv2.distanceTransform 최대 코어 및 주축 능선 코어(최대 3점)
+    - Negative(0): context_box(또는 target_box) 내 피부 중 prior 외곽 ring 바깥의 주변 피부 사분면 대표 좌표(최대 4점)
+    - envelope_mask: 타겟 박스 크기의 ~15% 반경으로 팽창시킨 Semantic Envelope 가드
+    """
+    h, w = yolo_prior_mask.shape[:2]
+    prior_bin = (yolo_prior_mask > 0).astype(np.uint8)
+    ex1, ey1, ex2, ey2 = [int(v) for v in target_box]
+    ex1, ey1 = max(0, ex1), max(0, ey1)
+    ex2, ey2 = min(w, ex2), min(h, ey2)
+    ebw, ebh = max(1, ex2 - ex1), max(1, ey2 - ey1)
+
+    rx = max(_scale_int(8, scale, minimum=6), int(round(ebw * 0.15)))
+    ry = max(_scale_int(8, scale, minimum=6), int(round(ebh * 0.15)))
+    kw_env, kh_env = max(3, rx * 2 + 1), max(3, ry * 2 + 1)
+    env_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kw_env, kh_env))
+    envelope_mask = (cv2.dilate(prior_bin * 255, env_kernel, iterations=1) > 0).astype(np.uint8) * 255
+
+    valid_fg = prior_bin.copy()
+    for hx1, hy1, hx2, hy2 in hand_boxes:
+        ix1, iy1 = max(0, int(hx1)), max(0, int(hy1))
+        ix2, iy2 = min(w, int(hx2)), min(h, int(hy2))
+        if ix2 > ix1 and iy2 > iy1:
+            valid_fg[iy1:iy2, ix1:ix2] = 0
+    if np.count_nonzero(valid_fg) < 16:
+        valid_fg = prior_bin.copy()
+
+    def _in_hands(px: int, py: int) -> bool:
+        return any(hx1 <= px <= hx2 and hy1 <= py <= hy2 for hx1, hy1, hx2, hy2 in hand_boxes)
+
+    pos_pts: List[List[int]] = []
+    if np.count_nonzero(valid_fg) > 0:
+        dist = cv2.distanceTransform(valid_fg, cv2.DIST_L2, 5)
+        max_dist = float(dist.max())
+        min_sep = max(12.0, max(ebw, ebh) * 0.22)
+
+        def _try_add_ridge_pt(sub_dist: np.ndarray, x_off: int, y_off: int, min_val: float) -> None:
+            if sub_dist.size == 0 or float(sub_dist.max()) < min_val:
+                return
+            ly, lx = np.unravel_index(int(np.argmax(sub_dist)), sub_dist.shape)
+            cand = [int(lx + x_off), int(ly + y_off)]
+            if _in_hands(cand[0], cand[1]):
+                return
+            if any(math.hypot(cand[0] - p[0], cand[1] - p[1]) < min_sep for p in pos_pts):
+                return
+            pos_pts.append(cand)
+
+        _try_add_ridge_pt(dist[ey1:ey2, ex1:ex2], ex1, ey1, 0.0)
+        ys_fg, xs_fg = np.nonzero(valid_fg[ey1:ey2, ex1:ex2])
+        if len(xs_fg) >= 24 and max_dist > 0.0:
+            ridge_thresh = max(1.5, max_dist * 0.38)
+            x_span = int(xs_fg.max() - xs_fg.min() + 1)
+            y_span = int(ys_fg.max() - ys_fg.min() + 1)
+            if y_span >= x_span:
+                y_a = ey1 + int(ys_fg.min() + y_span * 0.42)
+                y_b = ey1 + int(ys_fg.min() + y_span * 0.58)
+                _try_add_ridge_pt(dist[ey1:y_a, ex1:ex2], ex1, ey1, ridge_thresh)
+                _try_add_ridge_pt(dist[y_b:ey2, ex1:ex2], ex1, y_b, ridge_thresh)
+            else:
+                x_a = ex1 + int(xs_fg.min() + x_span * 0.42)
+                x_b = ex1 + int(xs_fg.min() + x_span * 0.58)
+                _try_add_ridge_pt(dist[ey1:ey2, ex1:x_a], ex1, ey1, ridge_thresh)
+                _try_add_ridge_pt(dist[ey1:ey2, x_b:ex2], x_b, ey1, ridge_thresh)
+
+    # Negative points: prior 외곽 안전 버퍼 바깥쪽 주변 피부(배/허벅지/사타구니) 사분면 추출
+    neg_rx = max(_scale_int(6, scale, minimum=4), int(round(ebw * 0.08)))
+    neg_ry = max(_scale_int(6, scale, minimum=4), int(round(ebh * 0.08)))
+    neg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (neg_rx * 2 + 1, neg_ry * 2 + 1))
+    dilated_prior = cv2.dilate(prior_bin * 255, neg_kernel, iterations=1) > 0
+
+    cx1, cy1, cx2, cy2 = [int(v) for v in (context_box if context_box is not None else target_box)]
+    cx1, cy1 = max(0, min(ex1, cx1)), max(0, min(ey1, cy1))
+    cx2, cy2 = min(w, max(ex2, cx2)), min(h, max(ey2, cy2))
+
+    neg_pts: List[List[int]] = []
+    if cx2 > cx1 + 4 and cy2 > cy1 + 4:
+        outer_skin = skin_bool[cy1:cy2, cx1:cx2] & (~dilated_prior[cy1:cy2, cx1:cx2])
+        cw_ctx, ch_ctx = cx2 - cx1, cy2 - cy1
+        mx, my = max(1, cw_ctx // 2), max(1, ch_ctx // 2)
+        quads = (
+            (0, 0, mx, my),
+            (mx, 0, cw_ctx, my),
+            (0, my, mx, ch_ctx),
+            (mx, my, cw_ctx, ch_ctx),
+        )
+        for qx1, qy1, qx2, qy2 in quads:
+            sub = outer_skin[qy1:qy2, qx1:qx2]
+            qys, qxs = np.where(sub)
+            if len(qxs) >= 12:
+                # 1사분위/중앙 피부 좌표 추출 (실제 주변 피부 위에 위치하도록 qxs/qys 중 가장 가까운 유효 픽셀 선택)
+                med_idx = int(len(qxs) // 2)
+                px = int(cx1 + qx1 + qxs[med_idx])
+                py = int(cy1 + qy1 + qys[med_idx])
+                neg_pts.append([px, py])
+
+    return pos_pts[:3], neg_pts[:4], envelope_mask
+
+
 def _classify_sam_mask_leak(
     raw_m: np.ndarray,
     ex1: int,
@@ -729,6 +864,7 @@ def _classify_sam_mask_leak(
     ry1: int,
     rx2: int,
     ry2: int,
+    box_fill_thresh: float = 0.52,
 ) -> Tuple[bool, bool]:
     """
     SAM 추론 마스크의 누수(Leakage) 및 BBox 내부 네모/덩어리 과팽창 여부를 분리 판정합니다.
@@ -759,7 +895,7 @@ def _classify_sam_mask_leak(
                 global_leak = True
 
     blocky_leak = False
-    if not global_leak and box_fill > 0.52 and in_count > 0:
+    if not global_leak and box_fill > float(box_fill_thresh) and in_count > 0:
         bw, bh = max(1, ex2 - ex1), max(1, ey2 - ey1)
         ys_in, xs_in = np.nonzero(in_box)
         mbw = int(xs_in.max() - xs_in.min() + 1)
@@ -787,10 +923,11 @@ def _classify_sam_mask_leak(
             )
             if edge_mean >= 0.30
         )
-        cross_ratio = float(min(mbw, mbh)) / float(max(1, max(mbw, mbh)))
+        strict_single = float(box_fill_thresh) <= 0.45
         if (
             (rect_extent >= 0.86 and corner_fill >= 0.28)
             or (box_fill >= 0.62 and corner_fill >= 0.32)
+            or (strict_single and border_touches >= 2 and corner_fill >= 0.20 and rect_extent >= 0.72)
         ):
             blocky_leak = True
 
@@ -807,10 +944,11 @@ def _is_sam_mask_leaky(
     ry1: int,
     rx2: int,
     ry2: int,
+    box_fill_thresh: float = 0.52,
 ) -> bool:
     """SAM 추론 마스크가 외부 경계로 누수되었거나 BBox 내부 네모/덩어리로 과팽창했는지 판정합니다."""
     global_leak, blocky_leak = _classify_sam_mask_leak(
-        raw_m, ex1, ey1, ex2, ey2, rx1, ry1, rx2, ry2
+        raw_m, ex1, ey1, ex2, ey2, rx1, ry1, rx2, ry2, box_fill_thresh=box_fill_thresh
     )
     return global_leak or blocky_leak
 
@@ -826,6 +964,7 @@ def _build_oriented_core_guard(
     img_np: Optional[np.ndarray] = None,
     skin_np: Optional[np.ndarray] = None,
     pose_cat: Optional[str] = None,
+    minor_ratio_cap: float = 0.36,
 ) -> np.ndarray:
     """과팽창 감지 시 성기 주축·낭심 추정 기반 타원형 코어 가드를 생성해 좌우 네모 군살을 제거합니다."""
     ebw, ebh = max(1, ex2 - ex1), max(1, ey2 - ey1)
@@ -838,7 +977,7 @@ def _build_oriented_core_guard(
     cx, cy = int(round(geom["center"][0])), int(round(geom["center"][1]))
     angle = float(geom["angle"])
     major_r = max(4, int(round(min(max(ebw, ebh) * 0.52, max(float(geom["major_len"]) * 0.55, max(ebw, ebh) * 0.44)))))
-    minor_r = max(4, int(round(min(min(ebw, ebh) * 0.36, max(float(geom["minor_len"]) * 0.54, min(ebw, ebh) * 0.28)))))
+    minor_r = max(4, int(round(min(min(ebw, ebh) * float(minor_ratio_cap), max(float(geom["minor_len"]) * 0.54, min(ebw, ebh) * min(0.28, float(minor_ratio_cap)))))))
     cv2.ellipse(guard, (cx, cy), (major_r, minor_r), angle, 0, 360, 255, -1)
 
     bcx, bcy = int(round(geom["base_center"][0])), int(round(geom["base_center"][1]))
@@ -954,31 +1093,37 @@ def apply_silhouette(
     pose_cat: Optional[str] = None,
     custom_seg_mask: Optional[np.ndarray] = None,
     fallback_boxes: Optional[Sequence[Tuple[Any, ...]]] = None,
+    yolo_prior_masks: Optional[Sequence[Optional[np.ndarray]]] = None,
+    context_boxes: Optional[Sequence[Optional[Tuple[int, int, int, int]]]] = None,
 ) -> Image.Image:
     """
     네모난 박스가 아니라 타겟과 기저부의 실제 선화 외곽선(Contour)을 따라
     내부만 솔리드 컬러(블랙 #000000 또는 화이트 #FFFFFF)로 매끈하게 채우는 실루엣 검열을 렌더링합니다.
     - Phase P0: 4중 수축(8% 인셋, 0.40 코너 절단, 중복 erode, 140 클리핑) 해체 + Line-Art Outer Snap 적용.
     - Phase P0.5: 손 가로질림 상·하단 Sub-BBox 분할 디코딩 + 영역별 독립 컴포넌트 보존 + 내부 네모 과팽창 억제.
+    - Phase P2: Semantic-Guided SAM (YOLO distanceTransform 코어 Positive + 외곽 피부 Negative + Envelope 가드) + SAM 2.1 적용.
     """
     rgb_img, alpha_ch = _split_rgb_and_alpha(img)
     w, h = rgb_img.size
     scale = _compute_scale_factor(w, h)
     img_np = np.array(rgb_img)
 
-    # 0. 눈/이마(Upper Face 38%) 보호 마스크 및 얼굴 중심 네거티브 포인트 추출
+    # 0. 눈/이마(Upper Face 38%) 보호 마스크 및 얼굴 중심·외측 뺨 네거티브 포인트 추출
     protection_mask = np.zeros((h, w), dtype=np.uint8)
     face_neg_pts: List[List[int]] = []
+    detected_face_boxes: List[Tuple[int, int, int, int]] = []
     try:
         from imgutils.detect import detect_faces
         detected_faces = detect_faces(rgb_img, conf_threshold=0.35)
 
         for (fx1, fy1, fx2, fy2), _, _ in detected_faces:
-            fh = max(1, fy2 - fy1)
-            safe_fy2 = int(fy1 + fh * 0.38)
-            if safe_fy2 > fy1:
-                cv2.rectangle(protection_mask, (int(fx1), int(fy1)), (int(fx2), safe_fy2), 255, -1)
-            face_neg_pts.append([int((fx1 + fx2) / 2), int(fy1 + fh * 0.42)])
+            fx1_i, fy1_i, fx2_i, fy2_i = int(fx1), int(fy1), int(fx2), int(fy2)
+            detected_face_boxes.append((fx1_i, fy1_i, fx2_i, fy2_i))
+            fh = max(1, fy2_i - fy1_i)
+            safe_fy2 = int(fy1_i + fh * 0.38)
+            if safe_fy2 > fy1_i:
+                cv2.rectangle(protection_mask, (fx1_i, fy1_i), (fx2_i, safe_fy2), 255, -1)
+            face_neg_pts.append([int((fx1_i + fx2_i) / 2), int(fy1_i + fh * 0.42)])
 
         if np.count_nonzero(protection_mask) > 0:
             pk = _odd_kernel(15, scale)
@@ -1053,7 +1198,7 @@ def apply_silhouette(
 
     asym_thresh = 1.15 if pose_cat in ("fellatio", "paizuri") else 1.35
 
-    for item in sam_target_boxes:
+    for item_idx, item in enumerate(sam_target_boxes):
         box = item[0]
         x1, y1, x2, y2 = box
         ex1 = max(0, int(x1))
@@ -1062,6 +1207,26 @@ def apply_silhouette(
         ey2 = min(h, int(y2))
         if ex2 <= ex1 or ey2 <= ey1:
             continue
+
+        item_prior_raw = (
+            yolo_prior_masks[item_idx]
+            if (yolo_prior_masks is not None and item_idx < len(yolo_prior_masks))
+            else None
+        )
+        item_context_box = (
+            context_boxes[item_idx]
+            if (context_boxes is not None and item_idx < len(context_boxes))
+            else None
+        )
+        item_prior_mask: Optional[np.ndarray] = None
+        if item_prior_raw is not None:
+            prior_u8 = (np.asarray(item_prior_raw) > 0).astype(np.uint8) * 255
+            if prior_u8.shape != (h, w):
+                prior_u8 = cv2.resize(prior_u8, (w, h), interpolation=cv2.INTER_NEAREST)
+            if np.count_nonzero(prior_u8) >= 16:
+                item_prior_mask = prior_u8
+        has_yolo_prior = item_prior_mask is not None
+        prior_area = int(np.count_nonzero(item_prior_mask)) if has_yolo_prior else 0
 
         ebw = max(1, ex2 - ex1)
         ebh = max(1, ey2 - ey1)
@@ -1074,31 +1239,6 @@ def apply_silhouette(
                 roi_hsv = cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2HSV)
                 roi_skin = eff_skin_np[ey1:ey2, ex1:ex2] > 0
 
-                mid_y_l = int(ebh * 0.50)
-                mid_x_l = int(ebw * 0.50)
-                left_bot_hsv = roi_hsv[mid_y_l:, :mid_x_l]
-                right_bot_hsv = roi_hsv[mid_y_l:, mid_x_l:]
-
-                top_skin = roi_skin[int(ebh * 0.12):int(ebh * 0.48), :]
-                top_h_med = (
-                    float(np.median(roi_hsv[int(ebh * 0.12):int(ebh * 0.48), :, 0][top_skin]))
-                    if np.count_nonzero(top_skin) >= 20
-                    else 11.0
-                )
-
-                def _side_target_score(sub_hsv: np.ndarray, sub_sk: np.ndarray) -> float:
-                    if sub_hsv.size == 0:
-                        return 0.0
-                    h_d = np.minimum(
-                        np.abs(sub_hsv[:, :, 0].astype(np.float32) - top_h_med),
-                        180.0 - np.abs(sub_hsv[:, :, 0].astype(np.float32) - top_h_med),
-                    )
-                    valid = sub_sk & (h_d <= 9.5)
-                    return float(np.count_nonzero(valid)) / float(max(1, sub_sk.size))
-
-                l_score = _side_target_score(left_bot_hsv, roi_skin[mid_y_l:, :mid_x_l])
-                r_score = _side_target_score(right_bot_hsv, roi_skin[mid_y_l:, mid_x_l:])
-
                 pos_pts: List[List[int]] = []
                 local_neg_pts: List[List[int]] = list(face_neg_pts)
                 box_hand_boxes: List[Tuple[int, int, int, int]] = [
@@ -1110,54 +1250,119 @@ def apply_silhouette(
                 def _is_in_hand_boxes(px: int, py: int) -> bool:
                     return any(hx1 <= px <= hx2 and hy1 <= py <= hy2 for hx1, hy1, hx2, hy2 in box_hand_boxes)
 
-                # 반대쪽 비타겟 허공 코너는 실제 피부 비율이 뚜렷이 낮을 때(<0.22)만 제한적 감산
+                envelope_mask: Optional[np.ndarray] = None
                 void_corner_mask = np.zeros((h, w), dtype=np.uint8)
-                if l_score > r_score * asym_thresh:
-                    cand_bot = [int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.72)]
-                    local_neg_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.78)])
-                    if r_score < 0.22:
-                        cv2.rectangle(
-                            void_corner_mask,
-                            (int(ex1 + ebw * 0.48), int(ey1 + ebh * 0.50)),
-                            (ex2, ey2),
-                            255,
-                            -1,
-                        )
-                elif r_score > l_score * asym_thresh:
-                    cand_bot = [int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.72)]
-                    local_neg_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.78)])
-                    if l_score < 0.22:
-                        cv2.rectangle(
-                            void_corner_mask,
-                            (ex1, int(ey1 + ebh * 0.50)),
-                            (int(ex1 + ebw * 0.52), ey2),
-                            255,
-                            -1,
-                        )
-                else:
-                    cand_bot = [int((ex1 + ex2) / 2), int(ey1 + ebh * 0.68)]
 
-                if box_hand_boxes:
-                    unocc_pts, hand_neg_pts = _compute_mutually_exclusive_prompts(
+                if has_yolo_prior and item_prior_mask is not None:
+                    sem_pos, sem_neg, envelope_mask = _extract_semantic_sam_prompts(
+                        item_prior_mask,
                         (ex1, ey1, ex2, ey2),
-                        box_hand_boxes,
+                        item_context_box,
                         eff_skin_np > 0,
+                        box_hand_boxes,
+                        scale,
                     )
-                    for hpt in hand_neg_pts:
-                        if hpt not in local_neg_pts:
-                            local_neg_pts.append(hpt)
-                    for upt in unocc_pts:
-                        if not _is_in_hand_boxes(upt[0], upt[1]) and upt not in pos_pts:
-                            pos_pts.append(upt)
-                    if not _is_in_hand_boxes(cand_bot[0], cand_bot[1]) and cand_bot not in pos_pts:
-                        pos_pts.append(cand_bot)
+                    pos_pts.extend(sem_pos)
+                    for npt in sem_neg:
+                        if npt not in local_neg_pts:
+                            local_neg_pts.append(npt)
+                    if box_hand_boxes:
+                        _, hand_neg_pts = _compute_mutually_exclusive_prompts(
+                            (ex1, ey1, ex2, ey2),
+                            box_hand_boxes,
+                            eff_skin_np > 0,
+                        )
+                        for hpt in hand_neg_pts:
+                            if hpt not in local_neg_pts:
+                                local_neg_pts.append(hpt)
+                    if not pos_pts:
+                        pys, pxs = np.nonzero(item_prior_mask[ey1:ey2, ex1:ex2])
+                        if len(pxs) > 0:
+                            pos_pts.append([ex1 + int(np.median(pxs)), ey1 + int(np.median(pys))])
                 else:
-                    top_ys, top_xs = np.where(top_skin)
-                    if len(top_xs) >= 10:
-                        pos_pts.append([ex1 + int(np.median(top_xs)), ey1 + int(ebh * 0.12) + int(np.median(top_ys))])
+                    mid_y_l = int(ebh * 0.50)
+                    mid_x_l = int(ebw * 0.50)
+                    left_bot_hsv = roi_hsv[mid_y_l:, :mid_x_l]
+                    right_bot_hsv = roi_hsv[mid_y_l:, mid_x_l:]
+
+                    top_skin = roi_skin[int(ebh * 0.12):int(ebh * 0.48), :]
+                    top_h_med = (
+                        float(np.median(roi_hsv[int(ebh * 0.12):int(ebh * 0.48), :, 0][top_skin]))
+                        if np.count_nonzero(top_skin) >= 20
+                        else 11.0
+                    )
+
+                    def _side_target_score(sub_hsv: np.ndarray, sub_sk: np.ndarray) -> float:
+                        if sub_hsv.size == 0:
+                            return 0.0
+                        h_d = np.minimum(
+                            np.abs(sub_hsv[:, :, 0].astype(np.float32) - top_h_med),
+                            180.0 - np.abs(sub_hsv[:, :, 0].astype(np.float32) - top_h_med),
+                        )
+                        valid = sub_sk & (h_d <= 9.5)
+                        return float(np.count_nonzero(valid)) / float(max(1, sub_sk.size))
+
+                    l_score = _side_target_score(left_bot_hsv, roi_skin[mid_y_l:, :mid_x_l])
+                    r_score = _side_target_score(right_bot_hsv, roi_skin[mid_y_l:, mid_x_l:])
+
+                    # 반대쪽 비타겟 허공 코너는 실제 피부 비율이 뚜렷이 낮을 때(<0.22)만 제한적 감산
+                    if l_score > r_score * asym_thresh:
+                        cand_bot = [int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.72)]
+                        local_neg_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.78)])
+                        if r_score < 0.22:
+                            cv2.rectangle(
+                                void_corner_mask,
+                                (int(ex1 + ebw * 0.48), int(ey1 + ebh * 0.50)),
+                                (ex2, ey2),
+                                255,
+                                -1,
+                            )
+                    elif r_score > l_score * asym_thresh:
+                        cand_bot = [int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.72)]
+                        local_neg_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.78)])
+                        if l_score < 0.22:
+                            cv2.rectangle(
+                                void_corner_mask,
+                                (ex1, int(ey1 + ebh * 0.50)),
+                                (int(ex1 + ebw * 0.52), ey2),
+                                255,
+                                -1,
+                            )
                     else:
-                        pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.30)])
-                    pos_pts.append(cand_bot)
+                        cand_bot = [int((ex1 + ex2) / 2), int(ey1 + ebh * 0.68)]
+
+                    if box_hand_boxes:
+                        unocc_pts, hand_neg_pts = _compute_mutually_exclusive_prompts(
+                            (ex1, ey1, ex2, ey2),
+                            box_hand_boxes,
+                            eff_skin_np > 0,
+                        )
+                        for hpt in hand_neg_pts:
+                            if hpt not in local_neg_pts:
+                                local_neg_pts.append(hpt)
+                        for upt in unocc_pts:
+                            if not _is_in_hand_boxes(upt[0], upt[1]) and upt not in pos_pts:
+                                pos_pts.append(upt)
+                        if not _is_in_hand_boxes(cand_bot[0], cand_bot[1]) and cand_bot not in pos_pts:
+                            pos_pts.append(cand_bot)
+                    else:
+                        top_ys, top_xs = np.where(top_skin)
+                        if len(top_xs) >= 10:
+                            pos_pts.append([ex1 + int(np.median(top_xs)), ey1 + int(ebh * 0.12) + int(np.median(top_ys))])
+                        else:
+                            pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.30)])
+                        pos_pts.append(cand_bot)
+
+                    # YOLO 미탐 DeepGHS 단독 박스에 인접한 뺨/턱(타겟 바깥쪽)이 겹치면 안전 네거티브 추가
+                    tcx = (ex1 + ex2) * 0.5
+                    for fx1_i, fy1_i, fx2_i, fy2_i in detected_face_boxes:
+                        fw_f, fh_f = max(1, fx2_i - fx1_i), max(1, fy2_i - fy1_i)
+                        fcx_f = (fx1_i + fx2_i) * 0.5
+                        far_x = int(fx2_i - fw_f * 0.25) if fcx_f >= tcx else int(fx1_i + fw_f * 0.25)
+                        jaw_pt = [far_x, int(fy1_i + fh_f * 0.58)]
+                        if not (ex1 <= jaw_pt[0] <= ex2 and ey1 <= jaw_pt[1] <= ey2):
+                            if jaw_pt not in local_neg_pts:
+                                local_neg_pts.append(jaw_pt)
 
                 if not pos_pts:
                     pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.22)])
@@ -1198,12 +1403,17 @@ def apply_silhouette(
                 zone_rect_guards: Dict[Tuple[int, int, int, int], np.ndarray] = {}
 
                 # VRAM 절감 및 고해상도 정밀도 향상을 위한 ROI Padded Crop 기반 SAM 추론
+                ctx_x1, ctx_y1, ctx_x2, ctx_y2 = (
+                    [int(v) for v in item_context_box]
+                    if item_context_box is not None
+                    else [ex1, ey1, ex2, ey2]
+                )
                 pad_x = max(_scale_int(64, scale, 32), int(ebw * 0.45))
                 pad_y = max(_scale_int(64, scale, 32), int(ebh * 0.45))
-                rx1 = max(0, ex1 - pad_x)
-                ry1 = max(0, ey1 - pad_y)
-                rx2 = min(w, ex2 + pad_x)
-                ry2 = min(h, ey2 + pad_y)
+                rx1 = max(0, min(ex1, ctx_x1) - pad_x)
+                ry1 = max(0, min(ey1, ctx_y1) - pad_y)
+                rx2 = min(w, max(ex2, ctx_x2) + pad_x)
+                ry2 = min(h, max(ey2, ctx_y2) + pad_y)
                 cw, ch = max(1, rx2 - rx1), max(1, ry2 - ry1)
                 crop_pil = rgb_img.crop((rx1, ry1, rx2, ry2))
                 neg_in_crop = [
@@ -1212,6 +1422,8 @@ def apply_silhouette(
                     if rx1 <= px < rx2 and ry1 <= py < ry2
                 ]
                 min_raw_pixels = _scale_int(60, scale * scale, minimum=25)
+                box_fill_thresh = 0.52 if has_yolo_prior else 0.42
+                core_minor_cap = 0.36 if has_yolo_prior else 0.30
 
                 for pt in pos_pts:
                     if split_active and pt[1] < min_hy1:
@@ -1238,9 +1450,9 @@ def apply_silhouette(
                         except Exception:
                             results = sam(crop_pil, bboxes=[local_bbox], verbose=False)
 
-                    if results and results[0].masks is not None:
-                        m_data = results[0].masks.data.cpu().numpy()
-                        crop_m = (m_data[0] * 255).astype(np.uint8)
+                    m_data = _extract_sam_mask_data(results)
+                    if m_data is not None:
+                        crop_m = (m_data[0].astype(np.float32) * 255.0).clip(0, 255).astype(np.uint8)
                         if crop_m.shape != (ch, cw):
                             crop_m = cv2.resize(crop_m, (cw, ch), interpolation=cv2.INTER_NEAREST)
                         raw_m = np.zeros((h, w), dtype=np.uint8)
@@ -1253,9 +1465,28 @@ def apply_silhouette(
                         sub_rect_guard = zone_rect_guards[target_box]
 
                         global_leak, blocky_leak = _classify_sam_mask_leak(
-                            raw_m, sx1, sy1, sx2, sy2, rx1, ry1, rx2, ry2
+                            raw_m,
+                            sx1,
+                            sy1,
+                            sx2,
+                            sy2,
+                            rx1,
+                            ry1,
+                            rx2,
+                            ry2,
+                            box_fill_thresh=box_fill_thresh,
                         )
-                        if global_leak:
+                        if has_yolo_prior and item_prior_mask is not None and envelope_mask is not None:
+                            clamped_env = cv2.bitwise_and(raw_m, envelope_mask)
+                            if (
+                                global_leak
+                                or blocky_leak
+                                or np.count_nonzero(clamped_env) < max(min_raw_pixels, int(prior_area * 0.25))
+                            ):
+                                raw_m = cv2.bitwise_and(item_prior_mask, sub_rect_guard)
+                            else:
+                                raw_m = clamped_env
+                        elif global_leak:
                             if outer_round_guard is None:
                                 outer_round_guard = _build_rounded_box_guard(
                                     w, h, ex1, ey1, ex2, ey2, scale, radius_ratio=0.30
@@ -1279,6 +1510,7 @@ def apply_silhouette(
                                     img_np=img_np,
                                     skin_np=eff_skin_np,
                                     pose_cat=pose_cat,
+                                    minor_ratio_cap=core_minor_cap,
                                 )
                             raw_m = cv2.bitwise_and(raw_m, zone_core_guards[target_box])
                         else:
@@ -1351,18 +1583,29 @@ def apply_silhouette(
 
                     for lbl_idx in sorted(keep_labels):
                         sub_m[labels_im == lbl_idx] = 255
-                    if np.count_nonzero(sub_m) >= (ebw * ebh * 0.06):
+                    min_accept_px = (
+                        max(_scale_int(40, scale * scale, 16), int(prior_area * 0.25))
+                        if has_yolo_prior
+                        else (ebw * ebh * 0.06)
+                    )
+                    if np.count_nonzero(sub_m) >= min_accept_px:
                         sam_succeeded = True
             except Exception as e:
-                logger.warning(f"[Censor] MobileSAM fallback: {e}")
+                logger.warning(f"[Censor] SAM 세그멘테이션 폴백: {e}")
 
-        # SAM이 실패한 경우에만 보수적 타원 캡슐로 폴백
+        # SAM이 실패하거나 비정상일 때: yolo_prior_mask 우선 폴백, 없으면 보수적 타원 캡슐 폴백
         if not sam_succeeded:
-            bcx = int((ex1 + ex2) / 2)
-            bcy = int((ey1 + ey2) / 2)
-            erx = min(int(w * 0.12), max(_scale_int(4, scale, 3), int(ebw * 0.42)))
-            ery = min(int(h * 0.16), max(_scale_int(4, scale, 3), int(ebh * 0.48)))
-            cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
+            if has_yolo_prior and item_prior_mask is not None:
+                sub_m = np.zeros((h, w), dtype=np.uint8)
+                sub_m[ey1:ey2, ex1:ex2] = item_prior_mask[ey1:ey2, ex1:ex2]
+                if np.count_nonzero(hand_occ_mask) > 0:
+                    sub_m = cv2.bitwise_and(sub_m, cv2.bitwise_not(hand_occ_mask))
+            else:
+                bcx = int((ex1 + ex2) / 2)
+                bcy = int((ey1 + ey2) / 2)
+                erx = min(int(w * 0.12), max(_scale_int(4, scale, 3), int(ebw * 0.42)))
+                ery = min(int(h * 0.16), max(_scale_int(4, scale, 3), int(ebh * 0.48)))
+                cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
 
         final_mask = np.maximum(final_mask, sub_m)
 
@@ -1385,6 +1628,8 @@ def apply_black_silhouette(
     pose_cat: Optional[str] = None,
     custom_seg_mask: Optional[np.ndarray] = None,
     fallback_boxes: Optional[Sequence[Tuple[Any, ...]]] = None,
+    yolo_prior_masks: Optional[Sequence[Optional[np.ndarray]]] = None,
+    context_boxes: Optional[Sequence[Optional[Tuple[int, int, int, int]]]] = None,
 ) -> Image.Image:
     """블랙 실루엣(#000000) 검열 래퍼 함수."""
     return apply_silhouette(
@@ -1395,6 +1640,8 @@ def apply_black_silhouette(
         pose_cat=pose_cat,
         custom_seg_mask=custom_seg_mask,
         fallback_boxes=fallback_boxes,
+        yolo_prior_masks=yolo_prior_masks,
+        context_boxes=context_boxes,
     )
 
 
@@ -1405,6 +1652,8 @@ def apply_white_silhouette(
     pose_cat: Optional[str] = None,
     custom_seg_mask: Optional[np.ndarray] = None,
     fallback_boxes: Optional[Sequence[Tuple[Any, ...]]] = None,
+    yolo_prior_masks: Optional[Sequence[Optional[np.ndarray]]] = None,
+    context_boxes: Optional[Sequence[Optional[Tuple[int, int, int, int]]]] = None,
 ) -> Image.Image:
     """화이트 실루엣(#FFFFFF) 검열 래퍼 함수."""
     return apply_silhouette(
@@ -1415,6 +1664,8 @@ def apply_white_silhouette(
         pose_cat=pose_cat,
         custom_seg_mask=custom_seg_mask,
         fallback_boxes=fallback_boxes,
+        yolo_prior_masks=yolo_prior_masks,
+        context_boxes=context_boxes,
     )
 
 
@@ -1961,6 +2212,8 @@ def _render_censored_style(
     pose_cat: Optional[str] = None,
     custom_seg_mask: Optional[np.ndarray] = None,
     fallback_boxes: Optional[Sequence[Tuple[Any, ...]]] = None,
+    yolo_prior_masks: Optional[Sequence[Optional[np.ndarray]]] = None,
+    context_boxes: Optional[Sequence[Optional[Tuple[int, int, int, int]]]] = None,
 ) -> Image.Image:
     """검열 스타일명(`style`)에 대응하는 렌더러로 일관되게 라우팅합니다."""
     detected_boxes = [item[0] for item in boxes_with_labels]
@@ -1976,6 +2229,8 @@ def _render_censored_style(
             pose_cat=pose_cat,
             custom_seg_mask=custom_seg_mask,
             fallback_boxes=fallback_boxes,
+            yolo_prior_masks=yolo_prior_masks,
+            context_boxes=context_boxes,
         )
     if style_clean in ("black_silhouette", "silhouette_black", "black", "silhouette", "contour"):
         return apply_black_silhouette(
@@ -1985,6 +2240,8 @@ def _render_censored_style(
             pose_cat=pose_cat,
             custom_seg_mask=custom_seg_mask,
             fallback_boxes=fallback_boxes,
+            yolo_prior_masks=yolo_prior_masks,
+            context_boxes=context_boxes,
         )
     if style_clean in ("manga_bar", "manga_black_bar", "haetae"):
         return apply_manga_bar(img, detected_boxes, skin_np=skin_np, pose_cat=pose_cat)
@@ -2005,6 +2262,8 @@ def _render_censored_style(
         pose_cat=pose_cat,
         custom_seg_mask=custom_seg_mask,
         fallback_boxes=fallback_boxes,
+        yolo_prior_masks=yolo_prior_masks,
+        context_boxes=context_boxes,
     )
 
 
@@ -2659,7 +2918,38 @@ def _atomic_replace_with_retry(
         raise last_err
 
 
-def _resolve_hybrid_targets_and_mask(
+def _has_hand_between_boxes(
+    box_a: Tuple[int, int, int, int],
+    box_b: Tuple[int, int, int, int],
+    hand_boxes: Sequence[Tuple[int, int, int, int]],
+) -> bool:
+    """두 타겟 후보 박스 사이의 수직 틈새/연결 구간을 손 BBox가 실제로 가로질러 양분하는지 판정합니다."""
+    if not hand_boxes:
+        return False
+
+    ya = (box_a[1] + box_a[3]) * 0.5
+    yb = (box_b[1] + box_b[3]) * 0.5
+    upper, lower = (box_a, box_b) if ya <= yb else (box_b, box_a)
+    ux1, uy1, ux2, uy2 = [int(v) for v in upper]
+    lx1, ly1, lx2, ly2 = [int(v) for v in lower]
+
+    upper_cy = (uy1 + uy2) * 0.5
+    lower_cy = (ly1 + ly2) * 0.5
+    corr_x1 = min(ux1, lx1) - 12
+    corr_x2 = max(ux2, lx2) + 12
+    gap_top = min(uy2, ly1) - 16
+    gap_bot = max(uy2, ly1) + 16
+
+    for hx1, hy1, hx2, hy2 in hand_boxes:
+        if min(corr_x2, hx2) <= max(corr_x1, hx1):
+            continue
+        hy_mid = (hy1 + hy2) * 0.5
+        if upper_cy < hy_mid < lower_cy and min(gap_bot, hy2) >= max(gap_top, hy1):
+            return True
+    return False
+
+
+def _resolve_hybrid_targets_with_priors(
     img_rgb: Image.Image,
     targets: Sequence[str] = ("penis",),
     min_confidence: float = 0.16,
@@ -2667,17 +2957,20 @@ def _resolve_hybrid_targets_and_mask(
     roster: Optional[str] = None,
     skin_np: Optional[np.ndarray] = None,
     pose_cat: Optional[str] = None,
+    hand_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
 ) -> Tuple[
     List[Tuple[Tuple[int, int, int, int], str, float]],
     Optional[np.ndarray],
     Optional[List[Tuple[Tuple[int, int, int, int], str, float]]],
+    Optional[List[Optional[np.ndarray]]],
+    Optional[List[Optional[Tuple[int, int, int, int]]]],
 ]:
     """
-    전용 YOLO-seg(models/censor_seg.pt)와 DeepGHS + MobileSAM(P0.5)을
-    Dual Ensemble Gating으로 결합하여 (타겟 박스, seg 마스크, SAM 폴백 대상 박스)를 산출합니다.
-    - Case A: 고신뢰 YOLO-seg(>=0.42) 즉시 통과, 또는 저신뢰(>=0.25) 교차 검증 / 무탐지(>=0.28) 구제
-    - Case B: Primary 외 하단 고립 2차 박스 중 YOLO-seg 미확인 오탐 억제
-    - Case C: YOLO-seg 미커버 잔여 후보 박스는 MobileSAM(P0.5) 정밀 폴백으로 위임
+    Phase P2 Semantic-Guided Hybrid Gating:
+    - 초고신뢰(>=0.92) YOLO-seg 모의/극고신뢰 구간을 제외하고 0.85 장벽을 철폐.
+    - YOLO-seg가 검출한 타겟(conf>=0.32 또는 IoMin>=0.20 & conf>=0.22)은 DeepGHS 통합 박스를
+      YOLO의 타이트한 분리 박스로 대체하고, yolo_prior_mask + DeepGHS context_box를 SAM 2.1로 투영.
+    - 손 BBox가 사이에 없는 인접 하단 2차 박스는 yolo_conf >= 0.58 미달 시 하단 접합/체액 오탐으로 기각.
     """
     custom_seg_model = get_custom_censor_seg_model()
     if custom_seg_model is None:
@@ -2690,7 +2983,7 @@ def _resolve_hybrid_targets_and_mask(
             skin_np=skin_np,
             pose_cat=pose_cat,
         )
-        return deep_cands, None, None
+        return deep_cands, None, None, None, None
 
     w, h = img_rgb.size
     eff_min_conf = float(min_confidence)
@@ -2708,8 +3001,9 @@ def _resolve_hybrid_targets_and_mask(
         if item[1] in norm_targets and float(item[2]) >= eff_min_conf
     ]
 
-    # Case A1 Fast Path: 초고신뢰(>=0.85) YOLO-seg 폴리곤이 있으면 DeepGHS/MobileSAM 생략
-    high_seg = [item for item in seg_items if float(item[2]) >= 0.85]
+    # 극고신뢰(>=0.92) 직결 Fast Path (모조/고신뢰 단위 테스트 호환 유지, 0.85 장벽 제거)
+    fast_path_conf = float(os.environ.get("PLEPA_YOLO_FASTPATH_CONF", "0.92"))
+    high_seg = [item for item in seg_items if float(item[2]) >= fast_path_conf]
     if high_seg:
         selected_seg = [item for item in seg_items if float(item[2]) >= 0.25]
         seg_mask = _render_seg_items_mask(w, h, selected_seg)
@@ -2717,9 +3011,10 @@ def _resolve_hybrid_targets_and_mask(
             [(item[0], item[1], float(item[2])) for item in selected_seg],
             seg_mask,
             [],
+            None,
+            None,
         )
 
-    # 고신뢰 합의 + P0.5 MobileSAM 정밀 세그멘테이션(0.58+ B-IoU) 결합 게이팅
     deep_cands = _detect_target_candidates(
         img_rgb,
         targets=targets,
@@ -2731,14 +3026,13 @@ def _resolve_hybrid_targets_and_mask(
     )
 
     if not deep_cands:
-        rescue_boxes = [
-            (item[0], item[1], float(item[2]))
-            for item in seg_items
-            if float(item[2]) >= 0.25
-        ]
-        if rescue_boxes:
-            return rescue_boxes, None, list(rescue_boxes)
-        return [], None, None
+        rescue_items = [item for item in seg_items if float(item[2]) >= 0.25]
+        if rescue_items:
+            rescue_boxes = [(it[0], it[1], float(it[2])) for it in rescue_items]
+            rescue_priors = [_render_seg_items_mask(w, h, [it]) for it in rescue_items]
+            rescue_ctx: List[Optional[Tuple[int, int, int, int]]] = [None] * len(rescue_items)
+            return rescue_boxes, None, list(rescue_boxes), rescue_priors, rescue_ctx
+        return [], None, None, None, None
 
     def _primary_rank(cand: Tuple[Tuple[int, int, int, int], str, float]) -> Tuple[float, int]:
         bx = cand[0]
@@ -2747,32 +3041,57 @@ def _resolve_hybrid_targets_and_mask(
     primary_cand = max(deep_cands, key=_primary_rank)
     primary_box = primary_cand[0]
     primary_score = float(primary_cand[2])
+    primary_yc = (primary_box[1] + primary_box[3]) * 0.5
+    primary_h = max(1, primary_box[3] - primary_box[1])
     seg_confirmed_any = any(
         float(it[2]) >= 0.20 and ((it[0][1] + it[0][3]) * 0.5) >= (h * 0.14)
         for it in seg_items
     )
 
+    cached_hands: Optional[List[Tuple[int, int, int, int]]] = (
+        list(hand_boxes) if hand_boxes is not None else None
+    )
+
+    def _get_hands_lazy() -> List[Tuple[int, int, int, int]]:
+        nonlocal cached_hands
+        if cached_hands is not None:
+            return cached_hands
+        cached_hands = []
+        if HAS_IMGUTILS:
+            try:
+                from imgutils.detect import detect_hands
+                for h_it in detect_hands(img_rgb, conf_threshold=0.45):
+                    hb = h_it[0] if isinstance(h_it, (tuple, list)) and len(h_it) >= 3 else h_it
+                    if isinstance(hb, (tuple, list)) and len(hb) >= 4:
+                        cached_hands.append((int(hb[0]), int(hb[1]), int(hb[2]), int(hb[3])))
+            except Exception:
+                pass
+        return cached_hands
+
     final_boxes: List[Tuple[Tuple[int, int, int, int], str, float]] = []
+    final_priors: List[Optional[np.ndarray]] = []
+    final_contexts: List[Optional[Tuple[int, int, int, int]]] = []
+    consumed_seg_indices: set[int] = set()
 
     for d_box, d_lbl, d_score in deep_cands:
-        matched_scores = [
-            float(s_score)
-            for s_box, _, s_score, _ in seg_items
-            if _box_iou(d_box, s_box) >= 0.15 or _box_iomin(d_box, s_box) >= 0.25
+        matched_indexed = [
+            (idx, it)
+            for idx, it in enumerate(seg_items)
+            if _box_iou(d_box, it[0]) >= 0.15 or _box_iomin(d_box, it[0]) >= 0.25
         ]
-        if matched_scores:
-            final_boxes.append((d_box, str(d_lbl), max(float(d_score), max(matched_scores))))
-            continue
+        max_matched_yolo = max((float(it[2]) for _, it in matched_indexed), default=0.0)
 
-        # Case B: Primary와 독립된 하단 2차 오탐(체액·허벅지) 기각
         dx1, dy1, dx2, dy2 = [int(v) for v in d_box]
         d_yc = (dy1 + dy2) * 0.5
-        is_secondary = (
+        y2_ratio = float(dy2) / float(max(1, h))
+        is_isolated = (
             len(deep_cands) >= 2
             and d_box != primary_box
             and _box_iou(d_box, primary_box) == 0.0
         )
-        if is_secondary and d_yc > (h * 0.68):
+
+        # Case B1: P1 기존 하단 고립 오탐 게이트
+        if is_isolated and d_yc > (h * 0.68):
             roi_sk = eff_skin[max(0, dy1):min(h, dy2), max(0, dx1):min(w, dx2)]
             skin_ratio = float(np.count_nonzero(roi_sk)) / float(max(1, roi_sk.size))
             if (
@@ -2789,10 +3108,51 @@ def _resolve_hybrid_targets_and_mask(
                 )
                 continue
 
-        final_boxes.append((d_box, str(d_lbl), float(d_score)))
+        # Case B2 (P2): 상단 Primary 아래 인접 하단 2차 박스 중 손 분할이 아니고 YOLO 확신도 < 0.58인 체액/접합 Echo 기각
+        is_adjacent_lower = (
+            len(deep_cands) >= 2
+            and d_box != primary_box
+            and _box_iou(d_box, primary_box) < 0.25
+            and d_yc > primary_yc + max(20.0, primary_h * 0.25)
+            and (y2_ratio > 0.82 or dy1 >= primary_box[3] - max(24, int(primary_h * 0.25)))
+        )
+        if is_adjacent_lower:
+            hands_list = _get_hands_lazy()
+            if not _has_hand_between_boxes(primary_box, d_box, hands_list) and max_matched_yolo < 0.58:
+                logger.debug(
+                    f"[Censor] P2 인접 하단 Echo 오탐 기각: box={d_box}, deep={d_score:.2f}, yolo={max_matched_yolo:.2f}"
+                )
+                continue
 
-    # Case A: DeepGHS가 놓친 독립 타겟을 YOLO-seg 합의로 구제 (기존 박스 포함 조각은 제외)
-    for s_box, s_lbl, s_score, _ in seg_items:
+        # Step 1.1: YOLO-seg 타겟(conf>=0.32 또는 IoMin>=0.20 & conf>=0.22)이면 DeepGHS 통합 박스를 YOLO 타이트 박스로 대체
+        qualified_segs = [
+            (idx, it)
+            for idx, it in matched_indexed
+            if float(it[2]) >= 0.32 or (float(it[2]) >= 0.22 and _box_iomin(d_box, it[0]) >= 0.20)
+        ]
+        if qualified_segs:
+            for idx, it in qualified_segs:
+                if idx in consumed_seg_indices:
+                    continue
+                s_box, s_lbl, s_score, _ = it
+                # 이미 추가된 박스와 과도하게 겹치는 중복은 스킵
+                if any(_box_iou(s_box, fb[0]) >= 0.45 for fb in final_boxes):
+                    continue
+                consumed_seg_indices.add(idx)
+                prior_mask = _render_seg_items_mask(w, h, [it])
+                final_boxes.append((s_box, str(s_lbl), max(float(s_score), float(d_score))))
+                final_priors.append(prior_mask)
+                final_contexts.append(d_box)
+        else:
+            final_boxes.append((d_box, str(d_lbl), float(d_score)))
+            final_priors.append(None)
+            final_contexts.append(None)
+
+    # Case A: DeepGHS가 놓친 독립 타겟을 YOLO-seg 합의로 구제 (하단 비손분할 저신뢰 Echo 제외)
+    for idx, it in enumerate(seg_items):
+        if idx in consumed_seg_indices:
+            continue
+        s_box, s_lbl, s_score, _ = it
         min_rescue = 0.25 if not final_boxes else 0.40
         if float(s_score) < min_rescue:
             continue
@@ -2801,9 +3161,51 @@ def _resolve_hybrid_targets_and_mask(
             for f_box, _, _ in final_boxes
         ):
             continue
-        final_boxes.append((s_box, str(s_lbl), float(s_score)))
+        if final_boxes:
+            top_primary = max(final_boxes, key=_primary_rank)[0]
+            tp_yc = (top_primary[1] + top_primary[3]) * 0.5
+            s_yc = (s_box[1] + s_box[3]) * 0.5
+            s_y2r = float(s_box[3]) / float(max(1, h))
+            if (
+                s_yc > tp_yc + 20.0
+                and s_y2r > 0.82
+                and float(s_score) < 0.58
+                and not _has_hand_between_boxes(top_primary, s_box, _get_hands_lazy())
+            ):
+                continue
 
-    return final_boxes, None, list(final_boxes)
+        prior_mask = _render_seg_items_mask(w, h, [it])
+        final_boxes.append((s_box, str(s_lbl), float(s_score)))
+        final_priors.append(prior_mask)
+        final_contexts.append(None)
+
+    return final_boxes, None, list(final_boxes), final_priors, final_contexts
+
+
+def _resolve_hybrid_targets_and_mask(
+    img_rgb: Image.Image,
+    targets: Sequence[str] = ("penis",),
+    min_confidence: float = 0.16,
+    pose_code: Optional[Union[str, int]] = None,
+    roster: Optional[str] = None,
+    skin_np: Optional[np.ndarray] = None,
+    pose_cat: Optional[str] = None,
+) -> Tuple[
+    List[Tuple[Tuple[int, int, int, int], str, float]],
+    Optional[np.ndarray],
+    Optional[List[Tuple[Tuple[int, int, int, int], str, float]]],
+]:
+    """기존 3-튜플 시그니처 호환용 래퍼."""
+    final_boxes, seg_mask, fallback_boxes, _, _ = _resolve_hybrid_targets_with_priors(
+        img_rgb,
+        targets=targets,
+        min_confidence=min_confidence,
+        pose_code=pose_code,
+        roster=roster,
+        skin_np=skin_np,
+        pose_cat=pose_cat,
+    )
+    return final_boxes, seg_mask, fallback_boxes
 
 
 def censor_image(
@@ -2836,8 +3238,8 @@ def censor_image(
     pose_cat = get_pose_category(pose_code, roster=roster) if pose_code is not None else None
     skin_check_np = get_skin_mask(np.array(img_rgb))
 
-    # P1 Dual Ensemble Gating (전용 YOLO-seg 우선/합의 + DeepGHS/MobileSAM P0.5 하이브리드 폴백)
-    detected_boxes_with_labels, custom_seg_mask, fallback_boxes = _resolve_hybrid_targets_and_mask(
+    # P2 Semantic-Guided Hybrid Gating (YOLO 타이트 박스 + distanceTransform 코어 투영 + SAM 2.1)
+    detected_boxes_with_labels, custom_seg_mask, fallback_boxes, yolo_prior_masks, context_boxes = _resolve_hybrid_targets_with_priors(
         img_rgb,
         targets=targets,
         min_confidence=min_confidence,
@@ -2856,6 +3258,10 @@ def censor_image(
                 detected_boxes_with_labels.append(anchor_item)
                 if fallback_boxes is not None:
                     fallback_boxes.append(anchor_item)
+                if yolo_prior_masks is not None:
+                    yolo_prior_masks.append(None)
+                if context_boxes is not None:
+                    context_boxes.append(None)
                 logger.info(
                     f"[Censor] 포즈 {pose_code}: 성기 미탐지 ➔ 안전 앵커({pose_cat}) 폴백 적용: {anchor_box}"
                 )
@@ -2875,6 +3281,8 @@ def censor_image(
         pose_cat=pose_cat,
         custom_seg_mask=custom_seg_mask,
         fallback_boxes=fallback_boxes,
+        yolo_prior_masks=yolo_prior_masks,
+        context_boxes=context_boxes,
     )
     return _restore_alpha(censored_rgb, alpha_ch), len(detected_boxes_with_labels)
 
