@@ -134,6 +134,7 @@ class GenerationParams:
     retry_qc_failed: bool = True  # _batch_manifest.json 내 qc_passed=False 항목 overwrite=False 시 자동 재시도
     anchor_fallback: bool = False  # 검열 탐지 실패 시 포즈 기반 안전 앵커 폴백 마스킹 (기본 False)
     seed: Optional[int] = None  # 특정 난수 시드 고정 생성
+    out_dir: Optional[str] = None  # 별도 테스트 출력 루트 폴더 (지정 시 out_dir/{roster}/{char}/에 저장)
 
 
 # CLI와 GUI가 단일 진실 공급원(SSOT)으로 공유하는 생성 옵션 메타데이터 레지스트리
@@ -451,18 +452,21 @@ class GenerationService:
                     break
     
                 bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine="sdxl")
-                # --ckpt-tag 지정 시 체크포인트 비교용 서브폴더에 저장
+                # --out-dir / --ckpt-tag 지정 시 별도 출력 폴더 또는 체크포인트 비교용 서브폴더에 저장
+                base_asset_root = (Path(params.out_dir) / actual_roster) if params.out_dir else (PROJECTS_DIR / actual_roster / "assets")
                 if params.ckpt_tag:
-                    output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix / f"ckpt_{params.ckpt_tag}"
-                    origin_dir = PROJECTS_DIR / actual_roster / "assets" / f"{char.prefix}_origin" / f"ckpt_{params.ckpt_tag}"
+                    output_dir = base_asset_root / char.prefix / f"ckpt_{params.ckpt_tag}"
+                    origin_dir = base_asset_root / f"{char.prefix}_origin" / f"ckpt_{params.ckpt_tag}"
                 else:
-                    output_dir = PROJECTS_DIR / actual_roster / "assets" / char.prefix
-                    origin_dir = PROJECTS_DIR / actual_roster / "assets" / f"{char.prefix}_origin"
+                    output_dir = base_asset_root / char.prefix
+                    origin_dir = base_asset_root / f"{char.prefix}_origin"
                 output_dir.mkdir(parents=True, exist_ok=True)
     
                 if not quiet:
                     print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
-                    if params.ckpt_tag:
+                    if params.out_dir:
+                        print(f"  별도 출력 폴더: {output_dir}")
+                    elif params.ckpt_tag:
                         print(f"  저장 위치: assets/{char.prefix}/ckpt_{params.ckpt_tag}/")
                     if params.bg:
                         print(f"  즉석 배경: '{params.bg}' 적용")

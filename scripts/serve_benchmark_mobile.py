@@ -62,6 +62,7 @@ ARTIST_RATATATA = PROJECTS_DIR / "ykn" / "artist_benchmark_ratatata"
 HYBRID_BENCH = PROJECTS_DIR / "ykn" / "artist_benchmark_hybrid"
 C_TUNING_BENCH = PROJECTS_DIR / "ykn" / "artist_benchmark_c_tuning"
 CAMPUS_BENCH = PROJECTS_DIR / "campus" / "artist_benchmark_c1_c2"
+TEST_C4_DIR = ROOT / "output" / "test_batch_c4"
 CF = ROOT / "cloudflared.exe"
 PORT = 8085
 ACCESS_TOKEN = os.environ.get("PLEPA_MOBILE_TOKEN", "").strip() or secrets.token_urlsafe(24)
@@ -83,6 +84,7 @@ for _mount_path, _mount_dir, _mount_name, _allow_html in (
     ("/c_tuning", C_TUNING_BENCH, "c_tuning", True),
     ("/campus_bench", CAMPUS_BENCH, "campus_bench", True),
     ("/inspect", INSPECT_BATCH, "inspect", True),
+    ("/test_c4", TEST_C4_DIR, "test_c4", True),
 ):
     if _mount_dir.is_dir():
         app.mount(_mount_path, StaticFiles(directory=_mount_dir, html=_allow_html), name=_mount_name)
@@ -1362,7 +1364,12 @@ def start_server_and_tunnel():
     print("\n" + "=" * 70)
     if tunnel_url:
         print(f"  📱 [스마트폰 모바일 링크 (공인)]:  {tunnel_url}/inspect/?token={ACCESS_TOKEN}")
+        if TEST_C4_DIR.is_dir():
+            print(f"  🧪 [C4 테스트 20장 갤러리 (공인)]: {tunnel_url}/test_c4/?token={ACCESS_TOKEN}")
         print(f"  🔬 [벤치마크 대시보드 (공인)]:     {tunnel_url}?token={ACCESS_TOKEN}")
+    if TEST_C4_DIR.is_dir():
+        print(f"  🧪 [C4 테스트 20장 (Wi-Fi)]:     http://{local_ip}:{PORT}/test_c4/?token={ACCESS_TOKEN}")
+        print(f"  🧪 [C4 테스트 20장 (로컬 PC)]:    http://127.0.0.1:{PORT}/test_c4/?token={ACCESS_TOKEN}")
     print(f"  📶 [동일 Wi-Fi 내부망 링크]:        http://{local_ip}:{PORT}/inspect/?token={ACCESS_TOKEN}")
     print(f"  💻 [로컬 PC 링크]:                 http://127.0.0.1:{PORT}/inspect/?token={ACCESS_TOKEN}")
     print("=" * 70 + "\n")
