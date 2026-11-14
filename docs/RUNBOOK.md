@@ -80,12 +80,12 @@ python batch_generator.py -r campus -c aya -p all --censor-only --censor-style d
 ```
 
 
-### 2.4 모바일 인터랙티브 검수 갤러리, 원클릭 터치 덧칠 에디터 및 P1 하이브리드 정량 벤치마크 (ADR-86 / ADR-95 / ADR-96)
+### 2.4 모바일 인터랙티브 검수 갤러리, 원클릭 터치 덧칠 에디터 및 P2 Semantic-Guided SAM 2.1 정량 벤치마크 (ADR-86 / ADR-95 / ADR-96 / ADR-97)
 - **동작 원리**:
-  - **P0.5+P1 하이브리드 파이프라인**: `DeepGHS` + 자체 학습 `YOLO11s-seg` (`models/censor_seg.pt`, `imgsz=1024`) Dual Consensus Gating으로 타겟 박스를 합의 확정한 뒤, `MobileSAM(P0.5)` 손 가로질림 Sub-BBox 분할 + 외곽 선화 스냅(`+1~3px` 먹선 흡수)으로 경계 품질을 극대화함 (`protection_mask` 침범 `0px` 유지).
-  - 모바일 검수 갤러리(port: 8085)에서 에셋별 `[✏️ 터치 덧칠]` 버튼을 탭하여 풀스크린 캔버스 에디터 진입 및 `/test_c4/`에서 `white_p1`, `white_p05`, `white_p0`, `white_c7` 1:1 시각 비교 가능.
+  - **P2 Semantic-Guided SAM 2.1 파이프라인**: `DeepGHS` + 자체 학습 `YOLO11s-seg` (`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2`) 합의 박스에서 `PLEPA_YOLO_FASTPATH_CONF=0.92` 미만 구간을 YOLO 타이트 BBox + `yolo_prior_mask`(`distanceTransform` 코어 `Positive=1` + 외곽 피부 `Negative=0` + `envelope_mask`)로 **SAM 2.1 (`sam2.1_s.pt`, 미존재 시 `mobile_sam.pt` 폴백)**에 투영하며, 손 분할 없는 인접 하단 Echo(`y2_ratio > 0.82` & `yolo_conf < 0.58`)를 차단하고 외곽 선화 스냅(`+1~3px`)을 적용함.
+  - 모바일 검수 갤러리(port: 8085)에서 에셋별 `[✏️ 터치 덧칠]` 버튼을 탭하여 풀스크린 캔버스 에디터 진입 및 `/test_c4/`에서 `white_p2`(기본), `white_p1`, `white_p05`, `white_p0`, `white_c7` 1:1 시각 비교 가능.
   - 사용자가 스마트폰 화면에서 터치 브러시로 모자란 부분을 1~2초 덧칠하고 `[💾 저장 완료]` 시 `POST /api/retouch_censor`를 통해 원본 파일 영구 덮어쓰기 저장 및 `output/benchmarks/ground_truth/` 정답 데이터 자동 아카이브.
-  - 클린 데이터셋 추출기(`extract_censor_seg_dataset.py`)는 `spy_holdout` 40장을 학습 세트에서 100% 격리(`holdout_leaks=0`)하며 인페인트 왜곡본 없이 순수 화이트 정답쌍 + 비노출 하드 네거티브를 생성함.
+  - 클린 데이터셋 추출기(`extract_censor_seg_dataset.py`)는 `spy_holdout` 40장을 학습 세트에서 100% 격리(`holdout_leaks=0`)하며 성인 씬 내부 부분 네거티브(`--inscene-neg-limit 55`) 및 극단 구도 오버샘플(`--extreme-pose-oversample 3`)을 지원함.
 ```powershell
 # 1) 모바일 검수 갤러리 및 Cloudflare 공인 터널 서버 구동 (포트 8085)
 python scripts/serve_benchmark_mobile.py
@@ -93,11 +93,11 @@ python scripts/serve_benchmark_mobile.py
 # 2) 검수 뷰어 HTML 갱신
 .\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py
 
-# 3) Hold-out 격리 클린 데이터셋 추출 및 YOLO11s-seg(1024px) 학습·배포 (Phase P1)
-.\.venv\Scripts\python.exe scripts/train_censor_seg.py --clean-spy-dir <SPY_ASSETS_DIR> --gt-dir output/benchmarks/ground_truth --model yolo11s-seg.pt --epochs 65 --imgsz 1024 --batch 4
+# 3) Hold-out 격리 클린 + 부분 네거티브 데이터셋 추출 및 YOLO11s-seg(1024px, mask_ratio=2) 학습·배포 (Phase P2)
+.\.venv\Scripts\python.exe scripts/train_censor_seg.py --clean-spy-dir <SPY_ASSETS_DIR> --gt-dir output/benchmarks/ground_truth --model yolo11s-seg.pt --epochs 65 --imgsz 1024 --batch 4 --mask-ratio 2
 
-# 4) Hold-out 정답셋 기반 P1 하이브리드 정량 벤치마크 & test_c4 A/B 비교 실행
-.\.venv\Scripts\python.exe scripts/benchmark_censor_metrics.py --label P1 --save-c4-suffix p1 --out-json output/benchmarks/p4_p1_result.json --compare-json output/benchmarks/p4_p05_result.json
+# 4) Hold-out 정답셋 기반 P2 정량 벤치마크 & test_c4 A/B 비교 실행
+.\.venv\Scripts\python.exe scripts/benchmark_censor_metrics.py --label P2 --save-c4-suffix p2 --out-json output/benchmarks/p4_p2_result.json --compare-json output/benchmarks/p4_p1_result.json
 ```
 
 ### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프

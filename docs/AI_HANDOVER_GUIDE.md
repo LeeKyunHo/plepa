@@ -31,11 +31,10 @@
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
-6. **ADR-86 → Phase P0 → P0.5+P1 하이브리드 정밀 검열 & 인간-AI 협업 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 / ADR-96)**:
-   - **역할 분담 하이브리드 파이프라인**: `DeepGHS` + 자체 학습 `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, retina_masks=True`) **Dual Consensus Gating**으로 미탐 구제 및 하단 오탐을 억제하고, 중간 신뢰도(`0.16..0.84`) 박스들은 **MobileSAM(P0.5) + 외곽 선화 스냅(`_snap_to_outer_lineart`, +1~3px)** 파이프라인으로 정밀 리파이닝함 (`conf >= 0.85` 고신뢰 구간만 세그멘테이션 Fast-Path 적용).
-   - **P0.5 손 가로질림 Sub-BBox 분할 & 블록 과팽창 억제**: 손이 타겟 중간을 가로지를 때 `upper_sub_bbox` / `lower_sub_bbox`로 상·하단 비가려짐 영역을 독립 디코딩하여 상단 끝단 유실(`mik_187` 547px → 3,347px)을 해결하고, `_classify_sam_mask_leak()`로 BBox 내부 직사각형 과팽창을 조건부 방어함.
-   - `protection_mask`(전경 손/얼굴 보호) `0px` 침범 불변식, 주변 신체 사각 침범 결함 0% 및 미탐지 억지 앵커(`enable_anchor_fallback=False`) 영구 비활성화 유지.
-   - 살짝 모자란 부분은 모바일/웹 검수 갤러리 캔버스 에디터에서 사용자가 1~2초 만에 `[✏️ 터치 덧칠]` 마감하여 `output/benchmarks/ground_truth/`로 자동 아카이브.
+6. **ADR-86 → Phase P0 → P0.5+P1 → P2 Semantic-Guided SAM 2.1 정밀 검열 & 인간-AI 협업 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 / ADR-96 / ADR-97)**:
+   - **Semantic-Guided Hybrid Pipeline**: `DeepGHS` + 자체 학습 `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, retina_masks=True`) 합의로 `PLEPA_YOLO_FASTPATH_CONF=0.92` 미만(`0.32..0.919` 또는 `IoMin>=0.20 & conf>=0.22`) 구간에서 YOLO의 **타이트 분리 BBox + `yolo_prior_mask`**를 `SAM 2.1`(`sam2.1_s.pt`, 미존재 시 `mobile_sam.pt` 폴백)으로 직접 투영함.
+   - **코어 투영·Envelope 방어 & 인접 Echo 억제**: `_extract_semantic_sam_prompts()`가 `distanceTransform` 코어(`Positive=1`)와 외곽 피부 점(`Negative=0`)·`envelope_mask` 클램핑을 적용해 복부/배경 오팽창을 억제하며, `_has_hand_between_boxes()` 기반으로 손 분할 없는 하단 인접 2차 오탐(`y2_ratio > 0.82` & `yolo_conf < 0.58`)을 차단함 (`test_c4` `MultiBox 4→0`).
+   - **P0.5 손 분할·블록 가드 & `protection_mask` 불변식**: `yolo_prior_mask is None`인 DeepGHS 단독 구간은 `box_fill_thresh=0.42`/`minor_ratio_cap=0.30`으로 강화하고, `_extract_sam_mask_data()`로 빈 마스크·모의 객체 안전 추출 및 `protection_mask`(손·얼굴) `0px` 침범·`enable_anchor_fallback=False`를 유지하며, 미흡 부위는 모바일 갤러리 `[✏️ 터치 덧칠]`로 `output/benchmarks/ground_truth/`에 축적함.
 7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
    - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
 8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
@@ -1758,4 +1757,22 @@ ight_terrace(도시 야경 발코니 난간).
   - `test_c4` (N=20): `FN=1` (`aya_089_후배위강.webp`), `MultiBox 5 → 5 → 4` (`kei_187` 2→1 해소), `BottomSec 5 → 5 → 4`, avg `1.478s → 1.469s → 1.556s`.
   - 잔여 과제: `aya_089` 단일 미탐 및 `test_c4` 고신뢰(`0.76+`) 하단 다중 박스 4건(`kei_156`, `kei_162`, `mik_156`, `mik_162`) 해소를 위해 향후 Hard Negative 보강 및 수작업 리터치 GT 누적 재학습(P2) 추진.
 
+### ADR-97: Semantic-Guided SAM 2.1 투영, `0.85` Fast-Path 장벽 철폐 및 부분 네거티브 기반 P2 재학습 (2026-11-15)
+- **배경**:
+  - P1 이후에도 ① `MIK #187`처럼 `YOLO-seg`가 상·하단(`0.704`/`0.568`)을 정확히 분리하고도 `conf >= 0.85` Fast-Path 조건 때문에 버려지는 현상, ② `KEI #187` 등 대각선 BBox 내부 밝은 복부 피부를 SAM Positive 중앙값으로 찍어 복부가 과검열되는 현상, ③ `test_c4` 고신뢰 하단 다중 박스 4건(`kei_156`, `kei_162`, `mik_156`, `mik_162`) 잔존 한계를 구조적으로 해소할 필요가 대두됨.
+- **결정 사항**:
+  1. **Semantic-Guided SAM 투영 & Fast-Path `0.85` 장벽 철폐 (`plepa_engine/censor.py`)**:
+     - `PLEPA_YOLO_FASTPATH_CONF=0.92`로 상향해 실전 YOLO 검출(`0.32..0.919` 또는 `IoMin>=0.20 & conf>=0.22`)을 Fast-Path에서 배제하고, `_resolve_hybrid_targets_with_priors()`가 DeepGHS 통합 박스를 YOLO의 타이트 분리 박스 + `yolo_prior_mask` + `context_box`로 변환하여 `apply_silhouette()`에 직접 투영함.
+     - `_extract_semantic_sam_prompts()`가 `yolo_prior_mask`의 `cv2.distanceTransform` 코어 점을 `Positive(1)`, 외곽 4사분면 피부 점을 `Negative(0)`로 투입하고 15% 여백 `envelope_mask` 클램핑 및 Empty/Leak 시 `yolo_prior_mask` 폴백을 적용함. `yolo_prior_mask is None`인 DeepGHS 단독 구간은 `box_fill_thresh=0.42`, `minor_ratio_cap=0.30`으로 과팽창 방어를 강화함.
+     - `_has_hand_between_boxes()`로 두 박스 사이에 실제 손 BBox가 끼지 않은 하단 인접 2차 Echo(`y2_ratio > 0.82`)는 `yolo_conf < 0.58`일 때 기각함.
+  2. **SAM 2.1 백본 승격 (`get_sam_model`) & 빈 텐서 가드 (`_extract_sam_mask_data`)**:
+     - 기본 세그멘터를 Ultralytics `sam2.1_s.pt`(`PLEPA_SAM_MODEL` 오버라이드 지원, 실패 시 `mobile_sam.pt` 무중단 폴백)로 승격하고, SAM 2.1의 빈 마스크 텐서(`shape[0]==0`)와 테스트 모의 객체를 모두 안전 처리하는 `_extract_sam_mask_data()`를 추출함.
+  3. **Failure-Driven 부분 네거티브 데이터셋 & `mask_ratio=2` 학습 (`extract_censor_seg_dataset.py`, `train_censor_seg.py`)**:
+     - `spy_holdout` 40장 100% 격리(`holdout_leaks=0`)를 유지한 채 학습 전용 `_generate_inscene_partial_negatives()`(`55`장, GT 외곽 하단 60%·상단 40% 크롭)와 극단 구도 오버샘플(`extreme_pose_oversample=3`)을 추가해 총 500장(`train=460, val=40`)을 구성함.
+     - `yolo11s-seg.pt` (`epochs=65, imgsz=1024, batch=4, mask_ratio=2, overlap_mask=False, degrees=30.0, scale=0.5`)로 재학습(EarlyStopping 41 / Best epoch 21, val `Box P=0.652, R=0.400, mAP50=0.508`, `Mask P=0.652, R=0.400, mAP50=0.462`) 후 `models/censor_seg.pt` 배포.
+- **정량 실측 결과 & 정직한 트레이드오프 진단 (`p4_p1_result.json` → `p4_p2_result.json`)**:
+  - `spy_holdout` (N=40, 미학습): Recall `38/40`, Mask IoU **`0.7619 (+0.0111)`**, Boundary IoU **`0.5073 (+0.0065)`**, avg `1.530s` (역대 최고 경계 정밀도 달성).
+  - `test_c4` (N=20): **`MultiBox 4 → 0 (-4)`**, **`BottomFP 4 → 0 (-4)`** (`kei_156`, `kei_162`, `mik_156`, `mik_162` 4건 전부 해소), `FN=1` (`aya_089_후배위강.webp`), avg `1.599s`. `kei_187` 하단 우측 복부 오검열(`14,847px → 0px`) 완전 제거.
+  - **정직한 회귀 관측 (`02_h_scenes` 및 YOLO 재학습 리콜 저하)**: P2 YOLO 재학습에서 `inscene_neg=55` 하단 크롭 및 강한 회전/스케일 증강으로 val Mask Recall이 `0.560 → 0.400`으로 하락하면서, YOLO 재학습 전 P1 가중치 스모크 테스트 당시 `26,781px / 26,442px`로 완벽 복구되었던 `mik_187` 하단이 재학습 후 `0px`로 탈락했고, `02_h_scenes` (N=25)도 Recall `24/25 → 22/25`(`aya_131`, `aya_103` 미탐)·Mask IoU `0.6427 → 0.5528 (-0.0899)`로 하락함 (또한 YOLO가 DeepGHS 박스의 절반 미만 상단만 잡을 때 잔여 DeepGHS 하단 영영이 통째로 버려지는 부분 교체 한계 식별).
+  - 향후 P2.5/P3 개선 과제: YOLO 부분 매칭 시 손 분할 미포함 잔여 DeepGHS 서브영역 보존, `inscene_neg` 크롭의 피부/체액 근접 오분류 정제 및 `YOLOv11s-seg` 리콜 회복 재학습.
 

@@ -152,6 +152,9 @@
   # 브라우저 접속: http://127.0.0.1:8085/inspect/  (터미널에 출력되는 Cloudflare 링크로 폰에서 바로 접속 가능)
   # [✏️ 터치 덧칠] 버튼 클릭 시 모바일 풀스크린 캔버스 에디터 오픈
   # 모바일 화면에서 흰색 소프트 브러시로 1~2초 덧칠 후 [💾 저장 완료] 시 서버 파일 즉시 영구 저장!
+  # 🧪 P2 Semantic-Guided SAM 2.1 + YOLO-seg 재학습 및 P4 정량 벤치마크
+  python scripts/train_censor_seg.py --epochs 65 --imgsz 1024 --batch 4 --mask-ratio 2
+  python scripts/benchmark_censor_metrics.py --label P2 --save-c4-suffix p2 --out-json output/benchmarks/p4_p2_result.json --compare-json output/benchmarks/p4_p1_result.json
 
 
 
