@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from plepa_engine.censor import get_skin_mask
+from plepa_engine.censor import get_skin_mask, is_pose_censor_required
 
 IMAGE_EXTS = {".webp", ".png", ".jpg", ".jpeg"}
 
@@ -351,6 +351,134 @@ def _is_kiro_h_pose(file_path: Path) -> bool:
     return any(tok.isdigit() and int(tok) >= 35 for tok in file_path.stem.split("_"))
 
 
+def collect_spy_white_pairs(
+    spy_assets_dir: Path,
+    holdout_per_char: int = 4,
+) -> Tuple[List[Tuple[Path, Path]], List[Tuple[Path, Path]]]:
+    """
+    `kiro/projects/spy/assets`에서 1:1 화이트 실루엣 차분(Diff) 정답 쌍을 탐색하여
+    `(학습용_pairs, holdout_검증용_pairs)`로 결정론적으로 분리 반환합니다.
+    - 캐릭터별 뒤쪽 `holdout_per_char`개는 Hold-out 벤치마크 전용으로 영구 격리합니다.
+    """
+    if not spy_assets_dir.exists():
+        return [], []
+    holdout_n = max(0, int(holdout_per_char))
+    train_pairs: List[Tuple[Path, Path]] = []
+    holdout_pairs: List[Tuple[Path, Path]] = []
+
+    for origin_dir in sorted(spy_assets_dir.glob("*_origin")):
+        if not origin_dir.is_dir():
+            continue
+        char_code = origin_dir.name[: -len("_origin")]
+        censored_dir = spy_assets_dir / char_code
+        if not censored_dir.is_dir():
+            continue
+        char_white_pairs: List[Tuple[Path, Path]] = []
+        for orig_f in sorted(origin_dir.glob("*.*")):
+            if orig_f.suffix.lower() not in IMAGE_EXTS:
+                continue
+            cens_f: Optional[Path] = None
+            for ext in (".webp", ".png", ".jpg", ".jpeg"):
+                cand = censored_dir / f"{orig_f.stem}{ext}"
+                if cand.is_file():
+                    cens_f = cand
+                    break
+            if cens_f is None:
+                continue
+            with Image.open(orig_f) as io, Image.open(cens_f) as ic:
+                o_arr = np.array(io.convert("RGB"), dtype=np.int16)
+                c_arr = np.array(ic.convert("RGB"), dtype=np.int16)
+                if o_arr.shape != c_arr.shape:
+                    continue
+                diff_mask = np.abs(c_arr - o_arr).max(axis=2) > 25
+                if int(np.count_nonzero(diff_mask)) < 250:
+                    continue
+                vals = c_arr[diff_mask]
+                if float((vals.min(axis=1) > 220).mean()) >= 0.70:
+                    char_white_pairs.append((orig_f, cens_f))
+
+        if not char_white_pairs:
+            continue
+        if holdout_n > 0:
+            holdout_slice = char_white_pairs[-holdout_n:]
+            train_slice = char_white_pairs[:-holdout_n]
+            holdout_pairs.extend(holdout_slice)
+            train_pairs.extend(train_slice)
+        else:
+            train_pairs.extend(char_white_pairs)
+
+    return train_pairs, holdout_pairs
+
+
+def _collect_clean_hard_negative_files(
+    projects_dir: Path,
+    limit: int = 120,
+    excluded_names: Optional[set[str]] = None,
+) -> List[Tuple[str, Path]]:
+    """
+    `projects/{roster}/assets/*_origin`에서 비노출/일상 포즈(포즈 번호 001~034, 비검열 확정)
+    원본 이미지를 하드 네거티브(Empty Label) 후보로 균등 추출합니다.
+    """
+    if limit <= 0 or not projects_dir.exists():
+        return []
+
+    blocked = excluded_names or set()
+    candidates: List[Tuple[str, Path]] = []
+    for roster_dir in sorted(projects_dir.iterdir()):
+        assets_dir = roster_dir / "assets"
+        if not assets_dir.is_dir():
+            continue
+        roster_name = roster_dir.name
+        for sub in sorted(assets_dir.iterdir()):
+            if not sub.is_dir():
+                continue
+            if sub.name.endswith("_origin"):
+                search_root = sub
+            elif (sub / "_origin").is_dir():
+                search_root = sub / "_origin"
+            else:
+                continue
+
+            for f in sorted(search_root.rglob("*")):
+                if not f.is_file() or f.suffix.lower() not in IMAGE_EXTS:
+                    continue
+                if f.name in blocked:
+                    continue
+                low_posix = f.as_posix().lower()
+                if "02_h_scenes" in low_posix or "_h_" in low_posix:
+                    continue
+                num_tokens = [int(tok) for tok in f.stem.split("_") if tok.isdigit()]
+                if not num_tokens or max(num_tokens) > 34 or min(num_tokens) < 1:
+                    continue
+                if is_pose_censor_required(file_path=f, roster=roster_name):
+                    continue
+                candidates.append((roster_name, f))
+
+    if len(candidates) <= limit:
+        return candidates
+
+    # 전 로스터/캐릭터가 고르게 포함되도록 결정론적 균등 스트라이드 샘플링
+    n_total = len(candidates)
+    return [candidates[(idx * n_total) // limit] for idx in range(limit)]
+
+
+def _clear_existing_dataset(out_dir: Path, images_dir: Path, labels_dir: Path) -> None:
+    """재빌드 시 이전 실험(예: kiro inpaint 등)의 잔여 이미지/라벨/캐시를 정리합니다."""
+    for target_dir in (images_dir, labels_dir):
+        if target_dir.is_dir():
+            for child in target_dir.iterdir():
+                if child.is_file():
+                    child.unlink(missing_ok=True)
+    for stale_file in (
+        out_dir / "train.txt",
+        out_dir / "val.txt",
+        out_dir / "labels.cache",
+        labels_dir.with_suffix(".cache"),
+    ):
+        if stale_file.is_file():
+            stale_file.unlink(missing_ok=True)
+
+
 def build_yolo_seg_dataset(
     gt_dir: Path,
     projects_dir: Path,
@@ -360,25 +488,29 @@ def build_yolo_seg_dataset(
     gt_oversample: int = 1,
     kiro_projects_dir: Optional[Path] = None,
     kiro_rosters: Sequence[str] = ("don", "hey", "man"),
+    include_kiro_inpaint: bool = False,
+    clean_spy_dir: Optional[Path] = None,
+    spy_holdout_per_char: int = 4,
+    hard_neg_limit: int = 120,
+    clean_existing: bool = True,
 ) -> Dict[str, int]:
     """
-    ground_truth 검열본 + `_origin` 차분 쌍과 `kiro` 수작업 블랙 실루엣(피부 역복원 포함)을
-    통합하여 YOLO-seg 학습 데이터셋을 일괄 생성합니다.
+    Phase P1 클린 데이터셋 빌더:
+    1. `ground_truth`(02_h_scenes) + `_origin` 1:1 화이트 차분 쌍 (오버샘플링 복사본은 train.txt 전용)
+    2. `clean_spy_dir`(kiro/projects/spy/assets) 1:1 화이트 차분 쌍 (Hold-out 40장 100% 격리)
+    3. 비노출 하드 네거티브(`<= 034` 일상 포즈, Empty `.txt` 라벨)
+    (기존 `don/hey/man` 인페인트 합성 왜곡셋은 `include_kiro_inpaint=False`로 기본 제외)
     """
     images_dir = out_dir / "images"
     labels_dir = out_dir / "labels"
     images_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)
+    if clean_existing:
+        _clear_existing_dataset(out_dir, images_dir, labels_dir)
 
-    yaml_path = out_dir / "data.yaml"
-    yaml_path.write_text(
-        f"path: {out_dir.resolve().as_posix()}\n"
-        "train: images\n"
-        "val: images\n"
-        "names:\n"
-        f"  {int(class_id)}: genital\n",
-        encoding="utf-8",
-    )
+    train_image_paths: List[Path] = []
+    val_image_paths: List[Path] = []
+    used_origin_names: set[str] = set()
 
     gt_files = (
         sorted(f for f in gt_dir.rglob("*") if f.is_file() and f.suffix.lower() in IMAGE_EXTS)
@@ -400,6 +532,7 @@ def build_yolo_seg_dataset(
             if origin_file is None:
                 continue
             matched += 1
+            used_origin_names.add(origin_file.name)
 
             with Image.open(origin_file) as orig_im, Image.open(gt_file) as cens_im:
                 _, yolo_lines = extract_yolo_seg_polygons_from_diff(
@@ -421,12 +554,86 @@ def build_yolo_seg_dataset(
                 dst_lbl = labels_dir / f"{eff_stem}.txt"
                 shutil.copy2(origin_file, dst_img)
                 dst_lbl.write_text(label_payload, encoding="utf-8")
+                train_image_paths.append(dst_img)
                 gt_written += 1
             processed += 1
 
+    # 2. Clean 1:1 White Spy Pairs (40 Hold-out files strictly isolated!)
+    spy_train_written = 0
+    spy_holdout_excluded = 0
+    if clean_spy_dir is not None and Path(clean_spy_dir).exists():
+        spy_train_pairs, spy_holdout_pairs = collect_spy_white_pairs(
+            Path(clean_spy_dir),
+            holdout_per_char=spy_holdout_per_char,
+        )
+        spy_holdout_excluded = len(spy_holdout_pairs)
+        holdout_block_names = {
+            p.name for pair in spy_holdout_pairs for p in pair
+        }
+        holdout_block_paths = {
+            p.resolve() for pair in spy_holdout_pairs for p in pair
+        }
+        used_origin_names.update(holdout_block_names)
+
+        for sp_idx, (orig_f, white_f) in enumerate(spy_train_pairs):
+            if (
+                orig_f.name in holdout_block_names
+                or white_f.name in holdout_block_names
+                or orig_f.resolve() in holdout_block_paths
+                or white_f.resolve() in holdout_block_paths
+            ):
+                raise RuntimeError(f"Hold-out Data Leakage 차단: {orig_f}")
+
+            used_origin_names.add(orig_f.name)
+            with Image.open(orig_f) as orig_im, Image.open(white_f) as white_im:
+                _, yolo_lines = extract_yolo_seg_polygons_from_diff(
+                    orig_im,
+                    white_im,
+                    class_id=class_id,
+                    diff_thresh=diff_thresh,
+                )
+            if not yolo_lines:
+                skipped_empty += 1
+                continue
+
+            char_tag = orig_f.parent.name.replace("_origin", "").replace(" ", "_")
+            eff_stem = f"spy_{char_tag}_{orig_f.stem}".replace(" ", "_")
+            dst_img = images_dir / f"{eff_stem}{orig_f.suffix.lower()}"
+            dst_lbl = labels_dir / f"{eff_stem}.txt"
+            shutil.copy2(orig_f, dst_img)
+            dst_lbl.write_text("\n".join(yolo_lines) + "\n", encoding="utf-8")
+            if sp_idx % 7 == 0:
+                val_image_paths.append(dst_img)
+            else:
+                train_image_paths.append(dst_img)
+            spy_train_written += 1
+            processed += 1
+
+    # 3. Hard Negatives (Clean Non-Exposed Poses <= 034, Empty Labels)
+    hard_neg_written = 0
+    if hard_neg_limit > 0 and projects_dir.exists():
+        hn_files = _collect_clean_hard_negative_files(
+            projects_dir,
+            limit=hard_neg_limit,
+            excluded_names=used_origin_names,
+        )
+        for hn_idx, (roster_name, hn_path) in enumerate(hn_files):
+            eff_stem = f"neg_{roster_name}_{hn_idx:03d}_{hn_path.stem}".replace(" ", "_")
+            dst_img = images_dir / f"{eff_stem}{hn_path.suffix.lower()}"
+            dst_lbl = labels_dir / f"{eff_stem}.txt"
+            shutil.copy2(hn_path, dst_img)
+            dst_lbl.write_text("", encoding="utf-8")
+            if hn_idx % 7 == 0:
+                val_image_paths.append(dst_img)
+            else:
+                train_image_paths.append(dst_img)
+            hard_neg_written += 1
+            processed += 1
+
+    # 4. Legacy kiro inpaint black silhouette restoration (disabled by default due to domain shift)
     kiro_scanned = 0
     kiro_processed = 0
-    if kiro_projects_dir is not None and Path(kiro_projects_dir).exists():
+    if include_kiro_inpaint and kiro_projects_dir is not None and Path(kiro_projects_dir).exists():
         kiro_root = Path(kiro_projects_dir)
         for roster in kiro_rosters:
             roster_assets = kiro_root / str(roster).strip() / "assets"
@@ -452,8 +659,34 @@ def build_yolo_seg_dataset(
                 dst_lbl = labels_dir / f"{out_stem}.txt"
                 Image.fromarray(restored_arr).save(dst_img, "WEBP", quality=95)
                 dst_lbl.write_text("\n".join(yolo_lines) + "\n", encoding="utf-8")
+                train_image_paths.append(dst_img)
                 kiro_processed += 1
                 processed += 1
+
+    # 5. Emit train.txt / val.txt split when large enough (keeps flat images/ + labels/ intact)
+    use_split_files = (len(train_image_paths) + len(val_image_paths)) >= 10 and len(val_image_paths) >= 1 and len(train_image_paths) >= 1
+    if use_split_files:
+        (out_dir / "train.txt").write_text(
+            "\n".join(p.resolve().as_posix() for p in train_image_paths) + "\n",
+            encoding="utf-8",
+        )
+        (out_dir / "val.txt").write_text(
+            "\n".join(p.resolve().as_posix() for p in val_image_paths) + "\n",
+            encoding="utf-8",
+        )
+        train_entry, val_entry = "train.txt", "val.txt"
+    else:
+        train_entry, val_entry = "images", "images"
+
+    yaml_path = out_dir / "data.yaml"
+    yaml_path.write_text(
+        f"path: {out_dir.resolve().as_posix()}\n"
+        f"train: {train_entry}\n"
+        f"val: {val_entry}\n"
+        "names:\n"
+        f"  {int(class_id)}: genital\n",
+        encoding="utf-8",
+    )
 
     return {
         "total_gt": len(gt_files),
@@ -461,8 +694,13 @@ def build_yolo_seg_dataset(
         "processed": processed,
         "gt_written": gt_written,
         "skipped_empty": skipped_empty,
+        "spy_train_written": spy_train_written,
+        "spy_holdout_excluded": spy_holdout_excluded,
+        "hard_neg_written": hard_neg_written,
         "kiro_scanned": kiro_scanned,
         "kiro_processed": kiro_processed,
+        "train_split_count": len(train_image_paths),
+        "val_split_count": len(val_image_paths),
     }
 
 
@@ -490,18 +728,41 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--class-id", type=int, default=0, help="YOLO-seg 클래스 ID (기본: 0)")
     parser.add_argument("--diff-thresh", type=int, default=18, help="픽셀 차분 임계값 (기본: 18)")
-    parser.add_argument("--gt-oversample", type=int, default=1, help="ground_truth 쌍 오버샘플링 배수 (기본: 1)")
+    parser.add_argument("--gt-oversample", type=int, default=4, help="ground_truth 쌍 오버샘플링 배수 (기본: 4)")
+    parser.add_argument(
+        "--clean-spy-dir",
+        type=Path,
+        default=ROOT.parent / "kiro" / "projects" / "spy" / "assets",
+        help="1:1 클린 화이트 정답 쌍을 추출할 spy/assets 디렉토리",
+    )
+    parser.add_argument(
+        "--spy-holdout-per-char",
+        type=int,
+        default=4,
+        help="캐릭터별 학습 제외(Hold-out) 쌍 개수 (기본: 4)",
+    )
+    parser.add_argument(
+        "--hard-neg-limit",
+        type=int,
+        default=120,
+        help="비노출 일상 포즈(<=034) 하드 네거티브 샘플 수 (기본: 120)",
+    )
     parser.add_argument(
         "--kiro-projects-dir",
         type=Path,
         default=None,
-        help="수작업 블랙 실루엣을 추출할 kiro/projects 루트 디렉토리 (읽기 전용)",
+        help="수작업 블랙 실루엣(인페인트) 추출용 kiro/projects 루트 디렉토리",
     )
     parser.add_argument(
         "--kiro-rosters",
         type=str,
         default="don,hey,man",
         help="kiro에서 스캔할 쉼표 구분 로스터 목록 (기본: don,hey,man)",
+    )
+    parser.add_argument(
+        "--include-kiro-inpaint",
+        action="store_true",
+        help="레거시 인페인트 합성본(don/hey/man)을 데이터셋에 포함 (기본 비활성화)",
     )
     return parser
 
@@ -518,12 +779,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         gt_oversample=args.gt_oversample,
         kiro_projects_dir=args.kiro_projects_dir,
         kiro_rosters=rosters,
+        include_kiro_inpaint=args.include_kiro_inpaint,
+        clean_spy_dir=args.clean_spy_dir,
+        spy_holdout_per_char=args.spy_holdout_per_char,
+        hard_neg_limit=args.hard_neg_limit,
     )
     print(
         f"[YOLO-seg Extractor] {stats['processed']} items processed "
         f"(total_gt={stats['total_gt']}, matched={stats['matched']}, gt_written={stats['gt_written']}, "
-        f"skipped_empty={stats['skipped_empty']}, kiro_scanned={stats['kiro_scanned']}, "
-        f"kiro_processed={stats['kiro_processed']})"
+        f"spy_train={stats['spy_train_written']}, spy_holdout_excluded={stats['spy_holdout_excluded']}, "
+        f"hard_neg={stats['hard_neg_written']}, train={stats['train_split_count']}, val={stats['val_split_count']}, "
+        f"skipped_empty={stats['skipped_empty']}, kiro_processed={stats['kiro_processed']})"
     )
     return 0
 

@@ -26,7 +26,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import plepa_engine.censor as censor
-from scripts.extract_censor_seg_dataset import _find_matching_origin, _index_origin_files
+from scripts.extract_censor_seg_dataset import (
+    _find_matching_origin,
+    _index_origin_files,
+    collect_spy_white_pairs,
+)
 
 
 IMAGE_EXTS = {".webp", ".png", ".jpg", ".jpeg"}
@@ -138,40 +142,8 @@ def collect_spy_holdout_white_pairs(
     """`kiro/projects/spy/assets`에서 캐릭터별 흰색 실루엣 Hold-out 정답 쌍(뒤쪽 N개)을 결정론적으로 추출합니다."""
     if not spy_assets_dir.exists() or per_char_limit <= 0:
         return []
-    pairs: List[Tuple[Path, Path]] = []
-    for origin_dir in sorted(spy_assets_dir.glob("*_origin")):
-        if not origin_dir.is_dir():
-            continue
-        char_code = origin_dir.name[: -len("_origin")]
-        censored_dir = spy_assets_dir / char_code
-        if not censored_dir.is_dir():
-            continue
-        char_white_pairs: List[Tuple[Path, Path]] = []
-        for orig_f in sorted(origin_dir.glob("*.*")):
-            if orig_f.suffix.lower() not in IMAGE_EXTS:
-                continue
-            cens_f: Optional[Path] = None
-            for ext in (".webp", ".png", ".jpg", ".jpeg"):
-                cand = censored_dir / f"{orig_f.stem}{ext}"
-                if cand.is_file():
-                    cens_f = cand
-                    break
-            if cens_f is None:
-                continue
-            with Image.open(orig_f) as io, Image.open(cens_f) as ic:
-                o_arr = np.array(io.convert("RGB"), dtype=np.int16)
-                c_arr = np.array(ic.convert("RGB"), dtype=np.int16)
-                if o_arr.shape != c_arr.shape:
-                    continue
-                diff_mask = np.abs(c_arr - o_arr).max(axis=2) > 25
-                if int(np.count_nonzero(diff_mask)) < 250:
-                    continue
-                vals = c_arr[diff_mask]
-                if float((vals.min(axis=1) > 220).mean()) >= 0.70:
-                    char_white_pairs.append((orig_f, cens_f))
-        if char_white_pairs:
-            pairs.extend(char_white_pairs[-per_char_limit:])
-    return pairs
+    _, holdout_pairs = collect_spy_white_pairs(spy_assets_dir, holdout_per_char=per_char_limit)
+    return holdout_pairs
 
 
 def _parse_pose_and_roster(path: Path, default_roster: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
@@ -256,7 +228,7 @@ def evaluate_test_c4(
             orig_rgb = im_o.convert("RGB")
             skin_np = censor.get_skin_mask(np.array(orig_rgb))
             t0 = time.perf_counter()
-            cands = censor._detect_target_candidates(
+            cands, custom_seg_mask, fallback_boxes = censor._resolve_hybrid_targets_and_mask(
                 orig_rgb,
                 targets=("penis",),
                 min_confidence=0.16,
@@ -272,6 +244,8 @@ def evaluate_test_c4(
                     style=style,
                     skin_np=skin_np,
                     pose_cat=pose_cat,
+                    custom_seg_mask=custom_seg_mask,
+                    fallback_boxes=fallback_boxes,
                 )
             else:
                 cens_rgb = orig_rgb

@@ -50,34 +50,59 @@ def _normalize_kiro_rosters(kiro_rosters: Any) -> Tuple[str, ...]:
     return tuple(str(r).strip() for r in kiro_rosters if str(r).strip())
 
 
+def _load_yolo_base_with_fallback(base_model: str) -> Tuple[Any, str]:
+    """요청한 YOLO-seg 체크포인트 로딩 실패 시 대체 체크포인트(yolov8s-seg -> 로컬 yolov8n-seg)로 폴백합니다."""
+    from ultralytics import YOLO
+
+    candidates: List[str] = [base_model]
+    for fb in ("yolov8s-seg.pt", str(ROOT_DIR / "yolov8n-seg.pt"), "yolov8n-seg.pt"):
+        if fb not in candidates:
+            candidates.append(fb)
+
+    last_err: Optional[Exception] = None
+    for cand in candidates:
+        try:
+            return YOLO(cand), cand
+        except Exception as err:
+            last_err = err
+            print(f"[Warn] 체크포인트 로딩 실패({cand}): {err} -> 다음 후보 시도")
+    if last_err is not None:
+        raise last_err
+    raise RuntimeError(f"사용 가능한 YOLO-seg 체크포인트를 찾지 못했습니다: {base_model}")
+
+
 def train_censor_seg(
     gt_dir: Path,
     projects_dir: Path,
     dataset_dir: Path,
     out_weights: Path,
-    base_model: str = "yolov8n-seg.pt",
-    epochs: int = 100,
-    imgsz: int = 640,
-    batch: int = 8,
+    base_model: str = "yolo11s-seg.pt",
+    epochs: int = 65,
+    imgsz: int = 1024,
+    batch: int = 4,
     device: Optional[str] = None,
     diff_thresh: int = 18,
     gt_oversample: int = 4,
     kiro_projects_dir: Optional[Path] = None,
     kiro_rosters: Any = ("don", "hey", "man"),
+    include_kiro_inpaint: bool = False,
+    clean_spy_dir: Optional[Path] = None,
+    spy_holdout_per_char: int = 4,
+    hard_neg_limit: int = 120,
     run_project_dir: Optional[Path] = None,
     run_name: str = "censor_seg_train",
     dry_run: bool = False,
 ) -> int:
-    """데이터셋 동기화 후 전용 YOLO-seg 모델을 학습하고 최종 가중치를 배포합니다."""
-    default_kiro_dir = ROOT_DIR.parent / "kiro" / "projects"
+    """클린 데이터셋 동기화 후 전용 YOLO-seg 모델을 학습하고 최종 가중치를 배포합니다."""
+    default_spy_dir = ROOT_DIR.parent / "kiro" / "projects" / "spy" / "assets"
     is_default_projects = projects_dir.resolve() in {
         (ROOT_DIR / "projects").resolve(),
         (ROOT_DIR / "output" / "projects").resolve(),
     }
-    if kiro_projects_dir is None and is_default_projects and default_kiro_dir.is_dir():
-        eff_kiro_dir: Optional[Path] = default_kiro_dir
+    if clean_spy_dir is None and is_default_projects and default_spy_dir.is_dir():
+        eff_spy_dir: Optional[Path] = default_spy_dir
     else:
-        eff_kiro_dir = kiro_projects_dir
+        eff_spy_dir = clean_spy_dir
 
     eff_projects_dir = (
         ROOT_DIR / "projects"
@@ -91,8 +116,12 @@ def train_censor_seg(
         out_dir=dataset_dir,
         diff_thresh=diff_thresh,
         gt_oversample=gt_oversample,
-        kiro_projects_dir=eff_kiro_dir,
+        kiro_projects_dir=kiro_projects_dir,
         kiro_rosters=_normalize_kiro_rosters(kiro_rosters),
+        include_kiro_inpaint=include_kiro_inpaint,
+        clean_spy_dir=eff_spy_dir,
+        spy_holdout_per_char=spy_holdout_per_char,
+        hard_neg_limit=hard_neg_limit,
     )
     images_dir = dataset_dir / "images"
     data_yaml = dataset_dir / "data.yaml"
@@ -106,9 +135,12 @@ def train_censor_seg(
         f"[Dataset] total_gt={summary.get('total_gt', 0)}, "
         f"matched={summary.get('matched', 0)}, "
         f"gt_written={summary.get('gt_written', 0)}, "
-        f"kiro_scanned={summary.get('kiro_scanned', 0)}, "
+        f"spy_train={summary.get('spy_train_written', 0)}, "
+        f"spy_holdout_excluded={summary.get('spy_holdout_excluded', 0)}, "
+        f"hard_neg={summary.get('hard_neg_written', 0)}, "
+        f"train={summary.get('train_split_count', 0)}, "
+        f"val={summary.get('val_split_count', 0)}, "
         f"kiro_processed={summary.get('kiro_processed', 0)}, "
-        f"processed={summary.get('processed', 0)}, "
         f"skipped_empty={summary.get('skipped_empty', 0)}, "
         f"ready_images={image_count}"
     )
@@ -129,10 +161,9 @@ def train_censor_seg(
         )
         return 1
 
-    from ultralytics import YOLO
-
     eff_run_dir.mkdir(parents=True, exist_ok=True)
-    model = YOLO(base_model)
+    model, resolved_base = _load_yolo_base_with_fallback(base_model)
+    print(f"[Train] base_model={resolved_base}, imgsz={imgsz}, batch={batch}, epochs={epochs}")
 
     train_kwargs: Dict[str, Any] = {
         "data": str(data_yaml),
@@ -142,6 +173,9 @@ def train_censor_seg(
         "project": str(eff_run_dir),
         "name": str(run_name),
         "exist_ok": True,
+        "patience": 20,
+        "mosaic": 0.5,
+        "close_mosaic": 15,
         "degrees": 25.0,
         "scale": 0.4,
         "fliplr": 0.5,
@@ -152,7 +186,20 @@ def train_censor_seg(
     if device:
         train_kwargs["device"] = device
 
-    results = model.train(**train_kwargs)
+    try:
+        results = model.train(**train_kwargs)
+    except RuntimeError as oom_err:
+        if "out of memory" in str(oom_err).lower() and int(imgsz) > 832:
+            print(f"[Warn] CUDA OOM at imgsz={imgsz}, batch={batch} -> imgsz=832, batch=4로 자동 재시도합니다.")
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            train_kwargs["imgsz"] = 832
+            train_kwargs["batch"] = min(4, int(batch))
+            model, resolved_base = _load_yolo_base_with_fallback(base_model)
+            results = model.train(**train_kwargs)
+        else:
+            raise
     best_weight = _resolve_trained_weights(results, eff_run_dir, run_name)
     if best_weight is None or not best_weight.is_file():
         print(
@@ -184,16 +231,39 @@ def _build_parser() -> argparse.ArgumentParser:
         help="원본 프로젝트 루트 디렉터리",
     )
     parser.add_argument(
+        "--clean-spy-dir",
+        type=Path,
+        default=None,
+        help="1:1 클린 화이트 정답 쌍을 추출할 spy/assets 디렉터리 (미지정 시 기본 경로 자동 탐색)",
+    )
+    parser.add_argument(
+        "--spy-holdout-per-char",
+        type=int,
+        default=4,
+        help="캐릭터별 학습 제외(Hold-out) 정답 쌍 개수 (기본: 4)",
+    )
+    parser.add_argument(
+        "--hard-neg-limit",
+        type=int,
+        default=120,
+        help="비노출 일상 포즈(<=034) 하드 네거티브 샘플 수 (기본: 120)",
+    )
+    parser.add_argument(
         "--kiro-projects-dir",
         type=Path,
         default=None,
-        help="수작업 블랙 실루엣을 추출할 kiro/projects 루트 디렉터리",
+        help="수작업 블랙 실루엣(인페인트) 추출용 kiro/projects 루트 디렉터리",
     )
     parser.add_argument(
         "--kiro-rosters",
         type=str,
         default="don,hey,man",
         help="kiro에서 스캔할 쉼표 구분 로스터 목록 (기본: don,hey,man)",
+    )
+    parser.add_argument(
+        "--include-kiro-inpaint",
+        action="store_true",
+        help="레거시 인페인트 합성본(don/hey/man)을 데이터셋에 포함 (기본 비활성화)",
     )
     parser.add_argument(
         "--gt-oversample",
@@ -209,13 +279,15 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model",
+        "--base-model",
+        dest="model",
         type=str,
-        default="yolov8n-seg.pt",
-        help="기반 Ultralytics 세그멘테이션 체크포인트",
+        default="yolo11s-seg.pt",
+        help="기반 Ultralytics 세그멘테이션 체크포인트 (기본: yolo11s-seg.pt)",
     )
-    parser.add_argument("--epochs", type=int, default=100, help="학습 에포크 수")
-    parser.add_argument("--imgsz", type=int, default=640, help="입력 해상도")
-    parser.add_argument("--batch", type=int, default=8, help="배치 크기")
+    parser.add_argument("--epochs", type=int, default=65, help="학습 에포크 수 (기본: 65)")
+    parser.add_argument("--imgsz", type=int, default=1024, help="입력 해상도 (기본: 1024)")
+    parser.add_argument("--batch", type=int, default=4, help="배치 크기 (기본: 4)")
     parser.add_argument("--device", type=str, default=None, help="학습 디바이스 (예: 0, cpu)")
     parser.add_argument("--diff-thresh", type=int, default=18, help="Diff 이진화 임계값")
     parser.add_argument(
@@ -252,6 +324,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         gt_oversample=args.gt_oversample,
         kiro_projects_dir=args.kiro_projects_dir,
         kiro_rosters=args.kiro_rosters,
+        include_kiro_inpaint=args.include_kiro_inpaint,
+        clean_spy_dir=args.clean_spy_dir,
+        spy_holdout_per_char=args.spy_holdout_per_char,
+        hard_neg_limit=args.hard_neg_limit,
         run_project_dir=args.run_dir,
         run_name=args.run_name,
         dry_run=args.dry_run,
