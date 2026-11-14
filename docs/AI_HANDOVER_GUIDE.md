@@ -31,10 +31,10 @@
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
-6. **ADR-86 → Phase P0 외곽 선화 정밀 스냅 & 인간-AI 협업 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95)**:
-   - 기존 ADR-86('애매하면 모자라게' BBox 내측 8% 수축 + 40% 라운딩 + 이중 침식)의 외곽 살색 림(Halo) 노출 한계를 **Phase P0**에서 해체·개선. 내측 강제 수축(`0%`)·조건부 Leakage 라운드 가드·단일 경계 안티에일리어싱 및 `protection_mask`(전경 손/얼굴 보호) `0px` 침범 불변식 위에서 **외곽 선화 스냅(`_snap_to_outer_lineart`, +1~3px 어두운 먹선 흡수)**과 하단 경계 오탐 게이트(`_filter_bottom_edge_false_positives`)를 공식 탑재함.
-   - 주변 신체(허벅지/가슴/입술/턱) 사각 침범 결함 0% 원천 방어.
-   - 미탐지 시 억지 사각 앵커 투척(`enable_anchor_fallback=False`) 영구 비활성화로 비노출 씬 및 주변 살 오검열 0% 유지.
+6. **ADR-86 → Phase P0 → P0.5+P1 하이브리드 정밀 검열 & 인간-AI 협업 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 / ADR-96)**:
+   - **역할 분담 하이브리드 파이프라인**: `DeepGHS` + 자체 학습 `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, retina_masks=True`) **Dual Consensus Gating**으로 미탐 구제 및 하단 오탐을 억제하고, 중간 신뢰도(`0.16..0.84`) 박스들은 **MobileSAM(P0.5) + 외곽 선화 스냅(`_snap_to_outer_lineart`, +1~3px)** 파이프라인으로 정밀 리파이닝함 (`conf >= 0.85` 고신뢰 구간만 세그멘테이션 Fast-Path 적용).
+   - **P0.5 손 가로질림 Sub-BBox 분할 & 블록 과팽창 억제**: 손이 타겟 중간을 가로지를 때 `upper_sub_bbox` / `lower_sub_bbox`로 상·하단 비가려짐 영역을 독립 디코딩하여 상단 끝단 유실(`mik_187` 547px → 3,347px)을 해결하고, `_classify_sam_mask_leak()`로 BBox 내부 직사각형 과팽창을 조건부 방어함.
+   - `protection_mask`(전경 손/얼굴 보호) `0px` 침범 불변식, 주변 신체 사각 침범 결함 0% 및 미탐지 억지 앵커(`enable_anchor_fallback=False`) 영구 비활성화 유지.
    - 살짝 모자란 부분은 모바일/웹 검수 갤러리 캔버스 에디터에서 사용자가 1~2초 만에 `[✏️ 터치 덧칠]` 마감하여 `output/benchmarks/ground_truth/`로 자동 아카이브.
 7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
    - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
@@ -1737,5 +1737,25 @@ ight_terrace(도시 야경 발코니 난간).
   3. **전용 학습/추출 스크립트 정비 및 정량 벤치마크 (`scripts/benchmark_censor_metrics.py`)**:
      - `scripts/extract_censor_seg_dataset.py`·`scripts/train_censor_seg.py`에 기존 수작업 정답셋 복원/추출 및 `gt_oversample` 파이프라인 통합.
      - `scripts/benchmark_censor_metrics.py` 신설로 C7 → P0 정량 실측 검증 완료 (`02_h_scenes` N=25 Mask IoU `0.4187 → 0.5887` (+0.1700), Boundary IoU `0.1461 → 0.2732` (+0.1271) / `spy_holdout` N=40 Mask IoU `0.5695 → 0.7479` (+0.1784), Boundary IoU `0.2697 → 0.5132` (+0.2435) / `test_c4` N=20 MultiBox `6 → 5`).
+
+### ADR-96: 손 가로질림 Sub-BBox 분할(P0.5), Hold-out 격리 YOLO11s-seg 학습 및 하이브리드 합의 게이팅(P1) 구축 (2026-11-15)
+- **배경**:
+  - P0 적용 후에도 ① 손이 타겟 중간을 가로질러 상·하단으로 양분될 때 `local_bbox` 전체 입력과 `max_area * 0.15` 임계치 때문에 상단 영역이 소실되는 현상(`mik_187`), ② BBox 테두리에만 미세하게 안 닿고 내부를 직사각형/기역자 형태로 과팽창 채움하는 현상(`mik_170`), ③ 1차 DeepGHS 탐지기의 고신뢰 하단 다중 오탐(`test_c4` 5건) 및 특정 후면 구도 미탐(`aya_089`)이 잔존함.
+  - 기존 인페인트 합성 데이터를 포함한 학습은 도메인 시프트를 유발하므로 순수 1:1 화이트 정답쌍과 비노출 하드 네거티브 기반의 클린 데이터셋 및 Hold-out 100% 격리가 요구됨.
+- **결정 사항**:
+  1. **[Phase P0.5] 손 가로질림 Sub-BBox 분할 디코딩 및 블록 과팽창 억제 (`plepa_engine/censor.py`)**:
+     - 교차 손 BBox의 폭 점유(`>= max(12, int(ebw * 0.35))`)로 상·하단 비가려짐 피부 포인트가 양분된 경우, `upper_sub_bbox` / `lower_sub_bbox`로 분할하여 SAM 마스크를 각각 독립 추론하고 상·하단 존별 컴포넌트를 개별 보존함 (반대편 억제용 `extra_neg` 주입 배제로 연속 타겟 손상 방지, `mik_187` 상단 픽셀 `547px → 3,347px` 회복 실측).
+     - `_classify_sam_mask_leak()`로 레거시 경계 이탈 검사와 BBox 내부 직사각형 과팽창 검사(`rect_extent >= 0.86 and corner_fill >= 0.28` 또는 `box_fill >= 0.62 and corner_fill >= 0.32`)를 통합 분리하여 유효 타원 마스킹 무손실과 과팽창 억제를 병행함.
+  2. **[Phase P1] 클린 데이터셋 & YOLO11s-seg 학습 (`extract_censor_seg_dataset.py`, `train_censor_seg.py`)**:
+     - `collect_spy_white_pairs(holdout_per_char=4)`로 검증용 `spy_holdout` 40장을 완전 격리(`holdout_leaks=0`), 인페인트 합성본(`include_kiro_inpaint=False`)을 배제하고 순수 화이트 정답쌍(`spy_train` 156 + `02_h_scenes` 4x train 전용 오버샘플 100) + 비노출 하드 네거티브 113장(`train=329 / val=40`, 총 369장)을 구축함.
+     - `yolo11s-seg.pt` (`epochs=65, imgsz=1024, batch=4`, EarlyStopping 61 / Best epoch 41, val `Box mAP50=0.517`, `Mask P=0.695, R=0.560, mAP50=0.629`) 학습 후 `models/censor_seg.pt`로 배포함.
+  3. **[Phase P1] 디텍터-세그멘터 역할 분담 Dual Consensus Gating (`_resolve_hybrid_targets_and_mask`)**:
+     - 실측 검증 결과 `YOLO11s-seg` 단독 폴리곤(`spy_holdout` Mask IoU `0.6696`, B-IoU `0.3008`) 대비 **DeepGHS + YOLO11s 합의 박스 + MobileSAM(P0.5) 리파이닝**이 경계 정밀도(`Mask IoU 0.7508`, `B-IoU 0.5008`, `+0.20` B-IoU 우위)에서 월등함을 확인함.
+     - 이에 `conf >= 0.85` 고신뢰 구간만 세그멘테이션 Fast-Path로 직행하고, `0.16..0.84` 구간에서는 양 디텍터 상호 검증(하단 고립 2차 오탐 `kei_187` 제거, 미탐 구제) 후 확정 박스를 `MobileSAM(P0.5)`로 라우팅함.
+- **정량 실측 결과 (P0 → P0.5 → P1 Hybrid, Hold-out 무누수 검증)**:
+  - `spy_holdout` (N=40, 미학습): Recall `37/40 → 37/40 → 38/40 (+1)`, Mask IoU `0.7479 → 0.7479 → 0.7508`, B-IoU `0.5132 → 0.5129 → 0.5008` (C7 `0.2697` 대비 `+0.2311`).
+  - `02_h_scenes` (N=25, train 일부 포함): Recall `22/25 → 22/25 → 24/25 (+2)`, Mask IoU `0.5887 → 0.5773 → 0.6427 (+0.0540 vs P0)`, B-IoU `0.2732 → 0.2659 → 0.2845`.
+  - `test_c4` (N=20): `FN=1` (`aya_089_후배위강.webp`), `MultiBox 5 → 5 → 4` (`kei_187` 2→1 해소), `BottomSec 5 → 5 → 4`, avg `1.478s → 1.469s → 1.556s`.
+  - 잔여 과제: `aya_089` 단일 미탐 및 `test_c4` 고신뢰(`0.76+`) 하단 다중 박스 4건(`kei_156`, `kei_162`, `mik_156`, `mik_162`) 해소를 위해 향후 Hard Negative 보강 및 수작업 리터치 GT 누적 재학습(P2) 추진.
 
 

@@ -80,21 +80,24 @@ python batch_generator.py -r campus -c aya -p all --censor-only --censor-style d
 ```
 
 
-### 2.4 모바일 인터랙티브 검수 갤러리, 원클릭 터치 덧칠 에디터 및 정량 벤치마크 (ADR-86 / ADR-95)
+### 2.4 모바일 인터랙티브 검수 갤러리, 원클릭 터치 덧칠 에디터 및 P1 하이브리드 정량 벤치마크 (ADR-86 / ADR-95 / ADR-96)
 - **동작 원리**:
-  - Phase P0 외곽 선화 스냅(`_snap_to_outer_lineart`, +1~3px 먹선 흡수) 및 전경 손/얼굴 `protection_mask` 침범 `0px` 원칙을 유지하면서, 미흡 구간만 모바일 터치 브러시로 보완.
-  - 모바일 검수 갤러리(port: 8085)에서 에셋별 [✏️ 터치 덧칠] 버튼을 탭하여 풀스크린 캔버스 에디터 진입.
-  - 사용자가 스마트폰 화면에서 터치 브러시로 모자란 부분을 1~2초 덧칠하고 [💾 저장 완료] 시 POST /api/retouch_censor를 통해 원본 파일 영구 덮어쓰기 저장 및 output/benchmarks/ground_truth/ 정답 데이터 자동 아카이브.
-  - 정량 검증기(`scripts/benchmark_censor_metrics.py`)로 Hold-out 정답셋 대비 Mask IoU / Boundary IoU A/B 비교 및 `test_c4` 비교 갤러리 생성 지원.
+  - **P0.5+P1 하이브리드 파이프라인**: `DeepGHS` + 자체 학습 `YOLO11s-seg` (`models/censor_seg.pt`, `imgsz=1024`) Dual Consensus Gating으로 타겟 박스를 합의 확정한 뒤, `MobileSAM(P0.5)` 손 가로질림 Sub-BBox 분할 + 외곽 선화 스냅(`+1~3px` 먹선 흡수)으로 경계 품질을 극대화함 (`protection_mask` 침범 `0px` 유지).
+  - 모바일 검수 갤러리(port: 8085)에서 에셋별 `[✏️ 터치 덧칠]` 버튼을 탭하여 풀스크린 캔버스 에디터 진입 및 `/test_c4/`에서 `white_p1`, `white_p05`, `white_p0`, `white_c7` 1:1 시각 비교 가능.
+  - 사용자가 스마트폰 화면에서 터치 브러시로 모자란 부분을 1~2초 덧칠하고 `[💾 저장 완료]` 시 `POST /api/retouch_censor`를 통해 원본 파일 영구 덮어쓰기 저장 및 `output/benchmarks/ground_truth/` 정답 데이터 자동 아카이브.
+  - 클린 데이터셋 추출기(`extract_censor_seg_dataset.py`)는 `spy_holdout` 40장을 학습 세트에서 100% 격리(`holdout_leaks=0`)하며 인페인트 왜곡본 없이 순수 화이트 정답쌍 + 비노출 하드 네거티브를 생성함.
 ```powershell
 # 1) 모바일 검수 갤러리 및 Cloudflare 공인 터널 서버 구동 (포트 8085)
 python scripts/serve_benchmark_mobile.py
 
-# 2) 검수 뷰어 HTML 갱신 및 모바일 서버 가동
+# 2) 검수 뷰어 HTML 갱신
 .\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py
 
-# 3) Hold-out 정답셋 기반 정량 Mask/Boundary IoU 벤치마크 실행 및 비교
-.\.venv\Scripts\python.exe scripts/benchmark_censor_metrics.py --label P0 --out-json output/benchmarks/p4_p0_result.json --compare-json output/benchmarks/p4_c7_baseline.json
+# 3) Hold-out 격리 클린 데이터셋 추출 및 YOLO11s-seg(1024px) 학습·배포 (Phase P1)
+.\.venv\Scripts\python.exe scripts/train_censor_seg.py --clean-spy-dir <SPY_ASSETS_DIR> --gt-dir output/benchmarks/ground_truth --model yolo11s-seg.pt --epochs 65 --imgsz 1024 --batch 4
+
+# 4) Hold-out 정답셋 기반 P1 하이브리드 정량 벤치마크 & test_c4 A/B 비교 실행
+.\.venv\Scripts\python.exe scripts/benchmark_censor_metrics.py --label P1 --save-c4-suffix p1 --out-json output/benchmarks/p4_p1_result.json --compare-json output/benchmarks/p4_p05_result.json
 ```
 
 ### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프
