@@ -904,9 +904,9 @@ def test_p1_hybrid_dual_gating_ensemble(monkeypatch):
     skin_np = np.full((600, 500), 255, dtype=np.uint8)
     monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
 
-    # 0) Fast Path: 초고신뢰 YOLO-seg (>=0.85) -> DeepGHS 우회 및 직결 폴리곤 마스크
+    # 0) Fast Path: 초고신뢰 YOLO-seg (>=0.92) -> DeepGHS 우회 및 직결 폴리곤 마스크
     seg_fast = [
-        ((180, 140, 290, 320), "penis", 0.91, np.array([[185, 145], [285, 145], [285, 315], [185, 315]])),
+        ((180, 140, 290, 320), "penis", 0.93, np.array([[185, 145], [285, 145], [285, 315], [185, 315]])),
     ]
     monkeypatch.setattr(censor, "_infer_custom_censor_seg_items", lambda *a, **kw: seg_fast)
     monkeypatch.setattr(
@@ -919,7 +919,23 @@ def test_p1_hybrid_dual_gating_ensemble(monkeypatch):
     assert fb_fast == []
     assert mask_fast is not None and int(np.count_nonzero(mask_fast)) > 5000
 
-    # 1) Case B: DeepGHS 2건 중 Primary만 YOLO와 합의, 하단 고립 오탐 기각 -> P0.5 SAM 정밀 세그멘테이션 라우팅
+    # 0-b) P2: 0.70(기존 0.85 장벽 미만, 0.92 미만) -> Fast-Path를 우회하지 않고 Semantic-Guided SAM 라우팅 (타이트 YOLO 박스+prior 전달)
+    seg_mid = [
+        ((180, 140, 290, 320), "penis", 0.70, np.array([[185, 145], [285, 145], [285, 315], [185, 315]])),
+    ]
+    deep_mid = [((175, 135, 295, 325), "penis", 0.80)]
+    monkeypatch.setattr(censor, "_infer_custom_censor_seg_items", lambda *a, **kw: seg_mid)
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: deep_mid)
+    boxes_mid, mask_mid, fb_mid, priors_mid, ctx_mid = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np
+    )
+    assert len(boxes_mid) == 1
+    assert boxes_mid[0][0] == (180, 140, 290, 320)
+    assert mask_mid is None
+    assert priors_mid is not None and priors_mid[0] is not None
+    assert ctx_mid == [(175, 135, 295, 325)]
+
+    # 1) Case B: DeepGHS 2건 중 Primary만 YOLO와 합의, 하단 고립 오탐 기각 -> YOLO 타이트 박스+prior로 SAM 정밀 세그멘테이션 라우팅
     seg_case_ab = [
         ((180, 140, 290, 320), "penis", 0.45, np.array([[185, 145], [285, 145], [285, 315], [185, 315]])),
     ]
@@ -932,7 +948,7 @@ def test_p1_hybrid_dual_gating_ensemble(monkeypatch):
 
     boxes_ab, mask_ab, fb_ab = censor._resolve_hybrid_targets_and_mask(img, skin_np=skin_np)
     assert len(boxes_ab) == 1
-    assert boxes_ab[0][0] == (175, 135, 295, 325)
+    assert boxes_ab[0][0] == (180, 140, 290, 320)
     assert mask_ab is None
     assert fb_ab == boxes_ab
 
@@ -953,5 +969,214 @@ def test_p1_hybrid_dual_gating_ensemble(monkeypatch):
     assert len(boxes_c) == 1
     assert mask_c is None
     assert fb_c == deep_case_c
+
+
+def test_p2_semantic_guided_sam_projection_and_fallback(monkeypatch):
+    """P2: yolo_prior_mask의 distanceTransform 코어 Positive(1) + 외곽 Negative(0) 투영, Envelope 클램핑, Empty/Leak 폴백을 검증합니다."""
+    import cv2
+    import imgutils.detect as img_detect
+    import plepa_engine.censor as censor
+
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: None)
+    monkeypatch.setattr(img_detect, "detect_faces", lambda *a, **kw: [])
+    monkeypatch.setattr(img_detect, "detect_hands", lambda *a, **kw: [])
+
+    # Warm skin canvas (diagonal BBox upper-left contains large belly skin at (105, 105))
+    img = Image.new("RGB", (400, 400), (242, 198, 178))
+    context_box = (80, 80, 300, 300)
+    tight_box = (95, 95, 285, 285)
+
+    # Diagonal shaft inside prior mask (from bottom-left (105, 275) to top-right (275, 105))
+    prior = np.zeros((400, 400), dtype=np.uint8)
+    cv2.line(prior, (105, 275), (275, 105), 255, thickness=28)
+
+    class _FakeMaskData:
+        def __init__(self, arr):
+            self._arr = arr
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._arr
+
+    class _FakeRes:
+        def __init__(self, arr_3d):
+            self.masks = type("_M", (), {"data": _FakeMaskData(arr_3d.astype(np.float32))})()
+
+    captured = []
+
+    def _fake_sam_spill(crop_pil, **kw):
+        cw, ch = crop_pil.size
+        pts = kw["points"][0]
+        lbls = kw["labels"][0]
+        captured.append((list(pts), list(lbls), cw, ch, tuple(kw["bboxes"][0])))
+        # Intentionally spill SAM mask into upper-left belly corner while also covering shaft
+        m = np.zeros((ch, cw), dtype=np.float32)
+        cv2.line(m, (15, ch - 15), (cw - 15, 15), 1.0, thickness=32)
+        m[0:70, 0:70] = 1.0  # false belly spill inside BBox top-left
+        return [_FakeRes(m[None, :, :])]
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _fake_sam_spill)
+    out = censor.apply_silhouette(
+        img,
+        [(tight_box, "penis", 0.68)],
+        color="white",
+        yolo_prior_masks=[prior],
+        context_boxes=[context_box],
+    )
+    out_np = np.array(out)
+
+    assert len(captured) >= 1
+    pts, lbls, _, _, _ = captured[0]
+    pos_pts = [pt for pt, l in zip(pts, lbls) if l == 1]
+    neg_pts = [pt for pt, l in zip(pts, lbls) if l == 0]
+    assert len(pos_pts) >= 1
+    assert len(neg_pts) >= 1
+    # Verify outer skin negatives lie outside the prior shaft & positive points lie on/near the prior shaft
+    # Note: crop origin is near max(0, x1-pad) — check global white mask result strictly:
+    white_mask = (out_np[:, :, 0] > 250) & (out_np[:, :, 1] > 250) & (out_np[:, :, 2] > 250)
+    shaft_center_white = int(np.count_nonzero(white_mask[175:205, 175:205]))
+    belly_corner_white = int(np.count_nonzero(white_mask[95:125, 95:125]))
+    assert shaft_center_white >= 400, f"대각선 코어 마스킹 누락: {shaft_center_white}px"
+    assert belly_corner_white == 0, f"외곽 복부 오검열 발생: {belly_corner_white}px"
+
+    # Empty SAM 2.1 output (0 masks) -> fallback cleanly to yolo_prior_mask
+    def _fake_sam_empty(crop_pil, **kw):
+        cw, ch = crop_pil.size
+        return [_FakeRes(np.zeros((0, ch, cw), dtype=np.float32))]
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _fake_sam_empty)
+    out_empty = censor.apply_silhouette(
+        img,
+        [(tight_box, "penis", 0.68)],
+        color="white",
+        yolo_prior_masks=[prior],
+        context_boxes=[context_box],
+    )
+    empty_np = np.array(out_empty)
+    white_empty = (empty_np[:, :, 0] > 250) & (empty_np[:, :, 1] > 250) & (empty_np[:, :, 2] > 250)
+    assert int(np.count_nonzero(white_empty[175:205, 175:205])) >= 300
+    assert int(np.count_nonzero(white_empty[95:125, 95:125])) == 0
+
+
+def test_p2_hand_split_preserved_vs_bottom_echo_suppressed(monkeypatch):
+    """P2: 손 분할 상/하단 다중 타겟은 보존하고, 손 분할 없는 하단 체액/접합 Echo는 yolo_conf < 0.58에서 기각함을 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (500, 700), (235, 185, 165))
+    skin_np = np.full((700, 500), 255, dtype=np.uint8)
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
+
+    upper_box = (170, 185, 310, 340)
+    lower_box = (165, 440, 315, 620)  # y2_ratio = 620/700 = 0.886 > 0.82
+    hand_between = (140, 350, 340, 425)
+
+    # 1) MIK #187-style: 1 coarse DeepGHS box + 2 YOLO-seg hand-split boxes -> keep both tight YOLO splits
+    poly_u = np.array([[175, 190], [305, 190], [305, 335], [175, 335]])
+    poly_l = np.array([[170, 445], [310, 445], [310, 615], [170, 615]])
+    monkeypatch.setattr(
+        censor,
+        "_detect_target_candidates",
+        lambda *a, **kw: [((155, 180, 325, 625), "penis", 0.78)],
+    )
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [
+            (upper_box, "penis", 0.70, poly_u),
+            (lower_box, "penis", 0.56, poly_l),
+        ],
+    )
+    boxes_1a, _, _, priors_1a, ctx_1a = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[hand_between]
+    )
+    assert len(boxes_1a) == 2
+    assert {b[0] for b in boxes_1a} == {upper_box, lower_box}
+    assert priors_1a is not None and all(p is not None for p in priors_1a)
+    assert ctx_1a == [(155, 180, 325, 625), (155, 180, 325, 625)]
+
+    # 2) MIK #156-style: 2 DeepGHS boxes (upper primary + adjacent lower echo), no hand between, lower YOLO conf=0.45 (<0.58)
+    monkeypatch.setattr(
+        censor,
+        "_detect_target_candidates",
+        lambda *a, **kw: [(upper_box, "penis", 0.80), (lower_box, "penis", 0.76)],
+    )
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [
+            (upper_box, "penis", 0.62, poly_u),
+            (lower_box, "penis", 0.45, poly_l),
+        ],
+    )
+    boxes_echo_drop, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[]
+    )
+    assert [b[0] for b in boxes_echo_drop] == [upper_box]
+
+    # Same geometry, WITH hand between -> both preserved even when lower YOLO conf=0.45
+    boxes_hand_keep, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[hand_between]
+    )
+    assert {b[0] for b in boxes_hand_keep} == {upper_box, lower_box}
+
+    # Same geometry, NO hand, lower YOLO conf=0.64 (>= 0.58) -> both preserved
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [
+            (upper_box, "penis", 0.62, poly_u),
+            (lower_box, "penis", 0.64, poly_l),
+        ],
+    )
+    boxes_high_yolo_keep, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[]
+    )
+    assert {b[0] for b in boxes_high_yolo_keep} == {upper_box, lower_box}
+
+
+def test_p2_sam_model_promotion_and_mobile_fallback(monkeypatch):
+    """P2: get_sam_model()이 SAM 2.1(sam2.1_s.pt)을 우선 로드하고, 미존재·실패 시 mobile_sam.pt로 무중단 폴백함을 검증합니다."""
+    import sys
+    import types
+    from pathlib import Path
+    import plepa_engine.censor as censor
+
+    censor.unload_censor_models()
+    monkeypatch.delenv("PLEPA_SAM_MODEL", raising=False)
+
+    loaded_calls = []
+
+    def _fake_sam_ok(name):
+        loaded_calls.append(name)
+        return {"loaded": name}
+
+    fake_ultra = types.SimpleNamespace(SAM=_fake_sam_ok)
+    monkeypatch.setitem(sys.modules, "ultralytics", fake_ultra)
+
+    m1 = censor.get_sam_model()
+    assert len(loaded_calls) == 1
+    assert Path(loaded_calls[0]).name == "sam2.1_s.pt"
+    assert Path(m1["loaded"]).name == "sam2.1_s.pt"
+
+    # Failure on sam2.1_s.pt must fall back cleanly to mobile_sam.pt
+    censor.unload_censor_models()
+    fallback_calls = []
+
+    def _fake_sam_fallback(name):
+        fallback_calls.append(name)
+        if "sam2.1" in str(name):
+            raise FileNotFoundError("sam2.1_s.pt not present")
+        return {"loaded": name}
+
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(SAM=_fake_sam_fallback))
+    m2 = censor.get_sam_model()
+    assert len(fallback_calls) >= 2
+    assert Path(fallback_calls[0]).name == "sam2.1_s.pt"
+    assert Path(fallback_calls[-1]).name == "mobile_sam.pt"
+    assert Path(m2["loaded"]).name == "mobile_sam.pt"
+    censor.unload_censor_models()
+
 
 
