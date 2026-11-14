@@ -589,16 +589,17 @@ def test_mutually_exclusive_hand_occlusion_and_hole_preservation(monkeypatch):
         out = apply_silhouette(img, [(gbox, "penis", 0.95)], color="white")
 
         # 1) 성기 SAM 호출의 positive points(label=1)가 손 BBox 내부에 절대 찍히지 않음 검증
-        # 주의: gbox 8% inset 높이 ebh=202, 손 높이는 40/145이므로 bbox 높이로 성기/손 호출을 정확히 구분
-        genital_calls = [c for c in calls if (c["kwargs"]["bboxes"][0][3] - c["kwargs"]["bboxes"][0][1]) >= 180]
-        hand_calls = [c for c in calls if (c["kwargs"]["bboxes"][0][3] - c["kwargs"]["bboxes"][0][1]) < 180]
+        # 주의: P0.5 Sub-BBox 분할 시 성기 높이가 줄어들 수 있으므로 성기 폭(>=115) vs 손 폭(<=110)으로 구분
+        genital_calls = [c for c in calls if (c["kwargs"]["bboxes"][0][2] - c["kwargs"]["bboxes"][0][0]) >= 115]
+        hand_calls = [c for c in calls if (c["kwargs"]["bboxes"][0][2] - c["kwargs"]["bboxes"][0][0]) < 115]
         assert len(genital_calls) >= 1, label_case
         assert len(hand_calls) >= 1, label_case
 
+        min_genital_lb_y1 = min(int(c["kwargs"]["bboxes"][0][1]) for c in genital_calls)
         for gc in genital_calls:
             lb = gc["kwargs"]["bboxes"][0]
             rx1 = 140 - lb[0]
-            ry1 = 80 - lb[1]
+            ry1 = 80 - min_genital_lb_y1
             pts = gc["kwargs"]["points"][0]
             lbls = gc["kwargs"]["labels"][0]
             for pt, lbl in zip(pts, lbls):
@@ -760,4 +761,197 @@ def test_p0_benchmark_metrics_helpers():
     eroded_4px[64:176, 94:146] = True
     assert compute_boundary_iou(eroded_4px, gt) == 0.0
     assert compute_mask_iou(eroded_4px, gt) > 0.8
+
+
+def test_p05_hand_split_sub_bbox_preserves_upper_tip(monkeypatch):
+    """P0.5: 손이 성기 중간을 가로질러 상단 귀두가 작게 노출돼도 Sub-BBox 분할 + 영역별 독립 보존으로 유지됨을 검증합니다."""
+    import imgutils.detect as img_detect
+    import plepa_engine.censor as censor
+
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: None)
+    monkeypatch.setattr(img_detect, "detect_faces", lambda *a, **kw: [])
+
+    skin_color = (238, 188, 168)
+    img = Image.new("RGB", (400, 520), skin_color)
+    gbox = (130, 60, 270, 440)       # 폭 140, 높이 380
+    hand_box = (115, 190, 285, 265)   # 성기 중간을 완전히 가로지르는 손 BBox
+
+    class _FakeMaskData:
+        def __init__(self, arr):
+            self._arr = arr
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._arr
+
+    class _FakeRes:
+        def __init__(self, mask_2d):
+            self.masks = type("_M", (), {"data": _FakeMaskData(mask_2d[None, :, :].astype(np.float32))})()
+
+    genital_sub_bboxes = []
+
+    def _fake_sam(crop_pil, **kw):
+        cw, ch = crop_pil.size
+        lb = [int(v) for v in kw["bboxes"][0]]
+        bw = lb[2] - lb[0]
+        m = np.zeros((ch, cw), dtype=np.float32)
+
+        if bw >= 160:
+            # 손 SAM 호출 (폭 170): 가로지르는 손 영역 반환
+            m[max(0, lb[1]):min(ch, lb[3]), max(0, lb[0]):min(cw, lb[2])] = 1.0
+            return [_FakeRes(m)]
+
+        # 성기 Sub-BBox 호출 (폭 140)
+        genital_sub_bboxes.append(tuple(lb))
+        pts = kw["points"][0]
+        lbls = kw["labels"][0]
+        pos_ys = [pt[1] for pt, l in zip(pts, lbls) if l == 1]
+        mid_cx = (lb[0] + lb[2]) // 2
+        if pos_ys and max(pos_ys) < lb[3] - 40:
+            # 상단 귀두: 매우 작은 컴포넌트(~260px, 하단 14000px의 2% 미만 -> 기존 max*0.15 필터에선 증발)
+            cy_u = min(pos_ys)
+            m[max(0, cy_u - 8):min(ch, cy_u + 10), max(0, mid_cx - 8):min(cw, mid_cx + 8)] = 1.0
+        else:
+            # 하단 기둥/음낭: 거대 컴포넌트(~13,000px)
+            m[max(lb[1] + 5, 0):min(lb[3] - 5, ch), max(lb[0] + 15, 0):min(lb[2] - 15, cw)] = 1.0
+        return [_FakeRes(m)]
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _fake_sam)
+    monkeypatch.setattr(img_detect, "detect_hands", lambda *a, **kw: [(hand_box, "hand", 0.92)])
+
+    out = apply_silhouette(img, [(gbox, "penis", 0.94)], color="white")
+    out_np = np.array(out)
+
+    # 1) Sub-BBox 분할 호출이 최소 2회(상단 + 하단) 발생해야 함
+    assert len(genital_sub_bboxes) >= 2
+    assert max(b[3] - b[1] for b in genital_sub_bboxes) < (gbox[3] - gbox[1])
+
+    # 2) 손 위쪽 상단 귀두 영역(y: 90~175)과 아래쪽 기저 영역(y: 280~425) 모두 백색 마스킹 보존
+    white_mask = (out_np[:, :, 0] > 250) & (out_np[:, :, 1] > 250) & (out_np[:, :, 2] > 250)
+    upper_white = int(np.count_nonzero(white_mask[90:175, 160:240]))
+    lower_white = int(np.count_nonzero(white_mask[280:425, 140:260]))
+    assert upper_white >= 120, f"상단 귀두가 소멸되었습니다: {upper_white}px"
+    assert lower_white >= 1000, f"하단 영역이 유실되었습니다: {lower_white}px"
+
+
+def test_p05_in_box_blocky_overexpansion_pruned(monkeypatch):
+    """P0.5: 테두리에 살짝 닿지 않아도 박스 내부를 직사각형/블록형으로 과팽창한 SAM 마스크를 감지·억제함을 검증합니다."""
+    import imgutils.detect as img_detect
+    import plepa_engine.censor as censor
+
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: None)
+    monkeypatch.setattr(img_detect, "detect_faces", lambda *a, **kw: [])
+    monkeypatch.setattr(img_detect, "detect_hands", lambda *a, **kw: [])
+
+    skin_color = (238, 188, 168)
+    img = Image.new("RGB", (400, 400), skin_color)
+    gbox = (120, 80, 280, 320)
+
+    # 단위 누수 분류기 직접 검증: 테두리에 4px 안 닿은 92% 네모 과팽창 블록 -> blocky_leak=True
+    sub_test = np.zeros((240, 160), dtype=np.uint8)
+    sub_test[4:236, 4:156] = 255
+    g_leak, b_leak = censor._classify_sam_mask_leak(sub_test, 0, 0, 160, 240, 0, 0, 160, 240)
+    assert not g_leak and b_leak
+
+    # 정상 슬림 타원은 global_leak/blocky_leak 모두 False여야 함
+    sub_oval = np.zeros((240, 160), dtype=np.uint8)
+    import cv2 as _cv2
+    _cv2.ellipse(sub_oval, (80, 120), (42, 105), 0, 0, 360, 255, -1)
+    g_ok, b_ok = censor._classify_sam_mask_leak(sub_oval, 0, 0, 160, 240, 0, 0, 160, 240)
+    assert not g_ok and not b_ok
+
+    class _FakeMaskData:
+        def __init__(self, arr):
+            self._arr = arr
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._arr
+
+    class _FakeRes:
+        def __init__(self, mask_2d):
+            self.masks = type("_M", (), {"data": _FakeMaskData(mask_2d[None, :, :].astype(np.float32))})()
+
+    def _fake_blocky_sam(crop_pil, **kw):
+        cw, ch = crop_pil.size
+        lb = [int(v) for v in kw["bboxes"][0]]
+        m = np.zeros((ch, cw), dtype=np.float32)
+        # BBox 경계에서 4px만 안쪽인 거대 직사각형 블록 출력
+        m[max(0, lb[1] + 4):min(ch, lb[3] - 4), max(0, lb[0] + 4):min(cw, lb[2] - 4)] = 1.0
+        return [_FakeRes(m)]
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _fake_blocky_sam)
+
+    out = apply_silhouette(img, [(gbox, "penis", 0.90)], color="white")
+    out_np = np.array(out)
+
+    # 외곽 네모 모서리((126, 86))는 코어 가드에 의해 깎여 피부색 유지, 중앙((200, 200))은 검열됨
+    corner_pixel = out_np[86, 126]
+    center_pixel = out_np[200, 200]
+    assert int(corner_pixel[2]) < 210, f"네모 과팽창 모서리가 깎이지 않음: {corner_pixel}"
+    assert int(center_pixel[0]) > 250 and int(center_pixel[2]) > 250
+
+
+def test_p1_hybrid_dual_gating_ensemble(monkeypatch):
+    """P1: _resolve_hybrid_targets_and_mask()의 Fast-Path(>=0.85), Case A(구제), Case B(하단 FP 기각), Case C(SAM 폴백)를 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (500, 600), (235, 185, 165))
+    skin_np = np.full((600, 500), 255, dtype=np.uint8)
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
+
+    # 0) Fast Path: 초고신뢰 YOLO-seg (>=0.85) -> DeepGHS 우회 및 직결 폴리곤 마스크
+    seg_fast = [
+        ((180, 140, 290, 320), "penis", 0.91, np.array([[185, 145], [285, 145], [285, 315], [185, 315]])),
+    ]
+    monkeypatch.setattr(censor, "_infer_custom_censor_seg_items", lambda *a, **kw: seg_fast)
+    monkeypatch.setattr(
+        censor,
+        "_detect_target_candidates",
+        lambda *a, **kw: (_ for _ in ()).throw(AssertionError("DeepGHS should be skipped on high_seg >= 0.85")),
+    )
+    boxes_fast, mask_fast, fb_fast = censor._resolve_hybrid_targets_and_mask(img, skin_np=skin_np)
+    assert len(boxes_fast) == 1
+    assert fb_fast == []
+    assert mask_fast is not None and int(np.count_nonzero(mask_fast)) > 5000
+
+    # 1) Case B: DeepGHS 2건 중 Primary만 YOLO와 합의, 하단 고립 오탐 기각 -> P0.5 SAM 정밀 세그멘테이션 라우팅
+    seg_case_ab = [
+        ((180, 140, 290, 320), "penis", 0.45, np.array([[185, 145], [285, 145], [285, 315], [185, 315]])),
+    ]
+    deep_case_ab = [
+        ((175, 135, 295, 325), "penis", 0.72),   # primary
+        ((200, 440, 300, 560), "penis", 0.21),   # 하단(yc=500 > 600*0.68=408), isolated skin FP -> 기각 대상
+    ]
+    monkeypatch.setattr(censor, "_infer_custom_censor_seg_items", lambda *a, **kw: seg_case_ab)
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: deep_case_ab)
+
+    boxes_ab, mask_ab, fb_ab = censor._resolve_hybrid_targets_and_mask(img, skin_np=skin_np)
+    assert len(boxes_ab) == 1
+    assert boxes_ab[0][0] == (175, 135, 295, 325)
+    assert mask_ab is None
+    assert fb_ab == boxes_ab
+
+    # 2) Case A: DeepGHS 0건 미탐 시 YOLO-seg(0.45) 단독 구제 -> SAM P0.5 정밀 마스킹으로 전달
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: [])
+    boxes_rescue, mask_rescue, fb_rescue = censor._resolve_hybrid_targets_and_mask(img, skin_np=skin_np)
+    assert len(boxes_rescue) == 1
+    assert boxes_rescue[0][0] == (180, 140, 290, 320)
+    assert mask_rescue is None
+    assert fb_rescue == boxes_rescue
+
+    # 3) Case C: YOLO-seg 0건 + DeepGHS 탐지 -> MobileSAM P0.5 fallback_boxes로 위임
+    deep_case_c = [((160, 120, 280, 340), "penis", 0.65)]
+    monkeypatch.setattr(censor, "_infer_custom_censor_seg_items", lambda *a, **kw: [])
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: deep_case_c)
+
+    boxes_c, mask_c, fb_c = censor._resolve_hybrid_targets_and_mask(img, skin_np=skin_np)
+    assert len(boxes_c) == 1
+    assert mask_c is None
+    assert fb_c == deep_case_c
+
 
