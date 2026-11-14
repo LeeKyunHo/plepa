@@ -354,6 +354,268 @@ def _clamp_mask_by_lineart_and_base(
     return cv2.bitwise_and(dilated, allowed_zone)
 
 
+def _extract_hand_outer_skin_point(
+    skin_mask_bool: np.ndarray,
+    hbox: Tuple[int, int, int, int],
+    genital_center_x: float,
+) -> Optional[List[int]]:
+    """손 BBox 내 성기 중심축에서 먼 손등/손목 외측 절반 구간의 대표 피부 좌표를 추출합니다."""
+    img_h, img_w = skin_mask_bool.shape[:2]
+    hx1 = max(0, int(hbox[0]))
+    hy1 = max(0, int(hbox[1]))
+    hx2 = min(img_w, int(hbox[2]))
+    hy2 = min(img_h, int(hbox[3]))
+    if hx2 <= hx1 or hy2 <= hy1:
+        return None
+    hx_mid = int((hx1 + hx2) / 2)
+    hy_mid = int((hy1 + hy2) / 2)
+    if hx_mid >= genital_center_x:
+        ox1, ox2 = hx_mid, hx2
+        fallback_x = int(hx1 + (hx2 - hx1) * 0.75)
+    else:
+        ox1, ox2 = hx1, hx_mid
+        fallback_x = int(hx1 + (hx2 - hx1) * 0.25)
+
+    if ox2 > ox1:
+        ys, xs = np.where(skin_mask_bool[hy1:hy2, ox1:ox2])
+        if len(xs) >= 12:
+            return [ox1 + int(np.median(xs)), hy1 + int(np.median(ys))]
+    return [min(img_w - 1, max(0, fallback_x)), min(img_h - 1, max(0, hy_mid))]
+
+
+def _compute_mutually_exclusive_prompts(
+    gbox: Tuple[int, int, int, int],
+    hand_boxes: Sequence[Tuple[int, int, int, int]],
+    skin_mask_bool: np.ndarray,
+) -> Tuple[List[List[int]], List[List[int]]]:
+    """
+    성기 BBox와 교차하는 손 BBox 목록 간의 상호 배타적 앵커 포인트를 계산합니다.
+    - unoccluded_pts: 손 BBox 바깥쪽 비가려짐 영역(상단 귀두 / 하단 기둥·낭심 / 측면)의 성기 코어 포인트
+    - hand_anchor_pts: 교차 손 BBox 중심 및 성기 중심축 외측(손등/손목) 피부 포인트
+    """
+    img_h, img_w = skin_mask_bool.shape[:2]
+    ex1 = max(0, int(gbox[0]))
+    ey1 = max(0, int(gbox[1]))
+    ex2 = min(img_w, int(gbox[2]))
+    ey2 = min(img_h, int(gbox[3]))
+    if ex2 <= ex1 or ey2 <= ey1:
+        return [], []
+
+    ebw = max(1, ex2 - ex1)
+    ebh = max(1, ey2 - ey1)
+    gx_mid = (ex1 + ex2) / 2.0
+
+    intersecting = [
+        (max(0, int(hx1)), max(0, int(hy1)), min(img_w, int(hx2)), min(img_h, int(hy2)))
+        for hx1, hy1, hx2, hy2 in hand_boxes
+        if max(ex1, hx1) < min(ex2, hx2) and max(ey1, hy1) < min(ey2, hy2)
+    ]
+    if not intersecting:
+        return [], []
+
+    def _in_hands(px: int, py: int) -> bool:
+        return any(hx1 <= px <= hx2 and hy1 <= py <= hy2 for hx1, hy1, hx2, hy2 in intersecting)
+
+    safe_roi_skin = skin_mask_bool[ey1:ey2, ex1:ex2].copy()
+    hand_anchor_pts: List[List[int]] = []
+    for hx1, hy1, hx2, hy2 in intersecting:
+        center_pt = [int((hx1 + hx2) / 2), int((hy1 + hy2) / 2)]
+        hand_anchor_pts.append(center_pt)
+        outer_pt = _extract_hand_outer_skin_point(skin_mask_bool, (hx1, hy1, hx2, hy2), gx_mid)
+        if outer_pt is not None and outer_pt != center_pt:
+            hand_anchor_pts.append(outer_pt)
+
+        # 경계 +1px까지 포함해 safe_roi_skin에서 마스킹 아웃
+        shx1 = max(0, hx1 - ex1)
+        shy1 = max(0, hy1 - ey1)
+        shx2 = min(ebw, hx2 - ex1 + 1)
+        shy2 = min(ebh, hy2 - ey1 + 1)
+        if shx2 > shx1 and shy2 > shy1:
+            safe_roi_skin[shy1:shy2, shx1:shx2] = False
+
+    min_hy1 = min(hb[1] for hb in intersecting)
+    max_hy2 = max(hb[3] for hb in intersecting)
+    unoccluded_pts: List[List[int]] = []
+
+    # 1) 상단 노출 코어 (손 위로 노출된 귀두 영역)
+    if min_hy1 > ey1 + 6:
+        top_cut = min(ebh, max(1, min_hy1 - ey1))
+    else:
+        top_cut = max(1, int(ebh * 0.48))
+    tys, txs = np.where(safe_roi_skin[:top_cut, :])
+    if len(txs) >= 8:
+        pt_top = [ex1 + int(np.median(txs)), ey1 + int(np.median(tys))]
+        if not _in_hands(pt_top[0], pt_top[1]):
+            unoccluded_pts.append(pt_top)
+    elif min_hy1 > ey1 + 6:
+        pt_top = [int(gx_mid), int((ey1 + min(ey2, min_hy1)) / 2)]
+        if not _in_hands(pt_top[0], pt_top[1]):
+            unoccluded_pts.append(pt_top)
+
+    # 2) 하단 노출 코어 (손 아래로 노출된 기둥/낭심 영역)
+    if ey2 > max_hy2 + 6:
+        bot_start = min(ebh - 1, max(0, max_hy2 - ey1 + 1))
+        bys, bxs = np.where(safe_roi_skin[bot_start:, :])
+        if len(bxs) >= 8:
+            pt_bot = [ex1 + int(np.median(bxs)), ey1 + bot_start + int(np.median(bys))]
+            if not _in_hands(pt_bot[0], pt_bot[1]):
+                unoccluded_pts.append(pt_bot)
+        else:
+            pt_bot = [int(gx_mid), int((max(ey1, max_hy2) + ey2) / 2)]
+            if not _in_hands(pt_bot[0], pt_bot[1]):
+                unoccluded_pts.append(pt_bot)
+
+    # 3) 좌/우 비가려짐 노출 코어 (상·하가 손에 모두 걸쳐진 경우)
+    if not unoccluded_pts:
+        sys_all, sxs_all = np.where(safe_roi_skin)
+        if len(sxs_all) >= 8:
+            pt_side = [ex1 + int(np.median(sxs_all)), ey1 + int(np.median(sys_all))]
+            if not _in_hands(pt_side[0], pt_side[1]):
+                unoccluded_pts.append(pt_side)
+
+    if not unoccluded_pts:
+        cand_above = [int(gx_mid), max(0, min_hy1 - 4)]
+        cand_below = [int(gx_mid), min(img_h - 1, max_hy2 + 4)]
+        if min_hy1 > ey1 and not _in_hands(cand_above[0], cand_above[1]):
+            unoccluded_pts.append(cand_above)
+        elif ey2 > max_hy2 and not _in_hands(cand_below[0], cand_below[1]):
+            unoccluded_pts.append(cand_below)
+
+    return unoccluded_pts, hand_anchor_pts
+
+
+def _extract_hand_occlusion_mask(
+    rgb_img: Image.Image,
+    sam: Any,
+    hand_boxes: Sequence[Tuple[int, int, int, int]],
+    genital_boxes: Sequence[Tuple[int, int, int, int]],
+    scale: float,
+    skin_np: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """
+    인위적인 고정 면적 비율 컷 없이 양방향 앵커와 기하학적 위상 경계만으로 전경 손(Hand) 실루엣을 분리합니다.
+    - Positive(1): 손 중심 + 성기 중심축 외측(손등/손목) 피부 포인트
+    - Negative(0): 손 BBox 바깥쪽 비가려짐 성기 코어 포인트(상단 귀두 / 하단 기저부)
+    - 추출된 손 마스크는 손 BBox 내부로만 엄격히 국한되며 경계 소프트 페더링을 적용합니다.
+    """
+    w, h = rgb_img.size
+    hand_mask = np.zeros((h, w), dtype=np.uint8)
+    if not hand_boxes or not genital_boxes:
+        return hand_mask
+
+    skin_bool = (
+        skin_np > 0
+        if skin_np is not None
+        else (get_skin_mask(np.array(rgb_img)) > 0)
+    )
+
+    for raw_hx1, raw_hy1, raw_hx2, raw_hy2 in hand_boxes:
+        hx1 = max(0, int(raw_hx1))
+        hy1 = max(0, int(raw_hy1))
+        hx2 = min(w, int(raw_hx2))
+        hy2 = min(h, int(raw_hy2))
+        if hx2 <= hx1 or hy2 <= hy1:
+            continue
+
+        intersecting = [
+            (max(0, int(gx1)), max(0, int(gy1)), min(w, int(gx2)), min(h, int(gy2)))
+            for (gx1, gy1, gx2, gy2) in genital_boxes
+            if max(gx1, hx1) < min(gx2, hx2) and max(gy1, hy1) < min(gy2, hy2)
+        ]
+        if not intersecting:
+            continue
+
+        hbw, hbh = max(1, hx2 - hx1), max(1, hy2 - hy1)
+        single_hand_m = np.zeros((h, w), dtype=np.uint8)
+        sam_ok = False
+
+        # 양방향 앵커 수집: 손 Positive(중심+손등 외측) & 성기 노출부 Negative(손 BBox 바깥)
+        hand_pos_global: List[List[int]] = [[int((hx1 + hx2) / 2), int((hy1 + hy2) / 2)]]
+        mean_gx = sum((gb[0] + gb[2]) / 2.0 for gb in intersecting) / float(len(intersecting))
+        outer_pt = _extract_hand_outer_skin_point(skin_bool, (hx1, hy1, hx2, hy2), mean_gx)
+        if outer_pt is not None and outer_pt != hand_pos_global[0]:
+            hand_pos_global.append(outer_pt)
+
+        genital_neg_global: List[List[int]] = []
+        for gbox in intersecting:
+            unocc_pts, _ = _compute_mutually_exclusive_prompts(gbox, [(hx1, hy1, hx2, hy2)], skin_bool)
+            for pt in unocc_pts:
+                if not (hx1 <= pt[0] <= hx2 and hy1 <= pt[1] <= hy2) and pt not in genital_neg_global:
+                    genital_neg_global.append(pt)
+
+        if sam is not None:
+            try:
+                pad = max(_scale_int(32, scale, minimum=16), int(max(hbw, hbh) * 0.25))
+                rx1 = max(0, min([hx1] + [gb[0] for gb in intersecting]) - pad)
+                ry1 = max(0, min([hy1] + [gb[1] for gb in intersecting]) - pad)
+                rx2 = min(w, max([hx2] + [gb[2] for gb in intersecting]) + pad)
+                ry2 = min(h, max([hy2] + [gb[3] for gb in intersecting]) + pad)
+                cw, ch = max(1, rx2 - rx1), max(1, ry2 - ry1)
+                crop_pil = rgb_img.crop((rx1, ry1, rx2, ry2))
+                local_hbox = [hx1 - rx1, hy1 - ry1, hx2 - rx1, hy2 - ry1]
+
+                local_pos = [
+                    [px - rx1, py - ry1]
+                    for px, py in hand_pos_global
+                    if rx1 <= px < rx2 and ry1 <= py < ry2
+                ]
+                if not local_pos:
+                    local_pos = [[int((hx1 + hx2) / 2) - rx1, int((hy1 + hy2) / 2) - ry1]]
+                local_neg = [
+                    [px - rx1, py - ry1]
+                    for px, py in genital_neg_global
+                    if rx1 <= px < rx2 and ry1 <= py < ry2
+                ]
+
+                all_pts = local_pos + local_neg
+                all_lbls = [1] * len(local_pos) + [0] * len(local_neg)
+
+                with _SAM_MODEL_LOCK:
+                    try:
+                        results = sam(
+                            crop_pil,
+                            bboxes=[local_hbox],
+                            points=[all_pts],
+                            labels=[all_lbls],
+                            verbose=False,
+                        )
+                    except Exception:
+                        results = sam(crop_pil, bboxes=[local_hbox], verbose=False)
+
+                if results and results[0].masks is not None:
+                    m_data = results[0].masks.data.cpu().numpy()
+                    crop_m = (m_data[0] * 255).astype(np.uint8)
+                    if crop_m.shape != (ch, cw):
+                        crop_m = cv2.resize(crop_m, (cw, ch), interpolation=cv2.INTER_NEAREST)
+                    raw_m = np.zeros((h, w), dtype=np.uint8)
+                    raw_m[ry1:ry2, rx1:rx2] = crop_m
+                    clipped = np.zeros((h, w), dtype=np.uint8)
+                    clipped[hy1:hy2, hx1:hx2] = raw_m[hy1:hy2, hx1:hx2]
+                    if np.count_nonzero(clipped) > 0:
+                        single_hand_m = clipped
+                        sam_ok = True
+            except Exception as he:
+                logger.debug(f"[Censor] 손 전경 마스크 추출 폴백: {he}")
+
+        if not sam_ok:
+            # SAM 미가용 또는 빈 마스크 반환 시 손 BBox 내측 보수 타원 마스크로 폴백
+            hcx, hcy = int((hx1 + hx2) / 2), int((hy1 + hy2) / 2)
+            erx = max(2, int(hbw * 0.38))
+            ery = max(2, int(hbh * 0.38))
+            cv2.ellipse(single_hand_m, (hcx, hcy), (erx, ery), 0, 0, 360, 255, -1)
+
+        # 해상도 비례 경계 소프트 페더링 후 손 BBox 내부로 위상 클리핑 유지
+        kh = _odd_kernel(7, scale, minimum=5)
+        smooth_hand = cv2.GaussianBlur(single_hand_m, (kh, kh), 1.6 * scale)
+        _, smooth_hand = cv2.threshold(smooth_hand, 115, 255, cv2.THRESH_BINARY)
+        bbox_bounded = np.zeros((h, w), dtype=np.uint8)
+        bbox_bounded[hy1:hy2, hx1:hx2] = smooth_hand[hy1:hy2, hx1:hx2]
+
+        hand_mask = np.maximum(hand_mask, bbox_bounded)
+
+    return hand_mask
+
+
 def apply_silhouette(
     img: Image.Image,
     boxes_with_labels: Sequence[Tuple[Any, ...]],
@@ -366,7 +628,7 @@ def apply_silhouette(
     네모난 박스가 아니라 타겟과 기저부의 실제 선화 외곽선(Contour)을 따라
     내부만 솔리드 컬러(블랙 #000000 또는 화이트 #FFFFFF)로 매끈하게 채우는 실루엣 검열을 렌더링합니다.
     - 전용 YOLO-seg 가중치(`models/censor_seg.pt`)가 활성화된 경우 폴리곤 마스크(`cv2.fillPoly`)를 우선 사용합니다.
-    - 미존재/미탐지 시 ADR-86 기준선(내측 8% 수축 + 손/얼굴 네거티브 가려짐 보호 + MobileSAM ROI 크롭)으로 폴백합니다.
+    - 미존재/미탐지 시 ADR-86 기준선(내측 8% 수축 + 전경 손 실루엣 하드 차감 + MobileSAM ROI 크롭)으로 폴백합니다.
     """
     rgb_img, alpha_ch = _split_rgb_and_alpha(img)
     w, h = rgb_img.size
@@ -395,6 +657,26 @@ def apply_silhouette(
     except Exception as pe:
         logger.debug(f"[Censor] 보호 영역 검출 생략: {pe}")
 
+    # 손 가려짐(Occlusion) 전경 박스 검출 (conf >= 0.45, detect_faces와 독립 격리)
+    detected_hand_boxes: List[Tuple[int, int, int, int]] = []
+    try:
+        from imgutils.detect import detect_hands
+        detected_hands = detect_hands(rgb_img, conf_threshold=0.45)
+        for h_item in detected_hands:
+            hbox = h_item[0] if isinstance(h_item, (tuple, list)) and len(h_item) >= 3 else h_item
+            if isinstance(hbox, (tuple, list)) and len(hbox) >= 4:
+                detected_hand_boxes.append((int(hbox[0]), int(hbox[1]), int(hbox[2]), int(hbox[3])))
+    except Exception as he:
+        logger.debug(f"[Censor] 손 영역 검출 생략: {he}")
+
+    genital_boxes_raw: List[Tuple[int, int, int, int]] = [
+        (int(it[0][0]), int(it[0][1]), int(it[0][2]), int(it[0][3]))
+        for it in boxes_with_labels
+        if it and isinstance(it[0], (tuple, list)) and len(it[0]) >= 4
+    ]
+
+    eff_skin_np = skin_np if skin_np is not None else get_skin_mask(img_np)
+
     # 전용 YOLO-seg 마스크 직접 렌더링 경로 (전달된 마스크 또는 활성화된 모델 추론)
     active_seg_mask = custom_seg_mask
     if active_seg_mask is None and boxes_with_labels:
@@ -403,6 +685,19 @@ def apply_silhouette(
             _, active_seg_mask = _infer_custom_censor_seg(rgb_img, seg_model)
 
     if active_seg_mask is not None and np.count_nonzero(active_seg_mask) > 0:
+        # YOLO-seg 경로에서는 get_sam_model() 호출 없이 보수적 손 보호 마스크만 병합
+        if detected_hand_boxes and genital_boxes_raw:
+            seg_hand_mask = _extract_hand_occlusion_mask(
+                rgb_img,
+                None,
+                detected_hand_boxes,
+                genital_boxes_raw,
+                scale,
+                skin_np=eff_skin_np,
+            )
+            if np.count_nonzero(seg_hand_mask) > 0:
+                protection_mask = np.maximum(protection_mask, seg_hand_mask)
+
         seg_bin = (active_seg_mask > 0).astype(np.uint8) * 255
         if seg_bin.shape != (h, w):
             seg_bin = cv2.resize(seg_bin, (w, h), interpolation=cv2.INTER_NEAREST)
@@ -430,21 +725,18 @@ def apply_silhouette(
         blended = np.clip(blended, 0, 255).astype(np.uint8)
         return _restore_alpha(Image.fromarray(blended), alpha_ch)
 
-    # 손 가려짐(Occlusion) 네거티브 포인트 검출 (독립 try 블록으로 detect_faces와 격리)
-    detected_hand_boxes: List[Tuple[int, int, int, int]] = []
-    try:
-        from imgutils.detect import detect_hands
-        detected_hands = detect_hands(rgb_img, conf_threshold=0.55)
-        for h_item in detected_hands:
-            hbox = h_item[0] if isinstance(h_item, (tuple, list)) and len(h_item) >= 3 else h_item
-            if isinstance(hbox, (tuple, list)) and len(hbox) >= 4:
-                detected_hand_boxes.append((int(hbox[0]), int(hbox[1]), int(hbox[2]), int(hbox[3])))
-    except Exception as he:
-        logger.debug(f"[Censor] 손 영역 검출 생략: {he}")
-
     final_mask = np.zeros((h, w), dtype=np.uint8)
-    eff_skin_np = skin_np if skin_np is not None else get_skin_mask(img_np)
     sam = get_sam_model()
+    hand_occ_mask = _extract_hand_occlusion_mask(
+        rgb_img,
+        sam,
+        detected_hand_boxes,
+        genital_boxes_raw,
+        scale,
+        skin_np=eff_skin_np,
+    )
+    if np.count_nonzero(hand_occ_mask) > 0:
+        protection_mask = np.maximum(protection_mask, hand_occ_mask)
     asym_thresh = 1.15 if pose_cat in ("fellatio", "paizuri") else 1.35
 
     for item in boxes_with_labels:
@@ -502,20 +794,19 @@ def apply_silhouette(
 
                 pos_pts: List[List[int]] = []
                 local_neg_pts: List[List[int]] = list(face_neg_pts)
-                for hx1, hy1, hx2, hy2 in detected_hand_boxes:
-                    if max(x1, hx1) < min(x2, hx2) and max(y1, hy1) < min(y2, hy2):
-                        local_neg_pts.append([int((hx1 + hx2) / 2), int((hy1 + hy2) / 2)])
+                box_hand_boxes: List[Tuple[int, int, int, int]] = [
+                    (hx1, hy1, hx2, hy2)
+                    for hx1, hy1, hx2, hy2 in detected_hand_boxes
+                    if max(x1, hx1) < min(x2, hx2) and max(y1, hy1) < min(y2, hy2)
+                ]
 
-                top_ys, top_xs = np.where(top_skin)
-                if len(top_xs) >= 10:
-                    pos_pts.append([ex1 + int(np.median(top_xs)), ey1 + int(ebh * 0.12) + int(np.median(top_ys))])
-                else:
-                    pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.30)])
+                def _is_in_hand_boxes(px: int, py: int) -> bool:
+                    return any(hx1 <= px <= hx2 and hy1 <= py <= hy2 for hx1, hy1, hx2, hy2 in box_hand_boxes)
 
                 # 하단 기저부 포인트 및 반대쪽 턱 밑 허공(Void Corner) 보수적 판정
                 void_corner_mask = np.zeros((h, w), dtype=np.uint8)
                 if l_score > r_score * asym_thresh:
-                    pos_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.72)])
+                    cand_bot = [int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.72)]
                     local_neg_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.78)])
                     cv2.rectangle(
                         void_corner_mask,
@@ -525,7 +816,7 @@ def apply_silhouette(
                         -1,
                     )
                 elif r_score > l_score * asym_thresh:
-                    pos_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.72)])
+                    cand_bot = [int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.72)]
                     local_neg_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.78)])
                     cv2.rectangle(
                         void_corner_mask,
@@ -535,7 +826,32 @@ def apply_silhouette(
                         -1,
                     )
                 else:
-                    pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.68)])
+                    cand_bot = [int((ex1 + ex2) / 2), int(ey1 + ebh * 0.68)]
+
+                if box_hand_boxes:
+                    unocc_pts, hand_neg_pts = _compute_mutually_exclusive_prompts(
+                        (ex1, ey1, ex2, ey2),
+                        box_hand_boxes,
+                        eff_skin_np > 0,
+                    )
+                    for hpt in hand_neg_pts:
+                        if hpt not in local_neg_pts:
+                            local_neg_pts.append(hpt)
+                    for upt in unocc_pts:
+                        if not _is_in_hand_boxes(upt[0], upt[1]) and upt not in pos_pts:
+                            pos_pts.append(upt)
+                    if not _is_in_hand_boxes(cand_bot[0], cand_bot[1]) and cand_bot not in pos_pts:
+                        pos_pts.append(cand_bot)
+                else:
+                    top_ys, top_xs = np.where(top_skin)
+                    if len(top_xs) >= 10:
+                        pos_pts.append([ex1 + int(np.median(top_xs)), ey1 + int(ebh * 0.12) + int(np.median(top_ys))])
+                    else:
+                        pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.30)])
+                    pos_pts.append(cand_bot)
+
+                if not pos_pts:
+                    pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.22)])
 
                 sam_union = np.zeros((h, w), dtype=np.uint8)
                 crop_mask = np.zeros((h, w), dtype=np.uint8)
@@ -604,20 +920,24 @@ def apply_silhouette(
                     sam_union = np.clip(sam_union.astype(np.float32) * void_weight, 0, 255).astype(np.uint8)
                     _, sam_union = cv2.threshold(sam_union, 127, 255, cv2.THRESH_BINARY)
 
-                # BBox 내부 엄격 클리핑 및 ADR-86 기준선(3x3 침식) 적용
+                # BBox 내부 엄격 클리핑 + ADR-86 기준선(3x3 침식) + 전경 손 실루엣 선차감
                 sam_union = cv2.bitwise_and(sam_union, crop_mask)
                 ke = _odd_kernel(3, scale, minimum=3)
                 k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ke, ke))
                 sam_union = cv2.erode(sam_union, k_erode, iterations=1)
+                if np.count_nonzero(hand_occ_mask) > 0:
+                    sam_union = cv2.bitwise_and(sam_union, cv2.bitwise_not(hand_occ_mask))
 
-                contours, _ = cv2.findContours(sam_union, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                if contours:
-                    max_area = max(cv2.contourArea(c) for c in contours)
+                # connectedComponentsWithStats로 내부 구멍(손가락/배경 파임)을 메우지 않고 보존
+                num_labels, labels_im, stats, _ = cv2.connectedComponentsWithStats(sam_union, connectivity=8)
+                if num_labels > 1:
+                    areas = stats[1:, cv2.CC_STAT_AREA]
+                    max_area = float(areas.max())
                     min_cnt_area = max(_scale_int(60, scale * scale, minimum=25), max_area * 0.15)
-                    for c in contours:
-                        if cv2.contourArea(c) >= min_cnt_area:
-                            cv2.drawContours(sub_m, [c], -1, 255, -1)
-                    if np.count_nonzero(sub_m) >= (bw * bh * 0.08):
+                    for lbl_idx in range(1, num_labels):
+                        if stats[lbl_idx, cv2.CC_STAT_AREA] >= min_cnt_area:
+                            sub_m[labels_im == lbl_idx] = 255
+                    if np.count_nonzero(sub_m) >= (bw * bh * 0.06):
                         sam_succeeded = True
             except Exception as e:
                 logger.warning(f"[Censor] MobileSAM fallback: {e}")
@@ -648,7 +968,7 @@ def apply_silhouette(
     smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 1.2 * scale)
     _, smoothed = cv2.threshold(smooth_blur, 140, 255, cv2.THRESH_BINARY)
 
-    # 얼굴 상단(눈/이마 38%) 보호 레이어 차감
+    # 얼굴 상단(눈/이마 38%) + 전경 손(Hand) 실루엣 보호 레이어 차감
     if np.count_nonzero(protection_mask) > 0:
         smoothed = cv2.bitwise_and(smoothed, cv2.bitwise_not(protection_mask))
 
@@ -1656,6 +1976,18 @@ def _box_iou(a: Tuple[int, int, int, int], b: Tuple[int, int, int, int]) -> floa
     return inter / float(union)
 
 
+def _box_iomin(a: Tuple[int, int, int, int], b: Tuple[int, int, int, int]) -> float:
+    """두 BBox 중 작은 박스 면적 대비 교집합 비율(IoMin)을 계산해 포함 중복 여부를 판정합니다."""
+    ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+    ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+    inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+    if inter <= 0:
+        return 0.0
+    area_a = max(1, (a[2] - a[0]) * (a[3] - a[1]))
+    area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
+    return inter / float(min(area_a, area_b))
+
+
 def _load_pil_image(image: Union[Image.Image, Path, str]) -> Image.Image:
     """파일 경로 또는 PIL 이미지를 컨텍스트 매니저로 안전하게 로드합니다."""
     if isinstance(image, (str, Path)):
@@ -1747,7 +2079,7 @@ def _detect_target_candidates(
             return
         cand = (x1, y1, x2, y2)
         for idx, (existing_box, existing_lbl, existing_score) in enumerate(detected_boxes_with_labels):
-            if _box_iou(cand, existing_box) > 0.45:
+            if _box_iou(cand, existing_box) > 0.45 or _box_iomin(cand, existing_box) >= 0.65:
                 merged = (
                     min(cand[0], existing_box[0]),
                     min(cand[1], existing_box[1]),
@@ -1794,6 +2126,33 @@ def _detect_target_candidates(
                     _add_candidate((bx1 + cx1, by1 + cy1, bx2 + cx1, by2 + cy1), lbl_l, float(score))
     except Exception as e:
         logger.warning(f"[Censor] 감지 모델 추론 예외: {e}")
+
+    # 3단계: 포함(IoMin >= 0.65) 및 겹침(IoU > 0.45) 잔여 조각 박스 수렴 병합
+    changed = True
+    while changed and len(detected_boxes_with_labels) > 1:
+        changed = False
+        merged_list: List[Tuple[Tuple[int, int, int, int], str, float]] = []
+        for cand_box, cand_lbl, cand_score in detected_boxes_with_labels:
+            merged_hit = False
+            for idx, (ex_box, ex_lbl, ex_score) in enumerate(merged_list):
+                if _box_iou(cand_box, ex_box) > 0.45 or _box_iomin(cand_box, ex_box) >= 0.65:
+                    merged_box = (
+                        min(cand_box[0], ex_box[0]),
+                        min(cand_box[1], ex_box[1]),
+                        max(cand_box[2], ex_box[2]),
+                        max(cand_box[3], ex_box[3]),
+                    )
+                    merged_list[idx] = (
+                        merged_box,
+                        cand_lbl if "penis" not in (cand_lbl, ex_lbl) else "penis",
+                        max(float(cand_score), float(ex_score)),
+                    )
+                    merged_hit = True
+                    changed = True
+                    break
+            if not merged_hit:
+                merged_list.append((cand_box, cand_lbl, float(cand_score)))
+        detected_boxes_with_labels = merged_list
 
     return detected_boxes_with_labels
 

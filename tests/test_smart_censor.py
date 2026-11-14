@@ -332,14 +332,16 @@ def test_adr86_restoration_and_hand_negative_points(monkeypatch):
 
     out = apply_silhouette(img, [(bbox, "penis", 0.94)], color="white")
 
-    # 1) 중앙 물광/음영 영역이 C5 구멍 없이 순백색으로 매끈히 덮임
-    assert out.getpixel((200, 200)) == (255, 255, 255)
-    # 2) ADR-86 8% 내측 수축으로 BBox 최외곽 경계부(143, 200)는 허벅지 보호(원본 색 유지)
+    # 1) 손 바깥 비가려짐 코어(상단 200, 150 및 좌측 180, 200)는 C5 파편화 없이 순백색으로 덮임
+    assert out.getpixel((200, 150)) == (255, 255, 255)
+    assert out.getpixel((180, 200)) == (255, 255, 255)
+    # 2) ADR-86 8% 내측 수축으로 BBox 최외곽 경계부는 허벅지 보호(원본 색 유지)
     assert out.getpixel((142, 200)) == skin_color
     assert out.getpixel((258, 200)) == skin_color
-    # 3) SAM에 겹친 손 중심점(negative label=0)이 주입되었고, 원거리 손(20, 20)은 제외됨
-    assert len(captured_calls) >= 1
-    first_call = captured_calls[0]
+    # 3) 성기 SAM 호출에 겹친 손 중심점(negative label=0)이 주입되었고, 원거리 손(20, 20)은 제외됨
+    genital_calls = [c for c in captured_calls if (c["bboxes"][0][2] - c["bboxes"][0][0]) >= 90]
+    assert len(genital_calls) >= 1
+    first_call = genital_calls[0]
     lb = first_call["bboxes"][0]
     pts = first_call["points"][0]
     lbls = first_call["labels"][0]
@@ -506,6 +508,129 @@ def test_extract_yolo_seg_polygons_from_diff(tmp_path):
     assert (out_ds / "images" / "aya_086_정상위강.webp").exists()
     assert (out_ds / "labels" / "aya_086_정상위강.txt").exists()
     assert (out_ds / "data.yaml").exists()
+
+
+def test_box_iomin_merges_contained_fragments(monkeypatch):
+    """큰 성기 BBox 내부에 포함된 다중 스케일 조각 BBox들이 IoMin>=0.65 기준으로 1개로 병합되는지 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (900, 1300), (240, 196, 176))
+    # 1단계 전체 스캔과 2단계 ROI 스캔이 순서·크기 다른 조각 박스들을 반환하는 상황 모사
+    # 주의: _detect_target_candidates의 2단계 ROI는 좌표 / 1.6 + offset 으로 변환됨
+    monkeypatch.setattr(
+        censor,
+        "detect_censors",
+        lambda pil_img, conf_threshold=0.1: (
+            # 전체 이미지(900x1300): 작은 조각들이 먼저, 큰 전체 박스가 뒤에 오는 경우 포함
+            [
+                ((252, 458, 439, 771), "penis", 0.57),
+                ((277, 456, 435, 558), "penis", 0.29),
+                ((112, 445, 453, 1083), "penis", 0.84),
+            ]
+            if pil_img.size == (900, 1300)
+            else []
+        ),
+    )
+
+    cands = censor._detect_target_candidates(img, targets=("penis",), min_confidence=0.16)
+    assert len(cands) == 1
+    assert cands[0][0] == (112, 445, 453, 1083)
+    assert abs(cands[0][2] - 0.84) < 1e-6
+
+
+def test_mutually_exclusive_hand_occlusion_and_hole_preservation(monkeypatch):
+    """손-성기 상호 배타적 앵커 분리, 고정 비율 컷 없는 동적 손 실루엣 보호 및 내부 구멍 보존을 검증합니다."""
+    import imgutils.detect as img_detect
+    import plepa_engine.censor as censor
+
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: None)
+    monkeypatch.setattr(img_detect, "detect_faces", lambda *a, **kw: [])
+
+    skin_color = (238, 188, 168)
+    img = Image.new("RGB", (400, 400), skin_color)
+    gbox = (140, 80, 260, 320)  # ex1=149, ey1=99, ex2=251, ey2=301
+
+    class _FakeMaskData:
+        def __init__(self, arr):
+            self._arr = arr
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._arr
+
+    class _FakeRes:
+        def __init__(self, mask_2d):
+            self.masks = type("_M", (), {"data": _FakeMaskData(mask_2d[None, :, :].astype(np.float32))})()
+
+    for label_case, hand_box in [
+        ("small_overlap", (160, 180, 240, 220)),   # 높이 약 17% 겹침
+        ("large_overlap", (145, 140, 255, 285)),   # 높이 약 60% 겹침 (고정 비율 컷 없이 모두 보호되어야 함)
+    ]:
+        hx1, hy1, hx2, hy2 = hand_box
+        calls = []
+
+        def _fake_sam(crop_pil, **kw):
+            cw, ch = crop_pil.size
+            calls.append({"size": (cw, ch), "kwargs": dict(kw)})
+            lb = kw["bboxes"][0]
+            # 손 SAM 호출인지, 성기 SAM 호출인지 BBox 폭/위치로 구분해 손가락/몸통 마스크 모사
+            m = np.zeros((ch, cw), dtype=np.float32)
+            # 호출 BBox 내부(성기 BBox라면 내부 90% 채우되 손 영역에는 구멍을 남기는 형태)
+            m[max(0, lb[1]):min(ch, lb[3]), max(0, lb[0]):min(cw, lb[2])] = 1.0
+            return [_FakeRes(m)]
+
+        monkeypatch.setattr(censor, "get_sam_model", lambda _fn=_fake_sam: _fn)
+        monkeypatch.setattr(img_detect, "detect_hands", lambda *a, _hb=hand_box, **kw: [(_hb, "hand", 0.91)])
+
+        out = apply_silhouette(img, [(gbox, "penis", 0.95)], color="white")
+
+        # 1) 성기 SAM 호출의 positive points(label=1)가 손 BBox 내부에 절대 찍히지 않음 검증
+        # 주의: gbox 8% inset 높이 ebh=202, 손 높이는 40/145이므로 bbox 높이로 성기/손 호출을 정확히 구분
+        genital_calls = [c for c in calls if (c["kwargs"]["bboxes"][0][3] - c["kwargs"]["bboxes"][0][1]) >= 180]
+        hand_calls = [c for c in calls if (c["kwargs"]["bboxes"][0][3] - c["kwargs"]["bboxes"][0][1]) < 180]
+        assert len(genital_calls) >= 1, label_case
+        assert len(hand_calls) >= 1, label_case
+
+        for gc in genital_calls:
+            lb = gc["kwargs"]["bboxes"][0]
+            rx1 = 149 - lb[0]
+            ry1 = 99 - lb[1]
+            pts = gc["kwargs"]["points"][0]
+            lbls = gc["kwargs"]["labels"][0]
+            for pt, lbl in zip(pts, lbls):
+                gx, gy = pt[0] + rx1, pt[1] + ry1
+                if lbl == 1:
+                    assert not (hx1 <= gx <= hx2 and hy1 <= gy <= hy2), f"{label_case}: pos pt inside hand"
+
+        # 2) 손 SAM 호출에도 손 바깥쪽 성기 노출 코어(negative label=0)가 전달되었는지 검증
+        hc = hand_calls[0]
+        assert 1 in hc["kwargs"]["labels"][0] and 0 in hc["kwargs"]["labels"][0], label_case
+
+        # 3) 최종 이미지: 손 위로 노출된 귀두 상단(200, 115)은 순백색 유지, 손 중심은 원본 피부색 보호
+        assert out.getpixel((200, 115)) == (255, 255, 255), label_case
+        assert out.getpixel((200, int((hy1 + hy2) / 2))) == skin_color, label_case
+
+    # 4) connectedComponentsWithStats 내부 구멍 보존 단독 검증 (detect_hands=0 상태에서도 SAM 내부 구멍 비메움)
+    monkeypatch.setattr(img_detect, "detect_hands", lambda *a, **kw: [])
+
+    def _hole_sam(crop_pil, **kw):
+        cw, ch = crop_pil.size
+        lb = kw["bboxes"][0]
+        rx1 = 149 - lb[0]
+        ry1 = 99 - lb[1]
+        m = np.zeros((ch, cw), dtype=np.float32)
+        m[max(0, lb[1]):min(ch, lb[3]), max(0, lb[0]):min(cw, lb[2])] = 1.0
+        # 중앙 (180..220, 180..220) 위치에 40x40 내부 구멍 생성
+        m[max(0, 180 - ry1):min(ch, 220 - ry1), max(0, 180 - rx1):min(cw, 220 - rx1)] = 0.0
+        return [_FakeRes(m)]
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _hole_sam)
+    out_hole = apply_silhouette(img, [(gbox, "penis", 0.95)], color="white")
+    assert out_hole.getpixel((200, 120)) == (255, 255, 255)
+    assert out_hole.getpixel((200, 200)) == skin_color
+
 
 
 
