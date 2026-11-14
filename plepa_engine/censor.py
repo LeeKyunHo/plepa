@@ -164,11 +164,14 @@ def _infer_custom_censor_seg(
             if getattr(res_boxes, "cls", None) is not None:
                 cls_arr = res_boxes.cls.cpu().numpy() if hasattr(res_boxes.cls, "cpu") else np.asarray(res_boxes.cls)
 
+        skin_np_seg: Optional[np.ndarray] = None
+        min_box_px = max(8, int(round(min(w, h) * 0.01)))
+        max_poly_area = float(w * h) * 0.25
+
         for idx, poly in enumerate(polys):
             poly_pts = np.round(np.asarray(poly, dtype=np.float32)).astype(np.int32)
             if poly_pts.ndim != 2 or len(poly_pts) < 3:
                 continue
-            cv2.fillPoly(mask, [poly_pts], 255)
 
             if xyxy_arr is not None and idx < len(xyxy_arr):
                 b = xyxy_arr[idx]
@@ -177,11 +180,32 @@ def _infer_custom_censor_seg(
                 xs, ys = poly_pts[:, 0], poly_pts[:, 1]
                 box = (int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max()))
 
+            bx1 = max(0, min(w - 1, box[0]))
+            by1 = max(0, min(h - 1, box[1]))
+            bx2 = max(bx1 + 1, min(w, box[2]))
+            by2 = max(by1 + 1, min(h, box[3]))
+            if (bx2 - bx1) < min_box_px or (by2 - by1) < min_box_px:
+                continue
+            if by2 < h * 0.10:
+                continue
+
+            poly_area = abs(float(cv2.contourArea(poly_pts)))
+            if poly_area < float(min_box_px * min_box_px) or poly_area > max_poly_area:
+                continue
+
             score = float(conf_arr[idx]) if (conf_arr is not None and idx < len(conf_arr)) else 0.90
+            if score < 0.40:
+                if skin_np_seg is None:
+                    skin_np_seg = get_skin_mask(np.array(img_rgb, dtype=np.uint8))
+                roi_sk = skin_np_seg[by1:by2, bx1:bx2]
+                if roi_sk.size == 0 or (np.count_nonzero(roi_sk) / float(roi_sk.size)) < 0.12:
+                    continue
+
+            cv2.fillPoly(mask, [poly_pts], 255)
             cls_id = int(cls_arr[idx]) if (cls_arr is not None and idx < len(cls_arr)) else 0
             raw_name = names.get(cls_id, "penis") if isinstance(names, dict) else "penis"
             label = "penis" if str(raw_name).lower() in ("genital", "penis", "0", "") else str(raw_name).lower()
-            boxes_out.append((box, label, score))
+            boxes_out.append(((bx1, by1, bx2, by2), label, score))
 
         if np.count_nonzero(mask) == 0 or not boxes_out:
             return [], None
@@ -604,9 +628,9 @@ def _extract_hand_occlusion_mask(
             ery = max(2, int(hbh * 0.38))
             cv2.ellipse(single_hand_m, (hcx, hcy), (erx, ery), 0, 0, 360, 255, -1)
 
-        # 해상도 비례 경계 소프트 페더링 후 손 BBox 내부로 위상 클리핑 유지
-        kh = _odd_kernel(7, scale, minimum=5)
-        smooth_hand = cv2.GaussianBlur(single_hand_m, (kh, kh), 1.6 * scale)
+        # 해상도 비례 1~1.5px 칼선 스무딩 후 손 BBox 내부로 위상 클리핑 유지
+        kh = _odd_kernel(3, scale, minimum=3)
+        smooth_hand = cv2.GaussianBlur(single_hand_m, (kh, kh), 0.8 * scale)
         _, smooth_hand = cv2.threshold(smooth_hand, 115, 255, cv2.THRESH_BINARY)
         bbox_bounded = np.zeros((h, w), dtype=np.uint8)
         bbox_bounded[hy1:hy2, hx1:hx2] = smooth_hand[hy1:hy2, hx1:hx2]
@@ -614,6 +638,165 @@ def _extract_hand_occlusion_mask(
         hand_mask = np.maximum(hand_mask, bbox_bounded)
 
     return hand_mask
+
+
+def _build_rounded_box_guard(
+    w: int,
+    h: int,
+    ex1: int,
+    ey1: int,
+    ex2: int,
+    ey2: int,
+    scale: float,
+    radius_ratio: float = 0.30,
+) -> np.ndarray:
+    """SAM 마스크 누수(Leakage) 시 허벅지/배경 코너 번짐을 막는 보수적 라운드 사각 가드를 생성합니다."""
+    guard = np.zeros((h, w), dtype=np.uint8)
+    ebw, ebh = max(1, ex2 - ex1), max(1, ey2 - ey1)
+    rad = max(_scale_int(4, scale, 3), int(min(ebw, ebh) * radius_ratio))
+    sub_c = np.zeros((ebh, ebw), dtype=np.uint8)
+    if ebw > rad * 2 and ebh > rad * 2:
+        cv2.rectangle(sub_c, (rad, 0), (ebw - rad, ebh), 255, -1)
+        cv2.rectangle(sub_c, (0, rad), (ebw, ebh - rad), 255, -1)
+        cv2.circle(sub_c, (rad, rad), rad, 255, -1)
+        cv2.circle(sub_c, (ebw - rad, rad), rad, 255, -1)
+        cv2.circle(sub_c, (rad, ebh - rad), rad, 255, -1)
+        cv2.circle(sub_c, (ebw - rad, ebh - rad), rad, 255, -1)
+    else:
+        cv2.ellipse(sub_c, (ebw // 2, ebh // 2), (ebw // 2, ebh // 2), 0, 0, 360, 255, -1)
+    guard[ey1:ey2, ex1:ex2] = sub_c
+    return guard
+
+
+def _is_sam_mask_leaky(
+    raw_m: np.ndarray,
+    ex1: int,
+    ey1: int,
+    ex2: int,
+    ey2: int,
+    rx1: int,
+    ry1: int,
+    rx2: int,
+    ry2: int,
+) -> bool:
+    """SAM 추론 마스크가 BBox 내부를 과포화하거나 외부 크롭 경계까지 누수(Leakage)되었는지 판정합니다."""
+    in_box = raw_m[ey1:ey2, ex1:ex2] > 0
+    box_area = max(1, (ex2 - ex1) * (ey2 - ey1))
+    box_fill = float(np.count_nonzero(in_box)) / float(box_area)
+    total_fg = int(np.count_nonzero(raw_m))
+    outside_ratio = float(max(0, total_fg - int(np.count_nonzero(in_box)))) / float(box_area)
+
+    if box_fill >= 0.90 and outside_ratio >= 0.35:
+        return True
+
+    crop_slice = raw_m[ry1:ry2, rx1:rx2] > 0
+    if crop_slice.size > 0 and outside_ratio >= 0.65:
+        border_sides = sum(
+            [
+                float(crop_slice[0, :].mean()) >= 0.35,
+                float(crop_slice[-1, :].mean()) >= 0.35,
+                float(crop_slice[:, 0].mean()) >= 0.35,
+                float(crop_slice[:, -1].mean()) >= 0.35,
+            ]
+        )
+        if border_sides >= 2:
+            return True
+    return False
+
+
+def _snap_to_outer_lineart(
+    mask: np.ndarray,
+    img_np: np.ndarray,
+    scale: float,
+    protection_mask: Optional[np.ndarray] = None,
+    max_steps: Optional[int] = None,
+) -> np.ndarray:
+    """
+    전경 마스크 바로 바깥쪽(해상도 비례 1~3px) 링 구간의 어두운 먹선/외곽 선화 픽셀을 흡수해
+    피부 테두리 노출 없이 포토샵 작업본처럼 선화 외곽까지 밀착 스냅합니다.
+    protection_mask 내부로는 단 1px도 확장하지 않습니다.
+    """
+    if mask.size == 0 or np.count_nonzero(mask) == 0 or img_np.size == 0:
+        return mask
+
+    steps = (
+        max(1, int(max_steps))
+        if max_steps is not None
+        else min(3, max(1, _scale_int(2, scale, minimum=1)))
+    )
+    gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+    k_ctx = _odd_kernel(7, scale, minimum=5)
+    k_bh = _odd_kernel(9, scale, minimum=5)
+    local_bright = cv2.dilate(gray, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_ctx, k_ctx)))
+    blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_bh, k_bh)))
+
+    # 평탄한 어두운 배경은 제외하고 주변 피부 대비 명도가 뚜렷이 낮은 얇은 윤곽선/어두운 테두리만 선별
+    contrast = local_bright.astype(np.int16) - gray.astype(np.int16)
+    dark_lineart = (blackhat >= 14) | ((gray <= 135) & (contrast >= 20))
+
+    allowed = (protection_mask == 0) if (protection_mask is not None and protection_mask.shape == mask.shape) else np.ones_like(mask, dtype=bool)
+    cur = (mask > 0).astype(np.uint8) * 255
+    k_step = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+
+    for _ in range(steps):
+        ring = (cv2.dilate(cur, k_step, iterations=1) > 0) & (cur == 0)
+        absorb = ring & dark_lineart & allowed
+        if not np.any(absorb):
+            break
+        cur[absorb] = 255
+
+    k_smooth_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    cur = cv2.morphologyEx(cur, cv2.MORPH_CLOSE, k_smooth_close)
+    if protection_mask is not None and protection_mask.shape == cur.shape:
+        cur[protection_mask > 0] = 0
+    return cur
+
+
+def _finalize_and_blend_silhouette(
+    img_np: np.ndarray,
+    alpha_ch: Optional[Image.Image],
+    mask: np.ndarray,
+    color: Union[str, Tuple[int, int, int]],
+    scale: float,
+    protection_mask: Optional[np.ndarray] = None,
+    apply_lineart_snap: bool = True,
+) -> Optional[Image.Image]:
+    """실루엣 마스크 마감(중립 임계 스무딩 -> 외곽 선화 스냅 -> 보호 마스크 차감 -> 1px AA 블렌딩)을 통합 수행합니다."""
+    if mask.size == 0 or np.count_nonzero(mask) == 0:
+        return None
+
+    kc = _odd_kernel(5, scale, minimum=3)
+    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kc, kc))
+    closed = cv2.morphologyEx((mask > 0).astype(np.uint8) * 255, cv2.MORPH_CLOSE, kernel_close)
+
+    ks = _odd_kernel(5, scale, minimum=3)
+    smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 1.0 * scale)
+    _, smoothed = cv2.threshold(smooth_blur, 115, 255, cv2.THRESH_BINARY)
+
+    if protection_mask is not None and np.count_nonzero(protection_mask) > 0:
+        smoothed = cv2.bitwise_and(smoothed, cv2.bitwise_not(protection_mask))
+
+    if apply_lineart_snap and np.count_nonzero(smoothed) > 0:
+        smoothed = _snap_to_outer_lineart(smoothed, img_np, scale, protection_mask=protection_mask)
+
+    if protection_mask is not None and np.count_nonzero(protection_mask) > 0:
+        smoothed = cv2.bitwise_and(smoothed, cv2.bitwise_not(protection_mask))
+
+    if np.count_nonzero(smoothed) == 0:
+        return None
+
+    kf = _odd_kernel(3, scale, minimum=3)
+    blurred = cv2.GaussianBlur(smoothed, (kf, kf), 0.8 * scale)
+    if isinstance(color, str):
+        color_rgb = (255, 255, 255) if color.lower() in ("white", "whiteout", "white_silhouette") else (12, 12, 16)
+    else:
+        color_rgb = color
+
+    alpha = (blurred.astype(np.float32) / 255.0)[:, :, np.newaxis]
+    target_layer = np.full_like(img_np, color_rgb, dtype=np.float32)
+    blended = (1.0 - alpha) * img_np.astype(np.float32) + alpha * target_layer
+    blended = np.clip(blended, 0, 255).astype(np.uint8)
+    return _restore_alpha(Image.fromarray(blended), alpha_ch)
 
 
 def apply_silhouette(
@@ -627,16 +810,15 @@ def apply_silhouette(
     """
     네모난 박스가 아니라 타겟과 기저부의 실제 선화 외곽선(Contour)을 따라
     내부만 솔리드 컬러(블랙 #000000 또는 화이트 #FFFFFF)로 매끈하게 채우는 실루엣 검열을 렌더링합니다.
-    - 전용 YOLO-seg 가중치(`models/censor_seg.pt`)가 활성화된 경우 폴리곤 마스크(`cv2.fillPoly`)를 우선 사용합니다.
-    - 미존재/미탐지 시 ADR-86 기준선(내측 8% 수축 + 전경 손 실루엣 하드 차감 + MobileSAM ROI 크롭)으로 폴백합니다.
+    - Phase P0: 4중 수축(8% 인셋, 0.40 코너 절단, 중복 erode, 140 클리핑) 해체 + Line-Art Outer Snap 적용.
+    - 누수(Leakage) 발생 시에만 보수적 라운드 가드를 조건부 적용하며, 전경 손·얼굴 상단 보호를 최우선 보장합니다.
     """
     rgb_img, alpha_ch = _split_rgb_and_alpha(img)
     w, h = rgb_img.size
     scale = _compute_scale_factor(w, h)
     img_np = np.array(rgb_img)
 
-    # 0. 눈/이마(Upper Face 38%) 보호 마스크 및 얼굴 중심 네거티브 포인트 추출:
-    #    - 입이나 뺨을 직각으로 파내지 않도록 오직 눈·이마(상단 38%)만 소프트 보호
+    # 0. 눈/이마(Upper Face 38%) 보호 마스크 및 얼굴 중심 네거티브 포인트 추출
     protection_mask = np.zeros((h, w), dtype=np.uint8)
     face_neg_pts: List[List[int]] = []
     try:
@@ -657,7 +839,7 @@ def apply_silhouette(
     except Exception as pe:
         logger.debug(f"[Censor] 보호 영역 검출 생략: {pe}")
 
-    # 손 가려짐(Occlusion) 전경 박스 검출 (conf >= 0.45, detect_faces와 독립 격리)
+    # 손 가려짐(Occlusion) 전경 박스 검출 (conf >= 0.45)
     detected_hand_boxes: List[Tuple[int, int, int, int]] = []
     try:
         from imgutils.detect import detect_hands
@@ -677,7 +859,7 @@ def apply_silhouette(
 
     eff_skin_np = skin_np if skin_np is not None else get_skin_mask(img_np)
 
-    # 전용 YOLO-seg 마스크 직접 렌더링 경로 (전달된 마스크 또는 활성화된 모델 추론)
+    # 전용 YOLO-seg 마스크 직접 렌더링 경로
     active_seg_mask = custom_seg_mask
     if active_seg_mask is None and boxes_with_labels:
         seg_model = get_custom_censor_seg_model()
@@ -685,7 +867,6 @@ def apply_silhouette(
             _, active_seg_mask = _infer_custom_censor_seg(rgb_img, seg_model)
 
     if active_seg_mask is not None and np.count_nonzero(active_seg_mask) > 0:
-        # YOLO-seg 경로에서는 get_sam_model() 호출 없이 보수적 손 보호 마스크만 병합
         if detected_hand_boxes and genital_boxes_raw:
             seg_hand_mask = _extract_hand_occlusion_mask(
                 rgb_img,
@@ -702,28 +883,16 @@ def apply_silhouette(
         if seg_bin.shape != (h, w):
             seg_bin = cv2.resize(seg_bin, (w, h), interpolation=cv2.INTER_NEAREST)
 
-        kc_seg = _odd_kernel(5, scale, minimum=3)
-        k_close_seg = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kc_seg, kc_seg))
-        seg_bin = cv2.morphologyEx(seg_bin, cv2.MORPH_CLOSE, k_close_seg)
-
-        if np.count_nonzero(protection_mask) > 0:
-            seg_bin = cv2.bitwise_and(seg_bin, cv2.bitwise_not(protection_mask))
-
-        if np.count_nonzero(seg_bin) == 0:
-            return img
-
-        kf_seg = _odd_kernel(5, scale, minimum=3)
-        blurred_seg = cv2.GaussianBlur(seg_bin, (kf_seg, kf_seg), 1.2 * scale)
-        if isinstance(color, str):
-            color_rgb = (255, 255, 255) if color.lower() in ("white", "whiteout", "white_silhouette") else (12, 12, 16)
-        else:
-            color_rgb = color
-
-        alpha = (blurred_seg.astype(np.float32) / 255.0)[:, :, np.newaxis]
-        target_layer = np.full_like(img_np, color_rgb, dtype=np.float32)
-        blended = (1.0 - alpha) * img_np.astype(np.float32) + alpha * target_layer
-        blended = np.clip(blended, 0, 255).astype(np.uint8)
-        return _restore_alpha(Image.fromarray(blended), alpha_ch)
+        blended_out = _finalize_and_blend_silhouette(
+            img_np,
+            alpha_ch,
+            seg_bin,
+            color=color,
+            scale=scale,
+            protection_mask=protection_mask,
+            apply_lineart_snap=True,
+        )
+        return blended_out if blended_out is not None else img
 
     final_mask = np.zeros((h, w), dtype=np.uint8)
     sam = get_sam_model()
@@ -742,18 +911,12 @@ def apply_silhouette(
     for item in boxes_with_labels:
         box = item[0]
         x1, y1, x2, y2 = box
-        bw = max(1, x2 - x1)
-        bh = max(1, y2 - y1)
-
-        # ADR-86 기준선: BBox 내측 8% 수축으로 주변 허벅지·손가락 여백 침범 방어
-        inset_x = int(bw * 0.08)
-        inset_y = int(bh * 0.08)
-        ex1 = max(0, x1 + inset_x)
-        ey1 = max(0, y1 + inset_y)
-        ex2 = min(w, x2 - inset_x)
-        ey2 = min(h, y2 - inset_y)
+        ex1 = max(0, int(x1))
+        ey1 = max(0, int(y1))
+        ex2 = min(w, int(x2))
+        ey2 = min(h, int(y2))
         if ex2 <= ex1 or ey2 <= ey1:
-            ex1, ey1, ex2, ey2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+            continue
 
         ebw = max(1, ex2 - ex1)
         ebh = max(1, ey2 - ey1)
@@ -762,7 +925,6 @@ def apply_silhouette(
 
         if sam is not None:
             try:
-                # 1) BBox 내부의 타겟 피부 영역과 비타겟(창문/책장/벽/어두운 허공) 영역을 분리합니다.
                 roi_rgb = img_np[ey1:ey2, ex1:ex2]
                 roi_hsv = cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2HSV)
                 roi_skin = eff_skin_np[ey1:ey2, ex1:ex2] > 0
@@ -797,34 +959,36 @@ def apply_silhouette(
                 box_hand_boxes: List[Tuple[int, int, int, int]] = [
                     (hx1, hy1, hx2, hy2)
                     for hx1, hy1, hx2, hy2 in detected_hand_boxes
-                    if max(x1, hx1) < min(x2, hx2) and max(y1, hy1) < min(y2, hy2)
+                    if max(ex1, hx1) < min(ex2, hx2) and max(ey1, hy1) < min(ey2, hy2)
                 ]
 
                 def _is_in_hand_boxes(px: int, py: int) -> bool:
                     return any(hx1 <= px <= hx2 and hy1 <= py <= hy2 for hx1, hy1, hx2, hy2 in box_hand_boxes)
 
-                # 하단 기저부 포인트 및 반대쪽 턱 밑 허공(Void Corner) 보수적 판정
+                # 반대쪽 비타겟 허공 코너는 실제 피부 비율이 뚜렷이 낮을 때(<0.22)만 제한적 감산
                 void_corner_mask = np.zeros((h, w), dtype=np.uint8)
                 if l_score > r_score * asym_thresh:
                     cand_bot = [int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.72)]
                     local_neg_pts.append([int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.78)])
-                    cv2.rectangle(
-                        void_corner_mask,
-                        (int(ex1 + ebw * 0.44), int(ey1 + ebh * 0.48)),
-                        (ex2, ey2),
-                        255,
-                        -1,
-                    )
+                    if r_score < 0.22:
+                        cv2.rectangle(
+                            void_corner_mask,
+                            (int(ex1 + ebw * 0.48), int(ey1 + ebh * 0.50)),
+                            (ex2, ey2),
+                            255,
+                            -1,
+                        )
                 elif r_score > l_score * asym_thresh:
                     cand_bot = [int(ex1 + ebw * 0.76), int(ey1 + ebh * 0.72)]
                     local_neg_pts.append([int(ex1 + ebw * 0.24), int(ey1 + ebh * 0.78)])
-                    cv2.rectangle(
-                        void_corner_mask,
-                        (ex1, int(ey1 + ebh * 0.48)),
-                        (int(ex1 + ebw * 0.56), ey2),
-                        255,
-                        -1,
-                    )
+                    if l_score < 0.22:
+                        cv2.rectangle(
+                            void_corner_mask,
+                            (ex1, int(ey1 + ebh * 0.50)),
+                            (int(ex1 + ebw * 0.52), ey2),
+                            255,
+                            -1,
+                        )
                 else:
                     cand_bot = [int((ex1 + ex2) / 2), int(ey1 + ebh * 0.68)]
 
@@ -854,23 +1018,14 @@ def apply_silhouette(
                     pos_pts.append([int((ex1 + ex2) / 2), int(ey1 + ebh * 0.22)])
 
                 sam_union = np.zeros((h, w), dtype=np.uint8)
-                crop_mask = np.zeros((h, w), dtype=np.uint8)
-                rad = max(_scale_int(4, scale, 3), int(min(ebw, ebh) * 0.40))
-                sub_c = np.zeros((ebh, ebw), dtype=np.uint8)
-                if ebw > rad * 2 and ebh > rad * 2:
-                    cv2.rectangle(sub_c, (rad, 0), (ebw - rad, ebh), 255, -1)
-                    cv2.rectangle(sub_c, (0, rad), (ebw, ebh - rad), 255, -1)
-                    cv2.circle(sub_c, (rad, rad), rad, 255, -1)
-                    cv2.circle(sub_c, (ebw - rad, rad), rad, 255, -1)
-                    cv2.circle(sub_c, (rad, ebh - rad), rad, 255, -1)
-                    cv2.circle(sub_c, (ebw - rad, ebh - rad), rad, 255, -1)
-                else:
-                    cv2.ellipse(sub_c, (int(ebw / 2), int(ebh / 2)), (int(ebw / 2), int(ebh / 2)), 0, 0, 360, 255, -1)
-                crop_mask[ey1:ey2, ex1:ex2] = sub_c
+                rect_guard = np.zeros((h, w), dtype=np.uint8)
+                margin = _scale_int(4, scale, minimum=2)
+                rect_guard[max(0, ey1 - margin) : min(h, ey2 + margin), max(0, ex1 - margin) : min(w, ex2 + margin)] = 255
+                round_guard: Optional[np.ndarray] = None
 
                 # VRAM 절감 및 고해상도 정밀도 향상을 위한 ROI Padded Crop 기반 SAM 추론
-                pad_x = max(_scale_int(64, scale, 32), int(bw * 0.45))
-                pad_y = max(_scale_int(64, scale, 32), int(bh * 0.45))
+                pad_x = max(_scale_int(64, scale, 32), int(ebw * 0.45))
+                pad_y = max(_scale_int(64, scale, 32), int(ebh * 0.45))
                 rx1 = max(0, ex1 - pad_x)
                 ry1 = max(0, ey1 - pad_y)
                 rx2 = min(w, ex2 + pad_x)
@@ -908,11 +1063,18 @@ def apply_silhouette(
                             crop_m = cv2.resize(crop_m, (cw, ch), interpolation=cv2.INTER_NEAREST)
                         raw_m = np.zeros((h, w), dtype=np.uint8)
                         raw_m[ry1:ry2, rx1:rx2] = crop_m
-                        raw_m = cv2.bitwise_and(raw_m, crop_mask)
+
+                        # Leakage(BBox 테두리/배경 과포화 번짐) 발생 시에만 보수적 라운드 가드 적용
+                        if _is_sam_mask_leaky(raw_m, ex1, ey1, ex2, ey2, rx1, ry1, rx2, ry2):
+                            if round_guard is None:
+                                round_guard = _build_rounded_box_guard(w, h, ex1, ey1, ex2, ey2, scale, radius_ratio=0.30)
+                            raw_m = cv2.bitwise_and(raw_m, round_guard)
+                        else:
+                            raw_m = cv2.bitwise_and(raw_m, rect_guard)
+
                         if np.count_nonzero(raw_m) >= min_raw_pixels:
                             sam_union = np.maximum(sam_union, raw_m)
 
-                # 턱 밑 허공 코너가 감지된 경우 부드러운 알파 감산으로 코너 배경만 덜어냄
                 if np.count_nonzero(void_corner_mask) > 0:
                     vk = _odd_kernel(21, scale)
                     soft_void = cv2.GaussianBlur(void_corner_mask, (vk, vk), 6.0 * scale)
@@ -920,11 +1082,7 @@ def apply_silhouette(
                     sam_union = np.clip(sam_union.astype(np.float32) * void_weight, 0, 255).astype(np.uint8)
                     _, sam_union = cv2.threshold(sam_union, 127, 255, cv2.THRESH_BINARY)
 
-                # BBox 내부 엄격 클리핑 + ADR-86 기준선(3x3 침식) + 전경 손 실루엣 선차감
-                sam_union = cv2.bitwise_and(sam_union, crop_mask)
-                ke = _odd_kernel(3, scale, minimum=3)
-                k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ke, ke))
-                sam_union = cv2.erode(sam_union, k_erode, iterations=1)
+                # 전경 손 실루엣 선차감 (내측 중복 erode 제거)
                 if np.count_nonzero(hand_occ_mask) > 0:
                     sam_union = cv2.bitwise_and(sam_union, cv2.bitwise_not(hand_occ_mask))
 
@@ -937,60 +1095,31 @@ def apply_silhouette(
                     for lbl_idx in range(1, num_labels):
                         if stats[lbl_idx, cv2.CC_STAT_AREA] >= min_cnt_area:
                             sub_m[labels_im == lbl_idx] = 255
-                    if np.count_nonzero(sub_m) >= (bw * bh * 0.06):
+                    if np.count_nonzero(sub_m) >= (ebw * ebh * 0.06):
                         sam_succeeded = True
             except Exception as e:
                 logger.warning(f"[Censor] MobileSAM fallback: {e}")
 
-        # MobileSAM이 실패한 경우에만 ADR-86 슬림 타원 캡슐로 폴백
+        # SAM이 실패한 경우에만 보수적 타원 캡슐로 폴백
         if not sam_succeeded:
             bcx = int((ex1 + ex2) / 2)
             bcy = int((ey1 + ey2) / 2)
-            erx = min(int(w * 0.12), max(_scale_int(4, scale, 3), int(ebw * 0.40)))
-            ery = min(int(h * 0.16), max(_scale_int(4, scale, 3), int(ebh * 0.46)))
+            erx = min(int(w * 0.12), max(_scale_int(4, scale, 3), int(ebw * 0.42)))
+            ery = min(int(h * 0.16), max(_scale_int(4, scale, 3), int(ebh * 0.48)))
             cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
 
         final_mask = np.maximum(final_mask, sub_m)
 
-    if np.count_nonzero(final_mask) == 0:
-        return img
-
-    # 5. ADR-86 기준선: 3x3 미세 침식 + 5x5 모폴로지 닫힘 + 경계 스무딩
-    ke_f = _odd_kernel(3, scale, minimum=3)
-    kernel_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ke_f, ke_f))
-    eroded = cv2.erode(final_mask, kernel_erode, iterations=1)
-
-    kc = _odd_kernel(5, scale, minimum=3)
-    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kc, kc))
-    closed = cv2.morphologyEx(eroded, cv2.MORPH_CLOSE, kernel_close)
-
-    ks = _odd_kernel(5, scale, minimum=3)
-    smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 1.2 * scale)
-    _, smoothed = cv2.threshold(smooth_blur, 140, 255, cv2.THRESH_BINARY)
-
-    # 얼굴 상단(눈/이마 38%) + 전경 손(Hand) 실루엣 보호 레이어 차감
-    if np.count_nonzero(protection_mask) > 0:
-        smoothed = cv2.bitwise_and(smoothed, cv2.bitwise_not(protection_mask))
-
-    if np.count_nonzero(smoothed) == 0:
-        return img
-
-    # 6. ADR-86 소프트 에지 페더링 (9x9, sigma 2.5*scale)
-    kf = _odd_kernel(9, scale, minimum=5)
-    blurred = cv2.GaussianBlur(smoothed, (kf, kf), 2.5 * scale)
-
-    # 색상 레이어 합성 (블랙 실루엣은 애니메이션 먹선 톤 (12, 12, 16) 적용)
-    if isinstance(color, str):
-        color_rgb = (255, 255, 255) if color.lower() in ("white", "whiteout", "white_silhouette") else (12, 12, 16)
-    else:
-        color_rgb = color
-
-    alpha = (blurred.astype(np.float32) / 255.0)[:, :, np.newaxis]
-    target_layer = np.full_like(img_np, color_rgb, dtype=np.float32)
-    blended = (1.0 - alpha) * img_np.astype(np.float32) + alpha * target_layer
-    blended = np.clip(blended, 0, 255).astype(np.uint8)
-
-    return _restore_alpha(Image.fromarray(blended), alpha_ch)
+    blended_out = _finalize_and_blend_silhouette(
+        img_np,
+        alpha_ch,
+        final_mask,
+        color=color,
+        scale=scale,
+        protection_mask=protection_mask,
+        apply_lineart_snap=True,
+    )
+    return blended_out if blended_out is not None else img
 
 
 def apply_black_silhouette(
@@ -2021,6 +2150,84 @@ def _get_roi_specs_for_pose(pose_cat: Optional[str]) -> List[Tuple[float, float,
     ]
 
 
+def _filter_bottom_edge_false_positives(
+    candidates: Sequence[Tuple[Tuple[int, int, int, int], str, float]],
+    img_w: int,
+    img_h: int,
+    img_rgb_np: Optional[np.ndarray] = None,
+    skin_mask_np: Optional[np.ndarray] = None,
+) -> List[Tuple[Tuple[int, int, int, int], str, float]]:
+    """
+    상단에 고신뢰 주 성기 박스가 존재할 때, 이미지 최하단 경계 근처(y2 >= 0.88*H) 또는 수직 분리 영역에서
+    발생하는 저신뢰(score < 0.35), 극단적 평판 조각(Sliver), 고밝기 체액/저피부 오탐 박스를 제거합니다.
+    """
+    if len(candidates) <= 1 or img_w <= 0 or img_h <= 0:
+        return list(candidates)
+
+    penis_indices = [i for i, item in enumerate(candidates) if str(item[1]).lower().strip() == "penis"]
+    if len(penis_indices) <= 1:
+        return list(candidates)
+
+    filtered: List[Tuple[Tuple[int, int, int, int], str, float]] = []
+    for idx, (box, lbl, score) in enumerate(candidates):
+        lbl_clean = str(lbl).lower().strip()
+        if lbl_clean != "penis":
+            filtered.append((box, lbl, score))
+            continue
+
+        x1, y1, x2, y2 = box
+        bw = max(1, x2 - x1)
+        bh = max(1, y2 - y1)
+        area = bw * bh
+        cy = (y1 + y2) * 0.5
+        aspect = float(bw) / float(bh)
+
+        # 자기 자신보다 위쪽에 위치한 고신뢰(>= 0.50) 주 후보 목록 확인
+        upper_anchors = [
+            candidates[j]
+            for j in penis_indices
+            if j != idx
+            and float(candidates[j][2]) >= 0.50
+            and ((candidates[j][0][1] + candidates[j][0][3]) * 0.5) < cy
+        ]
+        if not upper_anchors:
+            filtered.append((box, lbl, score))
+            continue
+
+        top_box, _, top_score = max(upper_anchors, key=lambda it: float(it[2]))
+        top_h = max(1, top_box[3] - top_box[1])
+        top_area = max(1, (top_box[2] - top_box[0]) * top_h)
+
+        near_bottom = y2 >= int(img_h * 0.88)
+        vert_isolated = y1 >= (top_box[3] - max(0, int(top_h * 0.08)))
+        drop = False
+
+        if near_bottom or vert_isolated:
+            # 1) 2차 ROI 줌인 등에서 발생한 저신뢰(< 0.35) 하단/분리 오탐 기각
+            if float(score) < 0.35:
+                drop = True
+            # 2) 최하단 경계(y2 >= 0.94*H)에 걸친 소형·평판 조각(Sliver) 기각
+            elif y2 >= int(img_h * 0.94) and area < int(top_area * 0.14):
+                if aspect >= 2.0 or bh < int(img_h * 0.06) or float(score) < 0.65:
+                    drop = True
+            # 3) 최하단 저피부/백색 체액 얼룩 오탐 기각 (단독 고신뢰 백광 타겟은 상단 앵커 미해당으로 보존)
+            elif near_bottom and img_rgb_np is not None and img_rgb_np.size > 0:
+                roi_rgb = img_rgb_np[max(0, y1) : min(img_h, y2), max(0, x1) : min(img_w, x2)]
+                if roi_rgb.size > 0:
+                    bright_ratio = float((roi_rgb.min(axis=2) >= 222).mean())
+                    skin_ratio = 1.0
+                    if skin_mask_np is not None and skin_mask_np.size > 0:
+                        roi_sk = skin_mask_np[max(0, y1) : min(img_h, y2), max(0, x1) : min(img_w, x2)]
+                        skin_ratio = float(np.count_nonzero(roi_sk)) / float(max(1, roi_sk.size))
+                    if bright_ratio >= 0.28 or (y2 >= int(img_h * 0.92) and skin_ratio < 0.25):
+                        drop = True
+
+        if not drop:
+            filtered.append((box, lbl, score))
+
+    return filtered if filtered else list(candidates)
+
+
 def _detect_target_candidates(
     img_rgb: Image.Image,
     targets: Sequence[str] = ("penis",),
@@ -2046,7 +2253,8 @@ def _detect_target_candidates(
     img_w, img_h = img_rgb.size
     scale = _compute_scale_factor(img_w, img_h)
     min_box_px = _scale_int(12, scale, minimum=8)
-    skin_check_np = skin_np if skin_np is not None else get_skin_mask(np.array(img_rgb))
+    img_rgb_np = np.array(img_rgb)
+    skin_check_np = skin_np if skin_np is not None else get_skin_mask(img_rgb_np)
 
     detected_boxes_with_labels: List[Tuple[Tuple[int, int, int, int], str, float]] = []
     is_upper_close = eff_pose_cat in ("fellatio", "paizuri", "piledriver")
@@ -2154,7 +2362,13 @@ def _detect_target_candidates(
                 merged_list.append((cand_box, cand_lbl, float(cand_score)))
         detected_boxes_with_labels = merged_list
 
-    return detected_boxes_with_labels
+    return _filter_bottom_edge_false_positives(
+        detected_boxes_with_labels,
+        img_w=img_w,
+        img_h=img_h,
+        img_rgb_np=img_rgb_np,
+        skin_mask_np=skin_check_np,
+    )
 
 
 def _atomic_replace_with_retry(
