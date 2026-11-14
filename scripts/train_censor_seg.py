@@ -89,6 +89,9 @@ def train_censor_seg(
     clean_spy_dir: Optional[Path] = None,
     spy_holdout_per_char: int = 4,
     hard_neg_limit: int = 120,
+    inscene_neg_limit: int = 55,
+    extreme_pose_oversample: int = 3,
+    mask_ratio: int = 2,
     run_project_dir: Optional[Path] = None,
     run_name: str = "censor_seg_train",
     dry_run: bool = False,
@@ -122,6 +125,8 @@ def train_censor_seg(
         clean_spy_dir=eff_spy_dir,
         spy_holdout_per_char=spy_holdout_per_char,
         hard_neg_limit=hard_neg_limit,
+        inscene_neg_limit=inscene_neg_limit,
+        extreme_pose_oversample=extreme_pose_oversample,
     )
     images_dir = dataset_dir / "images"
     data_yaml = dataset_dir / "data.yaml"
@@ -138,6 +143,7 @@ def train_censor_seg(
         f"spy_train={summary.get('spy_train_written', 0)}, "
         f"spy_holdout_excluded={summary.get('spy_holdout_excluded', 0)}, "
         f"hard_neg={summary.get('hard_neg_written', 0)}, "
+        f"inscene_neg={summary.get('inscene_neg_written', 0)}, "
         f"train={summary.get('train_split_count', 0)}, "
         f"val={summary.get('val_split_count', 0)}, "
         f"kiro_processed={summary.get('kiro_processed', 0)}, "
@@ -163,7 +169,10 @@ def train_censor_seg(
 
     eff_run_dir.mkdir(parents=True, exist_ok=True)
     model, resolved_base = _load_yolo_base_with_fallback(base_model)
-    print(f"[Train] base_model={resolved_base}, imgsz={imgsz}, batch={batch}, epochs={epochs}")
+    print(
+        f"[Train] base_model={resolved_base}, imgsz={imgsz}, batch={batch}, "
+        f"epochs={epochs}, mask_ratio={max(1, int(mask_ratio))}"
+    )
 
     train_kwargs: Dict[str, Any] = {
         "data": str(data_yaml),
@@ -174,10 +183,12 @@ def train_censor_seg(
         "name": str(run_name),
         "exist_ok": True,
         "patience": 20,
+        "mask_ratio": max(1, int(mask_ratio)),
+        "overlap_mask": False,
         "mosaic": 0.5,
         "close_mosaic": 15,
-        "degrees": 25.0,
-        "scale": 0.4,
+        "degrees": 30.0,
+        "scale": 0.5,
         "fliplr": 0.5,
         "hsv_h": 0.015,
         "hsv_s": 0.5,
@@ -189,15 +200,36 @@ def train_censor_seg(
     try:
         results = model.train(**train_kwargs)
     except RuntimeError as oom_err:
-        if "out of memory" in str(oom_err).lower() and int(imgsz) > 832:
-            print(f"[Warn] CUDA OOM at imgsz={imgsz}, batch={batch} -> imgsz=832, batch=4로 자동 재시도합니다.")
+        if "out of memory" in str(oom_err).lower() and (int(imgsz) > 832 or int(batch) > 2):
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-            train_kwargs["imgsz"] = 832
-            train_kwargs["batch"] = min(4, int(batch))
-            model, resolved_base = _load_yolo_base_with_fallback(base_model)
-            results = model.train(**train_kwargs)
+            if int(batch) > 2:
+                print(
+                    f"[Warn] CUDA OOM at imgsz={imgsz}, batch={batch} -> imgsz={imgsz}, batch=2로 자동 재시도합니다."
+                )
+                train_kwargs["batch"] = 2
+                try:
+                    model, resolved_base = _load_yolo_base_with_fallback(base_model)
+                    results = model.train(**train_kwargs)
+                except RuntimeError as oom_err2:
+                    if "out of memory" in str(oom_err2).lower() and int(imgsz) > 832:
+                        print("[Warn] CUDA OOM at batch=2 -> imgsz=832, batch=2로 최종 폴백 재시도합니다.")
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                        train_kwargs["imgsz"] = 832
+                        train_kwargs["batch"] = 2
+                        model, resolved_base = _load_yolo_base_with_fallback(base_model)
+                        results = model.train(**train_kwargs)
+                    else:
+                        raise
+            else:
+                print(f"[Warn] CUDA OOM at imgsz={imgsz}, batch={batch} -> imgsz=832, batch=2로 자동 재시도합니다.")
+                train_kwargs["imgsz"] = 832
+                train_kwargs["batch"] = min(2, int(batch))
+                model, resolved_base = _load_yolo_base_with_fallback(base_model)
+                results = model.train(**train_kwargs)
         else:
             raise
     best_weight = _resolve_trained_weights(results, eff_run_dir, run_name)
@@ -249,6 +281,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="비노출 일상 포즈(<=034) 하드 네거티브 샘플 수 (기본: 120)",
     )
     parser.add_argument(
+        "--inscene-neg-limit",
+        type=int,
+        default=55,
+        help="성인 씬 내부 비타겟(하단 체액·복부) 부분 네거티브 크롭 수 (기본: 55)",
+    )
+    parser.add_argument(
+        "--extreme-pose-oversample",
+        type=int,
+        default=3,
+        help="구강·후면 등 극단 구도 포즈 최소 오버샘플링 배수 (기본: 3)",
+    )
+    parser.add_argument(
         "--kiro-projects-dir",
         type=Path,
         default=None,
@@ -288,6 +332,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=int, default=65, help="학습 에포크 수 (기본: 65)")
     parser.add_argument("--imgsz", type=int, default=1024, help="입력 해상도 (기본: 1024)")
     parser.add_argument("--batch", type=int, default=4, help="배치 크기 (기본: 4)")
+    parser.add_argument("--mask-ratio", type=int, default=2, help="YOLO-seg 마스크 다운샘플 비율 (기본: 2, 낮을수록 고정밀)")
     parser.add_argument("--device", type=str, default=None, help="학습 디바이스 (예: 0, cpu)")
     parser.add_argument("--diff-thresh", type=int, default=18, help="Diff 이진화 임계값")
     parser.add_argument(
@@ -328,6 +373,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         clean_spy_dir=args.clean_spy_dir,
         spy_holdout_per_char=args.spy_holdout_per_char,
         hard_neg_limit=args.hard_neg_limit,
+        inscene_neg_limit=args.inscene_neg_limit,
+        extreme_pose_oversample=args.extreme_pose_oversample,
+        mask_ratio=args.mask_ratio,
         run_project_dir=args.run_dir,
         run_name=args.run_name,
         dry_run=args.dry_run,

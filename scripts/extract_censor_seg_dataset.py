@@ -479,6 +479,121 @@ def _clear_existing_dataset(out_dir: Path, images_dir: Path, labels_dir: Path) -
             stale_file.unlink(missing_ok=True)
 
 
+EXTREME_POSE_CODES = {
+    66, 67, 70, 71, 78, 88, 89, 90, 95, 100,
+    126, 127, 158, 159, 160, 166, 170, 171, 200, 201, 202,
+}
+EXTREME_POSE_KEYWORDS = ("펠라", "이라마", "후배위", "스마타", "유혹", "착의펠라", "가슴압박")
+
+
+def _is_extreme_pose_file(path: Path) -> bool:
+    """구강 클로즈업·후배위 등 미탐/과팽창 취약 극단 구도 파일 여부를 판별합니다."""
+    stem_low = path.stem.lower()
+    if any(kw in stem_low for kw in EXTREME_POSE_KEYWORDS):
+        return True
+    num_tokens = [int(tok) for tok in stem_low.split("_") if tok.isdigit()]
+    return any(tok in EXTREME_POSE_CODES for tok in num_tokens)
+
+
+def _generate_inscene_partial_negatives(
+    inscene_sources: Sequence[Tuple[str, Path, np.ndarray]],
+    images_dir: Path,
+    labels_dir: Path,
+    limit: int = 55,
+) -> List[Path]:
+    """
+    train 전용 양성 성인 씬에서 정답 타겟 마스크와 안전 마진을 완전히 배제한
+    하단(사타구니·체액·허벅지)·상단/측면 피부 영역 크롭을 추출해 부분 네거티브(Empty `.txt`)로 저장합니다.
+    Hold-out/Val 이미지는 입력 소스에 절대 포함되지 않습니다.
+    """
+    if limit <= 0 or not inscene_sources:
+        return []
+
+    lower_candidates: List[Tuple[str, Path, Tuple[int, int, int, int]]] = []
+    other_candidates: List[Tuple[str, Path, Tuple[int, int, int, int]]] = []
+
+    for stem_tag, orig_path, mask_bin in inscene_sources:
+        h, w = mask_bin.shape[:2]
+        if min(w, h) < 500:
+            continue
+        ys, xs = np.nonzero(mask_bin > 0)
+        if len(xs) == 0:
+            continue
+
+        gx1, gy1 = int(xs.min()), int(ys.min())
+        gx2, gy2 = int(xs.max()) + 1, int(ys.max()) + 1
+        pad = max(24, int(round(min(w, h) * 0.03)))
+
+        crops_to_check: List[Tuple[str, Tuple[int, int, int, int]]] = []
+        # 1) 하단 사타구니·체액·허벅지 크롭 (MIK #156 / #162류 오탐 교정용)
+        low_y0 = gy2 + pad
+        if h - low_y0 >= max(180, int(h * 0.16)):
+            crops_to_check.append(("low", (0, low_y0, w, h)))
+        # 2) 상단 복부·가슴·얼굴 크롭 (KEI #187 / MIK #170류 오검열 교정용)
+        up_y1 = gy1 - pad
+        if up_y1 >= max(240, int(h * 0.25)):
+            crops_to_check.append(("up", (0, 0, w, up_y1)))
+        # 3) 좌/우 측면 몸통 크롭
+        left_x1 = gx1 - pad
+        if left_x1 >= max(220, int(w * 0.28)):
+            crops_to_check.append(("left", (0, 0, left_x1, h)))
+        right_x0 = gx2 + pad
+        if w - right_x0 >= max(220, int(w * 0.28)):
+            crops_to_check.append(("right", (right_x0, 0, w, h)))
+
+        if not crops_to_check:
+            continue
+
+        with Image.open(orig_path) as im_o:
+            orig_arr = np.array(im_o.convert("RGB"), dtype=np.uint8)
+        if orig_arr.shape[:2] != (h, w):
+            continue
+
+        for kind, (cx1, cy1, cx2, cy2) in crops_to_check:
+            if int(np.count_nonzero(mask_bin[cy1:cy2, cx1:cx2])) > 0:
+                continue
+            crop_arr = orig_arr[cy1:cy2, cx1:cx2]
+            skin_c = get_skin_mask(crop_arr) > 0
+            skin_ratio = float(np.count_nonzero(skin_c)) / float(max(1, skin_c.size))
+            if skin_ratio < 0.12:
+                continue
+            entry = (f"{stem_tag}_{kind}", orig_path, (cx1, cy1, cx2, cy2))
+            if kind == "low":
+                lower_candidates.append(entry)
+            else:
+                other_candidates.append(entry)
+
+    # 하단 오탐 교정 ~60%, 상/측면 ~40% 균형 선택
+    def _stride_pick(items: List[Any], count: int) -> List[Any]:
+        if count <= 0 or not items:
+            return []
+        if len(items) <= count:
+            return list(items)
+        n_total = len(items)
+        return [items[(idx * n_total) // count] for idx in range(count)]
+
+    target_lower = min(len(lower_candidates), max(1, int(round(limit * 0.60))))
+    target_other = min(len(other_candidates), limit - target_lower)
+    if target_lower + target_other < limit:
+        extra_lower = min(len(lower_candidates), limit - target_other)
+        target_lower = max(target_lower, extra_lower)
+        target_other = min(len(other_candidates), limit - target_lower)
+
+    picked = _stride_pick(lower_candidates, target_lower) + _stride_pick(other_candidates, target_other)
+    written_paths: List[Path] = []
+    for p_idx, (tag, orig_path, (cx1, cy1, cx2, cy2)) in enumerate(picked):
+        out_stem = f"pneg_{p_idx:03d}_{tag}".replace(" ", "_")
+        dst_img = images_dir / f"{out_stem}.webp"
+        dst_lbl = labels_dir / f"{out_stem}.txt"
+        with Image.open(orig_path) as im_o:
+            crop_im = im_o.convert("RGB").crop((cx1, cy1, cx2, cy2))
+            crop_im.save(dst_img, "WEBP", quality=95)
+        dst_lbl.write_text("", encoding="utf-8")
+        written_paths.append(dst_img)
+
+    return written_paths
+
+
 def build_yolo_seg_dataset(
     gt_dir: Path,
     projects_dir: Path,
@@ -492,14 +607,16 @@ def build_yolo_seg_dataset(
     clean_spy_dir: Optional[Path] = None,
     spy_holdout_per_char: int = 4,
     hard_neg_limit: int = 120,
+    inscene_neg_limit: int = 55,
+    extreme_pose_oversample: int = 3,
     clean_existing: bool = True,
 ) -> Dict[str, int]:
     """
-    Phase P1 클린 데이터셋 빌더:
-    1. `ground_truth`(02_h_scenes) + `_origin` 1:1 화이트 차분 쌍 (오버샘플링 복사본은 train.txt 전용)
-    2. `clean_spy_dir`(kiro/projects/spy/assets) 1:1 화이트 차분 쌍 (Hold-out 40장 100% 격리)
+    Phase P2 Failure-Driven 클린 데이터셋 빌더:
+    1. `ground_truth`(02_h_scenes) + `_origin` 1:1 화이트 차분 쌍 (극단 구도 추가 오버샘플, train.txt 전용)
+    2. `clean_spy_dir`(kiro/projects/spy/assets) 1:1 화이트 차분 쌍 (Hold-out 40장 100% 격리, train분 극단 구도 오버샘플)
     3. 비노출 하드 네거티브(`<= 034` 일상 포즈, Empty `.txt` 라벨)
-    (기존 `don/hey/man` 인페인트 합성 왜곡셋은 `include_kiro_inpaint=False`로 기본 제외)
+    4. 성인 씬 내부 부분 네거티브(하단 사타구니·체액·상단 복부 크롭, train.txt 전용, Empty `.txt` 라벨)
     """
     images_dir = out_dir / "images"
     labels_dir = out_dir / "labels"
@@ -511,6 +628,7 @@ def build_yolo_seg_dataset(
     train_image_paths: List[Path] = []
     val_image_paths: List[Path] = []
     used_origin_names: set[str] = set()
+    inscene_sources: List[Tuple[str, Path, np.ndarray]] = []
 
     gt_files = (
         sorted(f for f in gt_dir.rglob("*") if f.is_file() and f.suffix.lower() in IMAGE_EXTS)
@@ -526,6 +644,7 @@ def build_yolo_seg_dataset(
     if gt_files:
         by_char_name, by_name = _index_origin_files(projects_dir)
         oversample = max(1, int(gt_oversample))
+        ext_os = max(1, int(extreme_pose_oversample))
 
         for gt_file in gt_files:
             origin_file = _find_matching_origin(gt_file, gt_dir, by_char_name, by_name)
@@ -535,7 +654,7 @@ def build_yolo_seg_dataset(
             used_origin_names.add(origin_file.name)
 
             with Image.open(origin_file) as orig_im, Image.open(gt_file) as cens_im:
-                _, yolo_lines = extract_yolo_seg_polygons_from_diff(
+                gt_diff_mask, yolo_lines = extract_yolo_seg_polygons_from_diff(
                     orig_im,
                     cens_im,
                     class_id=class_id,
@@ -547,8 +666,10 @@ def build_yolo_seg_dataset(
                 continue
 
             rel_stem = "_".join(gt_file.relative_to(gt_dir).with_suffix("").parts).replace(" ", "_")
+            inscene_sources.append((f"gt_{rel_stem}", origin_file, gt_diff_mask))
+            eff_oversample = max(oversample, oversample + ext_os - 1) if _is_extreme_pose_file(origin_file) else oversample
             label_payload = "\n".join(yolo_lines) + "\n"
-            for copy_idx in range(oversample):
+            for copy_idx in range(eff_oversample):
                 eff_stem = rel_stem if copy_idx == 0 else f"{rel_stem}_os{copy_idx}"
                 dst_img = images_dir / f"{eff_stem}{origin_file.suffix.lower()}"
                 dst_lbl = labels_dir / f"{eff_stem}.txt"
@@ -574,6 +695,7 @@ def build_yolo_seg_dataset(
             p.resolve() for pair in spy_holdout_pairs for p in pair
         }
         used_origin_names.update(holdout_block_names)
+        ext_spy_os = max(1, int(extreme_pose_oversample))
 
         for sp_idx, (orig_f, white_f) in enumerate(spy_train_pairs):
             if (
@@ -586,7 +708,7 @@ def build_yolo_seg_dataset(
 
             used_origin_names.add(orig_f.name)
             with Image.open(orig_f) as orig_im, Image.open(white_f) as white_im:
-                _, yolo_lines = extract_yolo_seg_polygons_from_diff(
+                spy_diff_mask, yolo_lines = extract_yolo_seg_polygons_from_diff(
                     orig_im,
                     white_im,
                     class_id=class_id,
@@ -598,15 +720,24 @@ def build_yolo_seg_dataset(
 
             char_tag = orig_f.parent.name.replace("_origin", "").replace(" ", "_")
             eff_stem = f"spy_{char_tag}_{orig_f.stem}".replace(" ", "_")
-            dst_img = images_dir / f"{eff_stem}{orig_f.suffix.lower()}"
-            dst_lbl = labels_dir / f"{eff_stem}.txt"
-            shutil.copy2(orig_f, dst_img)
-            dst_lbl.write_text("\n".join(yolo_lines) + "\n", encoding="utf-8")
-            if sp_idx % 7 == 0:
-                val_image_paths.append(dst_img)
-            else:
-                train_image_paths.append(dst_img)
-            spy_train_written += 1
+            label_payload = "\n".join(yolo_lines) + "\n"
+            is_val_slot = (sp_idx % 7 == 0)
+            n_copies = 1 if is_val_slot else (ext_spy_os if _is_extreme_pose_file(orig_f) else 1)
+
+            for copy_idx in range(n_copies):
+                copy_stem = eff_stem if copy_idx == 0 else f"{eff_stem}_os{copy_idx}"
+                dst_img = images_dir / f"{copy_stem}{orig_f.suffix.lower()}"
+                dst_lbl = labels_dir / f"{copy_stem}.txt"
+                shutil.copy2(orig_f, dst_img)
+                dst_lbl.write_text(label_payload, encoding="utf-8")
+                if is_val_slot:
+                    val_image_paths.append(dst_img)
+                else:
+                    train_image_paths.append(dst_img)
+                spy_train_written += 1
+
+            if not is_val_slot:
+                inscene_sources.append((eff_stem, orig_f, spy_diff_mask))
             processed += 1
 
     # 3. Hard Negatives (Clean Non-Exposed Poses <= 034, Empty Labels)
@@ -629,6 +760,17 @@ def build_yolo_seg_dataset(
                 train_image_paths.append(dst_img)
             hard_neg_written += 1
             processed += 1
+
+    # 3b. P2 In-Scene Partial Hard Negatives (Train-Only 성인 씬 비타겟 영역 크롭)
+    inscene_neg_paths = _generate_inscene_partial_negatives(
+        inscene_sources,
+        images_dir=images_dir,
+        labels_dir=labels_dir,
+        limit=inscene_neg_limit,
+    )
+    inscene_neg_written = len(inscene_neg_paths)
+    train_image_paths.extend(inscene_neg_paths)
+    processed += inscene_neg_written
 
     # 4. Legacy kiro inpaint black silhouette restoration (disabled by default due to domain shift)
     kiro_scanned = 0
@@ -697,6 +839,7 @@ def build_yolo_seg_dataset(
         "spy_train_written": spy_train_written,
         "spy_holdout_excluded": spy_holdout_excluded,
         "hard_neg_written": hard_neg_written,
+        "inscene_neg_written": inscene_neg_written,
         "kiro_scanned": kiro_scanned,
         "kiro_processed": kiro_processed,
         "train_split_count": len(train_image_paths),
@@ -748,6 +891,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="비노출 일상 포즈(<=034) 하드 네거티브 샘플 수 (기본: 120)",
     )
     parser.add_argument(
+        "--inscene-neg-limit",
+        type=int,
+        default=55,
+        help="성인 씬 비타겟 부분 크롭 하드 네거티브 샘플 수 (기본: 55)",
+    )
+    parser.add_argument(
+        "--extreme-pose-oversample",
+        type=int,
+        default=3,
+        help="구강/후배위 등 극단 구도 오버샘플링 배수 (기본: 3)",
+    )
+    parser.add_argument(
         "--kiro-projects-dir",
         type=Path,
         default=None,
@@ -783,12 +938,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         clean_spy_dir=args.clean_spy_dir,
         spy_holdout_per_char=args.spy_holdout_per_char,
         hard_neg_limit=args.hard_neg_limit,
+        inscene_neg_limit=args.inscene_neg_limit,
+        extreme_pose_oversample=args.extreme_pose_oversample,
     )
     print(
         f"[YOLO-seg Extractor] {stats['processed']} items processed "
         f"(total_gt={stats['total_gt']}, matched={stats['matched']}, gt_written={stats['gt_written']}, "
         f"spy_train={stats['spy_train_written']}, spy_holdout_excluded={stats['spy_holdout_excluded']}, "
-        f"hard_neg={stats['hard_neg_written']}, train={stats['train_split_count']}, val={stats['val_split_count']}, "
+        f"hard_neg={stats['hard_neg_written']}, inscene_neg={stats['inscene_neg_written']}, "
+        f"train={stats['train_split_count']}, val={stats['val_split_count']}, "
         f"skipped_empty={stats['skipped_empty']}, kiro_processed={stats['kiro_processed']})"
     )
     return 0

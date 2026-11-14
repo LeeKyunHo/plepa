@@ -228,7 +228,7 @@ def evaluate_test_c4(
             orig_rgb = im_o.convert("RGB")
             skin_np = censor.get_skin_mask(np.array(orig_rgb))
             t0 = time.perf_counter()
-            cands, custom_seg_mask, fallback_boxes = censor._resolve_hybrid_targets_and_mask(
+            cands, custom_seg_mask, fallback_boxes, yolo_prior_masks, context_boxes = censor._resolve_hybrid_targets_with_priors(
                 orig_rgb,
                 targets=("penis",),
                 min_confidence=0.16,
@@ -246,6 +246,8 @@ def evaluate_test_c4(
                     pose_cat=pose_cat,
                     custom_seg_mask=custom_seg_mask,
                     fallback_boxes=fallback_boxes,
+                    yolo_prior_masks=yolo_prior_masks,
+                    context_boxes=context_boxes,
                 )
             else:
                 cens_rgb = orig_rgb
