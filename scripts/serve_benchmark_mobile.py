@@ -405,6 +405,8 @@ class RerollRequest(BaseModel):
     censor_targets: str = "penis"
     min_confidence: float = 0.16
     enable_anchor_fallback: bool = False
+    strict_censor_qc: bool = False
+    auto_qc: bool = True
 
 
 class RerollJob:
@@ -419,6 +421,8 @@ class RerollJob:
         censor_targets: str = "penis",
         min_confidence: float = 0.16,
         enable_anchor_fallback: bool = False,
+        strict_censor_qc: bool = False,
+        auto_qc: bool = True,
     ):
         self.job_id = job_id
         self.file_path = file_path
@@ -430,6 +434,10 @@ class RerollJob:
         self.censor_targets = (censor_targets or "penis").strip() or "penis"
         self.min_confidence = float(min_confidence)
         self.enable_anchor_fallback = bool(enable_anchor_fallback)
+        self.strict_censor_qc = bool(strict_censor_qc)
+        self.auto_qc = bool(auto_qc)
+        self.qc_passed: Optional[bool] = None
+        self.qc_reason: Optional[str] = None
         self.status = "queued"  # queued | processing | done | failed
         self.created_at = time.time()
         self.started_at: Optional[float] = None
@@ -448,6 +456,10 @@ class RerollJob:
             "censor_targets": self.censor_targets,
             "min_confidence": self.min_confidence,
             "enable_anchor_fallback": self.enable_anchor_fallback,
+            "strict_censor_qc": self.strict_censor_qc,
+            "auto_qc": self.auto_qc,
+            "qc_passed": self.qc_passed,
+            "qc_reason": self.qc_reason,
             "status": self.status,
             "queue_position": queue_pos,
             "created_at": self.created_at,
@@ -515,6 +527,8 @@ def _execute_reroll_job(job: RerollJob) -> tuple[bool, Optional[int], Optional[s
             censor=False,
             censor_style=job.censor_style,
             censor_targets=job.censor_targets,
+            auto_qc=job.auto_qc,
+            strict_censor_qc=job.strict_censor_qc,
             seed=new_seed,
             no_ref=True,
             custom_neg=None,
@@ -522,8 +536,14 @@ def _execute_reroll_job(job: RerollJob) -> tuple[bool, Optional[int], Optional[s
 
         res = service.run_batch(params, quiet=True)
         if not res or not res[0].success or not res[0].image_path:
+            if res:
+                job.qc_passed = getattr(res[0], "qc_passed", False)
+                job.qc_reason = getattr(res[0], "qc_reason", None)
             err = res[0].error_message if res else "Unknown generation error"
             return False, None, f"ComfyUI 재생성 실패: {err}"
+
+        job.qc_passed = getattr(res[0], "qc_passed", True)
+        job.qc_reason = getattr(res[0], "qc_reason", None)
 
         gen_p = Path(res[0].image_path)
         if not gen_p.exists():
@@ -625,6 +645,8 @@ class RerollQueueManager:
             censor_targets=req.censor_targets,
             min_confidence=req.min_confidence,
             enable_anchor_fallback=req.enable_anchor_fallback,
+            strict_censor_qc=req.strict_censor_qc,
+            auto_qc=req.auto_qc,
         )
         self.jobs[job_id] = job
         await self.queue.put(job_id)
@@ -745,6 +767,8 @@ async def reroll_pose_endpoint(req: RerollRequest, request: Request):
                     "message": f"#{job.pose_code} 리롤 생성 완료 (seed: {job.new_seed})",
                     "seed": job.new_seed,
                     "file_name": filename,
+                    "qc_passed": job.qc_passed,
+                    "qc_reason": job.qc_reason,
                     "timestamp": int(time.time()),
                 }
             elif job.status == "failed":

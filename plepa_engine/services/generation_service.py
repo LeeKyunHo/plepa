@@ -131,6 +131,7 @@ class GenerationParams:
     prompt_alert_threshold: int = 2  # 연속 불량 시 프롬프트 점검 경고 발령 임계치
     reuse_seed: bool = False  # _batch_manifest.json의 이전 골든 시드 고정 재생성
     strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
+    retry_qc_failed: bool = True  # _batch_manifest.json 내 qc_passed=False 항목 overwrite=False 시 자동 재시도
     anchor_fallback: bool = False  # 검열 탐지 실패 시 포즈 기반 안전 앵커 폴백 마스킹 (기본 False)
     seed: Optional[int] = None  # 특정 난수 시드 고정 생성
 
@@ -495,14 +496,19 @@ class GenerationService:
                 char_codes = char_pose_map[char.prefix]
 
                 existing_manifest_seeds = {}
+                existing_manifest_qc_failed = set()
                 manifest_file = output_dir / "_batch_manifest.json"
                 if manifest_file.exists():
                     try:
                         with open(manifest_file, "r", encoding="utf-8") as mf:
                             m_data = json.load(mf)
                             for itm in m_data.get("items", []):
-                                if "code" in itm and itm.get("seed") is not None:
-                                    existing_manifest_seeds[str(itm["code"]).strip()] = itm["seed"]
+                                c_str = str(itm.get("code", "")).strip()
+                                if c_str:
+                                    if itm.get("seed") is not None:
+                                        existing_manifest_seeds[c_str] = itm["seed"]
+                                    if itm.get("qc_passed") is False:
+                                        existing_manifest_qc_failed.add(c_str)
                     except Exception:
                         pass
 
@@ -692,8 +698,9 @@ class GenerationService:
                             on_progress(current_item_index, total_items, res)
                         continue
 
-                    # 1. 기존 파일 스킵
-                    if not params.overwrite and out_path.exists() and out_path.stat().st_size > 0:
+                    # 1. 기존 파일 스킵 (단, 직전 _batch_manifest.json에 qc_passed=False 기록 시 자동 재시도)
+                    is_prev_qc_failed = params.retry_qc_failed and (code_key in existing_manifest_qc_failed)
+                    if not params.overwrite and not is_prev_qc_failed and out_path.exists() and out_path.stat().st_size > 0:
                         if not quiet:
                             print(" [기존 파일 보존: 건너뜀]", end="")
                         if should_censor:
@@ -714,8 +721,11 @@ class GenerationService:
                             on_progress(current_item_index, total_items, res)
                         continue
 
+                    if is_prev_qc_failed and not quiet and out_path.exists():
+                        print(" [이전 QC 불량 이력 감지 -> 자동 재생성]", end="")
+
                     # 2. 스마트 사본 보존
-                    if not params.overwrite and not out_path.exists() and legacy_path.exists() and legacy_path.stat().st_size > 0:
+                    if not params.overwrite and not is_prev_qc_failed and not out_path.exists() and legacy_path.exists() and legacy_path.stat().st_size > 0:
                         try:
                             out_path.parent.mkdir(parents=True, exist_ok=True)
                             shutil.copy2(legacy_path, out_path)
@@ -831,8 +841,13 @@ class GenerationService:
                                     if not quiet and attempt > 0:
                                         print(f" [Auto-QC 통과(재시도 {attempt}회)]", end="", flush=True)
 
-                                # Strict Censor QC: 성인 노출 필수 씬에서 성기 미탐지 시 리롤
-                                if should_censor and params.strict_censor_qc:
+                                # Strict Censor QC: 성인 노출 필수 씬에서 성기 미탐지 시 리롤 (censor=False 외부 리롤 워커에서도 독립 작동)
+                                if params.strict_censor_qc and (
+                                    should_censor
+                                    or is_pose_censor_required(
+                                        pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster
+                                    )
+                                ):
                                     from plepa_engine.censor import POSE_SAFE_ANCHORS, detect_genitals, get_pose_category
                                     code_norm = str(target.code).strip()
                                     pose_cat = get_pose_category(code_norm, roster=actual_roster)
@@ -912,7 +927,7 @@ class GenerationService:
                 # 배치 매니페스트 저널 원자적 기록 (_batch_manifest.json)
                 self._save_batch_manifest(output_dir, char, actual_roster, params, char_results)
 
-        if params.censor or params.censor_only:
+        if params.censor or params.censor_only or params.strict_censor_qc:
             unload_censor_models()
 
         if not quiet and all_results:

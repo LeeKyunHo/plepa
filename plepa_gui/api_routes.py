@@ -122,6 +122,8 @@ class RerollRequest(BaseModel):
     censor: bool = True
     censor_style: Optional[str] = None
     censor_targets: Optional[str] = None
+    auto_qc: Optional[bool] = None
+    strict_censor_qc: Optional[bool] = None
 
 
 class FillMissingRequest(BaseModel):
@@ -130,6 +132,8 @@ class FillMissingRequest(BaseModel):
     censor: bool = True
     censor_style: Optional[str] = None
     censor_targets: Optional[str] = None
+    auto_qc: Optional[bool] = None
+    strict_censor_qc: Optional[bool] = None
 
 
 class RestoreOriginAssetRequest(BaseModel):
@@ -252,6 +256,12 @@ async def api_reroll_asset(req: RerollRequest) -> Dict[str, Any]:
     """단일 컷 백그라운드 리롤(재생성) - GlobalJobManager FIFO 대기열 직렬화."""
     safe_roster = _validate_roster_name(req.roster)
     conf = default_config_service.get_config()
+    auto_qc = bool(conf.get("auto_qc", True)) if req.auto_qc is None else bool(req.auto_qc)
+    strict_censor_qc = (
+        bool(conf.get("strict_censor_qc", False))
+        if req.strict_censor_qc is None
+        else bool(req.strict_censor_qc)
+    )
     params = GenerationParams(
         character_expr=req.char,
         pose_expr=req.code,
@@ -260,6 +270,8 @@ async def api_reroll_asset(req: RerollRequest) -> Dict[str, Any]:
         censor=req.censor,
         censor_style=req.censor_style or conf.get("censor_style", "white_silhouette"),
         censor_targets=req.censor_targets or conf.get("censor_targets", "penis"),
+        auto_qc=auto_qc,
+        strict_censor_qc=strict_censor_qc,
         reuse_seed=req.reuse_seed,
     )
     started, queue_pos = global_job_manager.enqueue_job(params, label=f"리롤 {req.char}:{req.code}")
@@ -275,6 +287,8 @@ async def api_reroll_asset(req: RerollRequest) -> Dict[str, Any]:
         "message": msg,
         "char": req.char,
         "code": req.code,
+        "auto_qc": auto_qc,
+        "strict_censor_qc": strict_censor_qc,
     }
 
 
@@ -285,6 +299,12 @@ async def api_fill_missing(req: FillMissingRequest) -> Dict[str, Any]:
     conf = default_config_service.get_config()
     censor_style = req.censor_style or conf.get("censor_style", "white_silhouette")
     censor_targets = req.censor_targets or conf.get("censor_targets", "penis")
+    auto_qc = bool(conf.get("auto_qc", True)) if req.auto_qc is None else bool(req.auto_qc)
+    strict_censor_qc = (
+        bool(conf.get("strict_censor_qc", False))
+        if req.strict_censor_qc is None
+        else bool(req.strict_censor_qc)
+    )
     missing_map = default_asset_service.get_missing_poses_by_character(safe_roster)
 
     target_chars = [req.char] if req.char else list(missing_map.keys())
@@ -305,6 +325,8 @@ async def api_fill_missing(req: FillMissingRequest) -> Dict[str, Any]:
             censor=req.censor,
             censor_style=censor_style,
             censor_targets=censor_targets,
+            auto_qc=auto_qc,
+            strict_censor_qc=strict_censor_qc,
         )
         global_job_manager.enqueue_job(params, label=f"누락채우기 {char_pfx} ({len(codes)}종)")
 
@@ -312,6 +334,8 @@ async def api_fill_missing(req: FillMissingRequest) -> Dict[str, Any]:
         "success": True,
         "tasks_queued": tasks_queued,
         "jobs_submitted": jobs_submitted,
+        "auto_qc": auto_qc,
+        "strict_censor_qc": strict_censor_qc,
         "message": f"총 {tasks_queued}개의 누락 포즈 생성이 대기열({jobs_submitted}건)에 안전하게 등록되었습니다.",
     }
 

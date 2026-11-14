@@ -56,6 +56,22 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
         cdir = assets_dir / char
         if not cdir.is_dir():
             continue
+
+        manifest_qc_map: Dict[str, Dict[str, Any]] = {}
+        manifest_path = cdir / "_batch_manifest.json"
+        if manifest_path.is_file():
+            try:
+                m_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                for m_item in m_data.get("items", []):
+                    m_code = str(m_item.get("code", "")).strip()
+                    if m_code:
+                        manifest_qc_map[m_code] = {
+                            "qc_passed": m_item.get("qc_passed", True),
+                            "qc_reason": m_item.get("qc_reason"),
+                        }
+            except Exception:
+                pass
+
         for f in sorted(cdir.rglob("*.webp")):
             if "_origin" in f.parts or "_censored" in f.name or "_trash" in f.parts:
                 continue
@@ -69,6 +85,7 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
             mtime = f.stat().st_mtime
             is_newly_generated = mtime >= today_start
             is_recent_mod = mtime >= recent_start
+            qc_meta = manifest_qc_map.get(code, {})
 
             items.append({
                 "char": char,
@@ -81,6 +98,8 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
                 "is_recent": is_recent_mod,
                 "is_new": is_newly_generated,
                 "mtime": mtime,
+                "qc_passed": qc_meta.get("qc_passed", True),
+                "qc_reason": qc_meta.get("qc_reason"),
             })
 
     from plepa_engine.services.asset_service import default_asset_service
@@ -386,7 +405,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             const item = filteredItems[currentIndex];
             counter.innerText = (currentIndex + 1) + ' / ' + total;
             title.innerText = '#' + item.code + ' ' + (item.label || item.filename);
-            subtitle.innerText = item.char_name + ' (' + item.char + ')';
+            subtitle.innerText = item.char_name + ' (' + item.char + ')' + (item.qc_passed === false ? ' ⚠️ ' + (item.qc_reason || 'QC 경고') : '');
             
             mainImg.style.opacity = '0.4';
             mainImg.src = item.url;
@@ -571,7 +590,8 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                         roster: rawData.roster,
                         reuse_seed: false,
                         censor_style: opts.censor_style,
-                        censor_targets: opts.censor_targets
+                        censor_targets: opts.censor_targets,
+                        auto_qc: true
                     }})
                 }});
             }} catch (err) {{
@@ -597,7 +617,8 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                     body: JSON.stringify({{
                         roster: rawData.roster,
                         censor_style: opts.censor_style,
-                        censor_targets: opts.censor_targets
+                        censor_targets: opts.censor_targets,
+                        auto_qc: true
                     }})
                 }});
                 const data = await res.json();

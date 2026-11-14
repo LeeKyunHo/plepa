@@ -450,6 +450,11 @@ def generate_inspection_html(
     color: #fff;
     border-color: #34d399;
   }}
+  .reroll-badge-btn.qc-warn {{
+    background: #d97706;
+    color: #fff;
+    border-color: #fbbf24;
+  }}
   .reroll-badge-btn.failed {{
     background: #dc2626;
     color: #fff;
@@ -1033,8 +1038,15 @@ def generate_inspection_html(
             btn.disabled = true;
           }} else if (job.status === 'done' && activeTrackedJobs.has(jobId)) {{
             activeTrackedJobs.delete(jobId);
-            btn.innerHTML = '✅ 완료!';
-            btn.className = 'reroll-badge-btn done';
+            const hasQcWarn = job.qc_passed === false;
+            if (hasQcWarn) {{
+              btn.innerHTML = '⚠️ QC경고';
+              btn.title = job.qc_reason || 'Auto-QC 기준 미달';
+              btn.className = 'reroll-badge-btn qc-warn';
+            }} else {{
+              btn.innerHTML = '✅ 완료!';
+              btn.className = 'reroll-badge-btn done';
+            }}
 
             // 이미지 즉시 리로드 (캐시버스팅)
             const cleanRel = job.file_path.replace(/^\\/?inspect\\//, '').replace(/^\\//, '');
@@ -1042,13 +1054,18 @@ def generate_inspection_html(
             document.querySelectorAll(`img[src*="${{cleanRel}}"]`).forEach(img => {{
               img.src = cleanRel + '?t=' + t;
             }});
-            showToast(`🎉 [#${{job.pose_code}}] 새 이미지 리롤 생성 완료!`);
+            if (hasQcWarn) {{
+              showToast(`⚠️ [#${{job.pose_code}}] QC경고 (${{job.qc_reason || '기준 미달'}})`);
+            }} else {{
+              showToast(`🎉 [#${{job.pose_code}}] 새 이미지 리롤 생성 완료!`);
+            }}
 
             setTimeout(() => {{
               btn.innerHTML = '🎲 리롤';
+              btn.title = '새로운 무작위 시드로 리롤';
               btn.className = 'reroll-badge-btn';
               btn.disabled = false;
-            }}, 3000);
+            }}, hasQcWarn ? 4500 : 3000);
           }} else if (job.status === 'failed' && activeTrackedJobs.has(jobId)) {{
             activeTrackedJobs.delete(jobId);
             btn.innerHTML = '❌ 실패';
