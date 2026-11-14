@@ -282,36 +282,24 @@ def test_manga_bar_and_manga_glow_diagonal_masking():
     assert out_glow.getpixel((265, 100)) == (180, 180, 180)
 
 
-def test_lineart_barrier_prevents_thigh_bleed_and_preserves_base(monkeypatch):
-    """2D 선화 장벽이 동일 피부톤 허벅지 번짐을 차단하고 낭심 하단까지 깔끔히 덮는지 검증합니다."""
+def test_adr86_restoration_and_hand_negative_points(monkeypatch):
+    """ADR-86 내측 8% 수축 기준선 복원, 반실사 음영 비파편화, 겹친 손(detect_hands) 네거티브 포인트 주입을 검증합니다."""
+    import imgutils.detect as img_detect
     import plepa_engine.censor as censor
 
-    skin_color = (245, 200, 180)
-    line_color = (15, 15, 15)
+    # 테스트 중 custom YOLO-seg가 개입하지 않도록 모델 미존재 상태로 격리
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: None)
+
+    skin_color = (238, 188, 168)
     img = Image.new("RGB", (400, 400), skin_color)
     draw = ImageDraw.Draw(img)
+    # 반실사 물광/음영 패턴을 중앙부에 그려도 C5 선화 장벽이 동작하지 않으므로 구멍 없이 덮여야 함
+    draw.rectangle([185, 130, 215, 270], fill=(255, 250, 245), outline=(85, 45, 35), width=2)
+    draw.line([(195, 140), (195, 260)], fill=(255, 255, 255), width=3)
 
-    # 닫힌 2D 먹선 윤곽(두께 3px): 위쪽 기둥(x=180..220, y=102..240) + 아래쪽 낭심(154..246, 222..306)
-    draw.rectangle([178, 102, 222, 250], fill=skin_color, outline=line_color, width=3)
-    draw.ellipse([154, 224, 246, 308], fill=skin_color, outline=line_color, width=3)
-    # 기둥과 낭심 내부 연결부 먹선만 피부색으로 열어 단일 폐곡선 형성
-    draw.rectangle([181, 222, 219, 255], fill=skin_color)
+    bbox = (140, 100, 260, 300)  # bw=120, bh=200 -> 8% inset => ex1=149, ey1=116, ex2=251, ey2=284
+    captured_calls = []
 
-    bbox = (110, 90, 290, 320)
-
-    # 1) _clamp_mask_by_lineart_and_base 직접 검증: 허벅지까지 번진 전체 1 마스크 전달
-    roi_rgb = np.array(img.crop(bbox), dtype=np.uint8)
-    roi_skin = censor.get_skin_mask(roi_rgb)
-    wide_sam = np.full((bbox[3] - bbox[1], bbox[2] - bbox[0]), 255, dtype=np.uint8)
-    clamped = censor._clamp_mask_by_lineart_and_base(wide_sam, roi_rgb, roi_skin, scale=0.5)
-
-    # 기둥 내부(200-110=90, 150-90=60) 및 낭심 내부(90, 180)는 보존, 선화 바깥 허벅지(15, 60)는 차단
-    assert clamped[60, 90] == 255
-    assert clamped[180, 90] == 255
-    assert clamped[60, 15] == 0
-    assert clamped[60, 165] == 0
-
-    # 2) apply_silhouette 통합 검증: MobileSAM이 ROI 전체를 잡았다고 가정해도 선화 바깥 허벅지 비침범
     class _FakeMaskData:
         def __init__(self, arr):
             self._arr = arr
@@ -326,19 +314,153 @@ def test_lineart_barrier_prevents_thigh_bleed_and_preserves_base(monkeypatch):
         def __init__(self, w, h):
             self.masks = type("_M", (), {"data": _FakeMaskData(np.ones((1, h, w), dtype=np.float32))})()
 
-    monkeypatch.setattr(censor, "get_sam_model", lambda: (lambda crop_pil, **kw: [_FakeRes(crop_pil.width, crop_pil.height)]))
+    def _fake_sam(crop_pil, **kw):
+        captured_calls.append(dict(kw))
+        return [_FakeRes(crop_pil.width, crop_pil.height)]
 
-    out = apply_silhouette(img, [(bbox, "penis", 0.92)], color="white")
-    # 기둥 중앙 및 낭심 내부는 순백색 검열
-    assert out.getpixel((200, 160)) == (255, 255, 255)
-    assert out.getpixel((200, 270)) == (255, 255, 255)
-    # 기존 8% 수축 시 잘리던 낭심 하단부(295) 근처도 보호되어 검열 유지
-    assert min(out.getpixel((200, 294))) >= 245
-    # 선화 바깥쪽 동일 피부톤 허벅지 영역은 침범 없이 원본 유지
-    assert out.getpixel((125, 160)) == skin_color
-    assert out.getpixel((275, 160)) == skin_color
-    assert out.getpixel((125, 265)) == skin_color
-    assert out.getpixel((275, 265)) == skin_color
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _fake_sam)
+    monkeypatch.setattr(img_detect, "detect_faces", lambda *a, **kw: [])
+    # 겹치는 손 BBox (중심 230, 200) + 겹치지 않는 원거리 손 BBox (중심 20, 20)
+    monkeypatch.setattr(
+        img_detect,
+        "detect_hands",
+        lambda *a, **kw: [
+            ((200, 170, 260, 230), "hand", 0.92),
+            ((10, 10, 30, 30), "hand", 0.98),
+        ],
+    )
+
+    out = apply_silhouette(img, [(bbox, "penis", 0.94)], color="white")
+
+    # 1) 중앙 물광/음영 영역이 C5 구멍 없이 순백색으로 매끈히 덮임
+    assert out.getpixel((200, 200)) == (255, 255, 255)
+    # 2) ADR-86 8% 내측 수축으로 BBox 최외곽 경계부(143, 200)는 허벅지 보호(원본 색 유지)
+    assert out.getpixel((142, 200)) == skin_color
+    assert out.getpixel((258, 200)) == skin_color
+    # 3) SAM에 겹친 손 중심점(negative label=0)이 주입되었고, 원거리 손(20, 20)은 제외됨
+    assert len(captured_calls) >= 1
+    first_call = captured_calls[0]
+    lb = first_call["bboxes"][0]
+    pts = first_call["points"][0]
+    lbls = first_call["labels"][0]
+    assert lbls[0] == 1 and 0 in lbls
+    # local_bbox = [ex1-rx1, ey1-ry1, ...], ex1=149 => rx1 = ex1 - lb[0]
+    rx1 = 149 - lb[0]
+    ry1 = 116 - lb[1]
+    assert [230 - rx1, 200 - ry1] in pts
+    neg_idx = pts.index([230 - rx1, 200 - ry1])
+    assert lbls[neg_idx] == 0
+    assert [20 - rx1, 20 - ry1] not in pts
+
+
+def test_custom_yolo_seg_priority_and_train_dry_run(tmp_path, monkeypatch):
+    """전용 YOLO-seg 모델 우선 폴리곤 추론·미탐지 시 폴백·원클릭 학습 스크립트를 검증합니다."""
+    from pathlib import Path
+    import sys
+    import types
+    import plepa_engine.censor as censor
+    from scripts.train_censor_seg import main as train_main
+
+    censor.unload_censor_models()
+    dummy_weight = tmp_path / "models" / "censor_seg.pt"
+    dummy_weight.parent.mkdir(parents=True, exist_ok=True)
+    dummy_weight.write_bytes(b"dummy_weights")
+    monkeypatch.setenv("PLEPA_CENSOR_SEG_MODEL", str(dummy_weight))
+
+    # 삼각형 폴리곤 마스크를 반환하는 모조 YOLO-seg
+    triangle_poly = np.array([[180.0, 140.0], [230.0, 260.0], [150.0, 260.0]], dtype=np.float32)
+    seg_mode = {"empty": False}
+
+    class _FakeSegModel:
+        def __call__(self, img_rgb, conf=0.16, verbose=False):
+            if seg_mode["empty"]:
+                return [types.SimpleNamespace(masks=None, boxes=None, names={0: "penis"})]
+            res_masks = types.SimpleNamespace(xy=[triangle_poly])
+            res_boxes = types.SimpleNamespace(
+                xyxy=np.array([[150.0, 140.0, 230.0, 260.0]], dtype=np.float32),
+                conf=np.array([0.93], dtype=np.float32),
+                cls=np.array([0], dtype=np.float32),
+            )
+            return [types.SimpleNamespace(masks=res_masks, boxes=res_boxes, names={0: "penis"})]
+
+    fake_ultra = types.ModuleType("ultralytics")
+    fake_ultra.YOLO = lambda path: _FakeSegModel()
+    monkeypatch.setitem(sys.modules, "ultralytics", fake_ultra)
+
+    # MobileSAM이나 기본 검출기가 절대 호출되지 않아야 함
+    monkeypatch.setattr(censor, "get_sam_model", lambda: (_ for _ in ()).throw(AssertionError("SAM called")))
+    fallback_called = {"count": 0}
+
+    def _fake_fallback_detect(*args, **kwargs):
+        fallback_called["count"] += 1
+        return []
+
+    monkeypatch.setattr(censor, "_detect_target_candidates", _fake_fallback_detect)
+
+    try:
+        base_img = Image.new("RGB", (400, 400), (220, 175, 155))
+        out_img, count = censor.censor_image(base_img, style="white_silhouette")
+        assert count == 1
+        assert fallback_called["count"] == 0
+        # 폴리곤 내부 픽셀(185, 220)은 순백색, 외부(80, 80)는 원본 유지
+        assert out_img.getpixel((185, 220)) == (255, 255, 255)
+        assert out_img.getpixel((80, 80)) == (220, 175, 155)
+
+        # 전용 모델이 0건 탐지하면 기존 검출기 폴백 호출
+        seg_mode["empty"] = True
+        out_empty, count_empty = censor.censor_image(base_img, style="white_silhouette")
+        assert count_empty == 0
+        assert fallback_called["count"] == 1
+    finally:
+        censor.unload_censor_models()
+
+    # train_censor_seg --dry-run 및 모조 학습/가중치 배포 검증
+    gt_dir = tmp_path / "gt"
+    proj_dir = tmp_path / "proj"
+    orig_dir = proj_dir / "campus" / "assets" / "aya_origin" / "02_h_scenes"
+    orig_dir.mkdir(parents=True, exist_ok=True)
+    gt_dir.mkdir(parents=True, exist_ok=True)
+
+    orig = Image.new("RGB", (320, 320), (235, 190, 170))
+    gt = orig.copy()
+    ImageDraw.Draw(gt).rectangle([120, 100, 200, 220], fill=(255, 255, 255))
+    orig.save(orig_dir / "aya_086_정상위강.webp", "WEBP")
+    gt.save(gt_dir / "aya_086_정상위강.webp", "WEBP")
+
+    ds_dir = tmp_path / "seg_ds"
+    run_dir = tmp_path / "seg_runs"
+    out_weights = tmp_path / "deployed" / "censor_seg.pt"
+
+    assert train_main([
+        "--gt-dir", str(gt_dir),
+        "--projects-dir", str(proj_dir),
+        "--dataset-dir", str(ds_dir),
+        "--out-weights", str(out_weights),
+        "--run-dir", str(run_dir),
+        "--dry-run",
+    ]) == 0
+
+    class _FakeTrainYOLO:
+        def __init__(self, model_name):
+            self.model_name = model_name
+
+        def train(self, **kwargs):
+            weights_dir = Path(kwargs["project"]) / kwargs["name"] / "weights"
+            weights_dir.mkdir(parents=True, exist_ok=True)
+            (weights_dir / "best.pt").write_bytes(b"trained_best_weights")
+            return types.SimpleNamespace(save_dir=str(Path(kwargs["project"]) / kwargs["name"]))
+
+    fake_ultra.YOLO = _FakeTrainYOLO
+    assert train_main([
+        "--gt-dir", str(gt_dir),
+        "--projects-dir", str(proj_dir),
+        "--dataset-dir", str(ds_dir),
+        "--out-weights", str(out_weights),
+        "--run-dir", str(run_dir),
+        "--epochs", "5",
+    ]) == 0
+    assert out_weights.is_file()
+    assert out_weights.read_bytes() == b"trained_best_weights"
 
 
 def test_extract_yolo_seg_polygons_from_diff(tmp_path):

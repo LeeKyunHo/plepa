@@ -34,9 +34,11 @@ try:
 except ImportError:
     HAS_IMGUTILS = False
 
-# MobileSAM 모델 싱글톤 (Lazy Load, Thread-Safe)
+# MobileSAM 및 커스텀 YOLO-seg 모델 싱글톤 (Lazy Load, Thread-Safe)
 _SAM_MODEL = None
 _SAM_MODEL_LOCK = threading.Lock()
+_CENSOR_SEG_MODEL = None
+_CENSOR_SEG_LOCK = threading.Lock()
 _BASE_RESOLUTION = 832.0
 
 
@@ -98,11 +100,104 @@ def get_sam_model():
     return _SAM_MODEL if _SAM_MODEL is not False else None
 
 
+def get_custom_censor_seg_model():
+    """전용 YOLO-seg 검열 가중치(`PLEPA_CENSOR_SEG_MODEL` 또는 `models/censor_seg.pt`)를 싱글톤 로드합니다."""
+    global _CENSOR_SEG_MODEL
+    env_override = os.environ.get("PLEPA_CENSOR_SEG_MODEL", "").strip()
+    if _CENSOR_SEG_MODEL is not None and not env_override:
+        return _CENSOR_SEG_MODEL if _CENSOR_SEG_MODEL is not False else None
+
+    with _CENSOR_SEG_LOCK:
+        from plepa_engine.config import ROOT_DIR
+
+        model_path = Path(env_override) if env_override else (ROOT_DIR / "models" / "censor_seg.pt")
+        if not model_path.exists() or not model_path.is_file():
+            return None
+
+        if _CENSOR_SEG_MODEL is None or _CENSOR_SEG_MODEL is False or env_override:
+            try:
+                from ultralytics import YOLO
+
+                _CENSOR_SEG_MODEL = YOLO(str(model_path))
+                logger.info(f"[Censor] 전용 YOLO-seg 모델 로드 완료 ({model_path})")
+            except Exception as e:
+                logger.warning(f"[Censor] 전용 YOLO-seg 로드 실패, MobileSAM 모드로 폴백합니다: {e}")
+                _CENSOR_SEG_MODEL = False
+    return _CENSOR_SEG_MODEL if _CENSOR_SEG_MODEL is not False else None
+
+
+def _infer_custom_censor_seg(
+    img_rgb: Image.Image,
+    seg_model: Any,
+    min_confidence: float = 0.16,
+) -> Tuple[List[Tuple[Tuple[int, int, int, int], str, float]], Optional[np.ndarray]]:
+    """전용 YOLO-seg 모델로 성기 BBox 목록과 `cv2.fillPoly` 기반 이진 세그멘테이션 마스크를 추출합니다."""
+    if seg_model is None:
+        return [], None
+
+    w, h = img_rgb.size
+    mask = np.zeros((h, w), dtype=np.uint8)
+    boxes_out: List[Tuple[Tuple[int, int, int, int], str, float]] = []
+
+    try:
+        with _CENSOR_SEG_LOCK:
+            results = seg_model(img_rgb, conf=float(min_confidence), verbose=False)
+        if not results:
+            return [], None
+
+        res0 = results[0]
+        res_masks = getattr(res0, "masks", None)
+        res_boxes = getattr(res0, "boxes", None)
+        names = getattr(res0, "names", None) or {}
+        polys = getattr(res_masks, "xy", None) if res_masks is not None else None
+        if polys is None or len(polys) == 0:
+            return [], None
+
+        xyxy_arr = None
+        conf_arr = None
+        cls_arr = None
+        if res_boxes is not None:
+            if getattr(res_boxes, "xyxy", None) is not None:
+                xyxy_arr = res_boxes.xyxy.cpu().numpy() if hasattr(res_boxes.xyxy, "cpu") else np.asarray(res_boxes.xyxy)
+            if getattr(res_boxes, "conf", None) is not None:
+                conf_arr = res_boxes.conf.cpu().numpy() if hasattr(res_boxes.conf, "cpu") else np.asarray(res_boxes.conf)
+            if getattr(res_boxes, "cls", None) is not None:
+                cls_arr = res_boxes.cls.cpu().numpy() if hasattr(res_boxes.cls, "cpu") else np.asarray(res_boxes.cls)
+
+        for idx, poly in enumerate(polys):
+            poly_pts = np.round(np.asarray(poly, dtype=np.float32)).astype(np.int32)
+            if poly_pts.ndim != 2 or len(poly_pts) < 3:
+                continue
+            cv2.fillPoly(mask, [poly_pts], 255)
+
+            if xyxy_arr is not None and idx < len(xyxy_arr):
+                b = xyxy_arr[idx]
+                box = (int(b[0]), int(b[1]), int(b[2]), int(b[3]))
+            else:
+                xs, ys = poly_pts[:, 0], poly_pts[:, 1]
+                box = (int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max()))
+
+            score = float(conf_arr[idx]) if (conf_arr is not None and idx < len(conf_arr)) else 0.90
+            cls_id = int(cls_arr[idx]) if (cls_arr is not None and idx < len(cls_arr)) else 0
+            raw_name = names.get(cls_id, "penis") if isinstance(names, dict) else "penis"
+            label = "penis" if str(raw_name).lower() in ("genital", "penis", "0", "") else str(raw_name).lower()
+            boxes_out.append((box, label, score))
+
+        if np.count_nonzero(mask) == 0 or not boxes_out:
+            return [], None
+        return boxes_out, mask
+    except Exception as e:
+        logger.warning(f"[Censor] 전용 YOLO-seg 추론 예외, 기본 파이프라인으로 폴백합니다: {e}")
+        return [], None
+
+
 def unload_censor_models() -> None:
-    """로드된 MobileSAM 싱글톤 및 GPU VRAM 캐시를 안전하게 해제합니다."""
-    global _SAM_MODEL
+    """로드된 MobileSAM 및 전용 YOLO-seg 싱글톤과 GPU VRAM 캐시를 안전하게 해제합니다."""
+    global _SAM_MODEL, _CENSOR_SEG_MODEL
     with _SAM_MODEL_LOCK:
         _SAM_MODEL = None
+    with _CENSOR_SEG_LOCK:
+        _CENSOR_SEG_MODEL = None
     gc.collect()
     try:
         import torch
@@ -265,21 +360,18 @@ def apply_silhouette(
     color: Union[str, Tuple[int, int, int]] = "black",
     skin_np: Optional[np.ndarray] = None,
     pose_cat: Optional[str] = None,
+    custom_seg_mask: Optional[np.ndarray] = None,
 ) -> Image.Image:
     """
     네모난 박스가 아니라 타겟과 기저부의 실제 선화 외곽선(Contour)을 따라
     내부만 솔리드 컬러(블랙 #000000 또는 화이트 #FFFFFF)로 매끈하게 채우는 실루엣 검열을 렌더링합니다.
-    - 다중 피부 포인트 프롬프트 + 얼굴 중심 네거티브 프롬프트 기반 MobileSAM ROI 크롭 정밀 세그멘테이션.
-    - 구강/측면 구도에서 입가 직각 파임이나 허공 타원 팽창을 원천 차단.
+    - 전용 YOLO-seg 가중치(`models/censor_seg.pt`)가 활성화된 경우 폴리곤 마스크(`cv2.fillPoly`)를 우선 사용합니다.
+    - 미존재/미탐지 시 ADR-86 기준선(내측 8% 수축 + 손/얼굴 네거티브 가려짐 보호 + MobileSAM ROI 크롭)으로 폴백합니다.
     """
     rgb_img, alpha_ch = _split_rgb_and_alpha(img)
     w, h = rgb_img.size
     scale = _compute_scale_factor(w, h)
     img_np = np.array(rgb_img)
-    final_mask = np.zeros((h, w), dtype=np.uint8)
-    eff_skin_np = skin_np if skin_np is not None else get_skin_mask(img_np)
-
-    sam = get_sam_model()
 
     # 0. 눈/이마(Upper Face 38%) 보호 마스크 및 얼굴 중심 네거티브 포인트 추출:
     #    - 입이나 뺨을 직각으로 파내지 않도록 오직 눈·이마(상단 38%)만 소프트 보호
@@ -303,6 +395,56 @@ def apply_silhouette(
     except Exception as pe:
         logger.debug(f"[Censor] 보호 영역 검출 생략: {pe}")
 
+    # 전용 YOLO-seg 마스크 직접 렌더링 경로 (전달된 마스크 또는 활성화된 모델 추론)
+    active_seg_mask = custom_seg_mask
+    if active_seg_mask is None and boxes_with_labels:
+        seg_model = get_custom_censor_seg_model()
+        if seg_model is not None:
+            _, active_seg_mask = _infer_custom_censor_seg(rgb_img, seg_model)
+
+    if active_seg_mask is not None and np.count_nonzero(active_seg_mask) > 0:
+        seg_bin = (active_seg_mask > 0).astype(np.uint8) * 255
+        if seg_bin.shape != (h, w):
+            seg_bin = cv2.resize(seg_bin, (w, h), interpolation=cv2.INTER_NEAREST)
+
+        kc_seg = _odd_kernel(5, scale, minimum=3)
+        k_close_seg = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kc_seg, kc_seg))
+        seg_bin = cv2.morphologyEx(seg_bin, cv2.MORPH_CLOSE, k_close_seg)
+
+        if np.count_nonzero(protection_mask) > 0:
+            seg_bin = cv2.bitwise_and(seg_bin, cv2.bitwise_not(protection_mask))
+
+        if np.count_nonzero(seg_bin) == 0:
+            return img
+
+        kf_seg = _odd_kernel(5, scale, minimum=3)
+        blurred_seg = cv2.GaussianBlur(seg_bin, (kf_seg, kf_seg), 1.2 * scale)
+        if isinstance(color, str):
+            color_rgb = (255, 255, 255) if color.lower() in ("white", "whiteout", "white_silhouette") else (12, 12, 16)
+        else:
+            color_rgb = color
+
+        alpha = (blurred_seg.astype(np.float32) / 255.0)[:, :, np.newaxis]
+        target_layer = np.full_like(img_np, color_rgb, dtype=np.float32)
+        blended = (1.0 - alpha) * img_np.astype(np.float32) + alpha * target_layer
+        blended = np.clip(blended, 0, 255).astype(np.uint8)
+        return _restore_alpha(Image.fromarray(blended), alpha_ch)
+
+    # 손 가려짐(Occlusion) 네거티브 포인트 검출 (독립 try 블록으로 detect_faces와 격리)
+    detected_hand_boxes: List[Tuple[int, int, int, int]] = []
+    try:
+        from imgutils.detect import detect_hands
+        detected_hands = detect_hands(rgb_img, conf_threshold=0.55)
+        for h_item in detected_hands:
+            hbox = h_item[0] if isinstance(h_item, (tuple, list)) and len(h_item) >= 3 else h_item
+            if isinstance(hbox, (tuple, list)) and len(hbox) >= 4:
+                detected_hand_boxes.append((int(hbox[0]), int(hbox[1]), int(hbox[2]), int(hbox[3])))
+    except Exception as he:
+        logger.debug(f"[Censor] 손 영역 검출 생략: {he}")
+
+    final_mask = np.zeros((h, w), dtype=np.uint8)
+    eff_skin_np = skin_np if skin_np is not None else get_skin_mask(img_np)
+    sam = get_sam_model()
     asym_thresh = 1.15 if pose_cat in ("fellatio", "paizuri") else 1.35
 
     for item in boxes_with_labels:
@@ -311,26 +453,13 @@ def apply_silhouette(
         bw = max(1, x2 - x1)
         bh = max(1, y2 - y1)
 
-        # Phase C5: 선화 장벽이 허벅지 번짐을 막아주므로 내측 수축을 8% -> 2% 수준으로 완화하고
-        # _estimate_penis_axis_and_base()로 추정된 낭심(Base) 방향 끝단은 수축하지 않도록 보호
-        geom = _estimate_penis_axis_and_base(
-            img_np, (x1, y1, x2, y2), skin_np=eff_skin_np, pose_cat=pose_cat
-        )
-        bx_g, by_g = geom["base_center"]
-        cx_g, cy_g = geom["center"]
-        dx_b, dy_b = bx_g - cx_g, by_g - cy_g
-
-        base_in_x = max(0, int(round(bw * 0.02)))
-        base_in_y = max(0, int(round(bh * 0.02)))
-        in_left = 0 if dx_b < -bw * 0.10 else base_in_x
-        in_right = 0 if dx_b > bw * 0.10 else base_in_x
-        in_top = 0 if dy_b < -bh * 0.10 else base_in_y
-        in_bottom = 0 if dy_b > bh * 0.10 else base_in_y
-
-        ex1 = max(0, x1 + in_left)
-        ey1 = max(0, y1 + in_top)
-        ex2 = min(w, x2 - in_right)
-        ey2 = min(h, y2 - in_bottom)
+        # ADR-86 기준선: BBox 내측 8% 수축으로 주변 허벅지·손가락 여백 침범 방어
+        inset_x = int(bw * 0.08)
+        inset_y = int(bh * 0.08)
+        ex1 = max(0, x1 + inset_x)
+        ey1 = max(0, y1 + inset_y)
+        ex2 = min(w, x2 - inset_x)
+        ey2 = min(h, y2 - inset_y)
         if ex2 <= ex1 or ey2 <= ey1:
             ex1, ey1, ex2, ey2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
 
@@ -373,6 +502,9 @@ def apply_silhouette(
 
                 pos_pts: List[List[int]] = []
                 local_neg_pts: List[List[int]] = list(face_neg_pts)
+                for hx1, hy1, hx2, hy2 in detected_hand_boxes:
+                    if max(x1, hx1) < min(x2, hx2) and max(y1, hy1) < min(y2, hy2):
+                        local_neg_pts.append([int((hx1 + hx2) / 2), int((hy1 + hy2) / 2)])
 
                 top_ys, top_xs = np.where(top_skin)
                 if len(top_xs) >= 10:
@@ -407,7 +539,7 @@ def apply_silhouette(
 
                 sam_union = np.zeros((h, w), dtype=np.uint8)
                 crop_mask = np.zeros((h, w), dtype=np.uint8)
-                rad = max(_scale_int(4, scale, 3), int(min(ebw, ebh) * 0.18))
+                rad = max(_scale_int(4, scale, 3), int(min(ebw, ebh) * 0.40))
                 sub_c = np.zeros((ebh, ebw), dtype=np.uint8)
                 if ebw > rad * 2 and ebh > rad * 2:
                     cv2.rectangle(sub_c, (rad, 0), (ebw - rad, ebh), 255, -1)
@@ -472,57 +604,49 @@ def apply_silhouette(
                     sam_union = np.clip(sam_union.astype(np.float32) * void_weight, 0, 255).astype(np.uint8)
                     _, sam_union = cv2.threshold(sam_union, 127, 255, cv2.THRESH_BINARY)
 
-                # BBox 내부 엄격 클리핑 + 2D 선화 장벽(Line-Art Barrier) 기반 허벅지·배경 번짐 차단
+                # BBox 내부 엄격 클리핑 및 ADR-86 기준선(3x3 침식) 적용
                 sam_union = cv2.bitwise_and(sam_union, crop_mask)
-                roi_clamped = _clamp_mask_by_lineart_and_base(
-                    sam_union[ey1:ey2, ex1:ex2],
-                    roi_rgb,
-                    eff_skin_np[ey1:ey2, ex1:ex2],
-                    scale,
-                    pose_cat=pose_cat,
-                )
-                sam_union[ey1:ey2, ex1:ex2] = roi_clamped
+                ke = _odd_kernel(3, scale, minimum=3)
+                k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ke, ke))
+                sam_union = cv2.erode(sam_union, k_erode, iterations=1)
 
                 contours, _ = cv2.findContours(sam_union, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 if contours:
                     max_area = max(cv2.contourArea(c) for c in contours)
-                    min_cnt_area = max(_scale_int(60, scale * scale, minimum=25), max_area * 0.12)
+                    min_cnt_area = max(_scale_int(60, scale * scale, minimum=25), max_area * 0.15)
                     for c in contours:
                         if cv2.contourArea(c) >= min_cnt_area:
                             cv2.drawContours(sub_m, [c], -1, 255, -1)
-                    if np.count_nonzero(sub_m) >= (bw * bh * 0.04):
+                    if np.count_nonzero(sub_m) >= (bw * bh * 0.08):
                         sam_succeeded = True
             except Exception as e:
                 logger.warning(f"[Censor] MobileSAM fallback: {e}")
 
-        # MobileSAM이 실패한 경우에만 솔리드 타원 캡슐로 폴백 (+ 선화 장벽 클램핑 동일 적용)
+        # MobileSAM이 실패한 경우에만 ADR-86 슬림 타원 캡슐로 폴백
         if not sam_succeeded:
             bcx = int((ex1 + ex2) / 2)
             bcy = int((ey1 + ey2) / 2)
-            erx = min(int(w * 0.14), max(_scale_int(4, scale, 3), int(ebw * 0.44)))
-            ery = min(int(h * 0.18), max(_scale_int(4, scale, 3), int(ebh * 0.48)))
+            erx = min(int(w * 0.12), max(_scale_int(4, scale, 3), int(ebw * 0.40)))
+            ery = min(int(h * 0.16), max(_scale_int(4, scale, 3), int(ebh * 0.46)))
             cv2.ellipse(sub_m, (bcx, bcy), (erx, ery), 0, 0, 360, 255, -1)
-            sub_m[ey1:ey2, ex1:ex2] = _clamp_mask_by_lineart_and_base(
-                sub_m[ey1:ey2, ex1:ex2],
-                img_np[ey1:ey2, ex1:ex2],
-                eff_skin_np[ey1:ey2, ex1:ex2],
-                scale,
-                pose_cat=pose_cat,
-            )
 
         final_mask = np.maximum(final_mask, sub_m)
 
     if np.count_nonzero(final_mask) == 0:
         return img
 
-    # 5. 모폴로지 닫힘 + 경계 스무딩으로 선화 내부 빈틈을 메우고 깔끔한 망가풍 실루엣 완성
+    # 5. ADR-86 기준선: 3x3 미세 침식 + 5x5 모폴로지 닫힘 + 경계 스무딩
+    ke_f = _odd_kernel(3, scale, minimum=3)
+    kernel_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ke_f, ke_f))
+    eroded = cv2.erode(final_mask, kernel_erode, iterations=1)
+
     kc = _odd_kernel(5, scale, minimum=3)
     kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kc, kc))
-    closed = cv2.morphologyEx(final_mask, cv2.MORPH_CLOSE, kernel_close)
+    closed = cv2.morphologyEx(eroded, cv2.MORPH_CLOSE, kernel_close)
 
-    ks = _odd_kernel(3, scale, minimum=3)
-    smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 0.9 * scale)
-    _, smoothed = cv2.threshold(smooth_blur, 127, 255, cv2.THRESH_BINARY)
+    ks = _odd_kernel(5, scale, minimum=3)
+    smooth_blur = cv2.GaussianBlur(closed, (ks, ks), 1.2 * scale)
+    _, smoothed = cv2.threshold(smooth_blur, 140, 255, cv2.THRESH_BINARY)
 
     # 얼굴 상단(눈/이마 38%) 보호 레이어 차감
     if np.count_nonzero(protection_mask) > 0:
@@ -531,9 +655,9 @@ def apply_silhouette(
     if np.count_nonzero(smoothed) == 0:
         return img
 
-    # 6. 최소 경계 안티에일리어싱 페더링 (1~2px 수준의 깔끔한 망가풍 에지)
-    kf = _odd_kernel(5, scale, minimum=3)
-    blurred = cv2.GaussianBlur(smoothed, (kf, kf), 1.0 * scale)
+    # 6. ADR-86 소프트 에지 페더링 (9x9, sigma 2.5*scale)
+    kf = _odd_kernel(9, scale, minimum=5)
+    blurred = cv2.GaussianBlur(smoothed, (kf, kf), 2.5 * scale)
 
     # 색상 레이어 합성 (블랙 실루엣은 애니메이션 먹선 톤 (12, 12, 16) 적용)
     if isinstance(color, str):
@@ -554,9 +678,17 @@ def apply_black_silhouette(
     boxes_with_labels: Sequence[Tuple[Any, ...]],
     skin_np: Optional[np.ndarray] = None,
     pose_cat: Optional[str] = None,
+    custom_seg_mask: Optional[np.ndarray] = None,
 ) -> Image.Image:
     """블랙 실루엣(#000000) 검열 래퍼 함수."""
-    return apply_silhouette(img, boxes_with_labels, color="black", skin_np=skin_np, pose_cat=pose_cat)
+    return apply_silhouette(
+        img,
+        boxes_with_labels,
+        color="black",
+        skin_np=skin_np,
+        pose_cat=pose_cat,
+        custom_seg_mask=custom_seg_mask,
+    )
 
 
 def apply_white_silhouette(
@@ -564,9 +696,17 @@ def apply_white_silhouette(
     boxes_with_labels: Sequence[Tuple[Any, ...]],
     skin_np: Optional[np.ndarray] = None,
     pose_cat: Optional[str] = None,
+    custom_seg_mask: Optional[np.ndarray] = None,
 ) -> Image.Image:
     """화이트 실루엣(#FFFFFF) 검열 래퍼 함수."""
-    return apply_silhouette(img, boxes_with_labels, color="white", skin_np=skin_np, pose_cat=pose_cat)
+    return apply_silhouette(
+        img,
+        boxes_with_labels,
+        color="white",
+        skin_np=skin_np,
+        pose_cat=pose_cat,
+        custom_seg_mask=custom_seg_mask,
+    )
 
 
 def apply_wide_solid_bar(
@@ -1110,6 +1250,7 @@ def _render_censored_style(
     style: str = "white_silhouette",
     skin_np: Optional[np.ndarray] = None,
     pose_cat: Optional[str] = None,
+    custom_seg_mask: Optional[np.ndarray] = None,
 ) -> Image.Image:
     """검열 스타일명(`style`)에 대응하는 렌더러로 일관되게 라우팅합니다."""
     detected_boxes = [item[0] for item in boxes_with_labels]
@@ -1118,9 +1259,21 @@ def _render_censored_style(
     if style_clean in ("debug", "debug_bbox", "bbox", "bbox_debug"):
         return apply_debug_bbox(img, boxes_with_labels)
     if style_clean in ("white_silhouette", "white", "whiteout"):
-        return apply_white_silhouette(img, boxes_with_labels, skin_np=skin_np, pose_cat=pose_cat)
+        return apply_white_silhouette(
+            img,
+            boxes_with_labels,
+            skin_np=skin_np,
+            pose_cat=pose_cat,
+            custom_seg_mask=custom_seg_mask,
+        )
     if style_clean in ("black_silhouette", "silhouette_black", "black", "silhouette", "contour"):
-        return apply_black_silhouette(img, boxes_with_labels, skin_np=skin_np, pose_cat=pose_cat)
+        return apply_black_silhouette(
+            img,
+            boxes_with_labels,
+            skin_np=skin_np,
+            pose_cat=pose_cat,
+            custom_seg_mask=custom_seg_mask,
+        )
     if style_clean in ("manga_bar", "manga_black_bar", "haetae"):
         return apply_manga_bar(img, detected_boxes, skin_np=skin_np, pose_cat=pose_cat)
     if style_clean in ("manga_glow", "manga_white", "glow_bar"):
@@ -1133,7 +1286,13 @@ def _render_censored_style(
         return apply_shadow_silhouette(img, detected_boxes)
     if style_clean in ("mosaic", "pixel"):
         return apply_mosaic(img, detected_boxes)
-    return apply_white_silhouette(img, boxes_with_labels, skin_np=skin_np, pose_cat=pose_cat)
+    return apply_white_silhouette(
+        img,
+        boxes_with_labels,
+        skin_np=skin_np,
+        pose_cat=pose_cat,
+        custom_seg_mask=custom_seg_mask,
+    )
 
 
 def apply_debug_bbox(
@@ -1693,15 +1852,34 @@ def censor_image(
     pose_cat = get_pose_category(pose_code, roster=roster) if pose_code is not None else None
     skin_check_np = get_skin_mask(np.array(img_rgb))
 
-    detected_boxes_with_labels = _detect_target_candidates(
-        img_rgb,
-        targets=targets,
-        min_confidence=min_confidence,
-        pose_code=pose_code,
-        roster=roster,
-        skin_np=skin_check_np,
-        pose_cat=pose_cat,
-    )
+    # 1순위: 전용 학습 YOLO-seg 가중치(models/censor_seg.pt) 존재 시 MobileSAM을 우회하여 폴리곤 마스크 직결
+    custom_seg_model = get_custom_censor_seg_model()
+    custom_seg_mask: Optional[np.ndarray] = None
+    detected_boxes_with_labels: List[Tuple[Tuple[int, int, int, int], str, float]] = []
+
+    if custom_seg_model is not None:
+        seg_boxes, seg_mask = _infer_custom_censor_seg(
+            img_rgb,
+            custom_seg_model,
+            min_confidence=min_confidence,
+        )
+        norm_targets = _normalize_censor_targets(targets)
+        filtered_seg = [item for item in seg_boxes if item[1] in norm_targets]
+        if filtered_seg and seg_mask is not None and np.count_nonzero(seg_mask) > 0:
+            detected_boxes_with_labels = filtered_seg
+            custom_seg_mask = seg_mask
+
+    # 2순위: 전용 YOLO-seg 미존재 또는 0건 탐지 시 기존 detect_censors + ADR-86 MobileSAM 폴백
+    if not detected_boxes_with_labels:
+        detected_boxes_with_labels = _detect_target_candidates(
+            img_rgb,
+            targets=targets,
+            min_confidence=min_confidence,
+            pose_code=pose_code,
+            roster=roster,
+            skin_np=skin_check_np,
+            pose_cat=pose_cat,
+        )
 
     # 검열 미탐지 시 체위별 안전 앵커 폴백 점검 (기본 False: 신체 오검열 아티팩트 방지)
     if not detected_boxes_with_labels and pose_code is not None and pose_cat:
@@ -1726,6 +1904,7 @@ def censor_image(
         style=style,
         skin_np=skin_check_np,
         pose_cat=pose_cat,
+        custom_seg_mask=custom_seg_mask,
     )
     return _restore_alpha(censored_rgb, alpha_ch), len(detected_boxes_with_labels)
 
