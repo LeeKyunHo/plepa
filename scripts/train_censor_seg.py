@@ -15,7 +15,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
@@ -44,6 +44,12 @@ def _resolve_trained_weights(
     return None
 
 
+def _normalize_kiro_rosters(kiro_rosters: Any) -> Tuple[str, ...]:
+    if isinstance(kiro_rosters, str):
+        return tuple(r.strip() for r in kiro_rosters.split(",") if r.strip())
+    return tuple(str(r).strip() for r in kiro_rosters if str(r).strip())
+
+
 def train_censor_seg(
     gt_dir: Path,
     projects_dir: Path,
@@ -55,16 +61,38 @@ def train_censor_seg(
     batch: int = 8,
     device: Optional[str] = None,
     diff_thresh: int = 18,
+    gt_oversample: int = 4,
+    kiro_projects_dir: Optional[Path] = None,
+    kiro_rosters: Any = ("don", "hey", "man"),
     run_project_dir: Optional[Path] = None,
     run_name: str = "censor_seg_train",
     dry_run: bool = False,
 ) -> int:
     """데이터셋 동기화 후 전용 YOLO-seg 모델을 학습하고 최종 가중치를 배포합니다."""
+    default_kiro_dir = ROOT_DIR.parent / "kiro" / "projects"
+    is_default_projects = projects_dir.resolve() in {
+        (ROOT_DIR / "projects").resolve(),
+        (ROOT_DIR / "output" / "projects").resolve(),
+    }
+    if kiro_projects_dir is None and is_default_projects and default_kiro_dir.is_dir():
+        eff_kiro_dir: Optional[Path] = default_kiro_dir
+    else:
+        eff_kiro_dir = kiro_projects_dir
+
+    eff_projects_dir = (
+        ROOT_DIR / "projects"
+        if is_default_projects and not projects_dir.exists() and (ROOT_DIR / "projects").exists()
+        else projects_dir
+    )
+
     summary: Dict[str, int] = build_yolo_seg_dataset(
         gt_dir=gt_dir,
-        projects_dir=projects_dir,
+        projects_dir=eff_projects_dir,
         out_dir=dataset_dir,
         diff_thresh=diff_thresh,
+        gt_oversample=gt_oversample,
+        kiro_projects_dir=eff_kiro_dir,
+        kiro_rosters=_normalize_kiro_rosters(kiro_rosters),
     )
     images_dir = dataset_dir / "images"
     data_yaml = dataset_dir / "data.yaml"
@@ -77,6 +105,9 @@ def train_censor_seg(
     print(
         f"[Dataset] total_gt={summary.get('total_gt', 0)}, "
         f"matched={summary.get('matched', 0)}, "
+        f"gt_written={summary.get('gt_written', 0)}, "
+        f"kiro_scanned={summary.get('kiro_scanned', 0)}, "
+        f"kiro_processed={summary.get('kiro_processed', 0)}, "
         f"processed={summary.get('processed', 0)}, "
         f"skipped_empty={summary.get('skipped_empty', 0)}, "
         f"ready_images={image_count}"
@@ -149,8 +180,26 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--projects-dir",
         type=Path,
-        default=ROOT_DIR / "output" / "projects",
+        default=ROOT_DIR / "projects",
         help="원본 프로젝트 루트 디렉터리",
+    )
+    parser.add_argument(
+        "--kiro-projects-dir",
+        type=Path,
+        default=None,
+        help="수작업 블랙 실루엣을 추출할 kiro/projects 루트 디렉터리",
+    )
+    parser.add_argument(
+        "--kiro-rosters",
+        type=str,
+        default="don,hey,man",
+        help="kiro에서 스캔할 쉼표 구분 로스터 목록 (기본: don,hey,man)",
+    )
+    parser.add_argument(
+        "--gt-oversample",
+        type=int,
+        default=4,
+        help="ground_truth 원본 쌍 오버샘플링 배수 (기본: 4)",
     )
     parser.add_argument(
         "--dataset-dir",
@@ -200,6 +249,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         batch=args.batch,
         device=args.device,
         diff_thresh=args.diff_thresh,
+        gt_oversample=args.gt_oversample,
+        kiro_projects_dir=args.kiro_projects_dir,
+        kiro_rosters=args.kiro_rosters,
         run_project_dir=args.run_dir,
         run_name=args.run_name,
         dry_run=args.dry_run,
