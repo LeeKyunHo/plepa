@@ -183,6 +183,8 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "choices": {
             "white_silhouette": "화이트 실루엣",
             "black_silhouette": "블랙 실루엣",
+            "manga_bar": "망가 회전 바",
+            "manga_glow": "망가 화이트 글로우",
             "silhouette": "실루엣(기본)",
             "bar": "와이드 솔리드 바",
             "wide_bar": "와이드 바",

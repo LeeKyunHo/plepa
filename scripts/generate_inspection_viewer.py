@@ -781,6 +781,8 @@ def generate_inspection_html(
     <select id="global-censor-style" class="censor-select">
       <option value="white_silhouette" selected>white_silhouette (백색 실루엣)</option>
       <option value="black_silhouette">black_silhouette (흑색 실루엣)</option>
+      <option value="manga_bar">manga_bar (망가 회전 바)</option>
+      <option value="manga_glow">manga_glow (망가 화이트 글로우)</option>
       <option value="mosaic">mosaic (모자이크)</option>
       <option value="bar">bar (검은 바)</option>
       <option value="slim_bar">slim_bar (슬림 바)</option>

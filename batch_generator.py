@@ -230,9 +230,9 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--censor", action="store_true", help="2D 애니 성기 자동 검열 활성화 (무검열 원본은 {char}_origin/에 백업 보존하고 메인 에셋 경로에 검열본 저장)")
     parser.add_argument(
         "--censor-style",
-        choices=["white_silhouette", "black_silhouette", "silhouette", "bar", "wide_bar", "slim_bar", "shadow", "mosaic", "debug_bbox"],
+        choices=["white_silhouette", "black_silhouette", "manga_bar", "manga_glow", "silhouette", "bar", "wide_bar", "slim_bar", "shadow", "mosaic", "debug_bbox"],
         default="white_silhouette",
-        help="검열 시각 스타일 (white_silhouette: 외곽선 화이트 실루엣 [기본값], black_silhouette: 외곽선 블랙 실루엣, bar/wide_bar: 와이드 솔리드 바, slim_bar: 미니멀 슬림 바, shadow: 그림자 실루엣, mosaic: 격자 모자이크, debug_bbox: BBox 및 신뢰도 가시화 진단 모드)"
+        help="검열 시각 스타일 (white_silhouette: 외곽선 화이트 실루엣 [기본값], black_silhouette: 외곽선 블랙 실루엣, manga_bar: 주축 회전 망가 블랙 바, manga_glow: 주축+낭심 망가 화이트 글로우, bar/wide_bar: 와이드 솔리드 바, slim_bar: 미니멀 슬림 바, shadow: 그림자 실루엣, mosaic: 격자 모자이크, debug_bbox: BBox 및 신뢰도 가시화 진단 모드)"
     )
     parser.add_argument(
         "--censor-targets",

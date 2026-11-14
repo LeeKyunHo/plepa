@@ -8,7 +8,7 @@ tests/test_smart_censor.py
 
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from plepa_engine.censor import (
     apply_debug_bbox,
@@ -126,13 +126,13 @@ def test_detect_genitals_pose_code_and_rois(monkeypatch):
 
 
 def test_all_styles_and_verify_heal_respects_style(monkeypatch):
-    """6종 스타일 렌더링(Shadow 소프트 페더링 포함) 및 verify_and_heal_censor 스타일 존중 검증."""
+    """8종 스타일 렌더링(Shadow/Manga 포함) 및 verify_and_heal_censor 스타일 존중 검증."""
     import plepa_engine.censor as censor
 
     base = Image.new("RGB", (400, 400), (245, 200, 180))
     boxes = [((120, 140, 260, 280), "penis", 0.90)]
 
-    for st in ("white_silhouette", "black_silhouette", "bar", "slim_bar", "shadow", "mosaic"):
+    for st in ("white_silhouette", "black_silhouette", "manga_bar", "manga_glow", "bar", "slim_bar", "shadow", "mosaic"):
         rendered = censor._render_censored_style(base, boxes, style=st)
         assert rendered.size == (400, 400)
         assert not np.array_equal(np.array(rendered), np.array(base))
@@ -143,7 +143,7 @@ def test_all_styles_and_verify_heal_respects_style(monkeypatch):
     center_px = shadow_img.getpixel((190, 210))
     assert corner_px[0] > center_px[0] + 50
 
-    # verify_and_heal_censor(style="bar")가 블랙 실루엣이 아닌 와이드 솔리드 바(#000000)로 보정하는지 검증
+    # verify_and_heal_censor(style="bar" / "manga_bar" / "manga_glow") 스타일 존중 검증
     monkeypatch.setattr(censor, "HAS_IMGUTILS", True)
     monkeypatch.setattr(
         censor,
@@ -153,6 +153,14 @@ def test_all_styles_and_verify_heal_respects_style(monkeypatch):
     healed, was_healed = verify_and_heal_censor(base, style="bar")
     assert was_healed is True
     assert healed.getpixel((190, 200)) == (0, 0, 0)
+
+    healed_mb, was_healed_mb = verify_and_heal_censor(base, style="manga_bar")
+    assert was_healed_mb is True
+    assert healed_mb.getpixel((190, 200)) == (0, 0, 0)
+
+    healed_mg, was_healed_mg = verify_and_heal_censor(base, style="manga_glow")
+    assert was_healed_mg is True
+    assert healed_mg.getpixel((190, 200)) == (255, 255, 255)
 
 
 def test_rgba_preservation_and_scale_helpers(tmp_path, monkeypatch):
@@ -201,4 +209,76 @@ def test_unload_censor_models_and_sam_lock(monkeypatch):
     out = apply_silhouette(img, [((100, 120, 180, 220), "penis", 0.9)], color="black")
     assert out.size == (300, 300)
     assert np.mean(np.array(out)[150:190, 120:160]) < 100
+
+
+def _make_diagonal_target_image(bg_color=(255, 255, 255), fg_color=(240, 185, 165)):
+    """45도 대각선 기둥 + 우하단 낭심 팽대부 합성 테스트 이미지를 생성합니다."""
+    img = Image.new("RGB", (400, 400), bg_color)
+    draw = ImageDraw.Draw(img)
+    # 얇은 기둥: (125, 125) -> (230, 230)
+    draw.line([(125, 125), (230, 230)], fill=fg_color, width=22)
+    draw.ellipse([114, 114, 136, 136], fill=fg_color)
+    # 넓은 낭심(Base): (225, 225) 주변 원형/타원형 팽대부 (폭 ~66px)
+    draw.ellipse([192, 192, 258, 258], fill=fg_color)
+    return img
+
+
+def test_estimate_penis_axis_and_base_diagonal_and_oral():
+    """대각선 주축 각도(PCA), 양 끝단 30% 폭 기반 낭심 위치 추정 및 구강 씬·폴백 동작을 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = _make_diagonal_target_image()
+    img_np = np.array(img)
+    bbox = (90, 90, 280, 280)
+
+    geom = censor._estimate_penis_axis_and_base(img_np, bbox)
+    assert geom["fallback"] is False
+    # 45도(-135도) 대각선 주축 정렬 검증
+    mod_angle = geom["angle"] % 180.0
+    assert abs(mod_angle - 45.0) < 12.0
+
+    # 낭심(Base)은 더 넓은 우하단 (225, 225) 쪽에 가까워야 함
+    bx, by = geom["base_center"]
+    dist_to_base = ((bx - 225.0) ** 2 + (by - 225.0) ** 2) ** 0.5
+    dist_to_tip = ((bx - 125.0) ** 2 + (by - 125.0) ** 2) ** 0.5
+    assert dist_to_base < dist_to_tip
+
+    # 구강 씬(fellatio)에서는 얼굴/입에서 먼 하단 끝점을 Base로 고정
+    geom_oral = censor._estimate_penis_axis_and_base(img_np, bbox, pose_cat="fellatio")
+    assert geom_oral["base_center"][1] > 180.0
+
+    # 배경과 동일한 평탄 이미지(픽셀 구분 불가)에서는 BBox 종횡비 폴백 작동
+    flat_np = np.full((300, 300, 3), 245, dtype=np.uint8)
+    geom_fb = censor._estimate_penis_axis_and_base(flat_np, (50, 100, 250, 180))
+    assert geom_fb["fallback"] is True
+    assert geom_fb["major_len"] > geom_fb["minor_len"]
+
+
+def test_manga_bar_and_manga_glow_diagonal_masking():
+    """manga_bar와 manga_glow가 대각선 기둥+낭심만 깔끔히 덮고 비대상 여백을 침범하지 않는지 검증합니다."""
+    import plepa_engine.censor as censor
+
+    bbox = (90, 90, 280, 280)
+    boxes = [(bbox, "penis", 0.92)]
+
+    # 1) manga_bar 검증: 흰 배경 위 대각선 피부 영역에 회전 바 적용
+    img_bar = _make_diagonal_target_image(bg_color=(255, 255, 255), fg_color=(240, 185, 165))
+    out_bar = censor._render_censored_style(img_bar, boxes, style="manga_bar")
+    # 기둥 중심(170, 170) 및 낭심 중심(225, 225)은 순수 검은색 (0, 0, 0)
+    assert out_bar.getpixel((170, 170)) == (0, 0, 0)
+    assert out_bar.getpixel((225, 225)) == (0, 0, 0)
+    # 대각선과 무관한 BBox 내부 반대편 여백 코너는 침범 없이 원본(255, 255, 255) 유지
+    assert out_bar.getpixel((100, 265)) == (255, 255, 255)
+    assert out_bar.getpixel((265, 100)) == (255, 255, 255)
+
+    # 2) manga_glow 검증: 회색 배경 위 대각선 피부 영역에 화이트 글로우 적용
+    img_glow = _make_diagonal_target_image(bg_color=(180, 180, 180), fg_color=(240, 185, 165))
+    out_glow = censor._render_censored_style(img_glow, boxes, style="manga_glow")
+    # 기둥 중심(170, 170) 및 낭심 중심(225, 225) 코어는 불투명 순백색 (255, 255, 255)
+    assert out_glow.getpixel((170, 170)) == (255, 255, 255)
+    assert out_glow.getpixel((225, 225)) == (255, 255, 255)
+    # 먼 여백 코너는 원 배경색 유지
+    assert out_glow.getpixel((100, 265)) == (180, 180, 180)
+    assert out_glow.getpixel((265, 100)) == (180, 180, 180)
+
 

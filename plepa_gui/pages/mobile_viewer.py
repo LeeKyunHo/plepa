@@ -262,6 +262,8 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                     <select id="censorStyleSelect" class="censor-select-mini" title="즉시 재검열 및 리롤 스타일">
                         <option value="white_silhouette" selected>white_silhouette</option>
                         <option value="black_silhouette">black_silhouette</option>
+                        <option value="manga_bar">manga_bar</option>
+                        <option value="manga_glow">manga_glow</option>
                         <option value="mosaic">mosaic</option>
                         <option value="bar">bar</option>
                         <option value="slim_bar">slim_bar</option>

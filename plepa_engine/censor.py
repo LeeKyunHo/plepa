@@ -602,6 +602,362 @@ def apply_mosaic(
     return _restore_alpha(out, alpha_ch)
 
 
+def _normalize_censor_boxes(boxes: Sequence[Any]) -> List[Tuple[int, int, int, int]]:
+    """단순 4-튜플 BBox 또는 `(bbox, label, conf)` 시퀀스를 `(x1, y1, x2, y2)` 리스트로 정규화합니다."""
+    normalized: List[Tuple[int, int, int, int]] = []
+    for item in boxes:
+        raw = item[0] if isinstance(item, (list, tuple)) and item and isinstance(item[0], (list, tuple)) else item
+        normalized.append((int(raw[0]), int(raw[1]), int(raw[2]), int(raw[3])))
+    return normalized
+
+
+def _to_rgb_ndarray(img_or_np: Union[Image.Image, np.ndarray]) -> np.ndarray:
+    """PIL Image 또는 NumPy 배열을 RGB uint8 `(H, W, 3)` 배열로 변환합니다."""
+    if isinstance(img_or_np, np.ndarray):
+        if img_or_np.ndim == 2:
+            return cv2.cvtColor(img_or_np, cv2.COLOR_GRAY2RGB)
+        if img_or_np.shape[2] == 4:
+            return img_or_np[:, :, :3]
+        return img_or_np
+    return np.array(img_or_np.convert("RGB"), dtype=np.uint8)
+
+
+def _extract_roi_foreground_mask(roi_rgb: np.ndarray, roi_skin: Optional[np.ndarray]) -> np.ndarray:
+    """ROI 내부의 피부 또는 배경 대비 전경 픽셀 마스크(`bool`)를 추출합니다."""
+    rh, rw = roi_rgb.shape[:2]
+    area = max(1, rh * rw)
+    min_px = max(16, int(area * 0.03))
+
+    skin_bool = (roi_skin > 0) if roi_skin is not None else (get_skin_mask(roi_rgb) > 0)
+    skin_count = int(np.count_nonzero(skin_bool))
+
+    if min_px <= skin_count <= int(area * 0.80):
+        return skin_bool
+
+    border_samples = np.concatenate(
+        [roi_rgb[0, :], roi_rgb[-1, :], roi_rgb[:, 0], roi_rgb[:, -1]],
+        axis=0,
+    ).astype(np.float32)
+    border_bg = np.median(border_samples, axis=0)
+    dist = np.linalg.norm(roi_rgb.astype(np.float32) - border_bg, axis=2)
+    max_dist = float(dist.max()) if dist.size else 0.0
+    if max_dist > 16.0:
+        contrast_bool = dist > max(18.0, max_dist * 0.35)
+        contrast_count = int(np.count_nonzero(contrast_bool))
+        if min_px <= contrast_count <= int(area * 0.82):
+            return contrast_bool
+
+    if skin_count >= min_px:
+        return skin_bool
+    return np.zeros((rh, rw), dtype=bool)
+
+
+def _bbox_fallback_geometry(
+    x1: int, y1: int, x2: int, y2: int, pose_cat: Optional[str] = None
+) -> Dict[str, Any]:
+    """픽셀 부족 또는 등방성 ROI에 대한 BBox 종횡비 기반 기하 폴백을 생성합니다."""
+    bw = max(1.0, float(x2 - x1))
+    bh = max(1.0, float(y2 - y1))
+    cx = (x1 + x2) / 2.0
+    cy = (y1 + y2) / 2.0
+    if bw >= bh:
+        ux, uy = 1.0, 0.0
+        major_len = bw * 0.84
+        minor_len = bh * 0.56
+    else:
+        ux, uy = 0.0, -1.0  # 아래(Base) -> 위(Tip)
+        major_len = bh * 0.84
+        minor_len = bw * 0.56
+
+    if pose_cat and any(k in str(pose_cat).lower() for k in ("fellatio", "deepthroat", "oral", "blowjob", "irrumatio")):
+        if abs(uy) < 0.25:
+            ux, uy = 1.0, 0.0
+        elif uy > 0:
+            ux, uy = -ux, -uy
+
+    half_len = major_len * 0.5
+    base_t = -half_len * 0.65
+    ry = max(4.0, minor_len * 0.425)
+    rx = max(ry * 0.85, major_len * 0.20)
+    return {
+        "center": (cx, cy),
+        "axis": (ux, uy),
+        "angle": math.degrees(math.atan2(uy, ux)),
+        "major_len": major_len,
+        "minor_len": minor_len,
+        "shaft_width": minor_len * 0.72,
+        "shaft_start": (cx - ux * half_len, cy - uy * half_len),
+        "shaft_end": (cx + ux * half_len, cy + uy * half_len),
+        "base_center": (cx + ux * base_t, cy + uy * base_t),
+        "base_radii": (rx, ry),
+        "fallback": True,
+    }
+
+
+def _slice_cross_width(n_vals: np.ndarray, mask: np.ndarray, default_val: float) -> float:
+    """주축 구간 슬라이스 내부의 수직 폭(`P98 - P2`)을 계산합니다."""
+    if int(np.count_nonzero(mask)) < 4:
+        return default_val
+    vals = n_vals[mask]
+    return max(2.0, float(np.percentile(vals, 98.0) - np.percentile(vals, 2.0)))
+
+
+def _estimate_penis_axis_and_base(
+    img_np_or_rgb: Union[Image.Image, np.ndarray],
+    bbox: Tuple[int, int, int, int],
+    skin_np: Optional[np.ndarray] = None,
+    pose_cat: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    BBox 내부 전경 마스크의 PCA 주축(기울기 각도)과 양 끝단 단면 폭(30% 슬라이스)을 비교해
+    기둥 방향과 낭심(Base Bulb) 위치·반경을 추정합니다.
+    """
+    img_np = _to_rgb_ndarray(img_np_or_rgb)
+    h_img, w_img = img_np.shape[:2]
+    x1 = max(0, min(w_img - 1, int(bbox[0])))
+    y1 = max(0, min(h_img - 1, int(bbox[1])))
+    x2 = max(x1 + 1, min(w_img, int(bbox[2])))
+    y2 = max(y1 + 1, min(h_img, int(bbox[3])))
+
+    roi_rgb = img_np[y1:y2, x1:x2]
+    roi_skin = skin_np[y1:y2, x1:x2] if skin_np is not None else None
+    fg_mask = _extract_roi_foreground_mask(roi_rgb, roi_skin)
+    ys, xs = np.nonzero(fg_mask)
+    roi_area = max(1, (x2 - x1) * (y2 - y1))
+
+    if len(xs) < 16 or len(xs) > int(roi_area * 0.88):
+        return _bbox_fallback_geometry(x1, y1, x2, y2, pose_cat=pose_cat)
+
+    pts = np.column_stack([xs.astype(np.float64) + x1, ys.astype(np.float64) + y1])
+    mean = pts.mean(axis=0)
+    centered = pts - mean
+    cov = np.cov(centered, rowvar=False)
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    lambda_minor = float(max(eigvals[0], 1e-6))
+    lambda_major = float(max(eigvals[1], 1e-6))
+
+    bw, bh = float(x2 - x1), float(y2 - y1)
+    bbox_elongated = max(bw, bh) / max(1.0, min(bw, bh)) >= 1.35
+    if (lambda_major / lambda_minor) < 1.25 and not bbox_elongated:
+        return _bbox_fallback_geometry(x1, y1, x2, y2, pose_cat=pose_cat)
+
+    u = eigvecs[:, 1].astype(np.float64)
+    v = np.array([-u[1], u[0]], dtype=np.float64)
+    t_vals = centered @ u
+    n_vals = centered @ v
+
+    t_min = float(np.percentile(t_vals, 1.0))
+    t_max = float(np.percentile(t_vals, 99.0))
+    span = max(6.0, t_max - t_min)
+
+    neg_mask = t_vals <= (t_min + 0.30 * span)
+    pos_mask = t_vals >= (t_max - 0.30 * span)
+    mid_mask = (t_vals >= (t_min + 0.32 * span)) & (t_vals <= (t_max - 0.32 * span))
+
+    fallback_w = max(4.0, float(np.percentile(n_vals, 95.0) - np.percentile(n_vals, 5.0)))
+    width_neg = _slice_cross_width(n_vals, neg_mask, fallback_w)
+    width_pos = _slice_cross_width(n_vals, pos_mask, fallback_w)
+    shaft_width = _slice_cross_width(n_vals, mid_mask, min(width_neg, width_pos))
+
+    # 양 끝단 중 더 넓은 쪽을 낭심(Base)으로 선택; 구강 씬에서는 입/얼굴에서 먼 쪽(하단 우선)을 우선 고정
+    is_oral = bool(
+        pose_cat
+        and any(k in str(pose_cat).lower() for k in ("fellatio", "deepthroat", "oral", "blowjob", "irrumatio"))
+    )
+    end_neg_pt = mean + u * (t_min + 0.16 * span)
+    end_pos_pt = mean + u * (t_max - 0.16 * span)
+    if is_oral and abs(float(end_neg_pt[1] - end_pos_pt[1])) > 0.15 * span:
+        base_is_pos = float(end_pos_pt[1]) >= float(end_neg_pt[1])
+    else:
+        base_is_pos = width_pos > width_neg
+
+    if base_is_pos:
+        u = -u
+        t_min, t_max = -t_max, -t_min
+        base_width = width_pos
+    else:
+        base_width = width_neg
+
+    # Base는 항상 t_min 쪽에 위치 (u는 Base -> Tip 방향)
+    ux, uy = float(u[0]), float(u[1])
+    cx, cy = float(mean[0]), float(mean[1])
+    overall_minor = max(shaft_width, base_width, fallback_w)
+    overall_minor = min(overall_minor, max(bw, bh) * 0.95)
+
+    base_t = t_min + 0.18 * span
+    bx = cx + ux * base_t
+    by = cy + uy * base_t
+
+    ry = max(4.0, max(overall_minor * 0.85, base_width * 0.92) * 0.50)
+    rx = max(ry * 0.82, span * 0.20)
+    return {
+        "center": (cx, cy),
+        "axis": (ux, uy),
+        "angle": math.degrees(math.atan2(uy, ux)),
+        "major_len": span,
+        "minor_len": overall_minor,
+        "shaft_width": max(4.0, shaft_width),
+        "shaft_start": (cx + ux * t_min, cy + uy * t_min),
+        "shaft_end": (cx + ux * t_max, cy + uy * t_max),
+        "base_center": (bx, by),
+        "base_radii": (rx, ry),
+        "fallback": False,
+    }
+
+
+def _rotated_rect_points(
+    center: Tuple[float, float],
+    axis: Tuple[float, float],
+    length_along: float,
+    thickness_perp: float,
+) -> np.ndarray:
+    """중심·방향벡터(`axis`)·길이·두께로부터 회전 직사각형 4꼭짓점(`int32`)을 계산합니다."""
+    cx, cy = center
+    ux, uy = axis
+    vx, vy = -uy, ux
+    hl = max(1.0, length_along * 0.5)
+    ht = max(1.0, thickness_perp * 0.5)
+    return np.array(
+        [
+            [cx - ux * hl - vx * ht, cy - uy * hl - vy * ht],
+            [cx + ux * hl - vx * ht, cy + uy * hl - vy * ht],
+            [cx + ux * hl + vx * ht, cy + uy * hl + vy * ht],
+            [cx - ux * hl + vx * ht, cy - uy * hl + vy * ht],
+        ],
+        dtype=np.int32,
+    )
+
+
+def apply_manga_bar(
+    img: Image.Image,
+    boxes: Sequence[Any],
+    skin_np: Optional[np.ndarray] = None,
+    pose_cat: Optional[str] = None,
+) -> Image.Image:
+    """
+    주축 회전 각도와 낭심(Base) 기하 구조를 따라 기둥 코어 바 및 낭심 크로스 바를 배치하는
+    정통 망가식 검은 바(`manga_bar`) 검열을 렌더링합니다.
+    """
+    rgb_img, alpha_ch = _split_rgb_and_alpha(img)
+    norm_boxes = _normalize_censor_boxes(boxes)
+    if not norm_boxes:
+        return _restore_alpha(rgb_img.copy(), alpha_ch)
+
+    img_np = np.array(rgb_img, dtype=np.uint8)
+    h_img, w_img = img_np.shape[:2]
+    skin_mask = skin_np if skin_np is not None else get_skin_mask(img_np)
+    scale = _compute_scale_factor(w_img, h_img)
+    min_bar_w = _scale_int(10, scale, minimum=5)
+
+    mask = np.zeros((h_img, w_img), dtype=np.uint8)
+    for (x1, y1, x2, y2) in norm_boxes:
+        geom = _estimate_penis_axis_and_base(img_np, (x1, y1, x2, y2), skin_np=skin_mask, pose_cat=pose_cat)
+        sx0, sy0 = geom["shaft_start"]
+        sx1, sy1 = geom["shaft_end"]
+        mid_shaft = ((sx0 + sx1) * 0.5, (sy0 + sy1) * 0.5)
+        axis = geom["axis"]
+        major_len = geom["major_len"]
+        minor_len = geom["minor_len"]
+        shaft_w = geom["shaft_width"]
+        rx, ry = geom["base_radii"]
+
+        box_mask = np.zeros((h_img, w_img), dtype=np.uint8)
+        shaft_thick = max(float(min_bar_w), min(minor_len * 0.72, max(shaft_w * 0.85, minor_len * 0.42)))
+        shaft_poly = _rotated_rect_points(mid_shaft, axis, major_len * 0.94, shaft_thick)
+        cv2.fillConvexPoly(box_mask, shaft_poly, 255)
+
+        base_len = max(float(min_bar_w) * 1.3, rx * 1.55)
+        base_thick = max(float(min_bar_w) * 1.3, min(minor_len * 0.95, ry * 1.90))
+        base_poly = _rotated_rect_points(geom["base_center"], axis, base_len, base_thick)
+        cv2.fillConvexPoly(box_mask, base_poly, 255)
+
+        pad = max(4, int(max(x2 - x1, y2 - y1) * 0.08))
+        cx1, cy1 = max(0, x1 - pad), max(0, y1 - pad)
+        cx2, cy2 = min(w_img, x2 + pad), min(h_img, y2 + pad)
+        mask[cy1:cy2, cx1:cx2] = np.maximum(mask[cy1:cy2, cx1:cx2], box_mask[cy1:cy2, cx1:cx2])
+
+    out_np = img_np.copy()
+    out_np[mask > 0] = (0, 0, 0)
+    return _restore_alpha(Image.fromarray(out_np, mode="RGB"), alpha_ch)
+
+
+def apply_manga_glow(
+    img: Image.Image,
+    boxes: Sequence[Any],
+    skin_np: Optional[np.ndarray] = None,
+    pose_cat: Optional[str] = None,
+) -> Image.Image:
+    """
+    회전된 슬림 기둥 캡슐과 낭심 보호 타원을 결합한 뒤, 코어는 불투명 순백색(255)으로 유지하고
+    외곽만 부드럽게 발광·페더링하는 정통 망가식 화이트 글로우(`manga_glow`) 검열을 적용합니다.
+    """
+    rgb_img, alpha_ch = _split_rgb_and_alpha(img)
+    norm_boxes = _normalize_censor_boxes(boxes)
+    if not norm_boxes:
+        return _restore_alpha(rgb_img.copy(), alpha_ch)
+
+    img_np = np.array(rgb_img, dtype=np.uint8)
+    h_img, w_img = img_np.shape[:2]
+    skin_mask = skin_np if skin_np is not None else get_skin_mask(img_np)
+    scale = _compute_scale_factor(w_img, h_img)
+    min_cap_w = _scale_int(10, scale, minimum=5)
+    fk = _odd_kernel(13, scale, minimum=5)
+
+    alpha_total = np.zeros((h_img, w_img), dtype=np.float32)
+    for (x1, y1, x2, y2) in norm_boxes:
+        geom = _estimate_penis_axis_and_base(img_np, (x1, y1, x2, y2), skin_np=skin_mask, pose_cat=pose_cat)
+        p0 = (int(round(geom["shaft_start"][0])), int(round(geom["shaft_start"][1])))
+        p1 = (int(round(geom["shaft_end"][0])), int(round(geom["shaft_end"][1])))
+        bc = (int(round(geom["base_center"][0])), int(round(geom["base_center"][1])))
+        rx, ry = geom["base_radii"]
+        minor_len = geom["minor_len"]
+        shaft_w = geom["shaft_width"]
+        angle = float(geom["angle"])
+
+        outer_w = max(min_cap_w, int(round(min(minor_len * 0.72, max(shaft_w * 0.90, minor_len * 0.48)))))
+        core_w = max(3, int(round(outer_w * 0.72)))
+
+        outer_mask = np.zeros((h_img, w_img), dtype=np.uint8)
+        cv2.line(outer_mask, p0, p1, 255, thickness=outer_w)
+        cv2.ellipse(
+            outer_mask,
+            bc,
+            (max(3, int(round(rx * 0.95))), max(3, int(round(ry * 0.95)))),
+            angle,
+            0,
+            360,
+            255,
+            -1,
+        )
+
+        core_mask = np.zeros((h_img, w_img), dtype=np.uint8)
+        cv2.line(core_mask, p0, p1, 255, thickness=core_w)
+        cv2.ellipse(
+            core_mask,
+            bc,
+            (max(2, int(round(rx * 0.74))), max(2, int(round(ry * 0.74)))),
+            angle,
+            0,
+            360,
+            255,
+            -1,
+        )
+
+        sigma = max(1.8, min(float(x2 - x1), float(y2 - y1)) * 0.055)
+        blurred = cv2.GaussianBlur(outer_mask, (fk, fk), sigma)
+        box_alpha = np.maximum(blurred.astype(np.float32) / 255.0, (core_mask > 0).astype(np.float32))
+
+        pad = max(6, int(max(x2 - x1, y2 - y1) * 0.14))
+        cx1, cy1 = max(0, x1 - pad), max(0, y1 - pad)
+        cx2, cy2 = min(w_img, x2 + pad), min(h_img, y2 + pad)
+        alpha_total[cy1:cy2, cx1:cx2] = np.maximum(alpha_total[cy1:cy2, cx1:cx2], box_alpha[cy1:cy2, cx1:cx2])
+
+    alpha_3 = alpha_total[:, :, np.newaxis]
+    blended = img_np.astype(np.float32) * (1.0 - alpha_3) + 255.0 * alpha_3
+    out_np = np.clip(blended, 0, 255).astype(np.uint8)
+    return _restore_alpha(Image.fromarray(out_np, mode="RGB"), alpha_ch)
+
+
 def _render_censored_style(
     img: Image.Image,
     boxes_with_labels: Sequence[Tuple[Any, ...]],
@@ -619,6 +975,10 @@ def _render_censored_style(
         return apply_white_silhouette(img, boxes_with_labels, skin_np=skin_np, pose_cat=pose_cat)
     if style_clean in ("black_silhouette", "silhouette_black", "black", "silhouette", "contour"):
         return apply_black_silhouette(img, boxes_with_labels, skin_np=skin_np, pose_cat=pose_cat)
+    if style_clean in ("manga_bar", "manga_black_bar", "haetae"):
+        return apply_manga_bar(img, detected_boxes, skin_np=skin_np, pose_cat=pose_cat)
+    if style_clean in ("manga_glow", "manga_white", "glow_bar"):
+        return apply_manga_glow(img, detected_boxes, skin_np=skin_np, pose_cat=pose_cat)
     if style_clean in ("bar", "wide_bar", "solid_bar", "black_bar", "pill_bar"):
         return apply_wide_solid_bar(img, detected_boxes)
     if style_clean in ("slim_bar", "thin_bar"):
