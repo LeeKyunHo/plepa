@@ -344,6 +344,8 @@ def test_viewers_render_recensor_controls_and_censor_options(monkeypatch, tmp_pa
     assert "reapplyCensor(" in static_html
     assert "debug_bbox" in static_html
     assert "censor_style: censorOpts.censor_style" in static_html
+    assert "⚠️ QC경고" in static_html
+    assert "job.qc_passed === false" in static_html
 
     # 2. 8080 모바일 뷰어 HTML
     monkeypatch.setattr(
@@ -376,3 +378,118 @@ def test_viewers_render_recensor_controls_and_censor_options(monkeypatch, tmp_pa
     assert "/api/assets/reapply-censor" in mob_html
     assert "/api/assets/restore-origin" in mob_html
     assert "getPlepaAuthHeaders(" in mob_html
+
+
+def test_8085_reroll_qc_warning_exposed_in_queue_status(monkeypatch, tmp_path):
+    """8085 리롤 잡에서 qc_passed=False 발생 시 /api/reroll_queue_status에 경고 메타데이터 노출 검증."""
+    monkeypatch.setattr(sbm, "ACCESS_TOKEN", "bench-token-8085")
+    monkeypatch.setattr(sbm, "INSPECT_BATCH", tmp_path / "inspect")
+    monkeypatch.setattr(sbm, "PROJECTS_DIR", tmp_path / "projects")
+    monkeypatch.setattr(sbm.default_character_service, "list_rosters", lambda: ["campus"])
+    monkeypatch.setattr(sbm.reroll_queue_mgr, "jobs", {})
+    monkeypatch.setattr(sbm.reroll_queue_mgr, "start_worker", lambda: None)
+
+    rel = "aya/02_h_scenes/aya_064_smile.webp"
+    _write_webp(sbm.INSPECT_BATCH / rel, (30, 30, 30))
+    _write_webp(sbm.PROJECTS_DIR / "campus" / "assets" / rel, (30, 30, 30))
+
+    client = TestClient(sbm.app)
+    r_q = client.post(
+        "/api/reroll_queue",
+        headers={"X-Plepa-Token": "bench-token-8085"},
+        json={
+            "file_path": rel,
+            "char_code": "aya",
+            "pose_code": "064",
+            "strict_censor_qc": True,
+            "auto_qc": True,
+        },
+    )
+    assert r_q.status_code == 200
+    job_id = r_q.json()["job"]["job_id"]
+    job_obj = sbm.reroll_queue_mgr.jobs[job_id]
+    assert job_obj.strict_censor_qc is True
+    assert job_obj.auto_qc is True
+
+    generated_src = _write_webp(tmp_path / "comfy_qc_warn.webp", (80, 80, 80))
+
+    class _DummyGenSvc:
+        def __init__(self):
+            self.pose_bg_svc = SimpleNamespace(cache={})
+
+        def run_batch(self, params, quiet=True):
+            assert params.strict_censor_qc is True
+            assert params.auto_qc is True
+            return [
+                SimpleNamespace(
+                    success=True,
+                    image_path=str(generated_src),
+                    error_message=None,
+                    qc_passed=False,
+                    qc_reason="필수 성인 씬 성기 미탐지(구도 불량)",
+                )
+            ]
+
+    monkeypatch.setattr(gen_svc_mod, "GenerationService", _DummyGenSvc)
+    monkeypatch.setattr(
+        censor_mod,
+        "censor_image",
+        lambda image, **kw: (Image.new("RGB", image.size, (10, 20, 30)), 0),
+    )
+
+    ok, seed, err = sbm._execute_reroll_job(job_obj)
+    assert ok is True and err is None and seed is not None
+    job_obj.status = "done"
+    job_obj.new_seed = seed
+
+    r_status = client.get("/api/reroll_queue_status", headers={"X-Plepa-Token": "bench-token-8085"})
+    assert r_status.status_code == 200
+    job_status = r_status.json()["data"]["jobs"][job_id]
+    assert job_status["qc_passed"] is False
+    assert job_status["qc_reason"] == "필수 성인 씬 성기 미탐지(구도 불량)"
+
+
+def test_8080_reroll_and_fill_missing_inherit_config_qc(monkeypatch):
+    """8080 /api/assets/reroll 및 /fill-missing의 auto_qc/strict_censor_qc config 상속 및 명시 오버라이드 검증."""
+    monkeypatch.delenv("PLEPA_MOBILE_TOKEN", raising=False)
+    monkeypatch.setattr(
+        api_routes_mod.default_config_service,
+        "get_config",
+        lambda: {"auto_qc": True, "strict_censor_qc": True, "censor_style": "mosaic", "censor_targets": "penis"},
+    )
+    monkeypatch.setattr(
+        api_routes_mod.default_asset_service,
+        "get_missing_poses_by_character",
+        lambda roster: {"aya": ["064"]},
+    )
+
+    enqueued = []
+    monkeypatch.setattr(
+        api_routes_mod.global_job_manager,
+        "enqueue_job",
+        lambda params, label="": (enqueued.append(params) or True, len(enqueued)),
+    )
+
+    app = FastAPI()
+    app.include_router(api_routes_mod.api_router)
+    client = TestClient(app)
+
+    # 1. 미지정 시 Config 상속 (auto_qc=True, strict_censor_qc=True)
+    r1 = client.post("/api/assets/reroll", json={"char": "aya", "code": "064", "roster": "campus"})
+    assert r1.status_code == 200
+    assert r1.json()["auto_qc"] is True
+    assert r1.json()["strict_censor_qc"] is True
+    assert enqueued[-1].strict_censor_qc is True
+    assert enqueued[-1].auto_qc is True
+
+    # 2. 명시적 오버라이드 (strict_censor_qc=False)
+    r2 = client.post(
+        "/api/assets/fill-missing",
+        json={"roster": "campus", "char": "aya", "strict_censor_qc": False, "auto_qc": False},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["strict_censor_qc"] is False
+    assert r2.json()["auto_qc"] is False
+    assert enqueued[-1].strict_censor_qc is False
+    assert enqueued[-1].auto_qc is False
+

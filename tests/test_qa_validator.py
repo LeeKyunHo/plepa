@@ -238,5 +238,170 @@ class TestQAValidator(unittest.TestCase):
             self.assertIn("화각 드리프트", reason)
             self.assertLess(metrics["face_height_ratio"], 0.08)
 
+    def test_manifest_qc_failed_auto_retry_on_overwrite_false(self):
+        """_batch_manifest.json에 qc_passed=False 기록 시 overwrite=False여도 자동 재시도 복구 검증."""
+        import json
+        from contextlib import nullcontext
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        import plepa_engine.services.generation_service as gs_mod
+        from plepa_engine.models import CharacterConfig, PoseEntry
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            projects_dir = tmp_root / "projects"
+            asset_dir = projects_dir / "campus" / "assets" / "tst" / "01_normal"
+            asset_dir.mkdir(parents=True, exist_ok=True)
+            (asset_dir / "tst_000_평상.webp").write_bytes(b"old-ok")
+            (asset_dir / "tst_001_미소.webp").write_bytes(b"old-defect")
+
+            manifest_path = projects_dir / "campus" / "assets" / "tst" / "_batch_manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "prefix": "tst",
+                        "items": [
+                            {"code": "000", "label": "평상", "qc_passed": True, "qc_reason": None},
+                            {"code": "001", "label": "미소", "qc_passed": False, "qc_reason": "손 증식"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            char_cfg = CharacterConfig.from_dict(
+                {"prefix": "tst", "name": "테스트", "appearance": {"face_and_hair": "a", "physique": "b", "outfit": "c"}}
+            )
+            pose_db = {
+                "000": PoseEntry(code="000", label="평상", section="emotions", prompt="1girl, solo"),
+                "001": PoseEntry(code="001", label="미소", section="emotions", prompt="1girl, solo, smile"),
+            }
+
+            generated_codes = []
+
+            class _FakeClient:
+                def check_connection(self):
+                    return True
+
+                def session(self):
+                    return nullcontext()
+
+                def generate_image(self, workflow, output_path, **kw):
+                    generated_codes.append(output_path.name)
+                    Image.new("RGB", (64, 64), (180, 180, 180)).save(output_path, "WEBP")
+
+            svc = gs_mod.GenerationService(
+                character_svc=SimpleNamespace(resolve_characters=lambda *a, **kw: [(char_cfg, "campus")]),
+                pose_svc=SimpleNamespace(
+                    load_pose_db=lambda **kw: pose_db,
+                    resolve_pose_codes=lambda expr, db, **kw: [c.strip() for c in expr.split(",")],
+                    is_pose_allowed_for_character=lambda *a, **kw: True,
+                ),
+                bg_svc=SimpleNamespace(get_preset=lambda *a, **kw: "bedroom"),
+                asset_svc=SimpleNamespace(find_reference_image=lambda *a, **kw: None),
+                pose_bg_svc=SimpleNamespace(get_background_for_pose=lambda *a, **kw: "default"),
+            )
+
+            with patch.object(gs_mod, "PROJECTS_DIR", projects_dir), \
+                 patch.object(gs_mod, "ComfyClient", return_value=_FakeClient()), \
+                 patch.object(gs_mod, "validate_generated_image", return_value=(True, "", {})):
+                results = svc.run_batch(
+                    gs_mod.GenerationParams(
+                        character_expr="tst",
+                        pose_expr="000,001",
+                        roster="campus",
+                        overwrite=False,
+                        censor=False,
+                        auto_qc=True,
+                        no_ref=True,
+                    ),
+                    quiet=True,
+                )
+
+            self.assertEqual(len(generated_codes), 1)
+            self.assertIn("001", generated_codes[0])
+            self.assertTrue(all(r.qc_passed for r in results))
+            updated = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated["qc_defect_count"], 0)
+
+    def test_strict_censor_qc_runs_independently_when_censor_false(self):
+        """censor=False + strict_censor_qc=True 조합에서 detect_genitals Strict QC 리롤 작동 검증."""
+        from contextlib import nullcontext
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        import plepa_engine.censor as censor_mod
+        import plepa_engine.services.generation_service as gs_mod
+        from plepa_engine.models import CharacterConfig, PoseEntry
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            projects_dir = Path(tmp_dir) / "projects"
+            char_cfg = CharacterConfig.from_dict(
+                {"prefix": "tst", "name": "테스트", "appearance": {"face_and_hair": "a", "physique": "b", "outfit": "c"}}
+            )
+            pose_db = {
+                "088": PoseEntry(code="088", label="후배위약", section="h_scenes", prompt="1girl, 1boy, nude, doggystyle"),
+            }
+
+            gen_calls = []
+
+            class _FakeClient:
+                def check_connection(self):
+                    return True
+
+                def session(self):
+                    return nullcontext()
+
+                def generate_image(self, workflow, output_path, **kw):
+                    gen_calls.append(output_path.name)
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    Image.new("RGB", (64, 64), (210, 170, 150)).save(output_path, "WEBP")
+
+            detect_calls = []
+
+            def _fake_detect_genitals(img_path, targets=("penis",), pose_code=None, roster=None, **kw):
+                detect_calls.append({"pose_code": pose_code, "targets": list(targets), "roster": roster})
+                return [] if len(detect_calls) == 1 else [((10, 10, 40, 40), "penis", 0.88)]
+
+            svc = gs_mod.GenerationService(
+                character_svc=SimpleNamespace(resolve_characters=lambda *a, **kw: [(char_cfg, "campus")]),
+                pose_svc=SimpleNamespace(
+                    load_pose_db=lambda **kw: pose_db,
+                    resolve_pose_codes=lambda expr, db, **kw: ["088"],
+                    is_pose_allowed_for_character=lambda *a, **kw: True,
+                ),
+                bg_svc=SimpleNamespace(get_preset=lambda *a, **kw: "bedroom"),
+                asset_svc=SimpleNamespace(find_reference_image=lambda *a, **kw: None),
+                pose_bg_svc=SimpleNamespace(get_background_for_pose=lambda *a, **kw: "default"),
+            )
+
+            with patch.object(gs_mod, "PROJECTS_DIR", projects_dir), \
+                 patch.object(gs_mod, "ComfyClient", return_value=_FakeClient()), \
+                 patch.object(gs_mod, "validate_generated_image", return_value=(True, "", {})), \
+                 patch.object(gs_mod, "censor_file") as m_censor_file, \
+                 patch.object(gs_mod, "unload_censor_models") as m_unload, \
+                 patch.object(censor_mod, "detect_genitals", side_effect=_fake_detect_genitals):
+                results = svc.run_batch(
+                    gs_mod.GenerationParams(
+                        character_expr="tst",
+                        pose_expr="088",
+                        roster="campus",
+                        overwrite=True,
+                        censor=False,
+                        strict_censor_qc=True,
+                        auto_qc=True,
+                        max_retries=1,
+                        no_ref=True,
+                    ),
+                    quiet=True,
+                )
+
+            self.assertEqual(len(gen_calls), 2)
+            self.assertEqual(len(detect_calls), 2)
+            self.assertTrue(results[0].qc_passed)
+            self.assertEqual(results[0].retries, 1)
+            m_censor_file.assert_not_called()
+            m_unload.assert_called_once()
+
 if __name__ == "__main__":
     unittest.main()
