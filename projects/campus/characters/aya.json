@@ -3,7 +3,7 @@
   "name": "Ayame (아야메 / 교토 동기 - 미야코노코지 아야메 / 은발 쿨시크 힙스터)",
   "gender": "female",
   "default_mode": "sdxl",
-  "ref_weight": 0.55,
+  "ref_weight": 0.0,
   "faction": "meio_university_literature",
   "role": "교토 출신 동기. 플래티넘 은발 숏컷의 감성 미니멀리스트 쿨뷰티. 겉으론 시크하고 촌철살인 팩트폭행을 날리지만 유저에게만 챙겨주는 츤데레",
   "appearance": {
