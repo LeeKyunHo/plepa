@@ -1830,4 +1830,25 @@ ight_terrace(도시 야경 발코니 난간).
   - `pytest -q`: **180 passed** (신규 [`tests/test_prompt_pipeline.py`](../tests/test_prompt_pipeline.py) 6건 포함 전수 통과).
   - `precheck -r campus` (`2004`조합) & `precheck -r oto` (`987`조합): **위반 0건 PASS**.
 
+### ADR-101: 2-Track 화각 규약, 방향성 인라인 모브(`partner_pos`), 마네킹 태그 영구 퇴출 및 2D 화풍·일관성 락 통합 개편 (Phase H2-A/B, 2026-11-16)
+- **배경**:
+  - Phase H1(`ADR-100`) 이후 전체 334종 포즈 DB 및 Campus 756장 에셋 전수 감사 결과, ① `tight bust portrait`+`cowboy shot` 이중 화각 충돌(`DUAL_SHOT` 28건), ② `bald`/`faceless`·`male hair` 네거티브로 인한 대머리 마네킹 현상(58건), ③ `solo`+`1boy` 충돌(33건), ④ 범용 `Tier 2 BREAK`에 의한 상하·전후 체위 위치 교란, ⑤ `01_normal`(`poses`·`daily_events`) `is_daily_or_pov` 라우팅 누락 및 `#047` 손/ `#050` 야경 Color Burn 오탐이 식별됨.
+- **결정 사항**:
+  1. **2-Track 화각 규약 (`832x1216` 세로 100% 유지)**:
+     - **Track 1** (봉사/밀착형: `tight bust portrait, close-up`)과 **Track 2** (체위 기하 필수형: `angled medium shot, head to hips, upper three-quarter view`)로 분리하여 풋잡·정상위·후배위·기승위·교배프레스·들박 등의 골반·다리 기하를 보존함.
+  2. **범용 `Tier 2 BREAK` 폐기 ➔ 방향성 인라인 `partner_pos` 전환 (`models.py`, `schemas.py`, `pose_service.py`, `prompt_pipeline.py`)**:
+     - `_MOB_TIER_SPECS[2]` 및 `#060~#063`의 범용 `BREAK (faceless male partner...)`를 전면 폐기하고, `partner_pos` (`above | below | behind | side_kiss | offscreen`)에 따라 메인 프롬프트 청크 후미(`BREAK` 앞)에 방향성 엣지 크롭 태그를 인라인 주입함.
+  3. **`bald`/`faceless` 및 `male hair` 네거티브 영구 퇴출**:
+     - `data/sdxl_pose_database.json`, `projects/campus/events.json`, `prompt_pipeline.py`에서 `bald`, `faceless`, `male hair/bangs/haircut`을 전량 제거하고 `(detailed male face, male eyes, full male head:1.25)`로 단일화함.
+  4. **Reference-5 2D 미소녀 화풍 가드 & 의상/표정 락 (`prompt_pipeline.py`)**:
+     - `_STYLE_POSITIVE_GUARD_TAGS` / `_STYLE_NEGATIVE_GUARD` 주입(태닝 피부·누드 예외 준수), 코믹/놀람 표정 시 `(pupil-less:1.35)`/`(blank stare:1.4)` 네거티브 제외, 착의 씬 `choker`/`necklace` 보호 및 `is_daily_or_pov`에 `poses`·`daily_events` 복구.
+  5. **QA 보정(`qa_validator.py`) & 여성 H-씬 70종(`060~132`) 전수 매핑 완결**:
+     - `#047` 쓰다듬기 등 1인 POV 헤드팻 `max_hands=3` 허용, `#050` 야경 키워드 시 Color Burn 임계치 `0.22 -> 0.35` 완화.
+     - 여성 로맨스/H-씬 70종(`121` 제외) 전량 `mob_tier`(`0: 12`, `1: 6`, `2: 30`, `3: 22`) 및 `partner_pos`(`above: 14`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑 완료, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화.
+- **검증 결과**:
+  - `pytest -q`: **185 passed** (전수 계약 테스트 포함) | `precheck -r campus` (`2004`조합) & `-r oto` (`987`조합): **위반 0건 PASS**.
+  - Campus 에셋 재스캔(`1,379`장): `#047` `7/7`, `#050` `12/12` 전수 통과, Color Burn 실패 `0건`.
+  - H2-A 파일럿 8종 × 2명(`aya, shz` 16장): Auto-QC **16/16(100%)** 합격.
+
+
 
