@@ -31,10 +31,10 @@
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
-6. **ADR-86 → P0 → P0.5+P1 → P2 → P2.5 Residual Span 2-Way & SAM 2.1 정밀 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 ~ ADR-98)**:
-   - **Residual Span 2-Way 복원 & Semantic-Guided SAM 2.1**: `DeepGHS` + `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, val Mask R=0.600`) 합의 시 YOLO가 `DeepGHS` 수직/주축의 `62%` 미만만 커버하거나 상·하단에 `max(75px, 0.35*H)` 이상 잔여가 남으면 ① 교차 손 존 시 미커버 잔여 Sub-BBox(`yolo_prior=None`, 편측 대각 X축 클램핑)를 추가 보존(**분기 A**)하고, ② 손 개입 부재 시 Union Span 확장 + `_compute_prior_extension_corridor()` 축 연장 `Positive(1)` 및 `envelope_mask` 코리도 확장(**분기 B**)을 수행함.
+6. **ADR-86 → P0 → P0.5+P1 → P2 → P2.5 Residual Span 2-Way & SAM 2.1 정밀 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 ~ ADR-99, 프로덕션 기준선 최종 동결)**:
+   - **Residual Span 2-Way 복원 & Semantic-Guided SAM 2.1**: `DeepGHS` + `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, val Mask R=0.600`) 합의 시 부분 커버 구간을 ① 교차 손 존재 시 미커버 잔여 Sub-BBox(`yolo_prior=None`, 편측 대각 X축 클램핑) 추가 보존(**분기 A**), ② 손 개입 부재 시 Union Span 확장 + `_compute_prior_extension_corridor()` 축 연장 `Positive(1)` 및 `envelope_mask` 코리도 확장(**분기 B**)으로 처리함.
    - **프라이어 순도·고신뢰 구제 & Echo 억제**: 교차 면적 `6%` 미만 경계 파편 및 중심 이탈 인접 오탐이 `envelope_mask`를 왜곡하지 않도록 차단하고, DeepGHS 0건 `Case A`는 `0.19~0.25` 구간까지 확장하되 `area>=900px & skin>=0.12`로 정제하며, 주 타겟 확정 시 최상단 14%(`conf<0.65`) 및 비손분할 하단 Echo(`y2>0.82 & conf<0.58`)를 차단함 (`02_h_scenes` `24/25` IoU `0.7351`, `spy_holdout` `38/40` IoU `0.7494`).
-   - **가드 불변식 & 인간-AI 협업**: `yolo_prior_mask is None` 구간은 `box_fill_thresh=0.42`/`minor_ratio_cap=0.30`으로 강화하고, `_extract_sam_mask_data()` 빈 텐서 가드 및 `protection_mask`(손·얼굴) `0px` 침범·`enable_anchor_fallback=False`를 유지하며, 미흡 부위는 모바일 갤러리 `[✏️ 터치 덧칠]`로 `output/benchmarks/ground_truth/`에 축적함.
+   - **동결 & 가드 불변식 (Production Freeze)**: `SPY` 10인 510장 실전 H-씬 전수 배치(비노출 무마스크 `218`장 `det=0`, 핵심 남성 노출 9포즈 `10/10` 전원 탐지, 명확 오탐 `2`건 `0.39%`)를 끝으로 `P2.5` 엔진·임계값을 동결함. 회귀 방지를 위해 임의 수치 튜닝은 중단하며, 향후 `P3` 고도화는 하드 네거티브(`dom_100` 팔뚝 등) 및 모바일 `[✏️ 터치 덧칠]`(`output/benchmarks/ground_truth/`) 누적 기반 데이터 중심(Data-Centric) 1회 재학습으로만 진행함. `_extract_sam_mask_data()` 빈 텐서 가드 및 `protection_mask`(손·얼굴) `0px` 침범·`enable_anchor_fallback=False` 불변식 유지.
 7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
    - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
 8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
@@ -1793,5 +1793,19 @@ ight_terrace(도시 야경 발코니 난간).
     - `aya_076` `0.4083 → 0.6468`, `aya_103` `0.0000 → 0.5206`, `aya_131` `0.0000 → 0.5716` 회복.
   - `spy_holdout` (N=40, 미학습): Recall **`38/40`**, Mask IoU **`0.7494`**, Boundary IoU **`0.4795`**, avg `1.500s` (`cla_125` `0.6413`, `dom_126` `0.6992 → 0.8786`).
   - `test_c4` (N=20): `FN=1` (`aya_089_후배위강.webp`), `Top/Echo FP=0` (`kei_162=1`, `mik_156=1`), 정당 손분할 2건(`kei_187`, `mik_187`: `mik_187` 하단 `0px → 25,169px` / `kei_187` 하단-우측 `0px` 유지 + 좌하단 기저부 `143px → 10,914px` 복원), avg `1.765s`.
+
+### ADR-99: Phase P2.5 검열 엔진 최종 동결(Production Freeze) 및 SPY 10인 510장 실전 H-씬 전수 검증 (2026-11-15)
+- **배경**:
+  - P2.5(`ADR-98`)가 소규모 벤치마크(`02_h_scenes` N=25, `spy_holdout` N=40, `test_c4` N=20)를 통과한 이후, 미검증 대량 실전 에셋에서의 일반화 성능·과검열 빈도·비노출 보존력을 확인하기 위해 형제 프로젝트(`kiro`) `spy` 로스터 전체 오리진 에셋 **510장(10캐릭터 × 51포즈)** 대상 전수 테스트를 수행함.
+- **결정 사항**:
+  1. **대규모 실전 배치 검증 도구 & 웹 갤러리 통합 (`scripts/benchmark_spy_batch.py`, `scripts/serve_benchmark_mobile.py`)**:
+     - `C:\Users\rbsgh\kiro\projects\spy\assets\*_origin` 510장을 `censor_image(..., style="white_silhouette", targets=("penis",), roster="spy", enable_anchor_fallback=False)`로 일괄 추론하고 `output/test_batch_spy/index.html` 1:1 토글 비교 갤러리를 자동 생성하도록 구현함.
+     - `scripts/serve_benchmark_mobile.py`에 `/test_spy` 정적 마운트를 추가해 로컬·Wi-Fi·Cloudflare 터널을 통한 전수 육안 검수를 지원함.
+  2. **실측 결과 기반 P2.5 프로덕션 기준선 동결 (Production Freeze)**:
+     - 총 `510`장(`524.23s`, 평균 `1.028s/장`) 중 `232`장(`45.49%`) 탐지, `278`장(`54.51%`) `det=0`, 다중 탐지 `34`건 기록.
+     - `spy/assets/{char}/{fname}` 기존 흰색 정답 마스크 대조 결과, 정답 보유 `226`장 중 `166`장(`73.45%`) 탐지(남성 성기 노출 핵심 9포즈 `100_펠라치오강`, `117_대딸`, `117_정상위강`, `118_정상위절정`, `120_수유대딸`, `122_펠라치오약`, `124_파이즈리약`, `126_착의펠라약`, `127_착의펠라강`은 **10/10 캐릭터 전원 탐지**) / 미탐 `60`장(대다수 `111_삽입조르기`·`123_전라유혹`·`109_커닐링구스` 등 여성 부위/단독 또는 밀착 구도), 비노출 무마스크 정답셋 `218`장 **`det=0` 100% 보존**, 기존 무마스크 구작 중 추가 노출 탐지 `66`장(`127_가슴사정`, `120_후배위강`, `125_풋잡` 등).
+     - 사용자 전수 육안 검수 결과 명확한 과검열 오탐이 **단 2장(`0.39%`: `dom_100` 양측 팔뚝 `0.85/0.89` 동시 오탐, `srh_107` DeepGHS 0건 분기 `Case A 0.204` 2차 팔뚝 동시 구제)**으로 확인되어, 수치/휴리스틱 추가 수정에 따른 회귀 위험을 배제하고 **`P2.5`를 현 시점 프로덕션 완성 기준선으로 동결**함.
+  3. **향후 고도화 원칙**:
+     - 소수 과검열(`dom_100`, `srh_107`) 및 부족분은 현장에서 모바일 터치 덧칠/수작업 리터치로 마감하며, 추후 `P3`가 필요해질 경우 코드 임계값 조정 대신 해당 실패 사례(`dom_100` 팔뚝 하드 네거티브 등)를 포함한 **Data-Centric 1회 재학습**으로만 접근함.
 
 
