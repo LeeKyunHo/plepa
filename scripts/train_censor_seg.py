@@ -77,7 +77,7 @@ def train_censor_seg(
     dataset_dir: Path,
     out_weights: Path,
     base_model: str = "yolo11s-seg.pt",
-    epochs: int = 65,
+    epochs: int = 80,
     imgsz: int = 1024,
     batch: int = 4,
     device: Optional[str] = None,
@@ -89,7 +89,7 @@ def train_censor_seg(
     clean_spy_dir: Optional[Path] = None,
     spy_holdout_per_char: int = 4,
     hard_neg_limit: int = 120,
-    inscene_neg_limit: int = 55,
+    inscene_neg_limit: int = 18,
     extreme_pose_oversample: int = 3,
     mask_ratio: int = 2,
     run_project_dir: Optional[Path] = None,
@@ -182,13 +182,13 @@ def train_censor_seg(
         "project": str(eff_run_dir),
         "name": str(run_name),
         "exist_ok": True,
-        "patience": 20,
+        "patience": 35,
         "mask_ratio": max(1, int(mask_ratio)),
         "overlap_mask": False,
         "mosaic": 0.5,
         "close_mosaic": 15,
-        "degrees": 30.0,
-        "scale": 0.5,
+        "degrees": 15.0,
+        "scale": 0.35,
         "fliplr": 0.5,
         "hsv_h": 0.015,
         "hsv_s": 0.5,
@@ -283,8 +283,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--inscene-neg-limit",
         type=int,
-        default=55,
-        help="성인 씬 내부 비타겟(하단 체액·복부) 부분 네거티브 크롭 수 (기본: 55)",
+        default=18,
+        help="성인 씬 내부 비타겟(하단 체액·복부) 부분 네거티브 크롭 수 (기본: 18)",
     )
     parser.add_argument(
         "--extreme-pose-oversample",
@@ -329,7 +329,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="yolo11s-seg.pt",
         help="기반 Ultralytics 세그멘테이션 체크포인트 (기본: yolo11s-seg.pt)",
     )
-    parser.add_argument("--epochs", type=int, default=65, help="학습 에포크 수 (기본: 65)")
+    parser.add_argument("--epochs", type=int, default=80, help="학습 에포크 수 (기본: 80)")
     parser.add_argument("--imgsz", type=int, default=1024, help="입력 해상도 (기본: 1024)")
     parser.add_argument("--batch", type=int, default=4, help="배치 크기 (기본: 4)")
     parser.add_argument("--mask-ratio", type=int, default=2, help="YOLO-seg 마스크 다운샘플 비율 (기본: 2, 낮을수록 고정밀)")

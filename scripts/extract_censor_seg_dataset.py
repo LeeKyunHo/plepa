@@ -499,7 +499,7 @@ def _generate_inscene_partial_negatives(
     inscene_sources: Sequence[Tuple[str, Path, np.ndarray]],
     images_dir: Path,
     labels_dir: Path,
-    limit: int = 55,
+    limit: int = 18,
 ) -> List[Path]:
     """
     train 전용 양성 성인 씬에서 정답 타겟 마스크와 안전 마진을 완전히 배제한
@@ -522,7 +522,7 @@ def _generate_inscene_partial_negatives(
 
         gx1, gy1 = int(xs.min()), int(ys.min())
         gx2, gy2 = int(xs.max()) + 1, int(ys.max()) + 1
-        pad = max(24, int(round(min(w, h) * 0.03)))
+        pad = max(45, int(round((gy2 - gy1) * 0.35)))
 
         crops_to_check: List[Tuple[str, Tuple[int, int, int, int]]] = []
         # 1) 하단 사타구니·체액·허벅지 크롭 (MIK #156 / #162류 오탐 교정용)
@@ -607,7 +607,7 @@ def build_yolo_seg_dataset(
     clean_spy_dir: Optional[Path] = None,
     spy_holdout_per_char: int = 4,
     hard_neg_limit: int = 120,
-    inscene_neg_limit: int = 55,
+    inscene_neg_limit: int = 18,
     extreme_pose_oversample: int = 3,
     clean_existing: bool = True,
 ) -> Dict[str, int]:
@@ -893,8 +893,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--inscene-neg-limit",
         type=int,
-        default=55,
-        help="성인 씬 비타겟 부분 크롭 하드 네거티브 샘플 수 (기본: 55)",
+        default=18,
+        help="성인 씬 비타겟 부분 크롭 하드 네거티브 샘플 수 (기본: 18)",
     )
     parser.add_argument(
         "--extreme-pose-oversample",
