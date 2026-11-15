@@ -384,9 +384,20 @@ def test_adr101_qa_headpat_3hands_and_night_color_burn():
 
 
 def test_adr101_pose_db_and_events_zero_conflicts():
-    """ADR-101: sdxl_pose_database.json 및 events.json 내 DUAL_SHOT/bald/faceless/SOLO+1BOY 0건 유지 계약 검증."""
+    """ADR-101/H2-C: sdxl_pose_database.json 및 events.json 내 prompt/prompt_female/prompt_otokonoko/negative_add 전수 계약 검증."""
     import json
     from pathlib import Path
+
+    banned_tokens = (
+        "bald",
+        "faceless",
+        "large thick erect penis",
+        "impressive manhood",
+        "impressive large manhood",
+        "small penis",
+        "micropenis",
+    )
+    clothed_romance_codes = {"060", "064", "067", "068", "069", "070", "071", "073", "074", "075", "076", "077"}
 
     for path in (Path("data/sdxl_pose_database.json"), Path("projects/campus/events.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -396,16 +407,21 @@ def test_adr101_pose_db_and_events_zero_conflicts():
             for code, entry in items.items():
                 if not isinstance(entry, dict):
                     continue
-                for field in ("prompt", "prompt_otokonoko"):
+                for field in ("prompt", "prompt_female", "prompt_otokonoko", "negative_add"):
                     t = (entry.get(field) or "").lower()
                     if not t:
                         continue
-                    has_tight = any(k in t for k in ("tight bust portrait", "intimate close-up", "close-up bust shot"))
-                    has_wide = any(k in t for k in ("cowboy shot", "full body"))
-                    assert not (has_tight and has_wide), f"DUAL_SHOT in {path}:{sec}:{code}:{field}"
-                    assert "bald" not in t, f"bald in {path}:{sec}:{code}:{field}"
-                    assert "faceless" not in t, f"faceless in {path}:{sec}:{code}:{field}"
-                    assert not ("solo" in t and "1boy" in t), f"SOLO+1BOY in {path}:{sec}:{code}:{field}"
+                    for tok in banned_tokens:
+                        assert tok not in t, f"{tok!r} in {path}:{sec}:{code}:{field}"
+                    if field != "negative_add":
+                        has_tight = any(k in t for k in ("tight bust portrait", "intimate close-up", "close-up bust shot"))
+                        has_wide = any(k in t for k in ("cowboy shot", "full body"))
+                        assert not (has_tight and has_wide), f"DUAL_SHOT in {path}:{sec}:{code}:{field}"
+                        assert not ("solo" in t and "1boy" in t), f"SOLO+1BOY in {path}:{sec}:{code}:{field}"
+                if code in clothed_romance_codes and entry.get("required_outfit") == "default":
+                    for field in ("prompt", "prompt_female"):
+                        t = (entry.get(field) or "").lower()
+                        assert "completely nude" not in t, f"completely nude in default-outfit {sec}:{code}:{field}"
 
 
 def test_adr101_campus_70_female_h_poses_complete_tier_and_partner_pos():
