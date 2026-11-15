@@ -438,3 +438,61 @@ def test_adr101_campus_70_female_h_poses_complete_tier_and_partner_pos():
                 f"#{code} Tier 2 partner_pos 누락/무효: {pose.partner_pos}"
             )
     assert checked == 70, f"기대 여성 H-씬 70종 불일치: {checked}"
+
+
+def test_h2d_patch_e_preserves_intentional_half_clothed_and_exposed_poses():
+    """H2-D: #131 및 #067/#064 등 의도적 반착의/노출 포즈에서 [패치 E]가 단추 잠금/가슴 차단을 강제하지 않는지 검증."""
+    char = _make_female_char()
+    db_campus = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+
+    for code in ("067", "131"):
+        pose = db_campus[code]
+        pos, neg, _ = assemble_sdxl_prompt(char=char, pose=pose, bg_prompt="")
+        pos_low = pos.lower()
+        neg_low = neg.lower()
+        assert "fully buttoned shirt" not in pos_low, f"#{code} 강제 단추 잠금 오주입: {pos}"
+        assert "covered breasts" not in pos_low, f"#{code} covered breasts 오주입: {pos}"
+        assert "bare breasts" not in neg_low, f"#{code} bare breasts 네거티브 오주입: {neg}"
+        assert "unbuttoned shirt" not in neg_low, f"#{code} unbuttoned shirt 네거티브 오주입: {neg}"
+
+
+def test_h2d_068_to_070_tier3_and_kiss_vs_side_partner_pos():
+    """H2-D: #068~#070 mob_tier==3 성기 콤팩트 노출 및 #060/#061 키스 vs #108 측위 partner_pos 분리 검증."""
+    char = _make_female_char()
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+
+    for code in ("068", "069", "070"):
+        pose = db[code]
+        assert pose.mob_tier == 3
+        pos, _, _ = assemble_sdxl_prompt(char=char, pose=pose, bg_prompt="bedroom")
+        assert "partially visible glans, compact shaft" in pos.lower()
+
+    for kiss_code in ("060", "061"):
+        pos_kiss, _, _ = assemble_sdxl_prompt(char=char, pose=db[kiss_code], bg_prompt="bedroom")
+        assert "cropped dark-haired male jaw and lips at extreme frame edge" in pos_kiss.lower()
+        assert "back of dark-haired male head" not in pos_kiss.lower()
+
+    pos_side, _, _ = assemble_sdxl_prompt(char=char, pose=db["108"], bg_prompt="bedroom")
+    assert "cropped male torso and shoulder at edge" in pos_side.lower()
+
+
+def test_h2d_qa_allows_head_contact_back_of_head_with_1_face():
+    """H2-D: #109 커닐링구스 등 뒤통수 허용 오프스크린 씬에서 heads=2, faces=1일 때 Auto-QC 합격 검증."""
+    from plepa_engine.qa_validator import validate_generated_image
+
+    img = Image.new("RGB", (256, 384), color=(180, 180, 180))
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok, reason, metrics = validate_generated_image(
+            img,
+            prompt="cunnilingus, back of dark-haired male head between thighs, male face obscured",
+            is_solo_scene=False,
+            is_two_person=True,
+            is_offscreen_partner=True,
+        )
+        assert ok is True, reason
+        assert metrics["heads"] == 2
+        assert metrics["faces"] == 1

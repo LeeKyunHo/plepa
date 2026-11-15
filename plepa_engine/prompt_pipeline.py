@@ -98,7 +98,7 @@ _PARTNER_POS_SPECS: Dict[str, str] = {
     "above": "male hands pressing beside shoulders, cropped male shoulders at top edge, partner head out of frame",
     "below": "male hands gripping waist or hips from below, partner head out of frame",
     "behind": "male torso behind her, male hands gripping waist from behind, partner head out of frame",
-    "side_kiss": "back of dark-haired male head at edge, male face obscured, partner arms around waist",
+    "side_kiss": "cropped male torso and shoulder at edge, partner head out of frame, partner arms around waist",
     "offscreen": "partner head out of frame, cropped male hands at frame edge",
 }
 
@@ -613,24 +613,37 @@ class DefectDefenseMutator(PromptMutator):
                     r"\b(?:[a-z\-]+\s+)*(?:garter belt|attached garter straps|garter straps|garters|thighhighs|stockings|pantyhose|thigh compression|panties|underwear)\b",
                 )
 
-            # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
-            ctx.positive_prompt = _strip_tags_preserving_parens(
-                ctx.positive_prompt,
-                r"\b(?:unbuttoned top button|unbuttoned|shirt unbuttoned|open shirt|clothes open)\b",
+            has_intentional_top_exposure = any(
+                kw in pose_tag.lower()
+                for kw in (
+                    "exposed bare breasts",
+                    "unbuttoned shirt",
+                    "partially unbuttoned",
+                    "bra or skirt visible",
+                    "disheveled unbuttoned",
+                    "open collar",
+                    "bare collarbone",
+                )
             )
-            if "fully clothed" not in ctx.positive_prompt.lower():
-                ctx.positive_prompt = f"{ctx.positive_prompt}, ((wearing clothes, top on, fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
-            else:
-                ctx.positive_prompt = f"{ctx.positive_prompt}, ((fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
+            if not has_intentional_top_exposure:
+                # 포지티브에서 단추 풀림 등 탈의 유도 태그 정제 및 상의 단정 태그 주입
+                ctx.positive_prompt = _strip_tags_preserving_parens(
+                    ctx.positive_prompt,
+                    r"\b(?:unbuttoned top button|unbuttoned|shirt unbuttoned|open shirt|clothes open)\b",
+                )
+                if "fully clothed" not in ctx.positive_prompt.lower():
+                    ctx.positive_prompt = f"{ctx.positive_prompt}, ((wearing clothes, top on, fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
+                else:
+                    ctx.positive_prompt = f"{ctx.positive_prompt}, ((fully buttoned shirt, buttoned clothes, covered breasts, covered chest:1.35))"
 
-            # 글로벌 네거티브에 nude/naked/undressed를 넣으면 파트너 타겟 부위까지 검은 천/속옷으로 덮이므로 상의 탈의(topless/bare chest)만 정밀 억제
-            neg = (
-                f"{neg}, "
-                f"((topless, bare breasts, exposed breasts, nipples, exposed nipples, "
-                f"open shirt, unbuttoned, unbuttoned shirt, shirt pulled up, shirt lift, lifted shirt, clothes lift, open clothes, "
-                f"breast out, breasts out, areola, cleavage, exposed cleavage, deep cleavage, underboob, "
-                f"no shirt, flashing, exposed chest, bare chest:1.45))"
-            )
+                # 글로벌 네거티브에 nude/naked/undressed를 넣으면 파트너 타겟 부위까지 검은 천/속옷으로 덮이므로 상의 탈의(topless/bare chest)만 정밀 억제
+                neg = (
+                    f"{neg}, "
+                    f"((topless, bare breasts, exposed breasts, nipples, exposed nipples, "
+                    f"open shirt, unbuttoned, unbuttoned shirt, shirt pulled up, shirt lift, lifted shirt, clothes lift, open clothes, "
+                    f"breast out, breasts out, areola, cleavage, exposed cleavage, deep cleavage, underboob, "
+                    f"no shirt, flashing, exposed chest, bare chest:1.45))"
+                )
 
         ctx.negative_prompt = neg
 
@@ -675,9 +688,13 @@ def _apply_gaze_direction_negatives(pose_tag: str, neg: str) -> str:
     return neg
 
 
-def _inject_partner_pos_inline(pos: str, partner_pos: Optional[str]) -> str:
+def _inject_partner_pos_inline(pos: str, partner_pos: Optional[str], pose_tag: str = "") -> str:
     """2인 구도 시 범용 BREAK 대신 첫 청크 후미(BREAK 앞)에 방향성 파트너 엣지 크롭 태그를 인라인 주입한다."""
-    tags = _PARTNER_POS_SPECS.get(partner_pos or "", "partner head out of frame, cropped male shoulders at frame edge")
+    pose_low = (pose_tag or "").lower()
+    if partner_pos == "side_kiss" and any(kw in pose_low for kw in ("kiss", "french kiss")):
+        tags = "cropped dark-haired male jaw and lips at extreme frame edge, male eyes out of frame, partner arms around waist"
+    else:
+        tags = _PARTNER_POS_SPECS.get(partner_pos or "", "partner head out of frame, cropped male shoulders at frame edge")
     if not tags:
         return pos
     if " BREAK " in pos:
@@ -716,7 +733,7 @@ class TwoPersonMobMutator(PromptMutator):
                 common_guard = _build_common_interactive_negative_guard(ctx, is_multi_partner=False)
                 neg = f"{neg}, {common_guard}, {spec['negative_tags']}"
                 if mob_tier == 2:
-                    pos = _inject_partner_pos_inline(pos, ctx.partner_pos)
+                    pos = _inject_partner_pos_inline(pos, ctx.partner_pos, pose_tag)
                 elif spec["positive_tags"]:
                     pos = f"{pos} {spec['positive_tags']}" if spec["break_chunk"] else f"{pos}, {spec['positive_tags']}"
                     if mob_tier == 3 and (
@@ -825,7 +842,7 @@ class TwoPersonMobMutator(PromptMutator):
                         mob_negative = f"(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), {mob_boy_guard_hug}, (extra head:1.6), (three heads:1.6), (multiple heads:1.6)"
                     elif is_non_exposure_romance:
                         # 비성교 로맨스 씬(060 딥키스, 061 알몸키스 등): 범용 BREAK 대신 방향성 인라인 파트너 엣지 크롭 주입
-                        pos = _inject_partner_pos_inline(pos, ctx.partner_pos or "side_kiss")
+                        pos = _inject_partner_pos_inline(pos, ctx.partner_pos or "side_kiss", pose_tag)
                         mob_positive = ""
                         mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
                         mob_negative = f"{male_face_suppression}, male clothes, male shirt, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (fellatio:1.4), (blowjob:1.4), (oral:1.4), (penis:1.4), (standing male legs:1.45)"
@@ -863,7 +880,7 @@ class TwoPersonMobMutator(PromptMutator):
                         mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
 
                         if ctx.nude:
-                            mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15)"
+                            mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}(naked male:1.15)"
                             if lower_body:
                                 mob_positive += f", {lower_body}"
                             mob_negative = f"{head_suppression}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
@@ -874,10 +891,10 @@ class TwoPersonMobMutator(PromptMutator):
                                 or code_num_clean >= 64
                             )
                             if is_adult_intercourse:
-                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}{male_upper_attire}(bottomless male:1.15), (natural skin tone penis, bare skin shaft:1.1)"
+                                mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}{male_upper_attire}(bottomless male:1.15), (natural skin tone penis, bare skin shaft:1.1)"
                                 mob_negative = f"{head_suppression}{male_clothing_neg}, (wearing pants over crotch:1.45), (pants:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (condom, black condom, sheath, clothed penis, covered penis, underwear on penis, garter on male, stockings on male:1.45), {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
                             else:
-                                mob_positive = f"BREAK (single faceless male partner:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}{male_upper_attire}"
+                                mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), {rear_direction}{male_upper_attire}"
                                 if lower_body:
                                     mob_positive += f", {lower_body}"
                                 mob_negative = f"{head_suppression}{male_clothing_neg}, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"

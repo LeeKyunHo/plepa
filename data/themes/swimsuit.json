@@ -26,28 +26,36 @@
       "required_outfit": "swimsuit",
       "sdxl_prompt": "missionary sex, on beach towel, lying on back, 1boy, couple, kissing cheek, blushing hard, intimate",
       "flux_prompt": "An intimate scene lying on a soft beach towel under shade, engaging in missionary embrace, flushed cheeks, loving gaze, tropical breeze.",
-      "description": "비치 타월 위에서 수영복을 입은 채 진행하는 밀착 정상위 씬."
+      "description": "비치 타월 위에서 수영복을 입은 채 진행하는 밀착 정상위 씬.",
+      "mob_tier": 2,
+      "partner_pos": "above"
     },
     "D05": {
       "label": "수영복후배위",
       "required_outfit": "swimsuit",
       "sdxl_prompt": "doggystyle sex, on knees on sand, looking back, 1boy, couple, arching back, beach cabana, shaded",
       "flux_prompt": "In a secluded beach cabana, kneeling on soft sand in a doggystyle position, arching her back and looking back over her shoulder with an aroused expression.",
-      "description": "한적한 비치 카바나 모래 위에서 허리를 젖히고 돌아보는 후배위 씬."
+      "description": "한적한 비치 카바나 모래 위에서 허리를 젖히고 돌아보는 후배위 씬.",
+      "mob_tier": 2,
+      "partner_pos": "behind"
     },
     "D06": {
       "label": "수영복입위",
       "required_outfit": "swimsuit",
       "sdxl_prompt": "standing sex, leaning against palm tree, one leg raised, 1boy, couple, breathless, ocean breeze",
       "flux_prompt": "Standing embrace leaning back against a shaded palm tree by the ocean, one leg lifted slightly, breathless passionate expression, ocean breeze gently blowing.",
-      "description": "야자수 나무 그늘에 기댄 채 한쪽 다리를 들어올린 스탠딩 입위 씬."
+      "description": "야자수 나무 그늘에 기댄 채 한쪽 다리를 들어올린 스탠딩 입위 씬.",
+      "mob_tier": 2,
+      "partner_pos": "behind"
     },
     "D07": {
       "label": "수영복펠라",
       "required_outfit": "swimsuit",
       "sdxl_prompt": "fellatio, kneeling on towel, looking up at viewer, 1boy, open mouth, blushing, poolside",
       "flux_prompt": "Kneeling on a pool towel, looking up submissively at the viewer with wide flushed eyes, poolside setting with glistening water reflections.",
-      "description": "수영장 타월 위에 무릎 꿇고 위를 올려다보는 구강봉사 씬."
+      "description": "수영장 타월 위에 무릎 꿇고 위를 올려다보는 구강봉사 씬.",
+      "mob_tier": 3,
+      "partner_pos": null
     }
   }
 }
