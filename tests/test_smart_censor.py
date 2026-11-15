@@ -1179,4 +1179,245 @@ def test_p2_sam_model_promotion_and_mobile_fallback(monkeypatch):
     censor.unload_censor_models()
 
 
+def test_p25_residual_span_branch_a_hand_split(monkeypatch):
+    """P2.5 분기 A: YOLO가 상단만 잡고 교차 손 아래 DeepGHS 잔여 구간이 남은 경우 하단 residual sub_box를 추가 보존함을 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (500, 700), (235, 185, 165))
+    skin_np = np.full((700, 500), 255, dtype=np.uint8)
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
+
+    d_box = (155, 180, 325, 625)  # h=445, y2/H=0.893 > 0.82
+    upper_box = (170, 185, 310, 340)  # cov_y = 155/445 = 0.348 < 0.62
+    hand_between = (140, 350, 340, 425)
+    poly_u = np.array([[175, 190], [305, 190], [305, 335], [175, 335]])
+
+    monkeypatch.setattr(
+        censor,
+        "_detect_target_candidates",
+        lambda *a, **kw: [(d_box, "penis", 0.80)],
+    )
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(upper_box, "penis", 0.72, poly_u)],
+    )
+
+    boxes, _, _, priors, ctxs = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[hand_between]
+    )
+    assert len(boxes) == 2
+    assert boxes[0][0] == upper_box
+    assert priors[0] is not None
+    res_box = boxes[1][0]
+    assert res_box[1] >= upper_box[3]
+    assert res_box[3] == d_box[3]
+    assert priors[1] is None
+    assert ctxs[1] is None
+
+
+def test_p25_residual_span_branch_b_union_extension_and_belly_guard(monkeypatch):
+    """P2.5 분기 B: 손 가로질림 없이 YOLO가 상반부만 잡은 경우 Union Span 확장 및 축 연장 코리도 복원 + 복부 스필 차단을 검증합니다."""
+    import cv2
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (500, 700), (235, 185, 165))
+    skin_np = np.full((700, 500), 255, dtype=np.uint8)
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
+
+    # Vertical/slightly slanted shaft centered at x~240 from y=190 to y=600
+    d_box = (150, 180, 330, 610)  # h=430
+    upper_box = (205, 185, 275, 350)  # cov_y=165/430=0.384 < 0.62, bot_res=260
+    poly_u = np.array([[215, 190], [265, 190], [265, 345], [215, 345]])
+
+    monkeypatch.setattr(
+        censor,
+        "_detect_target_candidates",
+        lambda *a, **kw: [(d_box, "penis", 0.79)],
+    )
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(upper_box, "penis", 0.68, poly_u)],
+    )
+
+    boxes, _, _, priors, ctxs = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[]
+    )
+    assert len(boxes) == 1
+    assert boxes[0][0] == d_box
+    assert ctxs[0] == d_box
+    assert priors[0] is not None
+
+    class _FakeMaskData:
+        def __init__(self, arr):
+            self._arr = arr
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._arr
+
+    class _FakeRes:
+        def __init__(self, arr_3d):
+            self.masks = type("_M", (), {"data": _FakeMaskData(arr_3d.astype(np.float32))})()
+
+    captured = []
+
+    def _fake_sam_full(crop_pil, **kw):
+        cw, ch = crop_pil.size
+        pts = kw["points"][0]
+        lbls = kw["labels"][0]
+        captured.append((list(pts), list(lbls), cw, ch, tuple(kw["bboxes"][0])))
+        m = np.zeros((ch, cw), dtype=np.float32)
+        # Draw true vertical shaft down through center + false spill in top-left corner
+        cx = cw // 2
+        cv2.line(m, (cx, 15), (cx, ch - 15), 1.0, thickness=46)
+        m[0:80, 0:60] = 1.0
+        return [_FakeRes(m[None, :, :])]
+
+    monkeypatch.setattr(censor, "get_sam_model", lambda: _fake_sam_full)
+    out = censor.apply_silhouette(
+        img,
+        boxes,
+        color="white",
+        fallback_boxes=boxes,
+        yolo_prior_masks=priors,
+        context_boxes=ctxs,
+        skin_np=skin_np,
+    )
+    out_np = np.array(out)
+    white_mask = (out_np[:, :, 0] > 250) & (out_np[:, :, 1] > 250) & (out_np[:, :, 2] > 250)
+
+    assert len(captured) >= 2  # initial prior positive + auxiliary axial positive point
+    assert all(1 in lbls and 0 in lbls for _, lbls, _, _, _ in captured)
+
+    upper_white = int(np.count_nonzero(white_mask[210:330, 215:265]))
+    lower_ext_white = int(np.count_nonzero(white_mask[440:560, 215:265]))
+    belly_spill = int(np.count_nonzero(white_mask[180:220, 150:190]))
+    assert upper_white >= 1500
+    assert lower_ext_white >= 1500, f"연장 구간 하단 기저부 복원 부족: {lower_ext_white}px"
+    assert belly_spill == 0, f"연장 복원 중 상좌측 복부 스필 발생: {belly_spill}px"
+
+
+def test_p25_case_a_rescue_threshold_area_and_skin_gate(monkeypatch):
+    """P2.5: DeepGHS 0건일 때 conf 0.19~0.25 구간의 면적(>=900px)·피부(>=0.12) 게이트를 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (600, 1100), (235, 185, 165))
+    skin_full = np.full((1100, 600), 255, dtype=np.uint8)
+    skin_empty = np.zeros((1100, 600), dtype=np.uint8)
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: [])
+
+    # 1) aya_131-style: conf=0.21, area=56x54=3024 (>=900), high skin -> rescued
+    rescue_box = (247, 952, 303, 1006)
+    poly_ok = np.array([[250, 955], [300, 955], [300, 1003], [250, 1003]])
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(rescue_box, "penis", 0.21, poly_ok)],
+    )
+    boxes_ok, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_full, hand_boxes=[]
+    )
+    assert [b[0] for b in boxes_ok] == [rescue_box]
+
+    # 2) Same box & conf=0.21, skin_ratio=0 (<0.12) -> rejected
+    boxes_no_skin, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_empty, hand_boxes=[]
+    )
+    assert boxes_no_skin == []
+
+    # 3) Tiny noise box: area=20x30=600 (<900), conf=0.21, high skin -> rejected
+    tiny_box = (260, 960, 280, 990)
+    poly_tiny = np.array([[261, 961], [279, 961], [279, 989], [261, 989]])
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(tiny_box, "penis", 0.21, poly_tiny)],
+    )
+    boxes_tiny, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_full, hand_boxes=[]
+    )
+    assert boxes_tiny == []
+
+    # 4) Below min floor conf=0.17 (<0.19) with large box & high skin -> rejected
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(rescue_box, "penis", 0.17, poly_ok)],
+    )
+    boxes_low_conf, _, _, _, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_full, hand_boxes=[]
+    )
+    assert boxes_low_conf == []
+
+
+def test_p25_prior_purity_ceiling_gate_and_lopsided_residual_x_clamp(monkeypatch):
+    """P2.5 보강: 경계 미세파편·이탈 인접 YOLO 프라이어 배제, 상단 극초반 2차 오탐 차단, 편측 대각 손분할 X축 클램핑을 검증합니다."""
+    import plepa_engine.censor as censor
+
+    img = Image.new("RGB", (832, 1216), (235, 185, 165))
+    skin_np = np.full((1216, 832), 255, dtype=np.uint8)
+    monkeypatch.setattr(censor, "get_custom_censor_seg_model", lambda: object())
+
+    # 1) dom_126-style tiny border speck (4.3% area, <6% inter/d_area, conf=0.354) + kei_162-style top ceiling FP (yc/h=0.105 < 0.14)
+    d_dom = (464, 394, 645, 779)
+    speck = (617, 543, 661, 611)
+    top_fp = (368, 88, 482, 168)
+    poly_sp = np.array([[618, 545], [660, 545], [660, 610], [618, 610]])
+    poly_top = np.array([[370, 90], [480, 90], [480, 166], [370, 166]])
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: [(d_dom, "penis", 0.84)])
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(speck, "penis", 0.354, poly_sp), (top_fp, "penis", 0.403, poly_top)],
+    )
+    boxes_1, _, _, priors_1, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[]
+    )
+    assert [b[0] for b in boxes_1] == [d_dom]
+    assert priors_1 == [None]
+
+    # 2) cla_125-style off-center shifted adjacent YOLO box (centroid outside d_box, inter/s_area < 0.55, conf=0.474)
+    d_cla = (313, 832, 500, 1150)
+    shifted = (415, 986, 590, 1165)
+    poly_sh = np.array([[418, 990], [588, 990], [588, 1160], [418, 1160]])
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: [(d_cla, "penis", 0.58)])
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(shifted, "penis", 0.474, poly_sh)],
+    )
+    boxes_2, _, _, priors_2, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[]
+    )
+    assert [b[0] for b in boxes_2] == [d_cla]
+    assert priors_2 == [None]
+
+    # 3) kei_187-style lopsided diagonal Branch A (left_uncov=116, right_uncov=22) -> lower residual X2 clamped < 340
+    d_kei = (166, 678, 554, 1088)
+    yolo_u = (282, 686, 532, 934)
+    hand_mid = (294, 884, 482, 995)
+    poly_ku = np.array([[285, 690], [530, 690], [530, 930], [285, 930]])
+    monkeypatch.setattr(censor, "_detect_target_candidates", lambda *a, **kw: [(d_kei, "penis", 0.83)])
+    monkeypatch.setattr(
+        censor,
+        "_infer_custom_censor_seg_items",
+        lambda *a, **kw: [(yolo_u, "penis", 0.65, poly_ku)],
+    )
+    boxes_3, _, _, priors_3, _ = censor._resolve_hybrid_targets_with_priors(
+        img, skin_np=skin_np, hand_boxes=[hand_mid]
+    )
+    assert len(boxes_3) == 2
+    assert boxes_3[0][0] == yolo_u
+    res_box = boxes_3[1][0]
+    assert res_box[0] == 166
+    assert res_box[2] <= 335
+    assert res_box[1] >= 934 and res_box[3] == 1088
+    assert priors_3[1] is None
+
+
 
