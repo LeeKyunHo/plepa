@@ -31,10 +31,10 @@
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
    - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
-6. **ADR-86 → Phase P0 → P0.5+P1 → P2 Semantic-Guided SAM 2.1 정밀 검열 & 인간-AI 협업 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 / ADR-96 / ADR-97)**:
-   - **Semantic-Guided Hybrid Pipeline**: `DeepGHS` + 자체 학습 `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, retina_masks=True`) 합의로 `PLEPA_YOLO_FASTPATH_CONF=0.92` 미만(`0.32..0.919` 또는 `IoMin>=0.20 & conf>=0.22`) 구간에서 YOLO의 **타이트 분리 BBox + `yolo_prior_mask`**를 `SAM 2.1`(`sam2.1_s.pt`, 미존재 시 `mobile_sam.pt` 폴백)으로 직접 투영함.
-   - **코어 투영·Envelope 방어 & 인접 Echo 억제**: `_extract_semantic_sam_prompts()`가 `distanceTransform` 코어(`Positive=1`)와 외곽 피부 점(`Negative=0`)·`envelope_mask` 클램핑을 적용해 복부/배경 오팽창을 억제하며, `_has_hand_between_boxes()` 기반으로 손 분할 없는 하단 인접 2차 오탐(`y2_ratio > 0.82` & `yolo_conf < 0.58`)을 차단함 (`test_c4` `MultiBox 4→0`).
-   - **P0.5 손 분할·블록 가드 & `protection_mask` 불변식**: `yolo_prior_mask is None`인 DeepGHS 단독 구간은 `box_fill_thresh=0.42`/`minor_ratio_cap=0.30`으로 강화하고, `_extract_sam_mask_data()`로 빈 마스크·모의 객체 안전 추출 및 `protection_mask`(손·얼굴) `0px` 침범·`enable_anchor_fallback=False`를 유지하며, 미흡 부위는 모바일 갤러리 `[✏️ 터치 덧칠]`로 `output/benchmarks/ground_truth/`에 축적함.
+6. **ADR-86 → P0 → P0.5+P1 → P2 → P2.5 Residual Span 2-Way & SAM 2.1 정밀 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 ~ ADR-98)**:
+   - **Residual Span 2-Way 복원 & Semantic-Guided SAM 2.1**: `DeepGHS` + `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, val Mask R=0.600`) 합의 시 YOLO가 `DeepGHS` 수직/주축의 `62%` 미만만 커버하거나 상·하단에 `max(75px, 0.35*H)` 이상 잔여가 남으면 ① 교차 손 존 시 미커버 잔여 Sub-BBox(`yolo_prior=None`, 편측 대각 X축 클램핑)를 추가 보존(**분기 A**)하고, ② 손 개입 부재 시 Union Span 확장 + `_compute_prior_extension_corridor()` 축 연장 `Positive(1)` 및 `envelope_mask` 코리도 확장(**분기 B**)을 수행함.
+   - **프라이어 순도·고신뢰 구제 & Echo 억제**: 교차 면적 `6%` 미만 경계 파편 및 중심 이탈 인접 오탐이 `envelope_mask`를 왜곡하지 않도록 차단하고, DeepGHS 0건 `Case A`는 `0.19~0.25` 구간까지 확장하되 `area>=900px & skin>=0.12`로 정제하며, 주 타겟 확정 시 최상단 14%(`conf<0.65`) 및 비손분할 하단 Echo(`y2>0.82 & conf<0.58`)를 차단함 (`02_h_scenes` `24/25` IoU `0.7351`, `spy_holdout` `38/40` IoU `0.7494`).
+   - **가드 불변식 & 인간-AI 협업**: `yolo_prior_mask is None` 구간은 `box_fill_thresh=0.42`/`minor_ratio_cap=0.30`으로 강화하고, `_extract_sam_mask_data()` 빈 텐서 가드 및 `protection_mask`(손·얼굴) `0px` 침범·`enable_anchor_fallback=False`를 유지하며, 미흡 부위는 모바일 갤러리 `[✏️ 터치 덧칠]`로 `output/benchmarks/ground_truth/`에 축적함.
 7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
    - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
 8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
@@ -1775,4 +1775,23 @@ ight_terrace(도시 야경 발코니 난간).
   - `test_c4` (N=20): **`MultiBox 4 → 0 (-4)`**, **`BottomFP 4 → 0 (-4)`** (`kei_156`, `kei_162`, `mik_156`, `mik_162` 4건 전부 해소), `FN=1` (`aya_089_후배위강.webp`), avg `1.599s`. `kei_187` 하단 우측 복부 오검열(`14,847px → 0px`) 완전 제거.
   - **정직한 회귀 관측 (`02_h_scenes` 및 YOLO 재학습 리콜 저하)**: P2 YOLO 재학습에서 `inscene_neg=55` 하단 크롭 및 강한 회전/스케일 증강으로 val Mask Recall이 `0.560 → 0.400`으로 하락하면서, YOLO 재학습 전 P1 가중치 스모크 테스트 당시 `26,781px / 26,442px`로 완벽 복구되었던 `mik_187` 하단이 재학습 후 `0px`로 탈락했고, `02_h_scenes` (N=25)도 Recall `24/25 → 22/25`(`aya_131`, `aya_103` 미탐)·Mask IoU `0.6427 → 0.5528 (-0.0899)`로 하락함 (또한 YOLO가 DeepGHS 박스의 절반 미만 상단만 잡을 때 잔여 DeepGHS 하단 영영이 통째로 버려지는 부분 교체 한계 식별).
   - 향후 P2.5/P3 개선 과제: YOLO 부분 매칭 시 손 분할 미포함 잔여 DeepGHS 서브영역 보존, `inscene_neg` 크롭의 피부/체액 근접 오분류 정제 및 `YOLOv11s-seg` 리콜 회복 재학습.
+
+### ADR-98: 부분 YOLO 매칭 Residual Span 2-Way 복원, 저신뢰 구제 정교화 및 YOLO 리콜 회복 재학습 (Phase P2.5, 2026-11-15)
+- **배경**:
+  - Phase P2(`ADR-97`)로 `spy_holdout` Mask IoU `0.7619`와 `test_c4` 다중/하단 Echo 0건을 달성했으나, ① `inscene_neg=55` 하단 크롭 과다·강한 증강(`degrees=30, scale=0.5`)으로 YOLO val Mask Recall이 `0.560→0.400`으로 하락하면서 `02_h_scenes`가 `24/25(0.6427)→22/25(0.5528)`로 후퇴(`aya_103`, `aya_131` 미탐)했고, ② 부분 매칭 시 잔여 DeepGHS 구간이 소실(`mik_187` 하단 `0px`, `aya_076` IoU `0.6587→0.4083`)되는 회귀가 확인됨.
+- **결정 사항**:
+  1. **Residual Span 2-Way 복원 & 편측 대각 X축 클램핑 (`_resolve_hybrid_targets_with_priors`, `_compute_prior_extension_corridor`)**:
+     - 매칭된 YOLO 박스의 주축 커버리지가 `62%` 미만이거나 상·하단 미커버 잔여가 `max(75px, 0.35*dghs_h)` 이상인 Under-Coverage를 감지해 **분기 A(교차 손 존재)** 시 미커버 잔여 Sub-BBox(`yolo_prior=None`)를 추가 보존하되 편측 대각 구도에서는 인접 체형 스필 방지를 위해 미커버 측 수평 범위로 X축 클램핑(`res_x1/res_x2`)을 적용하고, **분기 B(교차 손 없음)** 시 Union Span 확장 및 PCA 축 연장 코리도(`_compute_prior_extension_corridor`)로 보조 `Positive(1)` 및 `envelope_mask` 확장을 제공함.
+  2. **프라이어 매칭 순도, 최상단 게이트 및 DeepGHS 0건 `Case A` 구제 정교화**:
+     - Primary 박스 대비 교차 면적 `6%` 미만 저신뢰 파편(`conf < 0.55`, `dom_126` 등) 및 중심 이탈 저교차 인접 박스(`conf < 0.60`, `cla_125` 등)가 `yolo_prior`로 채택되어 `envelope_mask`가 정타겟을 절단하는 현상을 차단함.
+     - `_passes_case_a_rescue()`를 통합해 DeepGHS 0건 시 YOLO 단독 구제 하한을 `0.25 → 0.19`로 낮추고(`0.19..0.249` 구간은 `area >= 900px` 및 `skin_ratio >= 0.12` 필수), 주 타겟 확정 시 최상단 14% 구간(`yc < 0.14*h, conf < 0.65`, `kei_162` 등) 2차 오탐을 차단함.
+  3. **YOLO11s-seg 리콜 회복 데이터셋 리밸런싱 & 재학습 (`extract_censor_seg_dataset.py`, `train_censor_seg.py`)**:
+     - `_generate_inscene_partial_negatives()` 기본 상한을 `55 → 18`로 축소하고 GT 외곽 이격 여백을 `max(24px, 3%) → max(45px, GT 높이 × 35%)`로 확보해 `spy_holdout` 40쌍 무누수(`holdout_leaks=0`) 총 `463`장(`train=423, val=40`)을 재구성함.
+     - `epochs=80, patience=35, degrees=15.0, scale=0.35, mask_ratio=2`로 재학습 완주(`val Box P=0.675, R=0.560, mAP50=0.626`, **`val Mask P=0.712, R=0.600, mAP50=0.573, mAP50-95=0.308`**) 후 `models/censor_seg.pt`에 배포함.
+- **정량 실측 결과 (`p4_p2_result.json` → `p4_p25_result.json`, `pytest 174 passed`)**:
+  - `02_h_scenes` (N=25): Recall **`22/25 → 24/25 (+2)`**, Mask IoU **`0.5528 → 0.7351 (+0.1823, P1 대비 +0.0924)`**, Boundary IoU **`0.2516 → 0.3433 (+0.0917)`**, avg `1.682s`.
+    - `aya_076` `0.4083 → 0.6468`, `aya_103` `0.0000 → 0.5206`, `aya_131` `0.0000 → 0.5716` 회복.
+  - `spy_holdout` (N=40, 미학습): Recall **`38/40`**, Mask IoU **`0.7494`**, Boundary IoU **`0.4795`**, avg `1.500s` (`cla_125` `0.6413`, `dom_126` `0.6992 → 0.8786`).
+  - `test_c4` (N=20): `FN=1` (`aya_089_후배위강.webp`), `Top/Echo FP=0` (`kei_162=1`, `mik_156=1`), 정당 손분할 2건(`kei_187`, `mik_187`: `mik_187` 하단 `0px → 25,169px` / `kei_187` 하단-우측 `0px` 유지 + 좌하단 기저부 `143px → 10,914px` 복원), avg `1.765s`.
+
 
