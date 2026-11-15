@@ -102,10 +102,15 @@ _CLOSEUP_ASPECT_KEYWORDS = (
     "cowboy shot",
 )
 
-_MULTI_HAND_PHRASES = (
+_HEADPAT_PHRASES = (
     "headpat",
     "patting head",
+    "patting her head",
+    "stroking hair",
     "hand on head",
+)
+
+_MULTI_HAND_PHRASES = (
     "hands pressed on mattress",
     "pov hands",
     "paizuri",
@@ -117,6 +122,17 @@ _MULTI_HAND_PHRASES = (
     "massage",
     "groping",
     "two hands",
+)
+
+_NIGHT_LIGHTING_KEYWORDS = (
+    "night",
+    "evening",
+    "dark",
+    "starry",
+    "neon",
+    "moonlight",
+    "nighttime",
+    "city lights",
 )
 
 
@@ -268,10 +284,12 @@ def validate_generated_image(
         if check_color_burn:
             burn_ratio = _compute_color_burn_ratio(img)
             metrics["color_burn_ratio"] = round(burn_ratio, 4)
-            if burn_ratio >= max_color_burn_ratio:
+            is_night_scene = any(kw in p_text for kw in _NIGHT_LIGHTING_KEYWORDS)
+            eff_max_burn = 0.35 if (is_night_scene and max_color_burn_ratio <= 0.22) else max_color_burn_ratio
+            if burn_ratio >= eff_max_burn:
                 reason = (
                     f"색감 과포화(Color Burn) 감지 "
-                    f"(과포화/클리핑 비율: {burn_ratio * 100:.1f}% >= {max_color_burn_ratio * 100:.1f}%)"
+                    f"(과포화/클리핑 비율: {burn_ratio * 100:.1f}% >= {eff_max_burn * 100:.1f}%)"
                 )
                 return False, reason, metrics
 
@@ -348,8 +366,14 @@ def validate_generated_image(
         metrics["hands"] = len(valid_hands)
 
         if is_solo:
+            is_headpat_scene = any(kw in p_text for kw in _HEADPAT_PHRASES)
             is_multi_hand_scene = any(kw in p_text for kw in _MULTI_HAND_PHRASES)
-            max_hands = 4 if is_multi_hand_scene else 2
+            if is_multi_hand_scene:
+                max_hands = 4
+            elif is_headpat_scene:
+                max_hands = 3
+            else:
+                max_hands = 2
             if metrics["hands"] > max_hands:
                 return False, f"1인 씬 손 증식({max_hands + 1}개 이상) 감지 (손: {metrics['hands']}개)", metrics
         else:

@@ -53,12 +53,17 @@ class PromptContext:
     is_dark_skin: bool = field(default=False)
     is_otokonoko: bool = field(default=False)
     mob_tier: Optional[int] = field(default=None)
+    partner_pos: Optional[str] = field(default=None)
     extra_quality_kws: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.slot = resolve_pose_outfit_slot(self.pose)
         self.nude = (self.slot == "nude")
         self.is_no_bg = _is_no_background(self.bg_prompt)
+        if self.partner_pos is None:
+            self.partner_pos = getattr(self.pose, "partner_pos", None)
+        char_skin_desc = f"{self.char.appearance.face_and_hair} {self.char.appearance.physique} {self.char.sdxl_positive or ''} {getattr(self.char, 'sdxl_nude_positive', '') or ''}".lower()
+        self.is_dark_skin = any(kw in char_skin_desc for kw in ("dark tan", "dark skin", "tanned skin", "sun-kissed skin", "tan skin", "bronze skin"))
 
         _ckpt_lower = (self.checkpoint_name or "").lower()
         _is_illustrious = any(k in _ckpt_lower for k in ("flatbread", "wai", "illustrious", "animagine", "animefull"))
@@ -72,6 +77,30 @@ _INTERACTIVE_POSE_KEYWORDS = (
     "hugging from behind", "shower sex", "standing sex", "anal sex", "vaginal penetration",
     "anal penetration", "alley sex", "covert sex",
 )
+
+_STYLE_POSITIVE_GUARD_TAGS = (
+    "delicate colored lineart",
+    "ultra-fine linework",
+    "2d cute anime face",
+    "dot nose",
+    "smooth pale skin",
+    "soft peach blush",
+    "iridescent hair highlights",
+    "detailed fabric texture",
+    "cinematic rim lighting",
+)
+_STYLE_NEGATIVE_GUARD = (
+    "(realistic nose, photorealistic face, 3d, thick lips, nasolabial folds:1.25), "
+    "(oily skin, greasy skin, heavy dark shadows, muddy colors:1.2), thick black outlines"
+)
+
+_PARTNER_POS_SPECS: Dict[str, str] = {
+    "above": "male hands pressing beside shoulders, cropped male shoulders at top edge, partner head out of frame",
+    "below": "male hands gripping waist or hips from below, partner head out of frame",
+    "behind": "male torso behind her, male hands gripping waist from behind, partner head out of frame",
+    "side_kiss": "back of dark-haired male head at edge, male face obscured, partner arms around waist",
+    "offscreen": "partner head out of frame, cropped male hands at frame edge",
+}
 
 _MOB_TIER_SPECS: Dict[int, Dict[str, Any]] = {
     0: {
@@ -90,16 +119,16 @@ _MOB_TIER_SPECS: Dict[int, Dict[str, Any]] = {
         "is_interactive": True,
         "break_chunk": False,
         "positive_tags": "(pov, disembodied male hands:1.05), cropped male arms, female focus",
-        "negative_tags": "male face, male torso, muscular chest, full male body, lower body focus, crotch focus",
+        "negative_tags": "(detailed male face, male eyes, full male head:1.25), male torso, muscular chest, full male body, lower body focus, crotch focus",
     },
     2: {
         "is_two_person": True,
         "is_offscreen_partner": True,
         "is_solo_scene": False,
         "is_interactive": True,
-        "break_chunk": True,
-        "positive_tags": "BREAK (faceless shadowed male silhouette:1.1), cropped male shoulder, dark lighting on partner, (female face and chest focus:1.15), crotch out of frame",
-        "negative_tags": "male face, detailed male eyes, full body, wide shot, crotch focus",
+        "break_chunk": False,
+        "positive_tags": "",
+        "negative_tags": "(detailed male face, male eyes, full male head:1.25), dark silhouette, heavy shadow, full body, wide shot, crotch focus",
     },
     3: {
         "is_two_person": True,
@@ -108,7 +137,7 @@ _MOB_TIER_SPECS: Dict[int, Dict[str, Any]] = {
         "is_interactive": True,
         "break_chunk": True,
         "positive_tags": "BREAK (pov crotch:1.05), disembodied penis, (partially visible glans, compact shaft:1.05), cropped male lower torso",
-        "negative_tags": "(giant penis, hyper penis, huge penis:1.25), full male body, male face, muscular chest",
+        "negative_tags": "(giant penis, hyper penis, huge penis:1.25), full male body, (detailed male face, male eyes, full male head:1.25), muscular chest",
     },
 }
 
@@ -225,7 +254,8 @@ def harmonize_character_expression(char_part: str, pose_tag: str) -> str:
         for kw in (
             "smile", "smiling", "laugh", "grin", "happy", "blush", "flushed",
             "crying", "tears", "ecstasy", "screaming", "angry", "moaning",
-            "pleasure", "winking", "embarrassed", "pout", "flustered", "intoxicated"
+            "pleasure", "winking", "embarrassed", "pout", "flustered", "intoxicated",
+            "shock", "surprised", "panic", "comic", "wide eyes", "constricted pupils", "blank stare",
         )
     )
     if has_explicit_pose_expression:
@@ -236,6 +266,20 @@ def harmonize_character_expression(char_part: str, pose_tag: str) -> str:
             flags=re.IGNORECASE,
         )
     return char_part
+
+
+def _inject_style_positive_guard(quality_clean: str, ctx: PromptContext) -> str:
+    """Reference-5 화풍 가드 태그를 중복 없이 주입한다 (태닝 피부/누드 예외 준수)."""
+    low = quality_clean.lower()
+    for tag in _STYLE_POSITIVE_GUARD_TAGS:
+        if ctx.is_dark_skin and tag == "smooth pale skin":
+            continue
+        if ctx.nude and tag == "detailed fabric texture":
+            continue
+        if tag.lower() not in low:
+            quality_clean = f"{quality_clean}, {tag}"
+            low = quality_clean.lower()
+    return quality_clean
 
 
 def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) -> str:
@@ -261,6 +305,7 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
         for kw in ctx.extra_quality_kws:
             if kw.lower() not in quality_clean.lower():
                 quality_clean = f"{quality_clean}, {kw}"
+        quality_clean = _inject_style_positive_guard(quality_clean, ctx)
         prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
         first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
         return f"{first_chunk} BREAK {char_part.strip()}"
@@ -268,6 +313,7 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
     base_pos = harmonize_character_expression(base_pos, pose_tag)
     if ctx.is_two_person:
         base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
+    base_pos = _inject_style_positive_guard(base_pos, ctx)
     prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
     return f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
 
@@ -378,9 +424,17 @@ class NegativeBaseMutator(PromptMutator):
 
             # 기본 네거티브 조립 후 custom_neg 및 pose.negative_add는 TwoPersonMobMutator 이후 SanitizerMutator에서 결합하여
             # 2인 씬 male/1boy/2boys 정규식 제거에 의해 사용자 네거티브가 훼손되지 않도록 보호합니다.
+        if not ctx.nude:
+            pos_low = ctx.positive_prompt.lower()
+            for acc in ("choker", "necklace"):
+                if acc in pos_low:
+                    neg = re.sub(rf",?\s*\(?\b{acc}\b(?::[0-9\.]+)?\)?", "", neg, flags=re.IGNORECASE)
+
         if "(photorealistic, realistic, 3d" not in neg:
             char_mult_guard = "" if ctx.is_two_person else "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
             neg = f"(photorealistic, realistic, 3d, render, cgi:1.25), {char_mult_guard}{neg}"
+        if _STYLE_NEGATIVE_GUARD not in neg:
+            neg = f"{neg}, {_STYLE_NEGATIVE_GUARD}"
 
         ctx.negative_prompt = neg
 
@@ -429,13 +483,26 @@ class DefectDefenseMutator(PromptMutator):
         else:
             face_obscure_guard = "(faceless:1.45), (shadow over eyes:1.4), (shadow over face:1.4), (no eyes:1.45), (hidden eyes:1.4), (obscured face:1.4)"
 
+        has_comic_expr = any(
+            kw in ctx.pose_tag.lower()
+            for kw in ("shock", "surprised", "panic", "comic", "wide eyes", "constricted pupils", "blank stare")
+        )
+        eye_defect_guard = (
+            "(empty eyes:1.35), (blank eyes:1.35), (white eyes:1.35), (eyeless:1.4), "
+            "(looking up at ceiling:1.4), (staring into distance:1.4), (vacant eyes:1.4), (wandering eyes:1.4)"
+            if has_comic_expr
+            else (
+                "(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
+                "(looking up at ceiling:1.4), (staring into distance:1.4), (vacant eyes:1.4), (blank stare:1.4), (unfocused eyes:1.4), (wandering eyes:1.4)"
+            )
+        )
+
         neg = (
             f"{neg}, "
             f"(text:1.4), (speech bubble:1.4), (dialogue:1.4), (dialogue box:1.4), (subtitles:1.4), (comic panel:1.4), (sound effects:1.4), (watermark:1.3), (signature:1.3), "
             f"(mask:1.4), (white mask:1.4), (face mask:1.4), (noh mask:1.4), (porcelain mask:1.4), (paper mask:1.4), (theatrical mask:1.4), (blindfold:1.4), (covered eyes:1.4), "
             f"(eyes covered by hair:1.45), (bangs over eyes:1.45), (hair over eyes:1.45), {face_obscure_guard}, "
-            f"(empty eyes:1.35), (blank eyes:1.35), (pupil-less:1.35), (white eyes:1.35), (eyeless:1.4), "
-            f"(looking up at ceiling:1.4), (staring into distance:1.4), (vacant eyes:1.4), (blank stare:1.4), (unfocused eyes:1.4), (wandering eyes:1.4), "
+            f"{eye_defect_guard}, "
             f"(extra hands:1.4), (extra arms:1.4), (multiple hands:1.4), (multiple arms:1.4), (fused hands:1.4), (too many fingers:1.4), (missing fingers:1.35), (poorly drawn hands:1.35), (mutated hands:1.35), "
             f"(extra legs:1.45), (multiple legs:1.45), (too many legs:1.45), (extra feet:1.45), (multiple feet:1.45), (extra thighs:1.45), (fused legs:1.4), (malformed legs:1.4), (mutated legs:1.4), (mutated feet:1.4), (extra limbs:1.45), "
             f"(overexposed, blown highlights, harsh lighting, blinding white highlight, burnt skin, oversaturated:1.25), ((sharp teeth, pointed teeth, shark teeth, jagged teeth, animal teeth, monster teeth, vampire fangs:1.45)), ((multiple beauty marks:1.45)), ((multiple moles:1.45)), ((freckles:1.35)), ((neck blemishes, neck moles, black spots on neck, dotted line:1.45)), ((skin spots:1.35))"
@@ -608,8 +675,19 @@ def _apply_gaze_direction_negatives(pose_tag: str, neg: str) -> str:
     return neg
 
 
+def _inject_partner_pos_inline(pos: str, partner_pos: Optional[str]) -> str:
+    """2인 구도 시 범용 BREAK 대신 첫 청크 후미(BREAK 앞)에 방향성 파트너 엣지 크롭 태그를 인라인 주입한다."""
+    tags = _PARTNER_POS_SPECS.get(partner_pos or "", "partner head out of frame, cropped male shoulders at frame edge")
+    if not tags:
+        return pos
+    if " BREAK " in pos:
+        head, tail = pos.split(" BREAK ", 1)
+        return f"{head}, {tags} BREAK {tail}"
+    return f"{pos}, {tags}"
+
+
 class TwoPersonMobMutator(PromptMutator):
-    """5단계: 4-Tier 모브·성기 노출 제어 및 2인 인터랙티브 씬 모브 BREAK 주입, 시선 차단."""
+    """5단계: 4-Tier 모브·성기 노출 제어 및 2인 인터랙티브 씬 방향성 인라인 파트너 주입, 시선 차단."""
 
     def mutate(self, ctx: PromptContext) -> None:
         pose_tag = ctx.pose_tag
@@ -637,8 +715,16 @@ class TwoPersonMobMutator(PromptMutator):
                 neg = re.sub(r",?\s*\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair|torso))", "", neg, flags=re.IGNORECASE)
                 common_guard = _build_common_interactive_negative_guard(ctx, is_multi_partner=False)
                 neg = f"{neg}, {common_guard}, {spec['negative_tags']}"
-                if spec["positive_tags"]:
+                if mob_tier == 2:
+                    pos = _inject_partner_pos_inline(pos, ctx.partner_pos)
+                elif spec["positive_tags"]:
                     pos = f"{pos} {spec['positive_tags']}" if spec["break_chunk"] else f"{pos}, {spec['positive_tags']}"
+                    if mob_tier == 3 and (
+                        str(getattr(ctx.pose, "code", "")).strip().zfill(3) in ("126", "127")
+                        or any(kw in pose_tag.lower() for kw in ("under desk", "under table", "책상밑"))
+                    ):
+                        pos = f"{pos}, ((clothed male partner:1.20)), ((wearing collared shirt, white shirt:1.20))"
+                        neg = f"{neg}, (shirtless male:1.35), (naked male:1.35), (bare chest:1.35), (bare shoulders:1.35)"
                 neg = _apply_gaze_direction_negatives(pose_tag, neg)
 
             if ctx.is_aftermath or ctx.is_solo_scene:
@@ -656,7 +742,7 @@ class TwoPersonMobMutator(PromptMutator):
         has_interactive_keywords = any(kw in pose_tag.lower() for kw in _INTERACTIVE_POSE_KEYWORDS)
 
         is_daily_or_pov = (not has_interactive_keywords) and (
-            ctx.pose.section in ("genit_actions", "emotions", "actions", "spy_actions", "wuxia_actions")
+            ctx.pose.section in ("genit_actions", "emotions", "actions", "poses", "daily_events", "spy_actions", "wuxia_actions")
             or ctx.pose.code.startswith("B")
             or ctx.pose.code.startswith("A")
             or ctx.pose.code.startswith("S")
@@ -694,7 +780,7 @@ class TwoPersonMobMutator(PromptMutator):
                 neg = f"{neg}, ((male body, male torso, male lower body, male legs, pants, trousers, black pants, jeans, lap, sitting between legs, legs of partner, 1boy:1.35))"
             else:
                 pos = re.sub(r",\s*solo\b", "", pos, flags=re.IGNORECASE)
-                male_face_suppression = "(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), male hair, male bangs, male haircut"
+                male_face_suppression = "(detailed male face, male eyes, full male head:1.25)"
 
                 is_non_sexual_support = any(kw in pose_tag.lower() for kw in ("non-sexual", "channeling qi", "transferring internal energy", "hands resting on back", "palms on upper back"))
                 if is_non_sexual_support:
@@ -738,8 +824,9 @@ class TwoPersonMobMutator(PromptMutator):
                         mob_boy_guard_hug = "(3boys:1.8), (multiple boys:1.8), (three men:1.8), (extra male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)" if ctx.is_otokonoko else "(2boys:1.8), (3boys:1.8), (multiple boys:1.8), (multiple males:1.8), (two men:1.8), (extra male:1.8), (second male:1.8), (duplicate male:1.8), (group:1.8), (threesome:1.8)"
                         mob_negative = f"(detailed male face:1.4), (detailed eyes on male:1.35), (handsome male:1.4), (attractive male face:1.3), (expressive male face:1.3), (male portrait:1.3), (bishi:1.3), (male eyelashes:1.3), (standing male:1.5), (tall male:1.5), (standing beside:1.5), (standing partner:1.5), {mob_boy_guard_hug}, (extra head:1.6), (three heads:1.6), (multiple heads:1.6)"
                     elif is_non_exposure_romance:
-                        # 비성교 로맨스 씬(060 딥키스, 061 알몸키스 등): 상체 밀착 키스/포옹이므로 파트너 하부 노출 태그 배제
-                        mob_positive = "BREAK (single faceless male partner:1.15), (obscured male face:1.15), (unseen male eyes:1.15), (male head turned away:1.15), (naked male:1.15), (bare shoulders:1.15), (arms around partner neck or waist:1.2)"
+                        # 비성교 로맨스 씬(060 딥키스, 061 알몸키스 등): 범용 BREAK 대신 방향성 인라인 파트너 엣지 크롭 주입
+                        pos = _inject_partner_pos_inline(pos, ctx.partner_pos or "side_kiss")
+                        mob_positive = ""
                         mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
                         mob_negative = f"{male_face_suppression}, male clothes, male shirt, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45), (fellatio:1.4), (blowjob:1.4), (oral:1.4), (penis:1.4), (standing male legs:1.45)"
                     else:

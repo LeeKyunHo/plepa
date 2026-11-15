@@ -27,6 +27,7 @@ class PoseEntry:
     status: str = "active"
     canonical_code: Optional[str] = None
     mob_tier: Optional[int] = None
+    partner_pos: Optional[str] = None
 
 
     def get_prompt(self, gender: str = "female") -> str:

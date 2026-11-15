@@ -103,7 +103,7 @@ class GenerationParams:
     custom_neg: Optional[str] = None
     ref_image: Optional[str] = None
     ref_weight: Optional[float] = None
-    no_ref: bool = False
+    no_ref: bool = True
     mock: bool = False
     dry_run: bool = False
     overwrite: bool = False
@@ -242,6 +242,13 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "label": "강제 덮어쓰기 (리롤)",
         "tooltip": "기존에 완료된 에셋을 건너뛰지 않고 새로 생성하여 덮어씁니다",
         "default": False,
+    },
+    {
+        "field": "no_ref",
+        "cli_flag": "--no-ref",
+        "label": "순수 프롬프트 (IP-Adapter 끄기)",
+        "tooltip": "레퍼런스 이미지(IP-Adapter) 색감·화풍 간섭 차단 (기본 권장)",
+        "default": True,
     },
     {
         "field": "mock",
