@@ -747,6 +747,94 @@ def _build_rounded_box_guard(
     return guard
 
 
+def _compute_prior_extension_corridor(
+    prior_bin: np.ndarray,
+    target_box: Tuple[int, int, int, int],
+) -> Optional[np.ndarray]:
+    """
+    YOLO prior 마스크보다 target_box가 한쪽(또는 양쪽) 끝단으로 크게 확장된 경우(Branch B Union Span),
+    prior 주축(PCA 1주성분)을 따라 미커버 잔여 구간으로 이어지는 중심축 회랑(Corridor) 마스크를 생성합니다.
+    """
+    h, w = prior_bin.shape[:2]
+    ex1, ey1, ex2, ey2 = target_box
+    ebw, ebh = max(1, ex2 - ex1), max(1, ey2 - ey1)
+    prior_in_box = prior_bin[ey1:ey2, ex1:ex2]
+    pys_b, pxs_b = np.nonzero(prior_in_box)
+    if len(pxs_b) < 16:
+        return None
+
+    px1, px2 = ex1 + int(pxs_b.min()), ex1 + int(pxs_b.max()) + 1
+    py1, py2 = ey1 + int(pys_b.min()), ey1 + int(pys_b.max()) + 1
+    gap_thresh = max(24, int(round(min(ebw, ebh) * 0.14)))
+    gap_top = py1 - ey1
+    gap_bot = ey2 - py2
+    gap_left = px1 - ex1
+    gap_right = ex2 - px2
+    if max(gap_top, gap_bot, gap_left, gap_right) < gap_thresh:
+        return None
+
+    uncovered_rect = np.zeros((h, w), dtype=np.uint8)
+    if gap_bot >= gap_thresh:
+        uncovered_rect[py2:ey2, ex1:ex2] = 255
+    if gap_top >= gap_thresh:
+        uncovered_rect[ey1:py1, ex1:ex2] = 255
+    if gap_left >= gap_thresh:
+        uncovered_rect[ey1:ey2, ex1:px1] = 255
+    if gap_right >= gap_thresh:
+        uncovered_rect[ey1:ey2, px2:ex2] = 255
+
+    gx = pxs_b.astype(np.float64) + float(ex1)
+    gy = pys_b.astype(np.float64) + float(ey1)
+    pcx, pcy = float(gx.mean()), float(gy.mean())
+    pts_centered = np.column_stack((gx - pcx, gy - pcy))
+    cov = np.cov(pts_centered, rowvar=False) if len(pts_centered) >= 4 else np.eye(2)
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    major_idx = int(np.argmax(eigvals))
+    minor_idx = 1 - major_idx
+    eig_ratio = float(eigvals[major_idx]) / max(1e-6, float(eigvals[minor_idx]))
+    if eig_ratio >= 1.25:
+        vx, vy = float(eigvecs[0, major_idx]), float(eigvecs[1, major_idx])
+    elif max(gap_top, gap_bot) >= max(gap_left, gap_right):
+        vx, vy = 0.0, 1.0
+    else:
+        vx, vy = 1.0, 0.0
+    norm_len = math.hypot(vx, vy) or 1.0
+    vx, vy = vx / norm_len, vy / norm_len
+
+    along_proj = pts_centered[:, 0] * vx + pts_centered[:, 1] * vy
+    perp_proj = np.abs(pts_centered[:, 0] * (-vy) + pts_centered[:, 1] * vx)
+    half_w = max(18, int(round(float(np.percentile(perp_proj, 95)) * 1.25)))
+
+    corners = ((ex1, ey1), (ex2, ey1), (ex1, ey2), (ex2, ey2))
+    box_projs = [(cx - pcx) * vx + (cy - pcy) * vy for cx, cy in corners]
+    box_lo, box_hi = min(box_projs), max(box_projs)
+    p_min, p_max = float(along_proj.min()), float(along_proj.max())
+    p_lo = float(np.percentile(along_proj, 8))
+    p_hi = float(np.percentile(along_proj, 92))
+
+    corridor = np.zeros((h, w), dtype=np.uint8)
+    drew = False
+    if (box_hi - p_max) >= gap_thresh * 0.70:
+        pt1 = (int(round(pcx + vx * p_hi)), int(round(pcy + vy * p_hi)))
+        pt2 = (int(round(pcx + vx * box_hi)), int(round(pcy + vy * box_hi)))
+        cv2.line(corridor, pt1, pt2, 255, thickness=max(16, half_w * 2))
+        drew = True
+    if (p_min - box_lo) >= gap_thresh * 0.70:
+        pt1 = (int(round(pcx + vx * p_lo)), int(round(pcy + vy * p_lo)))
+        pt2 = (int(round(pcx + vx * box_lo)), int(round(pcy + vy * box_lo)))
+        cv2.line(corridor, pt1, pt2, 255, thickness=max(16, half_w * 2))
+        drew = True
+
+    if not drew:
+        return None
+
+    box_mask = np.zeros((h, w), dtype=np.uint8)
+    box_mask[ey1:ey2, ex1:ex2] = 255
+    corridor = cv2.bitwise_and(corridor, box_mask)
+    corridor = cv2.bitwise_and(corridor, uncovered_rect)
+    return corridor if np.count_nonzero(corridor) >= 16 else None
+
+
 def _extract_semantic_sam_prompts(
     yolo_prior_mask: np.ndarray,
     target_box: Tuple[int, int, int, int],
@@ -758,8 +846,9 @@ def _extract_semantic_sam_prompts(
     """
     YOLO-seg 폴리곤 마스크(yolo_prior_mask)를 기반으로 SAM 2.1용 시맨틱 프롬프트를 산출합니다.
     - Positive(1): 손 영역을 제외한 prior 마스크의 cv2.distanceTransform 최대 코어 및 주축 능선 코어(최대 3점)
-    - Negative(0): context_box(또는 target_box) 내 피부 중 prior 외곽 ring 바깥의 주변 피부 사분면 대표 좌표(최대 4점)
-    - envelope_mask: 타겟 박스 크기의 ~15% 반경으로 팽창시킨 Semantic Envelope 가드
+                   + Branch B 확장 기저부가 존재할 경우 중심축 확장 구간의 보조 Positive 1점 추가
+    - Negative(0): context_box(또는 target_box) 내 피부 중 prior·확장 축 회랑 바깥의 주변 피부 사분면 대표 좌표(최대 4점)
+    - envelope_mask: 타겟 박스 크기의 ~15% 반경으로 팽창시킨 Semantic Envelope 가드 (+ 확장 축 코어 허용)
     """
     h, w = yolo_prior_mask.shape[:2]
     prior_bin = (yolo_prior_mask > 0).astype(np.uint8)
@@ -773,6 +862,13 @@ def _extract_semantic_sam_prompts(
     kw_env, kh_env = max(3, rx * 2 + 1), max(3, ry * 2 + 1)
     env_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kw_env, kh_env))
     envelope_mask = (cv2.dilate(prior_bin * 255, env_kernel, iterations=1) > 0).astype(np.uint8) * 255
+
+    ext_corridor = _compute_prior_extension_corridor(prior_bin, (ex1, ey1, ex2, ey2))
+    if ext_corridor is not None:
+        ext_pad = cv2.dilate(ext_corridor, env_kernel, iterations=1)
+        box_clip = np.zeros((h, w), dtype=np.uint8)
+        box_clip[max(0, ey1 - 6):min(h, ey2 + 6), max(0, ex1 - 6):min(w, ex2 + 6)] = 255
+        envelope_mask = cv2.bitwise_or(envelope_mask, cv2.bitwise_and(ext_pad, box_clip))
 
     valid_fg = prior_bin.copy()
     for hx1, hy1, hx2, hy2 in hand_boxes:
@@ -820,11 +916,26 @@ def _extract_semantic_sam_prompts(
                 _try_add_ridge_pt(dist[ey1:ey2, ex1:x_a], ex1, ey1, ridge_thresh)
                 _try_add_ridge_pt(dist[ey1:ey2, x_b:ex2], x_b, ey1, ridge_thresh)
 
-    # Negative points: prior 외곽 안전 버퍼 바깥쪽 주변 피부(배/허벅지/사타구니) 사분면 추출
+    # Negative points: prior 외곽 안전 버퍼 및 확장 축 회랑 바깥쪽 주변 피부 사분면 추출
     neg_rx = max(_scale_int(6, scale, minimum=4), int(round(ebw * 0.08)))
     neg_ry = max(_scale_int(6, scale, minimum=4), int(round(ebh * 0.08)))
     neg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (neg_rx * 2 + 1, neg_ry * 2 + 1))
     dilated_prior = cv2.dilate(prior_bin * 255, neg_kernel, iterations=1) > 0
+
+    aux_pos_pts: List[List[int]] = []
+    if ext_corridor is not None:
+        ext_mask = (ext_corridor > 0) & (~dilated_prior)
+        if np.count_nonzero(ext_mask) == 0:
+            ext_mask = ext_corridor > 0
+        for hx1, hy1, hx2, hy2 in hand_boxes:
+            ext_mask[max(0, int(hy1)):min(h, int(hy2)), max(0, int(hx1)):min(w, int(hx2))] = False
+        ext_skin = ext_mask & skin_bool
+        eys, exs = np.where(ext_skin if np.count_nonzero(ext_skin) >= 12 else ext_mask)
+        if len(exs) > 0:
+            med_e = int(len(exs) // 2)
+            cand_ext = [int(exs[med_e]), int(eys[med_e])]
+            if not _in_hands(cand_ext[0], cand_ext[1]):
+                aux_pos_pts.append(cand_ext)
 
     cx1, cy1, cx2, cy2 = [int(v) for v in (context_box if context_box is not None else target_box)]
     cx1, cy1 = max(0, min(ex1, cx1)), max(0, min(ey1, cy1))
@@ -832,7 +943,10 @@ def _extract_semantic_sam_prompts(
 
     neg_pts: List[List[int]] = []
     if cx2 > cx1 + 4 and cy2 > cy1 + 4:
-        outer_skin = skin_bool[cy1:cy2, cx1:cx2] & (~dilated_prior[cy1:cy2, cx1:cx2])
+        protected_neg_zone = dilated_prior.copy()
+        if ext_corridor is not None:
+            protected_neg_zone |= (ext_corridor > 0)
+        outer_skin = skin_bool[cy1:cy2, cx1:cx2] & (~protected_neg_zone[cy1:cy2, cx1:cx2])
         cw_ctx, ch_ctx = cx2 - cx1, cy2 - cy1
         mx, my = max(1, cw_ctx // 2), max(1, ch_ctx // 2)
         quads = (
@@ -845,13 +959,12 @@ def _extract_semantic_sam_prompts(
             sub = outer_skin[qy1:qy2, qx1:qx2]
             qys, qxs = np.where(sub)
             if len(qxs) >= 12:
-                # 1사분위/중앙 피부 좌표 추출 (실제 주변 피부 위에 위치하도록 qxs/qys 중 가장 가까운 유효 픽셀 선택)
                 med_idx = int(len(qxs) // 2)
                 px = int(cx1 + qx1 + qxs[med_idx])
                 py = int(cy1 + qy1 + qys[med_idx])
                 neg_pts.append([px, py])
 
-    return pos_pts[:3], neg_pts[:4], envelope_mask
+    return pos_pts[:3] + aux_pos_pts[:1], neg_pts[:4], envelope_mask
 
 
 def _classify_sam_mask_leak(
@@ -3025,8 +3138,24 @@ def _resolve_hybrid_targets_with_priors(
         pose_cat=pose_cat,
     )
 
+    def _passes_case_a_rescue(item: Tuple[Tuple[int, int, int, int], str, float, np.ndarray], has_existing: bool) -> bool:
+        s_box_c, _, s_score_c, _ = item
+        min_r = 0.40 if has_existing else 0.19
+        if float(s_score_c) < min_r:
+            return False
+        if not has_existing and 0.19 <= float(s_score_c) < 0.25:
+            sx1, sy1, sx2, sy2 = [int(v) for v in s_box_c]
+            s_area = max(0, sx2 - sx1) * max(0, sy2 - sy1)
+            if s_area < 900:
+                return False
+            roi_sk = eff_skin[max(0, sy1):min(h, sy2), max(0, sx1):min(w, sx2)]
+            skin_ratio = float(np.count_nonzero(roi_sk)) / float(max(1, roi_sk.size))
+            if skin_ratio < 0.12:
+                return False
+        return True
+
     if not deep_cands:
-        rescue_items = [item for item in seg_items if float(item[2]) >= 0.25]
+        rescue_items = [item for item in seg_items if _passes_case_a_rescue(item, has_existing=False)]
         if rescue_items:
             rescue_boxes = [(it[0], it[1], float(it[2])) for it in rescue_items]
             rescue_priors = [_render_seg_items_mask(w, h, [it]) for it in rescue_items]
@@ -3124,37 +3253,161 @@ def _resolve_hybrid_targets_with_priors(
                 )
                 continue
 
-        # Step 1.1: YOLO-seg 타겟(conf>=0.32 또는 IoMin>=0.20 & conf>=0.22)이면 DeepGHS 통합 박스를 YOLO 타이트 박스로 대체
-        qualified_segs = [
-            (idx, it)
-            for idx, it in matched_indexed
-            if float(it[2]) >= 0.32 or (float(it[2]) >= 0.22 and _box_iomin(d_box, it[0]) >= 0.20)
-        ]
+        # Step 1.1: YOLO-seg 타겟 매칭 (경계 미세 파편·박스 외곽 이탈 인접 오탐 배제) 및 Residual Span 2-Way 복원
+        d_area = max(1, (dx2 - dx1) * (dy2 - dy1))
+
+        def _is_valid_prior_match(it: Tuple[Tuple[int, int, int, int], str, float, np.ndarray]) -> bool:
+            s_bx, _, s_sc, _ = it
+            sc = float(s_sc)
+            if not (sc >= 0.32 or (sc >= 0.22 and _box_iomin(d_box, s_bx) >= 0.20)):
+                return False
+            sx1, sy1, sx2, sy2 = [int(v) for v in s_bx]
+            s_area = max(1, (sx2 - sx1) * (sy2 - sy1))
+            inter_area = max(0, min(dx2, sx2) - max(dx1, sx1)) * max(0, min(dy2, sy2) - max(dy1, sy1))
+            if (float(inter_area) / float(d_area)) < 0.06 and sc < 0.55:
+                return False
+            s_cx = (sx1 + sx2) * 0.5
+            s_cy = (sy1 + sy2) * 0.5
+            center_inside = (dx1 <= s_cx <= dx2) and (dy1 <= s_cy <= dy2)
+            if not center_inside and (float(inter_area) / float(s_area)) < 0.55 and sc < 0.60:
+                return False
+            return True
+
+        qualified_segs = [(idx, it) for idx, it in matched_indexed if _is_valid_prior_match(it)]
         if qualified_segs:
+            cand_segs: List[Tuple[int, Any]] = []
             for idx, it in qualified_segs:
                 if idx in consumed_seg_indices:
                     continue
-                s_box, s_lbl, s_score, _ = it
-                # 이미 추가된 박스와 과도하게 겹치는 중복은 스킵
+                s_box = it[0]
                 if any(_box_iou(s_box, fb[0]) >= 0.45 for fb in final_boxes):
                     continue
-                consumed_seg_indices.add(idx)
-                prior_mask = _render_seg_items_mask(w, h, [it])
-                final_boxes.append((s_box, str(s_lbl), max(float(s_score), float(d_score))))
-                final_priors.append(prior_mask)
-                final_contexts.append(d_box)
+                if any(_box_iou(s_box, prev_it[0]) >= 0.45 for _, prev_it in cand_segs):
+                    continue
+                cand_segs.append((idx, it))
+
+            if cand_segs:
+                for idx, _ in cand_segs:
+                    consumed_seg_indices.add(idx)
+
+                dghs_w = max(1, dx2 - dx1)
+                dghs_h = max(1, dy2 - dy1)
+
+                def _merged_span(segs_rng: List[Tuple[int, int]]) -> int:
+                    valid = sorted((a, b) for a, b in segs_rng if b > a)
+                    if not valid:
+                        return 0
+                    total_len = 0
+                    cur_a, cur_b = valid[0]
+                    for na, nb in valid[1:]:
+                        if na <= cur_b:
+                            cur_b = max(cur_b, nb)
+                        else:
+                            total_len += cur_b - cur_a
+                            cur_a, cur_b = na, nb
+                    return total_len + (cur_b - cur_a)
+
+                cov_y = _merged_span([(max(dy1, it[0][1]), min(dy2, it[0][3])) for _, it in cand_segs])
+                cov_y_ratio = float(cov_y) / float(dghs_h)
+                min_sx1 = min(int(it[0][0]) for _, it in cand_segs)
+                min_sy1 = min(int(it[0][1]) for _, it in cand_segs)
+                max_sx2 = max(int(it[0][2]) for _, it in cand_segs)
+                max_sy2 = max(int(it[0][3]) for _, it in cand_segs)
+                top_res = max(0, min_sy1 - dy1)
+                bot_res = max(0, dy2 - max_sy2)
+                y_res_thresh = max(75, int(round(dghs_h * 0.35)))
+
+                cov_x = _merged_span([(max(dx1, it[0][0]), min(dx2, it[0][2])) for _, it in cand_segs])
+                cov_x_ratio = float(cov_x) / float(dghs_w)
+                x_res_thresh = max(75, int(round(dghs_w * 0.35)))
+                lat_res = max(max(0, min_sx1 - dx1), max(0, dx2 - max_sx2))
+
+                is_under_covered = (
+                    cov_y_ratio < 0.62
+                    or top_res >= y_res_thresh
+                    or bot_res >= y_res_thresh
+                    or (dghs_w >= dghs_h * 0.70 and (cov_x_ratio < 0.62 or lat_res >= x_res_thresh))
+                )
+
+                if not is_under_covered:
+                    for _, it in cand_segs:
+                        s_box, s_lbl, s_score, _ = it
+                        prior_mask = _render_seg_items_mask(w, h, [it])
+                        final_boxes.append((s_box, str(s_lbl), max(float(s_score), float(d_score))))
+                        final_priors.append(prior_mask)
+                        final_contexts.append(d_box)
+                else:
+                    hands_list = _get_hands_lazy()
+                    yolo_union = (min_sx1, min_sy1, max_sx2, max_sy2)
+
+                    def _find_crossing_hand(sub_box: Tuple[int, int, int, int]) -> Optional[Tuple[int, int, int, int]]:
+                        for hb in hands_list:
+                            if _has_hand_between_boxes(yolo_union, sub_box, [hb]):
+                                return hb
+                        return None
+
+                    bot_cand = (dx1, max_sy2, dx2, dy2) if bot_res >= max(50, int(round(dghs_h * 0.25))) else None
+                    top_cand = (dx1, dy1, dx2, min_sy1) if top_res >= max(50, int(round(dghs_h * 0.25))) else None
+                    cross_bot = _find_crossing_hand(bot_cand) if bot_cand is not None else None
+                    cross_top = _find_crossing_hand(top_cand) if top_cand is not None else None
+
+                    if cross_bot is not None or cross_top is not None:
+                        # 분기 A: 손 가로질림(Hand-Split)에 의한 누락 -> 기존 YOLO 분할 + 미커버 잔여 Sub-BBox(yolo_prior=None) 보존
+                        # 편측 대각 구도에서 YOLO 기커버 반대측(인접 복부/체형) 스필 방지를 위해 수평 범위를 미커버 측으로 제한
+                        left_uncov = max(0, min_sx1 - dx1)
+                        right_uncov = max(0, dx2 - max_sx2)
+                        res_x1, res_x2 = dx1, dx2
+                        if left_uncov >= max(45, right_uncov * 2):
+                            res_x2 = min(dx2, min_sx1 + max(38, int(round(left_uncov * 0.33))))
+                        elif right_uncov >= max(45, left_uncov * 2):
+                            res_x1 = max(dx1, max_sx2 - max(38, int(round(right_uncov * 0.33))))
+
+                        for _, it in cand_segs:
+                            s_box, s_lbl, s_score, _ = it
+                            prior_mask = _render_seg_items_mask(w, h, [it])
+                            final_boxes.append((s_box, str(s_lbl), max(float(s_score), float(d_score))))
+                            final_priors.append(prior_mask)
+                            final_contexts.append(d_box)
+                        if cross_bot is not None and bot_cand is not None:
+                            res_y1 = max(max_sy2, int(cross_bot[1]))
+                            if res_y1 >= dy2 - 24:
+                                res_y1 = max_sy2
+                            if dy2 - res_y1 >= 24 and res_x2 - res_x1 >= 24:
+                                final_boxes.append(((res_x1, res_y1, res_x2, dy2), str(d_lbl), float(d_score)))
+                                final_priors.append(None)
+                                final_contexts.append(None)
+                        if cross_top is not None and top_cand is not None:
+                            res_y2 = min(min_sy1, int(cross_top[3]))
+                            if res_y2 <= dy1 + 24:
+                                res_y2 = min_sy1
+                            if res_y2 - dy1 >= 24 and res_x2 - res_x1 >= 24:
+                                final_boxes.append(((res_x1, dy1, res_x2, res_y2), str(d_lbl), float(d_score)))
+                                final_priors.append(None)
+                                final_contexts.append(None)
+                    else:
+                        # 분기 B: 손 개입 없는 연속 기저부 짧아짐 -> DeepGHS 범위로 Union Span 단일 확장
+                        union_box = (
+                            max(0, min(dx1, min_sx1)),
+                            max(0, min(dy1, min_sy1)),
+                            min(w, max(dx2, max_sx2)),
+                            min(h, max(dy2, max_sy2)),
+                        )
+                        merged_prior = _render_seg_items_mask(w, h, [it for _, it in cand_segs])
+                        merged_score = max([float(d_score)] + [float(it[2]) for _, it in cand_segs])
+                        final_boxes.append((union_box, str(d_lbl), merged_score))
+                        final_priors.append(merged_prior)
+                        final_contexts.append(d_box)
         else:
             final_boxes.append((d_box, str(d_lbl), float(d_score)))
             final_priors.append(None)
             final_contexts.append(None)
 
-    # Case A: DeepGHS가 놓친 독립 타겟을 YOLO-seg 합의로 구제 (하단 비손분할 저신뢰 Echo 제외)
+    # Case A: DeepGHS가 놓친 독립 타겟을 YOLO-seg 합의로 구제 (P2.5: min_rescue 0.25 -> 0.19 + 피부 비율/면적 가드)
     for idx, it in enumerate(seg_items):
         if idx in consumed_seg_indices:
             continue
         s_box, s_lbl, s_score, _ = it
-        min_rescue = 0.25 if not final_boxes else 0.40
-        if float(s_score) < min_rescue:
+        if not _passes_case_a_rescue(it, has_existing=bool(final_boxes)):
             continue
         if any(
             _box_iou(s_box, f_box) >= 0.12 or _box_iomin(s_box, f_box) >= 0.22
@@ -3165,6 +3418,8 @@ def _resolve_hybrid_targets_with_priors(
             top_primary = max(final_boxes, key=_primary_rank)[0]
             tp_yc = (top_primary[1] + top_primary[3]) * 0.5
             s_yc = (s_box[1] + s_box[3]) * 0.5
+            if float(s_yc) < (float(h) * 0.14) and float(s_score) < 0.65:
+                continue
             s_y2r = float(s_box[3]) / float(max(1, h))
             if (
                 s_yc > tp_yc + 20.0
