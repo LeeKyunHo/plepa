@@ -26,6 +26,7 @@ class PoseEntry:
     negative_add: str = ""
     status: str = "active"
     canonical_code: Optional[str] = None
+    mob_tier: Optional[int] = None
 
 
     def get_prompt(self, gender: str = "female") -> str:
@@ -40,6 +41,10 @@ class PoseEntry:
     @property
     def is_two_person(self) -> bool:
         """남성 파트너 또는 2인 상호작용이 포함된 씬인지 여부를 판정합니다."""
+        if self.mob_tier == 0:
+            return False
+        if self.mob_tier in (1, 2, 3):
+            return True
         p = f"{self.prompt} {self.prompt_female} {self.prompt_otokonoko}".lower()
         return any(
             kw in p
@@ -54,12 +59,18 @@ class PoseEntry:
     @property
     def is_offscreen_partner(self) -> bool:
         """화면 밖 1인칭(POV) 또는 화면 밖 파트너 연출 씬인지 판정합니다."""
+        if self.mob_tier in (0, 1, 2, 3):
+            return True
         p = f"{self.prompt} {self.prompt_female} {self.prompt_otokonoko}".lower()
         return any(kw in p for kw in ("pov", "off-screen", "offscreen", "cum on body", "facial", "gokkun"))
 
     @property
     def is_solo_scene(self) -> bool:
         """단독 1인 씬인지 여부를 판정합니다."""
+        if self.mob_tier == 0:
+            return True
+        if self.mob_tier in (1, 2, 3):
+            return False
         return not self.is_two_person
 
     @property

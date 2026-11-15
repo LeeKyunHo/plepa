@@ -807,15 +807,30 @@ class GenerationService:
 
                             # Auto-QC 품질 및 결함 검증
                             if params.auto_qc:
-                                is_kiss = "kiss" in (pose.prompt or "").lower() or str(target.code) in ("060", "061", "019")
+                                pose_mob_tier = getattr(pose, "mob_tier", None)
+                                if pose_mob_tier == 0:
+                                    qc_is_solo, qc_is_two_person, qc_is_offscreen = True, False, True
+                                elif pose_mob_tier in (1, 2, 3):
+                                    qc_is_solo, qc_is_two_person, qc_is_offscreen = False, True, True
+                                else:
+                                    qc_is_solo = pose.is_solo_scene
+                                    qc_is_two_person = pose.is_two_person
+                                    qc_is_offscreen = pose.is_offscreen_partner
+
+                                qc_prompt = (
+                                    pose.get_prompt(getattr(char, "gender", "female"))
+                                    if hasattr(pose, "get_prompt") and callable(pose.get_prompt)
+                                    else (pose.prompt or "")
+                                )
+                                is_kiss = "kiss" in qc_prompt.lower() or str(target.code) in ("060", "061", "019")
                                 passed, fail_reason, _ = validate_generated_image(
                                     image=out_path,
-                                    is_solo_scene=pose.is_solo_scene,
-                                    is_two_person=pose.is_two_person,
-                                    is_offscreen_partner=pose.is_offscreen_partner,
+                                    is_solo_scene=qc_is_solo,
+                                    is_two_person=qc_is_two_person,
+                                    is_offscreen_partner=qc_is_offscreen,
                                     is_kiss_scene=is_kiss,
                                     section=target.section,
-                                    prompt=pose.prompt,
+                                    prompt=qc_prompt,
                                 )
                                 if not passed:
                                     final_qc_fail = fail_reason
@@ -848,10 +863,15 @@ class GenerationService:
                                         print(f" [Auto-QC 통과(재시도 {attempt}회)]", end="", flush=True)
 
                                 # Strict Censor QC: 성인 노출 필수 씬에서 성기 미탐지 시 리롤 (censor=False 외부 리롤 워커에서도 독립 작동)
-                                if params.strict_censor_qc and (
-                                    should_censor
-                                    or is_pose_censor_required(
-                                        pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster
+                                # 단, mob_tier 0~2(오프스크린/손 크롭/실루엣 밀착)는 의도적으로 성기 노출을 배제하므로 필수 검출 대상에서 제외
+                                if (
+                                    params.strict_censor_qc
+                                    and getattr(pose, "mob_tier", None) not in (0, 1, 2)
+                                    and (
+                                        should_censor
+                                        or is_pose_censor_required(
+                                            pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster
+                                        )
                                     )
                                 ):
                                     from plepa_engine.censor import POSE_SAFE_ANCHORS, detect_genitals, get_pose_category

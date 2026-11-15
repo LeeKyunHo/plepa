@@ -130,6 +130,7 @@ class PoseService:
                     negative_add=item.get("negative_add", ""),
                     status=item.get("status", "active"),
                     canonical_code=item.get("canonical_code"),
+                    mob_tier=item.get("mob_tier"),
                 )
 
         # 로스터 전용 포즈 오버라이드 파일 (projects/{roster}/pose_overrides.json) 로드
@@ -182,6 +183,7 @@ class PoseService:
                             negative_add=item.get("negative_add", ""),
                             status=item.get("status", "active"),
                             canonical_code=item.get("canonical_code"),
+                            mob_tier=item.get("mob_tier"),
                         )
 
             except Exception as exc:

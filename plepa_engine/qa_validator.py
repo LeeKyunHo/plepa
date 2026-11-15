@@ -320,7 +320,10 @@ def validate_generated_image(
         if eff_require_subject and not headless_allowed and metrics["heads"] == 0 and metrics["faces"] == 0:
             return False, "피사체 증발/구도 붕괴 감지 (머리·얼굴 동시 미검출)", metrics
 
-        if is_two_person and is_offscreen_partner:
+        if is_solo:
+            if metrics["faces"] > 1:
+                return False, f"1인 씬 얼굴 초과 감지 (얼굴: {metrics['faces']}개)", metrics
+        elif is_two_person and is_offscreen_partner:
             if metrics["faces"] > 1:
                 return False, f"오프스크린 파트너 씬 모브 얼굴 노출 감지 (얼굴: {metrics['faces']}개, 단독 1인 얼굴만 허용)", metrics
         elif not is_solo:

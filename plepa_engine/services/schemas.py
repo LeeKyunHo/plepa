@@ -31,6 +31,10 @@ class PoseItemSchema(BaseModel):
     description: Optional[str] = Field(default="", description="포즈 한글 상세 설명")
     prompt: str = Field(min_length=1, description="엔진별 프롬프트 (FLUX 자연어 또는 SDXL 태그)")
     flags: Optional[PoseFlags] = Field(default=None, description="포즈 메타데이터 플래그")
+    mob_tier: Optional[Literal[0, 1, 2, 3]] = Field(
+        default=None,
+        description="2인 파트너/모브 노출 등급 (0=오프스크린 POV/솔로, 1=손·극부위 크롭, 2=실루엣 밀착, 3=콤팩트 봉사)",
+    )
 
     @field_validator("label")
     @classmethod
