@@ -175,3 +175,12 @@ def test_grounding_production_asset_lossless_guardrail():
             assert len(origin_files) >= min_origins, (
                 f"[{roster}/{char}] 원본 백업 수량이 최소 기준({min_origins}장) 미달입니다 (현재: {len(origin_files)}장)."
             )
+
+
+def test_no_ref_default_and_use_ref_toggle():
+    """IP-Adapter 기본 비활성화(ADR-36) 및 --use-ref 토글 반전 정합성을 검증."""
+    parser = create_parser()
+    assert parser.parse_args([]).no_ref is True
+    assert parser.parse_args(["--no-ref"]).no_ref is True
+    assert parser.parse_args(["--use-ref"]).no_ref is False
+    assert GenerationParams(character_expr="aya", pose_expr="072").no_ref is True

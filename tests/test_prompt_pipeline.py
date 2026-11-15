@@ -145,16 +145,14 @@ def test_mob_tier_pilot_8_poses_db_and_prompt_pipeline():
         elif expected_tier == 2:
             assert pose.is_two_person is True
             assert pose.is_offscreen_partner is True
-            assert pos.count("BREAK") == 2
-            mob_chunk = pos.split("BREAK")[-1].lower()
-            assert "faceless shadowed male silhouette" in mob_chunk
-            assert "cropped male shoulder" in mob_chunk
-            assert "dark lighting on partner" in mob_chunk
-            assert "female face and chest focus" in mob_chunk
+            assert pos.count("BREAK") == 1
+            assert "faceless" not in pos_low
+            assert "partner head out of frame" in pos_low
             assert "crotch out of frame" in pos_low
-            assert "penis" not in mob_chunk, f"Tier 2({code}) 모브 청크에 성기 태그 금지: {mob_chunk}"
-            for expected_neg in ("male face", "detailed male eyes", "full body", "wide shot", "crotch focus"):
+            assert "penis" not in pos_low, f"Tier 2({code}) 프롬프트에 성기 태그 금지: {pos}"
+            for expected_neg in ("detailed male face", "dark silhouette", "heavy shadow", "full body", "wide shot", "crotch focus"):
                 assert expected_neg in neg_low
+            assert "male hair" not in neg_low
         elif expected_tier == 3:
             assert pose.is_two_person is True
             assert pose.is_offscreen_partner is True
@@ -183,8 +181,13 @@ def test_implicit_solo_focus_marker_triggers_tier_0_without_breaking_legacy():
     assert "solo" in pos.lower()
     assert "disembodied limb" in neg.lower()
 
-    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
-    legacy_oral = db["096"]  # 1boy + solo focus + fellatio 레거시 포즈
+    legacy_oral = PoseEntry(
+        code="H98",
+        section="h_scenes",
+        label="테스트레거시오랄",
+        prompt="1boy, solo focus, 1girl, completely nude, fellatio, kneeling, looking up at partner",
+        mob_tier=None,
+    )
     assert legacy_oral.mob_tier is None
     pos_leg, _, _ = assemble_sdxl_prompt(char=char, pose=legacy_oral, bg_prompt="bedroom")
     assert pos_leg.count("BREAK") == 2
@@ -243,10 +246,10 @@ def test_generation_service_auto_qc_and_strict_censor_qc_tier_routing(tmp_path: 
     def _spy_validate(image, **kwargs):
         recorded_qc_calls.append(kwargs)
         # Tier 2 (086) 1차 시도는 모브 얼굴 침범으로 리롤 유도, 2차 시도 통과
-        if "shadowed male shoulder" in (kwargs.get("prompt") or "").lower():
+        if "lying on back on bed, legs spread" in (kwargs.get("prompt") or "").lower():
             attempt_086 = sum(
                 1 for c in recorded_qc_calls
-                if "shadowed male shoulder" in (c.get("prompt") or "").lower()
+                if "lying on back on bed, legs spread" in (c.get("prompt") or "").lower()
             )
             if attempt_086 == 1:
                 return False, "오프스크린 파트너 씬 모브 얼굴 노출 감지 (얼굴: 2개, 단독 1인 얼굴만 허용)", {"persons": 2, "heads": 1, "faces": 2, "hands": 2}
@@ -283,7 +286,7 @@ def test_generation_service_auto_qc_and_strict_censor_qc_tier_routing(tmp_path: 
     assert c_080["is_solo_scene"] is True
     assert c_080["is_two_person"] is False
 
-    for marker in ("lying on stomach", "shadowed male shoulder", "fellatio"):
+    for marker in ("on all fours", "lying on back on bed, legs spread", "fellatio"):
         c_t = next(v for k, v in qc_by_prompt.items() if marker in k.lower())
         assert c_t["is_solo_scene"] is False
         assert c_t["is_two_person"] is True
@@ -308,3 +311,114 @@ def test_generation_service_auto_qc_and_strict_censor_qc_tier_routing(tmp_path: 
         )
         assert passed_t2 is False
         assert "오프스크린 파트너" in reason_t2
+
+
+def test_adr101_style_guard_comic_expression_and_accessory_lock():
+    """ADR-101: Reference-5 화풍 가드, 태닝/누드 예외, 코믹 표정 눈 보존, male hair 제거 및 초커 보호 검증."""
+    from plepa_engine.models import CharacterAppearance, CharacterConfig, PoseEntry
+
+    char = CharacterConfig(
+        prefix="gyaru",
+        name="Gyaru",
+        gender="female",
+        appearance=CharacterAppearance(
+            face_and_hair="blonde twin tails, red eyes",
+            physique="slender",
+            outfit="choker, black shirt, red ribbon",
+        ),
+        sdxl_positive="masterpiece, best quality BREAK 1girl, blonde twin tails, red eyes, choker, black shirt",
+        sdxl_negative="choker, necklace, worst quality, low quality",
+    )
+    shock_pose = PoseEntry(
+        code="T01",
+        section="emotions",
+        label="놀람",
+        prompt="cowboy shot, shocked expression, wide eyes, constricted pupils, surprised",
+    )
+    pos, neg, is_nude = assemble_sdxl_prompt(char=char, pose=shock_pose, bg_prompt="classroom")
+    assert not is_nude
+    pos_low = pos.lower()
+    neg_low = neg.lower()
+    assert "delicate colored lineart" in pos_low
+    assert "2d cute anime face" in pos_low
+    assert "detailed fabric texture" in pos_low
+    assert "smooth pale skin" in pos_low
+    assert "realistic nose" in neg_low
+    assert "pupil-less" not in neg_low
+    assert "blank stare" not in neg_low
+    assert "choker" not in neg_low
+    assert "male hair" not in neg_low
+
+
+def test_adr101_qa_headpat_3hands_and_night_color_burn():
+    """ADR-101: #047 쓰다듬기(3손 허용) 및 #050 야경 Color Burn(0.35 완화) 검증."""
+    from plepa_engine.qa_validator import validate_generated_image
+
+    img = Image.new("RGB", (256, 384), color=(180, 180, 180))
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 3), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok, reason, metrics = validate_generated_image(
+            img,
+            prompt="cowboy shot, ((pov hand patting head:1.25)), blissful smiling face",
+            is_solo_scene=True,
+            is_two_person=False,
+        )
+        assert ok is True, reason
+        assert metrics["hands"] == 3
+
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.28):
+        ok, reason, _ = validate_generated_image(
+            img,
+            prompt="cowboy shot, city night view, glowing city lights, dark night sky",
+            is_solo_scene=True,
+            is_two_person=False,
+        )
+        assert ok is True, reason
+
+
+def test_adr101_pose_db_and_events_zero_conflicts():
+    """ADR-101: sdxl_pose_database.json 및 events.json 내 DUAL_SHOT/bald/faceless/SOLO+1BOY 0건 유지 계약 검증."""
+    import json
+    from pathlib import Path
+
+    for path in (Path("data/sdxl_pose_database.json"), Path("projects/campus/events.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for sec, items in data.items():
+            if not isinstance(items, dict):
+                continue
+            for code, entry in items.items():
+                if not isinstance(entry, dict):
+                    continue
+                for field in ("prompt", "prompt_otokonoko"):
+                    t = (entry.get(field) or "").lower()
+                    if not t:
+                        continue
+                    has_tight = any(k in t for k in ("tight bust portrait", "intimate close-up", "close-up bust shot"))
+                    has_wide = any(k in t for k in ("cowboy shot", "full body"))
+                    assert not (has_tight and has_wide), f"DUAL_SHOT in {path}:{sec}:{code}:{field}"
+                    assert "bald" not in t, f"bald in {path}:{sec}:{code}:{field}"
+                    assert "faceless" not in t, f"faceless in {path}:{sec}:{code}:{field}"
+                    assert not ("solo" in t and "1boy" in t), f"SOLO+1BOY in {path}:{sec}:{code}:{field}"
+
+
+def test_adr101_campus_70_female_h_poses_complete_tier_and_partner_pos():
+    """ADR-101 Phase H2-B: 캠퍼스 여성 H-씬 70종(060~132, 121 제외) 전수 mob_tier 및 Tier 2 partner_pos 계약 검증."""
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    checked = 0
+    for code, pose in sorted(db.items()):
+        if not (code.isdigit() and 60 <= int(code) <= 132 and code != "121"):
+            continue
+        checked += 1
+        assert pose.mob_tier in (0, 1, 2, 3), f"#{code} mob_tier 누락: {pose.mob_tier}"
+        if pose.mob_tier == 2:
+            assert pose.partner_pos in ("above", "below", "behind", "side_kiss", "offscreen"), (
+                f"#{code} Tier 2 partner_pos 누락/무효: {pose.partner_pos}"
+            )
+    assert checked == 70, f"기대 여성 H-씬 70종 불일치: {checked}"

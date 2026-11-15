@@ -64,6 +64,7 @@ C_TUNING_BENCH = PROJECTS_DIR / "ykn" / "artist_benchmark_c_tuning"
 CAMPUS_BENCH = PROJECTS_DIR / "campus" / "artist_benchmark_c1_c2"
 TEST_C4_DIR = ROOT / "output" / "test_batch_c4"
 TEST_SPY_DIR = ROOT / "output" / "test_batch_spy"
+TEST_H1_DIR = ROOT / "output" / "test_batch_h1_pilot"
 CF = ROOT / "cloudflared.exe"
 PORT = 8085
 ACCESS_TOKEN = os.environ.get("PLEPA_MOBILE_TOKEN", "").strip() or secrets.token_urlsafe(24)
@@ -87,6 +88,7 @@ for _mount_path, _mount_dir, _mount_name, _allow_html in (
     ("/inspect", INSPECT_BATCH, "inspect", True),
     ("/test_c4", TEST_C4_DIR, "test_c4", True),
     ("/test_spy", TEST_SPY_DIR, "test_spy", True),
+    ("/test_h1", TEST_H1_DIR, "test_h1", True),
 ):
     if _mount_dir.is_dir():
         app.mount(_mount_path, StaticFiles(directory=_mount_dir, html=_allow_html), name=_mount_name)
@@ -1370,6 +1372,8 @@ def start_server_and_tunnel():
             print(f"  🧪 [C4 테스트 20장 갤러리 (공인)]: {tunnel_url}/test_c4/?token={ACCESS_TOKEN}")
         if TEST_SPY_DIR.is_dir():
             print(f"  🕵️ [SPY H씬 510장 갤러리 (공인)]: {tunnel_url}/test_spy/?token={ACCESS_TOKEN}")
+        if TEST_H1_DIR.is_dir():
+            print(f"  🌸 [H1 파일럿 Before/After 비교 (공인)]: {tunnel_url}/test_h1/?token={ACCESS_TOKEN}")
         print(f"  🔬 [벤치마크 대시보드 (공인)]:     {tunnel_url}?token={ACCESS_TOKEN}")
     if TEST_C4_DIR.is_dir():
         print(f"  🧪 [C4 테스트 20장 (Wi-Fi)]:     http://{local_ip}:{PORT}/test_c4/?token={ACCESS_TOKEN}")
@@ -1377,6 +1381,9 @@ def start_server_and_tunnel():
     if TEST_SPY_DIR.is_dir():
         print(f"  🕵️ [SPY H씬 510장 (Wi-Fi)]:     http://{local_ip}:{PORT}/test_spy/?token={ACCESS_TOKEN}")
         print(f"  🕵️ [SPY H씬 510장 (로컬 PC)]:    http://127.0.0.1:{PORT}/test_spy/?token={ACCESS_TOKEN}")
+    if TEST_H1_DIR.is_dir():
+        print(f"  🌸 [H1 파일럿 Before/After (Wi-Fi)]:  http://{local_ip}:{PORT}/test_h1/?token={ACCESS_TOKEN}")
+        print(f"  🌸 [H1 파일럿 Before/After (로컬 PC)]: http://127.0.0.1:{PORT}/test_h1/?token={ACCESS_TOKEN}")
     print(f"  📶 [동일 Wi-Fi 내부망 링크]:        http://{local_ip}:{PORT}/inspect/?token={ACCESS_TOKEN}")
     print(f"  💻 [로컬 PC 링크]:                 http://127.0.0.1:{PORT}/inspect/?token={ACCESS_TOKEN}")
     print("=" * 70 + "\n")
