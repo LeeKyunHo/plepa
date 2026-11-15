@@ -13,6 +13,8 @@
 > 6. **모브 파트너 및 단일 캐릭터 불변식 (Mob Partner & Single Character Invariant)**:
 >    - 필로우토크(115/185) 등 2인 씬에서 남성 파트너는 항상 얼굴 없는 모브 형태(`lying on partner muscular chest, male head out of frame, faceless male`)로 고정하여 남성의 구체적 외모 노출을 원천 배제.
 >    - 캐릭터 복제(`2girls`, 여성이 둘 나오는 현상) 방지를 위해 단일 여성 앵커(`single female:1.2`) 및 복제 억제 네거티브(`2girls, duplicate female:1.4`) 상시 강제.
+> 7. **여캐 집중(Female-Centric/POV) 4-Tier 모브 제어 (Phase H1, 파일럿 8종 적용)**:
+>    - `mob_tier`(`0`: 오프스크린 POV/`solo focus` 단독, `1`: 손·팔 크롭 `BREAK` 미주입, `2`: 그림자 실루엣 밀착·무성기, `3`: 콤팩트 봉사)로 모브/성기 노출을 다층 제어하며, 파일럿 8종(`072, 080, 086, 088, 091, 092, 100, 104`)은 `cowboy shot` 충돌을 제거하고 상반신·표정 중심 구도로 개편 (오토코노코 `+70` 대칭 `150~209` 무손실 유지).
 
 ---
 

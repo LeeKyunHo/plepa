@@ -30,15 +30,16 @@
 3. **V3 포즈 아키텍처 (`000~209`)**: 코어 범용 DB(`sdxl_pose_database.json`)와 로스터 고유 이벤트(`events.json`)의 물리적 격리. 감정(`000~019`) + 일상(`020~050`) + 로스터이벤트(`051~059`, 격리) + 로맨스/봉사일원화(`060~079`, 파이즈리/대딸/풋잡 및 078 웨딩봉사 완비) + 여성성인본방(`080~129`, 095 웨딩본방체위 포함) + 여성특색H(`130~139`, 격리) + 오토성인(`150~199`) + 오토특색H(`200~209`, 격리).
 4. **오토코노코 `+70` 대칭 법칙**: 모든 성인 씬은 `오토코노코 코드 = 여성 코드 + 70` 공식으로 1:1 완벽 거울 매핑(`080~129` ↔ `150~199`, `130~139` ↔ `200~209`)되며, `GenerationService`가 자동 변환함.
 5. **6대 프롬프트 Mutator 체인 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
-   - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거) ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer`(모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
+   - `PoseTagPreparation` ➔ `PositiveAssembly`(품질 태그 중복 주입 제거, Tier 0 `solo` 보존) ➔ `NegativeBase` ➔ `DefectDefense`(오토코노코 성기 분기 여성 격리) ➔ `TwoPersonMob`(`4-Tier(0~3)` 여캐 집중/POV 모브 분기, 과장 체형·성기 하드코딩 제거, 단독/여운 씬 남성 차단) ➔ `Sanitizer`(레거시 및 Tier 2/3 모브 `BREAK` 제외 후 태그 충돌 자동 정제 & 가중치 상한 긍정 `1.15` / 부정 `1.25` 클램핑).
 6. **ADR-86 → P0 → P0.5+P1 → P2 → P2.5 Residual Span 2-Way & SAM 2.1 정밀 검열 ([`plepa_engine/censor.py`](../plepa_engine/censor.py), ADR-95 ~ ADR-99, 프로덕션 기준선 최종 동결)**:
    - **Residual Span 2-Way 복원 & Semantic-Guided SAM 2.1**: `DeepGHS` + `YOLO11s-seg`(`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, val Mask R=0.600`) 합의 시 부분 커버 구간을 ① 교차 손 존재 시 미커버 잔여 Sub-BBox(`yolo_prior=None`, 편측 대각 X축 클램핑) 추가 보존(**분기 A**), ② 손 개입 부재 시 Union Span 확장 + `_compute_prior_extension_corridor()` 축 연장 `Positive(1)` 및 `envelope_mask` 코리도 확장(**분기 B**)으로 처리함.
    - **프라이어 순도·고신뢰 구제 & Echo 억제**: 교차 면적 `6%` 미만 경계 파편 및 중심 이탈 인접 오탐이 `envelope_mask`를 왜곡하지 않도록 차단하고, DeepGHS 0건 `Case A`는 `0.19~0.25` 구간까지 확장하되 `area>=900px & skin>=0.12`로 정제하며, 주 타겟 확정 시 최상단 14%(`conf<0.65`) 및 비손분할 하단 Echo(`y2>0.82 & conf<0.58`)를 차단함 (`02_h_scenes` `24/25` IoU `0.7351`, `spy_holdout` `38/40` IoU `0.7494`).
    - **동결 & 가드 불변식 (Production Freeze)**: `SPY` 10인 510장 실전 H-씬 전수 배치(비노출 무마스크 `218`장 `det=0`, 핵심 남성 노출 9포즈 `10/10` 전원 탐지, 명확 오탐 `2`건 `0.39%`)를 끝으로 `P2.5` 엔진·임계값을 동결함. 회귀 방지를 위해 임의 수치 튜닝은 중단하며, 향후 `P3` 고도화는 하드 네거티브(`dom_100` 팔뚝 등) 및 모바일 `[✏️ 터치 덧칠]`(`output/benchmarks/ground_truth/`) 누적 기반 데이터 중심(Data-Centric) 1회 재학습으로만 진행함. `_extract_sam_mask_data()` 빈 텐서 가드 및 `protection_mask`(손·얼굴) `0px` 침범·`enable_anchor_fallback=False` 불변식 유지.
 7. **검열 에셋 저장 및 검토 최적화 2대 통합 서브폴더 구조**:
    - 에셋은 `projects/{roster}/assets/{char}/` 및 `_origin/` 하위의 2개 통합 서브폴더(`01_normal`, `02_h_scenes`)로 자동 분류 저장되며 3-Track 탐색기(신규 2대 서브폴더 우선 -> 구버전 6대 서브폴더 폴백 -> 루트 플랫 폴백)로 하위 호환성을 100% 영구 보장함. 노출이 감지된 성인/탈의 씬의 무검열 원본은 `_origin` 서브폴더에 100% 자동 선제 보존됨.
-8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py))**:
-   - ① 색감 과포화(Color Burn), ② 남성 모브 분신(2명 이상), ③ 여운/단독 씬 남성 난입, ④ 9~10등신 기형 장신 감지 시 시드를 바꿔 자동 리롤(기본 최대 3회).
+8. **Auto-QC 4대 불량 감지기 ([`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py)) & Tier별 검열QC 연동**:
+   - ① 색감 과포화(Color Burn), ② 남성 모브 분신(2명 이상 · Tier 1~3 `is_offscreen_partner=True`에서 `faces/heads >= 2` 즉시 리롤), ③ 여운/단독 씬 남성 난입(Tier 0 `is_solo_scene=True`), ④ 9~10등신 기형 장신 감지 시 시드를 바꿔 자동 리롤(기본 최대 3회).
+   - `strict_censor_qc=True`는 `mob_tier in (0, 1, 2)`(의도적 성기 미노출 구도)를 자동 제외하고 `mob_tier == 3` 봉사 및 비티어 성인 포즈에서만 작동함.
 9. **배치 생산 전 5단계 사전 점검 ([`plepa_engine/precheck.py`](../plepa_engine/precheck.py))**:
    - `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r {roster}` 실행 시 위반 0건(`PASS`) 유지 필수.
 10. **형제 프로젝트(`kiro`) 동기화 브릿지 ([`scripts/sync_to_kiro.py`](../scripts/sync_to_kiro.py))**:
@@ -1807,5 +1808,26 @@ ight_terrace(도시 야경 발코니 난간).
      - 사용자 전수 육안 검수 결과 명확한 과검열 오탐이 **단 2장(`0.39%`: `dom_100` 양측 팔뚝 `0.85/0.89` 동시 오탐, `srh_107` DeepGHS 0건 분기 `Case A 0.204` 2차 팔뚝 동시 구제)**으로 확인되어, 수치/휴리스틱 추가 수정에 따른 회귀 위험을 배제하고 **`P2.5`를 현 시점 프로덕션 완성 기준선으로 동결**함.
   3. **향후 고도화 원칙**:
      - 소수 과검열(`dom_100`, `srh_107`) 및 부족분은 현장에서 모바일 터치 덧칠/수작업 리터치로 마감하며, 추후 `P3`가 필요해질 경우 코드 임계값 조정 대신 해당 실패 사례(`dom_100` 팔뚝 하드 네거티브 등)를 포함한 **Data-Centric 1회 재학습**으로만 접근함.
+
+### ADR-100: H-씬 여캐 집중(Female-Centric/POV) 4-Tier 프롬프트 파이프라인 및 대표 8종 파일럿 개편 (Phase H1, 2026-11-15)
+- **배경**:
+  - `Phase P2.5` 검열 엔진 동결(`ADR-99`) 이후 H-씬 원천 화질 분석 결과, `TwoPersonMobMutator`가 모든 2인 인터랙티브 H-씬에 대형 남성 체형(`muscular build`)과 과장 성기 태그(`large thick erect penis:1.35` 등) 및 `(small penis:1.45)` 네거티브를 일괄 주입하고, 포즈 DB 내 `cowboy shot` + `tight bust portrait` 충돌로 2인 전신 엉킴·사지 왜곡 및 과도한 남캐 노출이 유발되는 문제가 확인됨.
+- **결정 사항**:
+  1. **과장 남성·성기 하드코딩 폐기 & 오토코노코 격리 (`plepa_engine/prompt_pipeline.py`)**:
+     - `TwoPersonMobMutator`에서 대형 체형(`muscular build/builds`) 및 과장/축소 성기 하드코딩(`large thick erect penis`, `impressive manhood`, `small/thin/short/micropenis`)을 전면 제거함 (`mob_tier=None` 착의 구강 씬은 `natural skin tone penis, bare skin shaft`만 유지).
+     - `DefectDefenseMutator` `[패치 C]`에서 `gender in ("female", "girl", "woman")`을 명시적으로 `is_otokonoko=False`로 고정하여 일반 여성 캐릭터로의 오토코노코 태그 전이를 원천 차단함.
+  2. **4-Tier 모브·노출 등급 (`mob_tier: 0 | 1 | 2 | 3`) 엔진 구축 (`models.py`, `schemas.py`, `pose_service.py`, `prompt_pipeline.py`)**:
+     - `PoseEntry.mob_tier` / `PoseItemSchema.mob_tier` 및 `_MOB_TIER_SPECS`를 신설하여 다층 제어:
+       - **Tier 0** (`Offscreen POV / Solo Focus`, 예: `080` 및 비-`1boy` 순수 `solo focus` H-포즈): `is_two_person=False, is_solo_scene=True`로 `solo` 보존 및 2번째 `BREAK` 차단, 네거티브 `1boy, male body, penis, disembodied limb` 주입.
+       - **Tier 1** (`Limb/Edge Crop POV`, 예: `088, 091`): 2번째 `BREAK` 없이 후미에 `(pov, disembodied male hands:1.05), cropped male arms, female focus` 인라인 보조 주입 + 몸통·하반신 차단 네거티브(`male face, male torso, muscular chest, full male body, lower body focus, crotch focus`).
+       - **Tier 2** (`Shadowed Silhouette Close-up`, 예: `086, 092, 104`): 성기 태그 0개의 그림자 실루엣 `BREAK` 블록(`faceless shadowed male silhouette`, `crotch out of frame`) + `SanitizerMutator` 모브 `BREAK` 제외 정제 확장.
+       - **Tier 3** (`Compact Service`, 예: `072, 100`): 상체·얼굴 배제 콤팩트 `BREAK` 블록(`pov crotch`, `disembodied penis`, `partially visible glans, compact shaft`) + 과대 크기 방지 네거티브(`(giant penis, hyper penis, huge penis:1.25), full male body, male face, muscular chest`).
+  3. **대표 8종 포즈 파일럿 개편 (`data/sdxl_pose_database.json`)**:
+     - `080`(T0), `088/091`(T1), `086/092/104`(T2), `072/100`(T3)에 `mob_tier`를 부여하고 `cowboy shot` 충돌을 제거해 여캐 표정·상반신 클로즈업 중심으로 재편함 (`832x1216` 세로 해상도, `072`/`080`의 `prompt_otokonoko` 및 `150~209` `+70` 대칭 무손실 유지).
+  4. **Auto-QC 및 `strict_censor_qc` 정합성 연동 (`generation_service.py`, `qa_validator.py`)**:
+     - `GenerationService`가 `mob_tier`에 따라 `is_solo_scene`/`is_two_person`/`is_offscreen_partner`를 `validate_generated_image()`에 전달(`qa_validator.py` `is_solo` `faces > 1` 차단 포함)하고, `strict_censor_qc`는 의도적으로 성기 노출을 배제한 `mob_tier in (0, 1, 2)`를 제외해 `mob_tier == 3` 및 비티어 포즈에서만 작동하도록 연동함 (`plepa_engine/censor.py` `ADR-99` 동결 유지).
+- **검증 결과**:
+  - `pytest -q`: **180 passed** (신규 [`tests/test_prompt_pipeline.py`](../tests/test_prompt_pipeline.py) 6건 포함 전수 통과).
+  - `precheck -r campus` (`2004`조합) & `precheck -r oto` (`987`조합): **위반 0건 PASS**.
 
 
