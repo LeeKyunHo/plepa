@@ -1891,6 +1891,17 @@ ight_terrace(도시 야경 발코니 난간).
      - `_H_SCENE_MOOD_LIGHTING_TAGS`에서 `warm rim light on skin:1.1` 및 `dramatic chiaroscuro`를 제거하고 `(dimly lit bedroom, moody intimate lighting, low-key atmospheric lighting:1.15)`, `(deep soft shadows, clean ambient occlusion:1.1)`로 중립화함.
      - `NegativeBaseMutator`와 `SanitizerMutator`의 H-씬 네거티브 해제 패턴을 `_STEAMY_H_NEG_UNLOCK_PATTERN` (`oily skin|greasy skin|shiny skin|white dots|spots on skin`)으로 통합·축소하여 `amber room`, `golden lighting`, `color tint`, `colored ambient lighting` 등 캐릭터 고유 황변/색번짐 방어선을 복원함 (`_H_SCENE_WET_SKIN_TAGS` 수분광/땀방울/홍조 유지).
 
+### ADR-105: `oto` 로스터 일상 톤 `campus` 동기화 및 남캐 모브 '상안부 그림자 음영' 전환 (Phase S7, 2026-11-17)
+- **배경**:
+  - 야간 감사 비교 결과 `kei(oto)` 일상이 `aya(campus)` 대비 노랗고 어둡게 렌더링되었으며, 2인 스킨십 구도에서 기존 `male hair over eyes, male bangs covering eyes` 앞머리 가림 태그의 주 캐릭터 이염 우려와 `(clear visible eyes:1.15)`로 인한 남캐 눈 역노출이 확인됨.
+- **결정 사항**:
+  1. **`oto` 배경·매핑·캐릭터 표준화 ([`projects/oto/background.json`](../projects/oto/background.json), [`pose_background_mapping.json`](../projects/oto/pose_background_mapping.json), `kei/luc/mik.json`)**:
+     - `fairy lights`, `warm afternoon sunlight`, `depth of field`, `blurry background`를 제거하고 `campus` 기준의 `neutral color balance`, `bright clean atmosphere`, `gentle natural window daylight`로 통일하며 `pose_background_mapping.json`(`049: none` 등)을 신설함.
+     - `kei/luc/mik.json` `sdxl_positive` 앞청크를 `aesthetic illustration, delicate anime coloring, soft shaded skin...`(`newest,` 이중 쉼표 제거)로 표준화하고 `sdxl_negative`에 황변·색조 오염 방어(`yellow/amber/golden/green/color tint:1.35`, `flat color, thick lineart`)를 보강함.
+  2. **남캐 모브 상안부 그림자 음영 전환 & 일상 환경광 정제 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
+     - `_MOB_EYELESS_BANGS_POS` 및 레거시 모브 청크의 `hair over eyes`/`bangs covering eyes` 계열을 전면 폐기하고 `_MOB_SHADOW_EYES_POS` (`(dark-haired male mob:1.15), (short black hair, shaded upper face, shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2)`)로 교체함.
+     - 1차 청크의 `(clear visible eyes:1.15)`를 비오토코노코 여성 한정 `(clear visible female eyes:1.15)`로 격리하고, 일상 씬(`not ctx.is_steamy_h_scene`)에서 `_DAILY_POSE_LIGHT_CLEANUP_RE`·`_DAILY_AMBIENT_CLEANUP_RE`로 `blurry background`, `depth of field`, `fairy lights`, `warm afternoon sunlight`를 엔진 레벨에서 자동 정제함.
+
 
 
 
