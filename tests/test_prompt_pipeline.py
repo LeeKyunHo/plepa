@@ -747,19 +747,23 @@ def test_phase_s4_pose_reclassification_and_qc_fixes():
 
 
 def test_mob_eyeless_bangs_style_and_carry_qc():
-    """모브 남캐 앞머리 눈가림(short black hair, hair over male eyes, bangs covering male eyes) 및 carry(036) Auto-QC 검증."""
+    """모브 남캐 상안부 그림자 음영(shaded upper face, shadow over male eyes) 및 앞머리 이염 방지·carry(036) Auto-QC 검증."""
     from plepa_engine.qa_validator import validate_generated_image
 
     char = _make_female_char()
     db_campus = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
 
-    # 1. #036 carry & #028 behind: 앞머리 눈가림 모브 태그 주입 + 글로벌 bangs over eyes 억제 해제 + 미남/금발/은발 전이 억제
+    # 1. #036 carry & #028 behind: 상안부 그림자 음영 모브 태그 주입 + 앞머리 눈가림 태그 폐기 + 여성 눈 한정 보존
     pos_036, neg_036, _ = assemble_sdxl_prompt(char=char, pose=db_campus["036"], bg_prompt="classroom")
     pos_036_low = pos_036.lower()
     neg_036_low = neg_036.lower()
     assert "short black hair" in pos_036_low
-    assert "male hair over eyes" in pos_036_low
-    assert "male bangs covering eyes" in pos_036_low
+    assert "shaded upper face" in pos_036_low
+    assert "shadow over male eyes" in pos_036_low
+    assert "eyes obscured by shadow" in pos_036_low
+    assert "no visible male eyes" in pos_036_low
+    assert "male hair over eyes" not in pos_036_low
+    assert "male bangs covering eyes" not in pos_036_low
     assert "tall dark-haired male mob" in pos_036_low
     assert "partner head out of frame" not in pos_036_low
     assert "full male head" not in neg_036_low
@@ -771,9 +775,10 @@ def test_mob_eyeless_bangs_style_and_carry_qc():
     assert "female bangs over eyes" in neg_036_low
 
     pos_028, neg_028, _ = assemble_sdxl_prompt(char=char, pose=db_campus["028"], bg_prompt="classroom")
-    assert "male hair over eyes" in pos_028.lower()
-    assert "male bangs covering eyes" in pos_028.lower()
-    assert "clear visible eyes" in pos_028.lower()
+    assert "shaded upper face" in pos_028.lower()
+    assert "shadow over male eyes" in pos_028.lower()
+    assert "male hair over eyes" not in pos_028.lower()
+    assert "clear visible female eyes" in pos_028.lower()
     assert "visible male eyes" in neg_028.lower()
 
     # 2. #036 공주님안기: 모브 머리(heads=2) + 눈가림으로 얼굴 1개(faces=1) -> PASS, 눈 노출(faces=2) -> FAIL
@@ -857,3 +862,48 @@ def test_phase_s5_tier2_embrace_promotion_and_neutral_mood_lighting():
 
     pos_093, _, _ = assemble_sdxl_prompt(char=char, pose=db["093"], bg_prompt="bedroom")
     assert "intimate close embrace" in pos_093.lower()
+
+
+def test_phase_s7_oto_neutral_color_balance_and_mob_shadow_eyes():
+    """Phase S7: Oto 로스터 중립 배경/캐릭터 네거티브 표준화, 일상 환경광 정제 및 모브 상안부 그림자 음영 격리 검증."""
+    from plepa_engine.services.background_service import default_background_service
+    from plepa_engine.services.character_service import default_character_service
+    from plepa_engine.services.pose_background_service import default_pose_bg_service
+
+    bgs_oto = default_background_service.get_backgrounds("oto", engine="sdxl")
+    assert "neutral color balance" in bgs_oto["default"].lower()
+    assert "fairy lights" not in bgs_oto["default"].lower()
+    assert "warm afternoon sunlight" not in bgs_oto["default"].lower()
+    assert "blurry background" not in bgs_oto["default"].lower()
+    assert "neutral color balance" in bgs_oto["studio"].lower()
+
+    assert default_pose_bg_service.get_background_for_pose("oto", "000") == "default"
+    assert default_pose_bg_service.get_background_for_pose("oto", "049") == "none"
+
+    db_oto = default_pose_service.load_pose_db(engine="sdxl", roster="oto")
+    for pfx in ("kei", "luc", "mik"):
+        char, _ = default_character_service.find_character(pfx, "oto")
+        pos_000, neg_000, _ = assemble_sdxl_prompt(char=char, pose=db_oto["000"], bg_prompt=bgs_oto["default"])
+        assert ", ," not in pos_000
+        assert "aesthetic illustration" in pos_000.lower()
+        assert "yellow lighting" in neg_000.lower()
+        assert "amber room" in neg_000.lower()
+        assert "color tint" in neg_000.lower()
+
+        # 외부/커스텀으로 유입된 blurry background, fairy lights, warm afternoon sunlight도 일상 씬에서는 자동 정제
+        dirty_bg = "modern room, fairy lights, warm afternoon sunlight through sheer white curtains, blurry background, depth of field"
+        pos_dirty, _, _ = assemble_sdxl_prompt(char=char, pose=db_oto["000"], bg_prompt=dirty_bg)
+        for bad in ("fairy lights", "warm afternoon sunlight", "blurry background", "depth of field"):
+            assert bad not in pos_dirty.lower(), f"{pfx} dirty tag {bad!r} 잔류"
+
+    # 오토코노코 2인 스킨십(028): (clear visible eyes) 역노출 방지 + 상안부 그림자 음영 모브 청크 확인
+    kei, _ = default_character_service.find_character("kei", "oto")
+    pos_kei_028, _, _ = assemble_sdxl_prompt(char=kei, pose=db_oto["028"], bg_prompt=bgs_oto["default"])
+    pos_low = pos_kei_028.lower()
+    assert "clear visible eyes" not in pos_low
+    assert "clear visible female eyes" not in pos_low
+    assert "shaded upper face" in pos_low
+    assert "shadow over male eyes" in pos_low
+    assert "male hair over eyes" not in pos_low
+    assert "hair over male eyes" not in pos_low
+    assert "bangs covering" not in pos_low

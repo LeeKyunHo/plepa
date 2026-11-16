@@ -145,9 +145,9 @@ def _is_outdoor_daylight_pose(pose_tag: str) -> bool:
     low = (pose_tag or "").lower()
     return any(kw in low for kw in _OUTDOOR_DAYLIGHT_HINTS)
 
-_MOB_EYELESS_BANGS_POS = (
-    "(dark-haired male mob:1.15), (short black hair, male hair over eyes, male bangs covering eyes, "
-    "shadow over male eyes, obscured male eyes, eyeless male:1.15)"
+_MOB_SHADOW_EYES_POS = (
+    "(dark-haired male mob:1.15), (short black hair, shaded upper face, "
+    "shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2)"
 )
 _MOB_EYELESS_BANGS_NEG = (
     "(visible male eyes, detailed male eyes, visible male pupils, detailed male face, "
@@ -375,11 +375,24 @@ def _inject_wet_skin_tags(text: str, ctx: PromptContext) -> str:
     return text
 
 
+_DAILY_AMBIENT_CLEANUP_RE = re.compile(
+    r",?\s*(?:HDR|high contrast|cartoon|glossy skin|photorealistic(?::[0-9\.]+)?|"
+    r"depth of field|blurry background|fairy lights|warm afternoon sunlight(?:\s+through\s+sheer\s+white\s+curtains)?|"
+    r"soft shaded skin(?::[0-9\.]+)?|smooth skin(?::[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)",
+    flags=re.IGNORECASE,
+)
+_DAILY_POSE_LIGHT_CLEANUP_RE = re.compile(
+    r",?\s*(?:depth of field|blurry background|fairy lights|warm afternoon sunlight(?:\s+through\s+sheer\s+white\s+curtains)?)",
+    flags=re.IGNORECASE,
+)
+
+
 def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) -> str:
     """BREAK 유무에 따라 캐릭터 표현 조화, 2인 solo 제거, 추가 품질 키워드 및 custom_pos를 일관되게 조립합니다."""
+    clean_pose_tag = _DAILY_POSE_LIGHT_CLEANUP_RE.sub("", pose_tag).strip(" ,") if not ctx.is_steamy_h_scene else pose_tag
     if " BREAK " in base_pos:
         quality_part, char_part = base_pos.split(" BREAK ", 1)
-        char_part = harmonize_character_expression(char_part, pose_tag)
+        char_part = harmonize_character_expression(char_part, clean_pose_tag)
         if ctx.is_two_person:
             char_part = re.sub(
                 r",?\s*\b(1girl,\s*solo|1boy,\s*solo)\b",
@@ -390,36 +403,33 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
             char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
             char_part = re.sub(r"^\s*,\s*", "", char_part)
         if not ctx.is_steamy_h_scene:
-            quality_clean = re.sub(
-                r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)",
-                "",
-                quality_part,
-                flags=re.IGNORECASE,
-            )
+            quality_clean = _DAILY_AMBIENT_CLEANUP_RE.sub("", quality_part).strip(" ,")
         else:
             quality_clean = re.sub(
                 r",?\s*(HDR|high contrast|cartoon|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|volumetric lighting)",
                 "",
                 quality_part,
                 flags=re.IGNORECASE,
-            )
-            if not _is_outdoor_daylight_pose(pose_tag):
-                quality_clean = re.sub(r",?\s*\bsoft lighting\b", "", quality_clean, flags=re.IGNORECASE)
+            ).strip(" ,")
+            if not _is_outdoor_daylight_pose(clean_pose_tag):
+                quality_clean = re.sub(r",?\s*\bsoft lighting\b", "", quality_clean, flags=re.IGNORECASE).strip(" ,")
         for kw in ctx.extra_quality_kws:
             if kw.lower() not in quality_clean.lower():
                 quality_clean = f"{quality_clean}, {kw}"
         quality_clean = _inject_style_positive_guard(quality_clean, ctx)
         prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
-        first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+        first_chunk = f"{prefix_tags}, {clean_pose_tag}" if clean_pose_tag else prefix_tags
         first_chunk = _inject_wet_skin_tags(first_chunk, ctx)
         return f"{first_chunk} BREAK {char_part.strip()}"
 
-    base_pos = harmonize_character_expression(base_pos, pose_tag)
+    base_pos = harmonize_character_expression(base_pos, clean_pose_tag)
+    if not ctx.is_steamy_h_scene:
+        base_pos = _DAILY_POSE_LIGHT_CLEANUP_RE.sub("", base_pos).strip(" ,")
     if ctx.is_two_person:
         base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
     base_pos = _inject_style_positive_guard(base_pos, ctx)
     prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
-    assembled = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+    assembled = f"{prefix_tags}, {clean_pose_tag}" if clean_pose_tag else prefix_tags
     return _inject_wet_skin_tags(assembled, ctx)
 
 
@@ -877,11 +887,11 @@ class TwoPersonMobMutator(PromptMutator):
                     if ctx.partner_pos == "carry":
                         pos = re.sub(r",?\s*\bpartner head out of frame\b", "", pos, flags=re.IGNORECASE)
                     if (getattr(ctx.pose, "section", "") or "").lower() == "poses" and ctx.partner_pos != "bury_chest":
-                        # 일상/스킨십 2인 포즈(027,028,031,036)에서는 별도 BREAK 블록으로 모브 남캐를 격리하고,
-                        # 주 캐릭터 눈이 closed eyes가 아닐 때는 명확한 눈 보존 토큰으로 앞머리 가림 전이를 차단
-                        if "closed eyes" not in pose_tag.lower():
-                            pos = f"{pos}, (clear visible eyes:1.15)"
-                        pos = f"{pos} BREAK (tall dark-haired male mob:1.15), {_MOB_EYELESS_BANGS_POS}"
+                        # 일상/스킨십 2인 포즈(027,028,031,036)에서는 별도 BREAK 블록으로 상안부 그림자 모브 남캐를 격리하고,
+                        # 주 캐릭터 눈은 여성 한정 clear visible female eyes로 보호해 남캐 눈 역노출과 앞머리 이염을 차단
+                        if "closed eyes" not in pose_tag.lower() and not ctx.is_otokonoko:
+                            pos = f"{pos}, (clear visible female eyes:1.15)"
+                        pos = f"{pos} BREAK (tall dark-haired male mob:1.15), {_MOB_SHADOW_EYES_POS}"
                     neg = f"{neg}, {_MOB_EYELESS_BANGS_NEG}"
                 elif spec["positive_tags"]:
                     pos = f"{pos} {spec['positive_tags']}" if spec["break_chunk"] else f"{pos}, {spec['positive_tags']}"
@@ -1031,7 +1041,7 @@ class TwoPersonMobMutator(PromptMutator):
                         mob_boy_guard = "(3boys:1.6), (multiple boys:1.6), (three men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6)" if ctx.is_otokonoko else "(2boys:1.6), (multiple boys:1.6), (multiple males:1.6), (two men:1.6), (extra male:1.6), (group:1.5), (threesome:1.5), (duplicate body:1.5), (duplicate male:1.6), (second male:1.6)"
 
                         if ctx.nude:
-                            mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), (short black hair, hair over male eyes, bangs covering male eyes:1.1), {rear_direction}(naked male:1.15)"
+                            mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), (short black hair, shaded upper face, shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2), {rear_direction}(naked male:1.15)"
                             if lower_body:
                                 mob_positive += f", {lower_body}"
                             mob_negative = f"{head_suppression}, {_MOB_EYELESS_BANGS_NEG}, male clothes, male shirt, pants, trousers, jeans, shorts, underwear, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
@@ -1042,10 +1052,10 @@ class TwoPersonMobMutator(PromptMutator):
                                 or code_num_clean >= 64
                             )
                             if is_adult_intercourse:
-                                mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), (short black hair, hair over male eyes, bangs covering male eyes:1.1), {rear_direction}{male_upper_attire}(bottomless male:1.15), (natural skin tone penis, bare skin shaft:1.1)"
+                                mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), (short black hair, shaded upper face, shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2), {rear_direction}{male_upper_attire}(bottomless male:1.15), (natural skin tone penis, bare skin shaft:1.1)"
                                 mob_negative = f"{head_suppression}{male_clothing_neg}, {_MOB_EYELESS_BANGS_NEG}, (wearing pants over crotch:1.45), (pants:1.4), (zipper on mouth:1.4), (face on clothes:1.35), (condom, black condom, sheath, clothed penis, covered penis, underwear on penis, garter on male, stockings on male:1.45), {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
                             else:
-                                mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), (short black hair, hair over male eyes, bangs covering male eyes:1.1), {rear_direction}{male_upper_attire}"
+                                mob_positive = f"BREAK (single cropped male partner:1.1), (partner head out of frame:1.15), (obscured male face:1.15), {head_cue}(unseen male eyes:1.15), (male head turned away:1.15), (short black hair, shaded upper face, shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2), {rear_direction}{male_upper_attire}"
                                 if lower_body:
                                     mob_positive += f", {lower_body}"
                                 mob_negative = f"{head_suppression}{male_clothing_neg}, {_MOB_EYELESS_BANGS_NEG}, (naked male:1.2), (bottomless:1.2), (male underwear:1.2), jeans, blue pants, {mob_boy_guard}, (extra hands:1.45), (multiple hands:1.45), (extra arms:1.45){upper_body_guard}"
