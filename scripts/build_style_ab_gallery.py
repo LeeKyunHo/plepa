@@ -74,7 +74,8 @@ def build_gallery() -> Path:
                 ("Before (원본)", _find_pose_web_path(PROJECTS_DIR / roster / "assets" / char, f"/projects/{roster}/assets/{char}", char, code)),
                 ("After (Glossy)", _find_pose_web_path(OVERNIGHT_DIR / roster, f"/overnight/{roster}", char, code)),
                 ("Option A (Dry Legacy)", _find_pose_web_path(STYLE_AB_DIR / "mode_a_legacy" / roster / char, f"/style_ab/mode_a_legacy/{roster}/{char}", char, code)),
-                ("Wet-H Booster (ADR-102)", _find_pose_web_path(STYLE_AB_DIR / "mode_wet_h" / roster / char, f"/style_ab/mode_wet_h/{roster}/{char}", char, code)),
+                ("Wet-H Booster (S2)", _find_pose_web_path(STYLE_AB_DIR / "mode_wet_h" / roster / char, f"/style_ab/mode_wet_h/{roster}/{char}", char, code)),
+                ("Wet + Moody (S3)", _find_pose_web_path(STYLE_AB_DIR / "mode_wet_moody" / roster / char, f"/style_ab/mode_wet_moody/{roster}/{char}", char, code)),
             ]
             cards = []
             for label, src in cols:
@@ -86,10 +87,10 @@ def build_gallery() -> Path:
             wet_rows_html.append(
                 f'<section class="pose-row">'
                 f'<h3>[{html.escape(roster)}/{html.escape(char)}] #{html.escape(code)}</h3>'
-                f'<div class="grid-4">{"".join(cards)}</div>'
+                f'<div class="grid-5">{"".join(cards)}</div>'
                 f'</section>'
             )
-    sections_html.append(f'<div class="char-block"><h2>ADR-102 Wet-H Booster Comparison (aya &amp; shz)</h2>{"".join(wet_rows_html)}</div>')
+    sections_html.append(f'<div class="char-block"><h2>Phase S2/S3 Wet-H &amp; Moody Comparison (aya &amp; shz)</h2>{"".join(wet_rows_html)}</div>')
 
     page = f"""<!doctype html>
 <html lang="ko">
@@ -106,7 +107,8 @@ def build_gallery() -> Path:
   .pose-row {{ margin-bottom: 24px; background: #161922; border: 1px solid #262b36; border-radius: 10px; padding: 12px; }}
   .pose-row h3 {{ margin: 0 0 10px; font-size: 14px; color: #c7d2fe; }}
   .grid-4 {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }}
-  @media (max-width: 900px) {{ .grid-4 {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }} }}
+  .grid-5 {{ display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }}
+  @media (max-width: 900px) {{ .grid-4, .grid-5 {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }} }}
   .col {{ background: #0f1115; border: 1px solid #262b36; border-radius: 8px; padding: 6px; }}
   .col-title {{ font-size: 12px; font-weight: 600; color: #9aa4b2; margin-bottom: 6px; text-align: center; }}
   .col img {{ width: 100%; height: auto; display: block; border-radius: 4px; }}
