@@ -313,9 +313,11 @@ def test_generation_service_auto_qc_and_strict_censor_qc_tier_routing(tmp_path: 
         assert "오프스크린 파트너" in reason_t2
 
 
-def test_adr101_style_guard_comic_expression_and_accessory_lock():
-    """ADR-101: Reference-5 화풍 가드, 태닝/누드 예외, 코믹 표정 눈 보존, male hair 제거 및 초커 보호 검증."""
+def test_adr101_style_guard_comic_expression_and_accessory_lock(monkeypatch):
+    """ADR-101: Reference-5 화풍 가드(glossy 모드 하위 호환), 태닝/누드 예외, 코믹 표정 눈 보존, male hair 제거 및 초커 보호 검증."""
     from plepa_engine.models import CharacterAppearance, CharacterConfig, PoseEntry
+
+    monkeypatch.setenv("PLEPA_STYLE_MODE", "glossy")
 
     char = CharacterConfig(
         prefix="gyaru",
@@ -496,3 +498,125 @@ def test_h2d_qa_allows_head_contact_back_of_head_with_1_face():
         assert ok is True, reason
         assert metrics["heads"] == 2
         assert metrics["faces"] == 1
+
+
+def test_style_mode_legacy_balanced_and_belt_guard(monkeypatch):
+    """Style A/B Test: legacy/balanced 모드 분기 및 tucked into + belt 착의 방어 검증."""
+    from plepa_engine.models import CharacterAppearance, CharacterConfig, PoseEntry
+
+    char = CharacterConfig(
+        prefix="aya",
+        name="Ayame",
+        gender="female",
+        appearance=CharacterAppearance(
+            face_and_hair="silver bob hair, deep violet eyes",
+            physique="slender",
+            outfit="white blouse tucked into high-waisted skirt, leather belt",
+        ),
+        sdxl_positive="masterpiece, best quality BREAK 1girl, silver bob hair, deep violet eyes, white blouse tucked into high-waisted skirt, leather belt",
+        sdxl_nude_positive="masterpiece, best quality BREAK 1girl, silver bob hair, deep violet eyes, nude",
+        sdxl_negative="worst quality, low quality",
+    )
+    clothed_pose = PoseEntry(
+        code="000",
+        section="emotions",
+        label="평상",
+        prompt="upper body, standing, gentle smile",
+    )
+    nude_pose = PoseEntry(
+        code="086",
+        section="h_scenes",
+        label="정상위강",
+        prompt="missionary, nude, looking at viewer",
+        required_outfit="nude",
+    )
+
+    # Mode A: legacy (기본값)
+    monkeypatch.delenv("PLEPA_STYLE_MODE", raising=False)
+    pos_leg, neg_leg, _ = assemble_sdxl_prompt(char=char, pose=clothed_pose, bg_prompt="classroom")
+    assert "delicate colored lineart" not in pos_leg.lower()
+    assert "2d cute anime face" not in pos_leg.lower()
+    assert "iridescent hair highlights" not in pos_leg.lower()
+    assert "heavy dark shadows" not in neg_leg.lower()
+    assert "untucked shirt, shirt over belt" in neg_leg.lower()
+
+    # Mode B: balanced
+    monkeypatch.setenv("PLEPA_STYLE_MODE", "balanced")
+    pos_bal, neg_bal, _ = assemble_sdxl_prompt(char=char, pose=clothed_pose, bg_prompt="classroom")
+    pos_bal_low = pos_bal.lower()
+    neg_bal_low = neg_bal.lower()
+    assert "delicate colored lineart" in pos_bal_low
+    assert "ultra-fine linework" in pos_bal_low
+    assert "soft peach blush" in pos_bal_low
+    assert "2d cute anime face" not in pos_bal_low
+    assert "iridescent hair highlights" not in pos_bal_low
+    assert "cinematic rim lighting" not in pos_bal_low
+    assert "detailed fabric texture" not in pos_bal_low
+    assert "heavy dark shadows" not in neg_bal_low
+    assert "realistic nose" in neg_bal_low
+    assert "untucked shirt, shirt over belt" in neg_bal_low
+
+    # 누드 포즈에서는 belt 방어 미주입
+    _, neg_nude, is_nude = assemble_sdxl_prompt(char=char, pose=nude_pose, bg_prompt="bedroom")
+    assert is_nude is True
+    assert "untucked shirt, shirt over belt" not in neg_nude.lower()
+
+
+def test_adr102_wet_h_scene_vs_daily_sweat_isolation(monkeypatch):
+    """ADR-102: 일상 씬(000~055) 땀/물광 차단 vs H-씬(060+) 3중 족쇄 해제 및 수분광 부스터 검증."""
+    from plepa_engine.models import CharacterAppearance, CharacterConfig, PoseEntry
+
+    monkeypatch.delenv("PLEPA_STYLE_MODE", raising=False)
+    char = CharacterConfig(
+        prefix="aya",
+        name="Ayame",
+        gender="female",
+        appearance=CharacterAppearance(
+            face_and_hair="silver bob hair, deep violet eyes",
+            physique="slender",
+            outfit="white blouse",
+        ),
+        sdxl_positive="masterpiece, best quality, glossy skin, wet skin, sweat BREAK 1girl, silver bob hair, deep violet eyes",
+        sdxl_nude_positive="masterpiece, best quality, wet skin, sweat BREAK 1girl, silver bob hair, deep violet eyes",
+        sdxl_negative="worst quality, low quality, oily skin, white dots, spots on skin",
+    )
+
+    daily_pose = PoseEntry(
+        code="000",
+        section="emotions",
+        label="평상",
+        prompt="upper body, standing, gentle smile",
+    )
+    h_pose = PoseEntry(
+        code="086",
+        section="h_scenes",
+        label="정상위강",
+        prompt="missionary, nude, looking at viewer",
+        required_outfit="nude",
+    )
+
+    # 일상 씬: 땀/물광 제거 + soft shaded skin 유지 + 수분광 부스터 미주입
+    pos_daily, neg_daily, _ = assemble_sdxl_prompt(char=char, pose=daily_pose, bg_prompt="none")
+    pos_daily_low = pos_daily.lower()
+    neg_daily_low = neg_daily.lower()
+    assert "wet skin" not in pos_daily_low
+    assert "glossy skin" not in pos_daily_low
+    assert "moist glistening skin" not in pos_daily_low
+    assert "soft shaded skin" in pos_daily_low
+    assert "oily skin" in neg_daily_low
+
+    # H-씬: 3중 족쇄 해제 (wet skin/sweat 보존, soft shaded skin 미주입, 수분광 부스터 주입, 네거티브 oily/white dots 제거)
+    pos_h, neg_h, _ = assemble_sdxl_prompt(char=char, pose=h_pose, bg_prompt="none")
+    pos_h_low = pos_h.lower()
+    neg_h_low = neg_h.lower()
+    assert "wet skin" in pos_h_low
+    assert "soft shaded skin" not in pos_h_low
+    assert "moist glistening skin, sweaty skin" in pos_h_low
+    assert "beads of sweat rolling down face and body" in pos_h_low
+    assert "specular skin highlights, dewy skin texture" in pos_h_low
+    assert "hot breath, subtle steam" in pos_h_low
+    assert "oily skin" not in neg_h_low
+    assert "greasy skin" not in neg_h_low
+    assert "shiny skin" not in neg_h_low
+    assert "white dots" not in neg_h_low
+    assert "spots on skin" not in neg_h_low

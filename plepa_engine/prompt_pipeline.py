@@ -8,6 +8,7 @@ SDXL 프롬프트 조합을 위한 Pipeline Mutator (미들웨어) 아키텍처.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -35,6 +36,7 @@ class PromptContext:
     custom_pos: Optional[str] = None
     custom_neg: Optional[str] = None
     checkpoint_name: Optional[str] = None
+    style_mode: str = field(default_factory=lambda: (os.environ.get("PLEPA_STYLE_MODE", "legacy").strip().lower() or "legacy"))
 
     slot: str = field(init=False)
     nude: bool = field(init=False)
@@ -52,6 +54,7 @@ class PromptContext:
     is_solo_scene: bool = field(default=False)
     is_dark_skin: bool = field(default=False)
     is_otokonoko: bool = field(default=False)
+    is_steamy_h_scene: bool = field(default=False)
     mob_tier: Optional[int] = field(default=None)
     partner_pos: Optional[str] = field(default=None)
     extra_quality_kws: List[str] = field(default_factory=list)
@@ -65,9 +68,24 @@ class PromptContext:
         char_skin_desc = f"{self.char.appearance.face_and_hair} {self.char.appearance.physique} {self.char.sdxl_positive or ''} {getattr(self.char, 'sdxl_nude_positive', '') or ''}".lower()
         self.is_dark_skin = any(kw in char_skin_desc for kw in ("dark tan", "dark skin", "tanned skin", "sun-kissed skin", "tan skin", "bronze skin"))
 
+        code_str = str(getattr(self.pose, "code", "") or "").strip()
+        code_digits = re.sub(r"\D", "", code_str)
+        code_num = int(code_digits) if code_digits else 0
+        sec_low = (getattr(self.pose, "section", "") or "").strip().lower()
+        self.is_steamy_h_scene = (
+            (code_num >= 60)
+            or (sec_low in ("romance", "h_scenes", "special_h", "special_female_h", "scenes_otokonoko", "special_otokonoko", "special_otokonoko_h", "adult", "bdsm"))
+            or (code_str.zfill(3) in ("038", "039"))
+        )
+
         _ckpt_lower = (self.checkpoint_name or "").lower()
         _is_illustrious = any(k in _ckpt_lower for k in ("flatbread", "wai", "illustrious", "animagine", "animefull"))
-        self.extra_quality_kws = [] if _is_illustrious else ["soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"]
+        if _is_illustrious:
+            self.extra_quality_kws = []
+        elif self.is_steamy_h_scene:
+            self.extra_quality_kws = ["soft lighting", "delicate anime coloring", "clean pale skin"]
+        else:
+            self.extra_quality_kws = ["soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"]
 
 
 _INTERACTIVE_POSE_KEYWORDS = (
@@ -92,6 +110,25 @@ _STYLE_POSITIVE_GUARD_TAGS = (
 _STYLE_NEGATIVE_GUARD = (
     "(realistic nose, photorealistic face, 3d, thick lips, nasolabial folds:1.25), "
     "(oily skin, greasy skin, heavy dark shadows, muddy colors:1.2), thick black outlines"
+)
+
+_STYLE_POSITIVE_BALANCED_TAGS = (
+    "delicate colored lineart",
+    "ultra-fine linework",
+    "soft peach blush",
+)
+_STYLE_NEGATIVE_BALANCED_GUARD = (
+    "(realistic nose, photorealistic face, 3d, thick lips, nasolabial folds:1.2), "
+    "(oily skin, greasy skin:1.15), thick black outlines"
+)
+
+_H_SCENE_WET_SKIN_TAGS = (
+    "(moist glistening skin, sweaty skin:1.15)",
+    "(beads of sweat rolling down face and body, water droplets on skin:1.15)",
+    "(specular skin highlights, dewy skin texture:1.1)",
+    "damp hair strands clinging to sweaty cheeks and neck",
+    "heavy facial blush, blush lines",
+    "hot breath, subtle steam",
 )
 
 _PARTNER_POS_SPECS: Dict[str, str] = {
@@ -269,9 +306,13 @@ def harmonize_character_expression(char_part: str, pose_tag: str) -> str:
 
 
 def _inject_style_positive_guard(quality_clean: str, ctx: PromptContext) -> str:
-    """Reference-5 화풍 가드 태그를 중복 없이 주입한다 (태닝 피부/누드 예외 준수)."""
+    """style_mode(legacy/balanced/glossy)에 따라 화풍 가드 태그를 중복 없이 주입한다."""
+    mode = (getattr(ctx, "style_mode", "legacy") or "legacy").strip().lower()
+    if mode == "legacy":
+        return quality_clean
+    tags = _STYLE_POSITIVE_GUARD_TAGS if mode == "glossy" else _STYLE_POSITIVE_BALANCED_TAGS
     low = quality_clean.lower()
-    for tag in _STYLE_POSITIVE_GUARD_TAGS:
+    for tag in tags:
         if ctx.is_dark_skin and tag == "smooth pale skin":
             continue
         if ctx.nude and tag == "detailed fabric texture":
@@ -280,6 +321,19 @@ def _inject_style_positive_guard(quality_clean: str, ctx: PromptContext) -> str:
             quality_clean = f"{quality_clean}, {tag}"
             low = quality_clean.lower()
     return quality_clean
+
+
+def _inject_wet_skin_tags(text: str, ctx: PromptContext) -> str:
+    """ADR-102: H-씬(is_steamy_h_scene)일 때 수분광·땀방울·열기 태그를 1번째 청크에 중복 없이 주입한다."""
+    if not ctx.is_steamy_h_scene:
+        return text
+    low = text.lower()
+    for tag in _H_SCENE_WET_SKIN_TAGS:
+        core = tag.strip("()").split(":")[0].strip().lower()
+        if core not in low and tag.lower() not in low:
+            text = f"{text}, {tag}"
+            low = text.lower()
+    return text
 
 
 def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) -> str:
@@ -296,18 +350,27 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
             )
             char_part = re.sub(r",?\s*\bsolo\b", "", char_part, flags=re.IGNORECASE)
             char_part = re.sub(r"^\s*,\s*", "", char_part)
-        quality_clean = re.sub(
-            r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)",
-            "",
-            quality_part,
-            flags=re.IGNORECASE,
-        )
+        if not ctx.is_steamy_h_scene:
+            quality_clean = re.sub(
+                r",?\s*(HDR|high contrast|cartoon|glossy skin|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)",
+                "",
+                quality_part,
+                flags=re.IGNORECASE,
+            )
+        else:
+            quality_clean = re.sub(
+                r",?\s*(HDR|high contrast|cartoon|photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|volumetric lighting)",
+                "",
+                quality_part,
+                flags=re.IGNORECASE,
+            )
         for kw in ctx.extra_quality_kws:
             if kw.lower() not in quality_clean.lower():
                 quality_clean = f"{quality_clean}, {kw}"
         quality_clean = _inject_style_positive_guard(quality_clean, ctx)
         prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
         first_chunk = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+        first_chunk = _inject_wet_skin_tags(first_chunk, ctx)
         return f"{first_chunk} BREAK {char_part.strip()}"
 
     base_pos = harmonize_character_expression(base_pos, pose_tag)
@@ -315,7 +378,8 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
         base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
     base_pos = _inject_style_positive_guard(base_pos, ctx)
     prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
-    return f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+    assembled = f"{prefix_tags}, {pose_tag}" if pose_tag else prefix_tags
+    return _inject_wet_skin_tags(assembled, ctx)
 
 
 class PositiveAssemblyMutator(PromptMutator):
@@ -326,7 +390,8 @@ class PositiveAssemblyMutator(PromptMutator):
 
         if (ctx.nude or ctx.slot != "default") and getattr(ctx.char, "sdxl_nude_positive", None):
             base_pos = ctx.char.sdxl_nude_positive.strip()
-            base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
+            if not ctx.is_steamy_h_scene:
+                base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
             if ctx.nude:
                 base_pos = f"{base_pos}, nude, completely nude"
             else:
@@ -338,7 +403,8 @@ class PositiveAssemblyMutator(PromptMutator):
         elif ctx.char.sdxl_positive:
             base_pos = ctx.char.sdxl_positive.strip()
             base_pos = re.sub(r",?\s*\(?hourglass\s*(shape)?(:[0-9\.]+)?\)?", "", base_pos, flags=re.IGNORECASE)
-            base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
+            if not ctx.is_steamy_h_scene:
+                base_pos = re.sub(r",?\s*(photorealistic(:[0-9\.]+)?|depth of field|soft shaded skin(:[0-9\.]+)?|smooth skin(:[0-9\.]+)?|wet skin|sweatdrop|\bsweat\b|volumetric lighting)", "", base_pos, flags=re.IGNORECASE)
             if ctx.nude:
                 base_pos = strip_sdxl_outfit_tags(base_pos)
                 base_pos = f"{base_pos}, nude, completely nude"
@@ -433,8 +499,19 @@ class NegativeBaseMutator(PromptMutator):
         if "(photorealistic, realistic, 3d" not in neg:
             char_mult_guard = "" if ctx.is_two_person else "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
             neg = f"(photorealistic, realistic, 3d, render, cgi:1.25), {char_mult_guard}{neg}"
-        if _STYLE_NEGATIVE_GUARD not in neg:
-            neg = f"{neg}, {_STYLE_NEGATIVE_GUARD}"
+        mode = (getattr(ctx, "style_mode", "legacy") or "legacy").strip().lower()
+        if mode == "glossy":
+            if _STYLE_NEGATIVE_GUARD not in neg:
+                neg = f"{neg}, {_STYLE_NEGATIVE_GUARD}"
+        elif mode == "balanced":
+            if _STYLE_NEGATIVE_BALANCED_GUARD not in neg:
+                neg = f"{neg}, {_STYLE_NEGATIVE_BALANCED_GUARD}"
+
+        if ctx.is_steamy_h_scene:
+            neg = _strip_tags_preserving_parens(
+                neg,
+                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin)\b(?::[0-9\.]+)?",
+            )
 
         ctx.negative_prompt = neg
 
@@ -644,6 +721,11 @@ class DefectDefenseMutator(PromptMutator):
                     f"breast out, breasts out, areola, cleavage, exposed cleavage, deep cleavage, underboob, "
                     f"no shirt, flashing, exposed chest, bare chest:1.45))"
                 )
+
+        if not ctx.nude:
+            pos_low = ctx.positive_prompt.lower()
+            if "tucked into" in pos_low and "belt" in pos_low:
+                neg = f"{neg}, (untucked shirt, shirt over belt, belt over shirt, long untucked hem:1.25)"
 
         ctx.negative_prompt = neg
 
@@ -1011,6 +1093,12 @@ class SanitizerMutator(PromptMutator):
             ctx.negative_prompt = f"{ctx.negative_prompt}, {ctx.pose.negative_add.strip()}"
         if ctx.custom_neg and ctx.custom_neg.strip():
             ctx.negative_prompt = f"{ctx.negative_prompt}, {ctx.custom_neg.strip()}"
+
+        if ctx.is_steamy_h_scene:
+            ctx.negative_prompt = _strip_tags_preserving_parens(
+                ctx.negative_prompt,
+                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin)\b(?::[0-9\.]+)?",
+            )
 
         # 1. 긍정/부정 태그 충돌 감지 및 네거티브에서 자동 제거
         # 남성 모브 전용 BREAK 블록(레거시 및 Tier 2/3)의 태그가 여주인공 본체 네거티브를 지우지 않도록 모브 블록 제외 후 검사
