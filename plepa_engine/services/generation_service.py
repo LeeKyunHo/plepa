@@ -11,9 +11,11 @@ import json
 import logging
 import os
 import random
+import re
 import shutil
 import time
 import uuid
+import zlib
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -88,6 +90,14 @@ def generate_mock_image(output_path: Path) -> None:
             f.write(tiny_webp)
 
 
+def compute_deterministic_pose_seed(pose_code: str, char_prefix: str) -> int:
+    """포즈 코드 및 캐릭터 식별자 기반의 프로세스 독립적 결정론적 시드를 산출합니다."""
+    code_digits = re.sub(r"\D", "", str(pose_code or "").strip())
+    numeric_code = int(code_digits) if code_digits else (zlib.crc32(str(pose_code or "").encode("utf-8")) % 1000)
+    char_offset = zlib.crc32(str(char_prefix or "").encode("utf-8")) % 100000
+    return numeric_code * 1000 + char_offset
+
+
 @dataclass
 class GenerationParams:
     """배치 생성 파라미터 컨테이너."""
@@ -130,6 +140,7 @@ class GenerationParams:
     freeu: bool = True  # ComfyUI FreeU_Advanced SDXL 선명도/질감 부스팅
     prompt_alert_threshold: int = 2  # 연속 불량 시 프롬프트 점검 경고 발령 임계치
     reuse_seed: bool = False  # _batch_manifest.json의 이전 골든 시드 고정 재생성
+    deterministic_pose_seed: bool = False  # 포즈 코드·캐릭터 기반 결정론적 시드 자동 고정
     strict_censor_qc: bool = False  # 필수 성인 노출 씬에서 성기 미탐지 시 자동 리롤
     retry_qc_failed: bool = True  # _batch_manifest.json 내 qc_passed=False 항목 overwrite=False 시 자동 재시도
     anchor_fallback: bool = False  # 검열 탐지 실패 시 포즈 기반 안전 앵커 폴백 마스킹 (기본 False)
@@ -213,6 +224,13 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
         "cli_flag": "--reuse-seed",
         "label": "🔒 골든 시드 고정",
         "tooltip": "_batch_manifest.json의 이전 시드를 재사용하여 구도를 유지하고 의상/태그만 갱신",
+        "default": False,
+    },
+    {
+        "field": "deterministic_pose_seed",
+        "cli_flag": "--deterministic-pose-seed",
+        "label": "🧭 포즈 고정 시드",
+        "tooltip": "포즈 코드와 캐릭터 기반의 결정론적 시드를 자동 산출하여 실행 간 구도 편차를 억제",
         "default": False,
     },
     {
@@ -602,7 +620,12 @@ class GenerationService:
                         pose, width, height, engine="sdxl",
                         user_specified=(params.width is not None or params.height is not None)
                     )
+                    code_key = str(code).strip()
                     sdxl_seed = params.seed if params.seed is not None else -1
+                    if sdxl_seed < 0 and params.reuse_seed and code_key in existing_manifest_seeds:
+                        sdxl_seed = existing_manifest_seeds[code_key]
+                    elif sdxl_seed < 0 and params.deterministic_pose_seed:
+                        sdxl_seed = compute_deterministic_pose_seed(code, char.prefix)
                     workflow = build_sdxl_workflow(
                         positive_prompt=pos_prompt,
                         negative_prompt=neg_prompt,

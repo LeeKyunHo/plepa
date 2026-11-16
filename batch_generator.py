@@ -244,6 +244,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=None, help="생성에 사용할 난수 시드 값 고정 (미지정 시 무작위)")
     parser.add_argument("--out-dir", default=None, help="별도 출력 루트 폴더 (지정 시 {out_dir}/{roster}/{char}/ 하위에 저장, 기존 에셋 미간섭)")
     parser.add_argument("--reuse-seed", action="store_true", help="_batch_manifest.json에 기록된 기존 골든 시드를 재사용하여 동일 구도로 의상/프롬프트 재생성")
+    parser.add_argument("--deterministic-pose-seed", action="store_true", help="포즈 코드 및 캐릭터 식별자 기반 결정론적 시드를 자동 산출하여 구도 편차 억제")
     parser.add_argument("--strict-censor-qc", action="store_true", help="필수 성인 결합/노출 씬에서 성기 미탐지 시 구도 불량으로 판정하여 자동 리롤")
     parser.add_argument("--audit", action="store_true", help="지정된 로스터의 캐릭터별 에셋 완비율, 누락 포즈, 검열 원본 백업 여부 1초 전수 감사 리포트 출력")
     parser.add_argument("--no-qc", action="store_true", help="Auto-QC 품질 검증 및 불량 시 자동 재시도 비활성화")
@@ -351,6 +352,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             auto_qc=(not args.no_qc),
             max_retries=args.max_retries,
             reuse_seed=args.reuse_seed,
+            deterministic_pose_seed=args.deterministic_pose_seed,
             strict_censor_qc=args.strict_censor_qc,
             anchor_fallback=args.anchor_fallback,
             seed=args.seed,
