@@ -304,6 +304,8 @@ class GenerationService:
         roster: str,
         src_for_backup: Optional[Path] = None,
         overwrite_origin: bool = False,
+        is_nude: bool = False,
+        is_otokonoko: Optional[bool] = None,
     ) -> bool:
         """단일 무검열 원본(_origin) 백업을 보장한 뒤 검열본을 원자적 임시파일로 생성하여 out_path를 안전 교체합니다."""
         backup_source = src_for_backup or out_path
@@ -323,6 +325,8 @@ class GenerationService:
                 enable_anchor_fallback=params.anchor_fallback,
                 backup_dir=None,
                 roster=roster,
+                is_nude=is_nude,
+                is_otokonoko=is_otokonoko,
             )
             if c_res and c_res.exists():
                 os.replace(tmp_censored, out_path)
@@ -669,8 +673,12 @@ class GenerationService:
                         track_info = f" [IP-A: {ref_mode}]" if (params.engine == "sdxl" and ref_file_name) else ""
                         print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}){track_info} -> {out_name}", end="", flush=True)
     
+                    is_char_otokonoko = (
+                        (str(getattr(char, "gender", "") or "").strip().lower() == "otokonoko")
+                        or ("otokonoko" in (getattr(char, "sdxl_positive", "") or "").lower())
+                    )
                     should_censor = params.censor and is_pose_censor_required(
-                        pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster
+                        pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster, is_otokonoko=is_char_otokonoko
                     )
 
                     # 0. CENSOR-ONLY (기존 이미지 소급 검열 모드: 검열본은 assets/{prefix}/에 교체 배치, 원본은 assets/{prefix}_origin/에 보존)
@@ -689,6 +697,8 @@ class GenerationService:
                                     pose.code,
                                     actual_roster,
                                     src_for_backup=src_path,
+                                    is_nude=is_nude,
+                                    is_otokonoko=is_char_otokonoko,
                                 )
                                 if applied:
                                     if not quiet:
@@ -721,7 +731,8 @@ class GenerationService:
                                 out_path.name, sub_origin_dir, legacy_sub_origin, origin_dir
                             )
                             applied = self._apply_censor_to_asset(
-                                origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
+                                origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster,
+                                is_nude=is_nude, is_otokonoko=is_char_otokonoko,
                             )
                             if applied and not quiet:
                                 print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
@@ -749,7 +760,8 @@ class GenerationService:
                                     out_path.name, sub_origin_dir, None, origin_dir
                                 )
                                 applied = self._apply_censor_to_asset(
-                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster
+                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster,
+                                    is_nude=is_nude, is_otokonoko=is_char_otokonoko,
                                 )
                                 if applied and not quiet:
                                     print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
@@ -877,7 +889,7 @@ class GenerationService:
                                     and (
                                         should_censor
                                         or is_pose_censor_required(
-                                            pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster
+                                            pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster, is_otokonoko=is_char_otokonoko
                                         )
                                     )
                                 ):
@@ -920,6 +932,8 @@ class GenerationService:
                                     pose.code,
                                     actual_roster,
                                     overwrite_origin=True,
+                                    is_nude=is_nude,
+                                    is_otokonoko=is_char_otokonoko,
                                 )
                                 if applied and not quiet:
                                     print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")

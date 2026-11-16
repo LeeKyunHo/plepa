@@ -2488,20 +2488,38 @@ NON_EXPOSURE_H_POSES: frozenset[str] = frozenset({
     "114",  # 착의섹스 후 (사후 여운)
     "115",  # 필로우토크 (사후 대화)
     "123",  # 전라유혹 (여성 단독 포즈)
-    # 오토코노코 대칭 (+70)
-    "151",  # 대면좌위 (<-081)
-    "152",  # 대면좌위절정 (<-082)
-    "153",  # 침대사후 (<-083)
-    "154",  # 후방사후 (<-084)
-    "171",  # 펠라사후
-    "179",  # 구강애무받기 (<-109)
-    "180",  # 후방애무약 (<-110)
-    "181",  # 후방애무강 (<-111)
-    "182",  # 착의섹스 전 (<-112)
-    "184",  # 착의섹스 후 (<-114)
-    "185",  # 필로우토크 (<-115)
-    "193",  # 배복종자세 (<-123)
+    # 주의: 오토코노코 대칭(151~193)은 주 캐릭터 본인에게 남성기가 존재하므로 면제하지 않고 전수 스캔함
 })
+
+
+def _is_otokonoko_context(
+    roster: Optional[str] = None,
+    file_path: Union[str, Path, None] = None,
+    code_str: Optional[str] = None,
+) -> bool:
+    """로스터/경로/포즈코드/캐릭터 설정으로부터 오토코노코 대상 여부를 추론합니다."""
+    if code_str and code_str.isdigit() and (150 <= int(code_str) <= 209):
+        return True
+    r_low = (roster or "").strip().lower()
+    if r_low == "oto" or "otokonoko" in r_low:
+        return True
+    if file_path is not None:
+        p_norm = str(file_path).replace("\\", "/").lower()
+        if "/oto/" in p_norm or "otokonoko" in p_norm:
+            return True
+        m_prefix = re.match(r"^([a-z0-9]+)_(?:[a-z]\d{2,3}|\d{3})_", Path(file_path).name.lower())
+        if m_prefix and roster:
+            try:
+                from plepa_engine.services.character_service import default_character_service
+                char_cfg = default_character_service.load_character(m_prefix.group(1), roster=roster)
+                if char_cfg is not None:
+                    g = (getattr(char_cfg, "gender", "") or "").strip().lower()
+                    sdxl_p = (getattr(char_cfg, "sdxl_positive", "") or "").lower()
+                    if g == "otokonoko" or "otokonoko" in sdxl_p:
+                        return True
+            except Exception:
+                pass
+    return False
 
 
 def is_pose_censor_required(
@@ -2510,16 +2528,18 @@ def is_pose_censor_required(
     is_nude: bool = False,
     file_path: Union[str, Path, None] = None,
     roster: Optional[str] = None,
+    is_otokonoko: Optional[bool] = None,
 ) -> bool:
     """
-    2대 서브폴더 구조(01_normal, 02_h_scenes) 및 포즈 코드에 기반하여 해당 포즈/에셋이 검열 대상인지 엄격히 판정합니다:
+    2대 서브폴더 구조(01_normal, 02_h_scenes) 및 포즈 코드·성별에 기반하여 해당 포즈/에셋이 검열 대상인지 엄격히 판정합니다:
     - 01_normal (000~059):
       * 000~019 (감정표현): 완전 착의 -> False (절대 면제)
       * 051~059 (일상 이벤트): 완전 착의 -> False (절대 면제)
-      * 020~050 (범용 일상): DAILY_EXPOSURE_CODES({"037"})만 True, 나머지(여성 단독 노출 포함) False
+      * 020~050 (범용 일상): DAILY_EXPOSURE_CODES({"037"})만 True, 단 오토코노코 누드 씬(030,038,039,043,044,045,049 등)은 본인 남성기 검열을 위해 True
     - 02_h_scenes (060~209+):
-      * 060~079 (로맨스/구강): 060,061(키스)은 False (절대 면제), 062~079는 True
-      * 080~209 (범용/특색 H씬): NON_EXPOSURE_H_POSES(081~084, 101, 109~112, 114, 115, 123 등 및 오토코노코 대칭)는 False, 나머지 True
+      * 060~079 (로맨스/구강): 060(딥키스)은 False, 061(알몸키스)은 오토코노코 누드 시 True, 062~079는 True
+      * 080~139 (여성 H씬): 여성 단독/비노출 NON_EXPOSURE_H_POSES는 False, 나머지 True
+      * 150~209 (오토코노코 H씬): 본인 남성기 노출 가능성을 포착하기 위해 면제 없이 전수 True
     """
     # 1. 파일 경로 기반 서브폴더 1차 검사 (01_emotions, 03_events는 무조건 면제)
     if file_path is not None:
@@ -2551,14 +2571,29 @@ def is_pose_censor_required(
     if len(code_str) >= 2 and code_str[0] == "N" and code_str[1:].isdigit():
         return True
 
+    if pose is None:
+        try:
+            pose = _get_cached_pose_db(roster=roster).get(code_str)
+        except Exception:
+            pose = None
+
+    eff_nude = bool(is_nude) or (
+        pose is not None and str(getattr(pose, "required_outfit", "") or "").strip().lower() == "nude"
+    )
+    eff_otokonoko = (
+        bool(is_otokonoko)
+        if is_otokonoko is not None
+        else _is_otokonoko_context(roster=roster, file_path=file_path, code_str=code_str)
+    )
+
     # 3. 비노출 면제 대역 판정
     if code_str in EXEMPT_EMOTION_CODES:
         return False
     if code_str in EXEMPT_DAILY_EVENT_CODES:
         return False
     if code_str in ROMANCE_NON_EXPOSURE_CODES:
-        return False
-    if code_str in NON_EXPOSURE_H_POSES:
+        return bool(eff_otokonoko and eff_nude)
+    if (not eff_otokonoko) and (code_str in NON_EXPOSURE_H_POSES):
         return False
 
     try:
@@ -2566,13 +2601,13 @@ def is_pose_censor_required(
     except ValueError:
         return False
 
-    # 4. 일상 포즈(020~050): 명시적 탈의 씬 또는 is_nude일 때만 검열
+    # 4. 일상 포즈(020~050): 명시적 탈의/사정 씬, is_nude, 또는 오토코노코 누드 일상(030,038,039,043,044,045,049)
     if 20 <= c_int <= 50:
-        return code_str in DAILY_EXPOSURE_CODES or is_nude
+        return (code_str in DAILY_EXPOSURE_CODES) or bool(is_nude) or bool(eff_otokonoko and eff_nude)
 
     # 5. 로맨스(060~079): 064~079(공용 구강/바스트/핸드잡/풋잡/스마타) 및 062, 063(함께씻기, 스푸닝)
     if 60 <= c_int <= 79:
-        return c_int in (62, 63) or (64 <= c_int <= 79) or is_nude
+        return c_int in (62, 63) or (64 <= c_int <= 79) or eff_nude
 
     # 6. 성인 H씬 대역 (080~139 여성, 150~209 오토코노코)
     if (80 <= c_int <= 139) or (150 <= c_int <= 209):
@@ -3471,6 +3506,8 @@ def censor_image(
     pose_code: Optional[Union[str, int]] = None,
     enable_anchor_fallback: bool = False,
     roster: Optional[str] = None,
+    is_nude: bool = False,
+    is_otokonoko: Optional[bool] = None,
 ) -> Tuple[Image.Image, int]:
     """
     이미지 내 성기 및 결합 접점 부위를 다중 스케일(전체 + 체위별 줌인 ROI)로 정밀 감지하여 검열을 적용합니다.
@@ -3485,8 +3522,10 @@ def censor_image(
     # V3 오검열 원천 방어 가드: 비검열 대상(감정표현, 일상 스킨십, 착의 이벤트 등)은 즉시 원본 반환
     if pose_code is not None and not is_pose_censor_required(
         pose_code=pose_code,
+        is_nude=is_nude,
         file_path=image if isinstance(image, (str, Path)) else None,
         roster=roster,
+        is_otokonoko=is_otokonoko,
     ):
         return _restore_alpha(img_rgb, alpha_ch), 0
 
@@ -3590,6 +3629,8 @@ def censor_file(
     enable_anchor_fallback: bool = False,
     backup_dir: Optional[Union[Path, str]] = None,
     roster: Optional[str] = None,
+    is_nude: bool = False,
+    is_otokonoko: Optional[bool] = None,
 ) -> Optional[Path]:
     """
     파일 경로를 입력받아 검열본을 생성하고 저장합니다.
@@ -3602,7 +3643,13 @@ def censor_file(
         return None
 
     # V3 오검열 원천 방어 가드: 비검열 대역(01_emotions, 03_events, 착의 일상 등)은 100% 면제
-    if not is_pose_censor_required(pose_code=pose_code, file_path=src, roster=roster):
+    if not is_pose_censor_required(
+        pose_code=pose_code,
+        is_nude=is_nude,
+        file_path=src,
+        roster=roster,
+        is_otokonoko=is_otokonoko,
+    ):
         return None
 
     if backup_dir:
@@ -3622,6 +3669,8 @@ def censor_file(
         pose_code=pose_code,
         enable_anchor_fallback=enable_anchor_fallback,
         roster=roster,
+        is_nude=is_nude,
+        is_otokonoko=is_otokonoko,
     )
 
     if count == 0:

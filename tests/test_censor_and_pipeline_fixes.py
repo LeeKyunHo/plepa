@@ -418,3 +418,33 @@ def test_censor_file_and_run_batch_filesystem_contracts(monkeypatch, tmp_path):
     assert not (origin_dir / "aya_088_origin_censored.webp").exists()
     assert not (normal_dir / "aya_088_censored_censored.webp").exists()
     assert (normal_dir / "aya_088_doggystyle_censored.webp").exists()
+
+
+def test_otokonoko_censor_required_for_daily_nude_and_sym_h_poses():
+    """오토코노코(oto/150~209) 캐릭터는 대칭 사후·애무 H씬(151~193) 및 누드 일상(030,043,049 등)에서도 본인 성기 검열 스캔이 반드시 활성화되어야 함."""
+    # 1. 오토코노코 대칭 H씬(151~193): NON_EXPOSURE_H_POSES에서 해제되어 전수 검열 대상이어야 함
+    for oto_code in ("151", "152", "153", "154", "171", "179", "180", "181", "182", "184", "185", "193"):
+        assert oto_code not in censor.NON_EXPOSURE_H_POSES
+        assert censor.is_pose_censor_required(pose_code=oto_code, roster="oto") is True
+
+    # 여성 비노출 H씬(081~123)은 기존대로 면제 유지
+    for fem_code in ("081", "083", "109", "110", "111", "115", "123"):
+        assert censor.is_pose_censor_required(pose_code=fem_code, roster="campus") is False
+
+    # 2. 오토코노코 일상 누드 씬(030, 038, 039, 043, 044, 045, 049): is_nude 인자가 없어도 DB required_outfit=="nude" 및 roster="oto" 기반으로 검열 필수 판정
+    for nude_code in ("030", "038", "039", "043", "044", "045", "049"):
+        assert censor.is_pose_censor_required(
+            pose_code=nude_code,
+            file_path=Path(f"output/oto/kei/01_normal/kei_{nude_code}_test.webp"),
+            roster="oto",
+        ) is True
+        # 여성 캐릭터 단독 일상 누드는 기본(is_nude=False 호출 시) 면제 유지
+        assert censor.is_pose_censor_required(
+            pose_code=nude_code,
+            file_path=Path(f"output/campus/aya/01_normal/aya_{nude_code}_test.webp"),
+            roster="campus",
+        ) is False
+
+    # 3. 오토코노코 착의 일상(000, 020) 및 딥키스(060)는 계속 면제
+    for safe_code in ("000", "010", "020", "060"):
+        assert censor.is_pose_censor_required(pose_code=safe_code, roster="oto", is_otokonoko=True) is False
