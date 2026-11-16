@@ -1845,6 +1845,7 @@ ight_terrace(도시 야경 발코니 난간).
   5. **QA 보정(`qa_validator.py`) & 여성 H-씬 70종(`060~132`) 전수 매핑 완결**:
      - `#047` 쓰다듬기 등 1인 POV 헤드팻 `max_hands=3` 허용, `#050` 야경 키워드 시 Color Burn 임계치 `0.22 -> 0.35` 완화.
      - 여성 로맨스/H-씬 70종(`121` 제외) 전량 `mob_tier`(`0: 12`, `1: 1(109)`, `2: 32`, `3: 25`) 및 `partner_pos`(`above: 11`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑 완료, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화.
+     - 추가로 `poses` 2인 스킨십(`027, 028, 031, 034(bury_chest), 036(carry)`)은 `mob_tier: 2`로 복구하고, `DefectDefenseMutator`의 눈/앞머리 방어를 `is_two_person` 시 `female`-한정으로 격리한 뒤 별도 `BREAK` 모브 청크(`_MOB_EYELESS_BANGS_POS`: 검은 숏컷 + 앞머리 눈가림 + 음영)를 결합해 주 캐릭터 눈/헤어 전이 없이 정석 서브컬처 모브 스타일을 일관 구현함.
 - **검증 결과**:
   - `pytest -q`: **185 passed** (전수 계약 테스트 포함) | `precheck -r campus` (`2004`조합) & `-r oto` (`987`조합): **위반 0건 PASS**.
   - Campus 에셋 재스캔(`1,379`장): `#047` `7/7`, `#050` `12/12` 전수 통과, Color Burn 실패 `0건`.
