@@ -14,7 +14,7 @@
 >    - 필로우토크(115/185) 등 2인 씬에서 남성 파트너는 마네킹 태그(`bald`, `faceless`, `male hair` 네거티브)를 영구 배제하고 `partner head out of frame` 또는 `back of dark-haired male head`로 제어.
 >    - 캐릭터 복제(`2girls`, 여성이 둘 나오는 현상) 방지를 위해 단일 여성 앵커(`single female:1.2`) 및 복제 억제 네거티브(`2girls, duplicate female:1.4`) 상시 강제.
 > 7. **여캐 집중(Female-Centric/POV) 4-Tier & 2-Track + 방향성 `partner_pos` 전수 완결 (ADR-101, Phase H2-A/B)**:
->    - 여성 로맨스/H-씬 70종(`060~132`, `121` 제외) 전량에 `mob_tier`(`0`: 12종, `1`: 6종, `2`: 30종, `3`: 22종) 및 방향성 인라인 `partner_pos`(`above`: 14종, `behind`: 10종, `below`: 5종, `side_kiss`: 6종) 적용 완료.
+>    - 여성 로맨스/H-씬 70종(`060~132`, `121` 제외) 전량에 `mob_tier`(`0`: 12종, `1`: 3종, `2`: 30종, `3`: 25종) 및 방향성 인라인 `partner_pos`(`above`: 11종, `behind`: 10종, `below`: 5종, `side_kiss`: 6종) 적용 완료.
 >    - **Track 1** (봉사/밀착형 `tight bust portrait, close-up`)과 **Track 2** (체위 기하 필수형 `angled medium shot, head to hips, upper three-quarter view`)로 분리하고, 중복 7쌍(`romance 064, 067, 073~077` 반착의 vs `h_scenes` 전라/절정) 및 `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화 완료 (오토코노코 `+70` 대칭 `150~209` 무손실 유지).
 
 ---

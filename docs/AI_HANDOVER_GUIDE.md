@@ -1844,11 +1844,25 @@ ight_terrace(도시 야경 발코니 난간).
      - `_STYLE_POSITIVE_GUARD_TAGS` / `_STYLE_NEGATIVE_GUARD` 주입(태닝 피부·누드 예외 준수), 코믹/놀람 표정 시 `(pupil-less:1.35)`/`(blank stare:1.4)` 네거티브 제외, 착의 씬 `choker`/`necklace` 보호 및 `is_daily_or_pov`에 `poses`·`daily_events` 복구.
   5. **QA 보정(`qa_validator.py`) & 여성 H-씬 70종(`060~132`) 전수 매핑 완결**:
      - `#047` 쓰다듬기 등 1인 POV 헤드팻 `max_hands=3` 허용, `#050` 야경 키워드 시 Color Burn 임계치 `0.22 -> 0.35` 완화.
-     - 여성 로맨스/H-씬 70종(`121` 제외) 전량 `mob_tier`(`0: 12`, `1: 6`, `2: 30`, `3: 22`) 및 `partner_pos`(`above: 14`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑 완료, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화.
+     - 여성 로맨스/H-씬 70종(`121` 제외) 전량 `mob_tier`(`0: 12`, `1: 3(088, 091, 109)`, `2: 30`, `3: 25`) 및 `partner_pos`(`above: 11`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑 완료, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화.
 - **검증 결과**:
   - `pytest -q`: **185 passed** (전수 계약 테스트 포함) | `precheck -r campus` (`2004`조합) & `-r oto` (`987`조합): **위반 0건 PASS**.
   - Campus 에셋 재스캔(`1,379`장): `#047` `7/7`, `#050` `12/12` 전수 통과, Color Burn 실패 `0건`.
   - H2-A 파일럿 8종 × 2명(`aya, shz` 16장): Auto-QC **16/16(100%)** 합격.
+
+---
+
+### ADR-102: 일상 `legacy` 화풍 확정, 착의 벨트 방어 및 H-씬 전용 Wet & Steamy Skin 부스터 (Phase S2, 2026-11-16)
+- **배경**:
+  - 야간 전수 감사 및 Style A/B 테스트 결과, `ADR-101`의 `glossy` 화풍 가드(`2d cute anime face`, `iridescent hair highlights`, `cinematic rim lighting`, `heavy dark shadows` 네거티브)가 일부 캐릭터의 눈동자 색 변질·목덜미 푸른 음영 오염·과노출을 유발하고, 착의 시 `tucked into`+`belt` 조합에서 셔츠 위 벨트 착용 오류가 확인됨.
+  - 또한 `POSE_MAPPING_V2.md`의 V3.1 스마트 땀 분리 불변식이 `prompt_pipeline.py` 내 무조건적인 `glossy skin/wet skin/sweat` 삭제 정규식, `soft shaded skin` 주입, 네거티브 `oily skin/white dots`에 의해 차단되고 있었음.
+- **결정 사항**:
+  1. **기본 화풍 모드 `"legacy"` 확정 (`PromptContext.style_mode`)**:
+     - `PLEPA_STYLE_MODE` 환경변수 기반 `"legacy"`(기본) / `"balanced"` / `"glossy"` 분기를 도입하고, 기본값을 `"legacy"`로 확정하여 일상 씬의 원본 색감·눈동자 색·음영 밀도를 100% 보존함 (`ADR-101` 구도·체위·모브 로직은 그대로 유지).
+  2. **착의 벨트 위치 방어 (`DefectDefenseMutator`)**:
+     - `not ctx.nude` 상태에서 `tucked into`와 `belt`가 동시 존재할 경우 네거티브에 `(untucked shirt, shirt over belt, belt over shirt, long untucked hem:1.25)`를 자동 주입함.
+  3. **H-씬 전용 Wet & Steamy Skin 3중 족쇄 해제 (`ctx.is_steamy_h_scene`)**:
+     - 포즈 코드 `>= 60`, 성인/로맨스 섹션, 또는 샤워 씬(`038`, `039`)일 때 `is_steamy_h_scene=True`로 판별하여 ① 긍정 프롬프트 내 `glossy skin`/`wet skin`/`sweat` 삭제 정규식 우회, ② `soft shaded skin` 제외 및 `_H_SCENE_WET_SKIN_TAGS` 6종(수분광·땀방울·열기) 주입, ③ 네거티브 내 `oily skin`/`greasy skin`/`shiny skin`/`white dots`/`spots on skin` 자동 정제를 적용함 (`000~055` 비성교 일상 씬은 `False`로 격리).
 
 
 
