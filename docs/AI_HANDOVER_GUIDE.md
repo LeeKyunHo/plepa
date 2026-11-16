@@ -1897,10 +1897,24 @@ ight_terrace(도시 야경 발코니 난간).
 - **결정 사항**:
   1. **`oto` 배경·매핑·캐릭터 표준화 ([`projects/oto/background.json`](../projects/oto/background.json), [`pose_background_mapping.json`](../projects/oto/pose_background_mapping.json), `kei/luc/mik.json`)**:
      - `fairy lights`, `warm afternoon sunlight`, `depth of field`, `blurry background`를 제거하고 `campus` 기준의 `neutral color balance`, `bright clean atmosphere`, `gentle natural window daylight`로 통일하며 `pose_background_mapping.json`(`049: none` 등)을 신설함.
-     - `kei/luc/mik.json` `sdxl_positive` 앞청크를 `aesthetic illustration, delicate anime coloring, soft shaded skin...`(`newest,` 이중 쉼표 제거)로 표준화하고 `sdxl_negative`에 황변·색조 오염 방어(`yellow/amber/golden/green/color tint:1.35`, `flat color, thick lineart`)를 보강함.
+     - `kei`/`luc`/`mik.json` `sdxl_positive` 앞청크를 `aesthetic illustration, delicate anime coloring, soft shaded skin...`(`newest,` 이중 쉼표 제거)로 표준화하고 `sdxl_negative`에 황변·색조 오염 방어(`yellow/amber/golden/green/color tint:1.35`, `flat color, thick lineart`)를 보강함.
   2. **남캐 모브 상안부 그림자 음영 전환 & 일상 환경광 정제 ([`plepa_engine/prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py))**:
      - `_MOB_EYELESS_BANGS_POS` 및 레거시 모브 청크의 `hair over eyes`/`bangs covering eyes` 계열을 전면 폐기하고 `_MOB_SHADOW_EYES_POS` (`(dark-haired male mob:1.15), (short black hair, shaded upper face, shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2)`)로 교체함.
      - 1차 청크의 `(clear visible eyes:1.15)`를 비오토코노코 여성 한정 `(clear visible female eyes:1.15)`로 격리하고, 일상 씬(`not ctx.is_steamy_h_scene`)에서 `_DAILY_POSE_LIGHT_CLEANUP_RE`·`_DAILY_AMBIENT_CLEANUP_RE`로 `blurry background`, `depth of field`, `fairy lights`, `warm afternoon sunlight`를 엔진 레벨에서 자동 정제함.
+
+### ADR-106: `signature_accessories` 의상/소품 락 & `CompositionAntiDriftMutator`·결정론적 포즈 시드 도입 (Phase S8-A/B, 2026-11-17)
+- **배경**:
+  - 장신구·소품이 `BREAK` 뒤 2차 청크 후반(CLIP 75토큰 이후)에 배치되거나 가중치 `1.15` 클램핑/네거티브 충돌·2인 스킨십 의상 교차 오염(`027 백허그` `shirtless male`)으로 유실되는 문제와, 실행 시드(`-1`) 변동으로 포즈별 화각·구도가 흔들리는 문제를 구조적으로 해결할 필요가 있음.
+- **결정 사항**:
+  1. **캐릭터 `signature_accessories` 스키마 및 전단 집중 배치 (`models.py`, `schemas.py`, `prompt_pipeline.py`)**:
+     - `CharacterConfig` 및 `CharacterSchema`에 `signature_accessories: List[str]` 필드를 신설하고 프로필 오버라이드와 연동함.
+     - `PositiveAssemblyMutator`에서 `_inject_signature_accessories()`로 소품 토큰을 2차 청크 선두(성별/인원 앵커 직후, CLIP 75토큰 이내)에 우선 배치하며, `nude` 상태에서도 `_FACE_HAIR_ACCESSORY_KEYWORDS`(안경·리본·베레모·헤어핀 등)는 계승함. `NegativeBaseMutator`는 `_strip_accessory_negative_conflicts()`로 전체 구문 및 핵심 소품 명사의 네거티브 충돌을 자동 제거함.
+  2. **2인 스킨십 의상 교차 오염 방지 (`TwoPersonMobMutator`)**:
+     - `poses` 2인 스킨십 착의 씬(`027` 등)에서 `shirtless male`을 1차 청크에서 제거해 3차 모브 `BREAK` 블록으로 격리하고, 주 캐릭터 외투(`blazer/jacket/cardigan/lab coat`) 보유 시 파트너 의상 전이 억제 네거티브를 추가함.
+  3. **신규 `CompositionAntiDriftMutator` & `--deterministic-pose-seed` (`prompt_pipeline.py`, `generation_service.py`, `batch_generator.py`)**:
+     - `TwoPersonMobMutator`와 `SanitizerMutator` 사이에 `CompositionAntiDriftMutator`를 추가하여 `tight bust portrait`, `cowboy shot`, `full body` 샷 사이즈별 반대 구도 이탈 네거티브를 자동 주입함.
+     - `GenerationParams`·`GENERATION_OPTION_SPECS`·CLI에 `deterministic_pose_seed`(`--deterministic-pose-seed`)를 삼위일체 등록하고, `compute_deterministic_pose_seed()`(`numeric_code * 1000 + crc32(char.prefix) % 100000`)로 프로세스 간에도 동일한 포즈·캐릭터 기준 시드를 산출함.
+
 
 
 
