@@ -155,14 +155,14 @@
       "label": "백허그",
       "description": "뒤에서 다가온 파트너가 등 뒤에서 부드럽게 감싸 안아주는 로맨틱하고 다정한 백허그 씬.",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, back hug, hug from behind, partner behind, cropped male partner, partner head out of frame, shirtless male, male arms wrapped around waist from behind, leaning back against partner, (head tilted down:1.25), (looking down:1.25), (downcast eyes:1.2), (bashful flustered expression:1.2), (heavily blushing:1.2), (shy blush:1.15), shy sweet smile, parted lips, sweet romantic atmosphere",
-      "mob_tier": 1,
+      "mob_tier": 2,
       "partner_pos": "behind"
     },
     "028": {
       "label": "엉덩이애무",
       "description": "파트너와 마주 안겨 밀착한 상태에서 상대의 손이 엉덩이를 감싸 쥐는 농밀한 스킨십 포즈.",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, (hugging partner:1.15), intimate embrace, (from behind:1.15), (turned back:1.15), back view, (ass grab:1.15), (butt grab:1.15), (fondling buttocks:1.15), groping, hands on buttocks, partner hands on ass, (looking back over shoulder:1.15), looking at viewer, arched back, cropped male partner, partner head out of frame, light blush, rosy cheeks, bedroom eyes, parted lips, breathless moaning, trembling with pleasure, seductive look",
-      "mob_tier": 1,
+      "mob_tier": 2,
       "partner_pos": "behind"
     },
     "029": {
@@ -180,7 +180,7 @@
       "label": "가슴애무",
       "description": "파트너가 뒤에서 덮쳐 양손으로 가슴을 감싸 쥐며 애무하는 등 뒤 스킨십 제스처.",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), groping, breast grab, grabbing from behind, partner behind, hands on breasts, arms around waist, cropped male partner, partner head out of frame, looking back over shoulder, looking at viewer, soft pink blush, flushed cheeks, embarrassed, teary eyes, protesting, parted lips, arched back",
-      "mob_tier": 1,
+      "mob_tier": 2,
       "partner_pos": "behind"
     },
     "032": {
@@ -201,11 +201,11 @@
     "034": {
       "label": "가슴에얼굴묻기",
       "description": "남성이 여자의 풍만한 가슴 위에 안면을 편안하게 얹고 기대며 여자가 그 머리를 포근하게 안아주는 따뜻하고 다정한 스킨십 포즈.",
-      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.25)), ((female holding male head against chest with both hands:1.25)), ((male burying face deep in female's chest, face completely hidden:1.25)), ((head resting on chest, only back of male head visible:1.25)), ((back of dark-haired male head, male face obscured:1.2)), ((tender gentle smile, happy warm smile:1.25)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.25))",
+      "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 1girl, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.25)), ((female holding male head against chest with both hands:1.25)), ((male burying face deep in female's chest, face completely hidden:1.25)), ((head resting on chest, only back of male head visible:1.25)), ((back of dark-haired male head, male face obscured:1.2)), ((tender gentle smile, happy warm smile:1.25)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.25))",
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, ((from above, high angle shot:1.2)), ((close-up bust shot:1.25)), ((both arms wrapped tenderly around partner's head:1.25)), ((holding male head against chest with both hands:1.25)), ((male burying face deep against chest, face completely hidden:1.25)), ((head resting on chest, only back of male head visible:1.25)), ((back of dark-haired male head, male face obscured:1.2)), ((tender gentle smile, happy warm smile:1.25)), ((soft blush:1.2)), looking down lovingly at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, ((single male partner:1.25))",
       "negative_add": "(crown, tiara, laurel, wreath, flower crown, hair wreath, halo, hair ornament, headwear:1.25), (facing each other:1.25), (eye contact:1.25), (male face visible:1.25), (male eyes:1.25), (male nose:1.25), (male mouth:1.25), (male profile:1.25), (two faces visible:1.25), (extra hands:1.25), (multiple hands:1.25), (extra arms:1.25), (standing male:1.25), (tall male:1.25), (standing beside:1.25), (2boys:1.25), (multiple boys:1.25), (duplicate male:1.25)",
-      "mob_tier": 1,
-      "partner_pos": "side_kiss"
+      "mob_tier": 2,
+      "partner_pos": "bury_chest"
     },
     "035": {
       "label": "덮치기",
@@ -218,8 +218,8 @@
       "label": "공주님안기",
       "description": "파트너의 양팔에 들려 안긴 채 부끄러움에 눈을 감고 고개를 살포시 숙이며 목을 꼭 감싸 안는 공주님 안기 포즈.",
       "prompt": "cowboy shot, (centered composition:1.15), (single view:1.25), (single shot:1.25), (princess carry:1.25), (carried by male partner:1.25), cropped male partner, partner head out of frame, (closed eyes:1.2), (head tilted down:1.2), (bashful embarrassed expression:1.25), (sweet blush:1.2), soft rosy cheeks, shy sweet smile, parted lips, (arms wrapped around partner neck:1.25), clinging tightly to partner, intimate romantic embrace, soft romantic lighting, detailed anime shading, full body",
-      "mob_tier": 1,
-      "partner_pos": "offscreen"
+      "mob_tier": 2,
+      "partner_pos": "carry"
     },
     "037": {
       "label": "붓카케",
@@ -285,8 +285,8 @@
       "required_outfit": "nude",
       "prompt": "cowboy shot, (centered composition:1.15), solo, completely nude, full nudity, bare skin, ((hugging knees in wide spacious sunken bath pool:1.25)), ((splashing clear water, screaming blush:1.25)), startled wide eyes, wet hair, rising steam, caught in bath",
       "section": "poses",
-      "mob_tier": 1,
-      "partner_pos": "side_kiss"
+      "mob_tier": 0,
+      "partner_pos": null
     },
     "046": {
       "label": "결혼식",
@@ -525,7 +525,7 @@
       "section": "romance",
       "negative_add": "(standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (detailed male face:1.25), (visible male eyes:1.25), (round glasses, thick glasses, dark frames, colored frames, red frames, black frames:1.4), (green eyes, blue eyes, yellow eyes:1.35), (amber lighting, yellow lighting, orange tint, warm yellow light:1.3), (black skin male, dark skin partner, very dark skin:1.35), (oversaturated, saturated, high contrast:1.3), (wearing pants:1.35), (wearing pants over crotch:1.35)",
       "prompt_female": "partially unbuttoned shirt, bra or skirt visible, shy teasing mood, 1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, delicate anime coloring, natural pale skin, tender bedroom intimacy",
-      "prompt_otokonoko": "otokonoko, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, tender bedroom intimacy",
+      "prompt_otokonoko": "otokonoko, ((upper body, chest focus, tight bust portrait:1.25)), completely nude, full nudity, bare skin, ((nursing handjob, breastfeeding and handjob simultaneously:1.25)), ((partner sucking on nipple, mouth on breast, partner face buried in breast, back of male head visible, obscured male face:1.25)), ((one hand stroking partner penis with delicate grip:1.25)), ((handjob while nursing:1.25)), sitting, partner lying with head on lap, looking down with sweet maternal affectionate smile, gentle loving blush, tender bedroom intimacy",
       "mob_tier": 3,
       "partner_pos": null
     },
@@ -581,7 +581,7 @@
     "081": {
       "label": "대면좌위",
       "description": "앉아있는 파트너의 무릎 위에 마주 앉아 팔로 목을 감싸고 카메라를 향해 표정을 드러내는 좌위 체위 (키로 047)",
-      "prompt": "angled medium shot, head to hips, upper three-quarter view, from side profile view, (facing left:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, sitting on lap, straddling, arms around partner neck, (facing viewer:1.2), face visible, looking at viewer over partner shoulder, heavy body blush, flushed cheeks and chest, parted lips moaning, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting, face to face straddling on lap, back of dark-haired male head at lower edge, partner head out of frame",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, from side profile view, (facing left:1.15), 1girl, completely nude, full nudity, bare skin, sitting on lap, straddling, arms around partner neck, (facing viewer:1.2), face visible, looking at viewer over partner shoulder, heavy body blush, flushed cheeks and chest, parted lips moaning, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting, face to face straddling on lap, back of dark-haired male head at lower edge, partner head out of frame",
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "below"
@@ -641,7 +641,7 @@
       "prompt": "pov, angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, completely nude, full nudity, bare skin, on bed, from behind, on all fours, hips raised, arched back, head turned back, looking at viewer, biting pillow, messy hair, sweaty back and shoulders, implied sex, motion blur, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking back, trembling with sweet sensation:1.15)), soft bedding",
       "section": "h_scenes",
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25), (facing right:1.25), (facing partner:1.25), (facing each other:1.25), (chest to chest:1.25), (paizuri:1.25), (fellatio:1.25), (oral:1.25), (partner in front:1.25), (male in front:1.25), (kissing chest:1.25)",
-      "mob_tier": 1,
+      "mob_tier": 2,
       "partner_pos": "behind"
     },
     "089": {
@@ -665,7 +665,7 @@
       "description": "파트너 위에 올라타 위에서 부드럽게 리드하는 기승위 (약)",
       "prompt": "pov, tight bust portrait, upper body focus, (centered composition:1.15), 1girl, completely nude, full nudity, bare skin, on bed, from below, straddling viewer, leaning forward, bouncing breasts, sweat drop on collarbone, hands on viewer's chest, heavy breathing, ((vivid sensual expression, flushed face, breathless parted lips gasping softly, moist emotional eyes, trembling with sweet sensation:1.2)), crotch out of frame, disheveled sheets, warm soft lighting",
       "section": "h_scenes",
-      "mob_tier": 1,
+      "mob_tier": 2,
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25)",
       "partner_pos": "below"
     },
@@ -771,7 +771,7 @@
     "107": {
       "label": "측위약",
       "description": "옆으로 나란히 누워 마주보며 천천히 결합하는 측위 (약)",
-      "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, lying on side on bed, ((side by side sex:1.25)), leg over partner hip, gentle slow rhythm, intimate embrace, looking at partner, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, trembling with sweet sensation, sweet moaning:1.25))",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, completely nude, full nudity, bare skin, lying on side on bed, ((side by side sex:1.25)), leg over partner hip, gentle slow rhythm, intimate embrace, looking at partner, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, trembling with sweet sensation, sweet moaning:1.25))",
       "section": "h_scenes",
       "partner_pos": "side_kiss",
       "mob_tier": 2
@@ -812,7 +812,7 @@
     "112": {
       "label": "착의섹스_시작",
       "description": "옷을 입은 채 벽이나 책상에 밀착되어 행위 직전 서로를 갈망하며 열띤 숨결과 긴장감을 나누는 초밀착 전희 씬",
-      "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, 1boy, ((passionate foreplay before clothed sex:1.25)), ((intensely leaning close, face-to-face:1.25)), ((fully clothed top, wearing shirt, skirt lifted, underwear aside:1.25)), ((steamy heavy breathing, whispering into ear, parted lips gasping softly:1.25)), (hands gripping clothes, pinned against wall or desk:1.25), ((intensely flushed face, wet glossy parted lips, half-closed lustful eyes, breathless longing gaze, anticipation expression:1.25)), trembling with sweet tension, disheveled clothing, thrilling secret encounter, heated intimate atmosphere, dramatic warm rim lighting",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, ((passionate foreplay before clothed sex:1.25)), ((intensely leaning close, leaning close:1.25)), ((fully clothed top, wearing shirt, skirt lifted, underwear aside:1.25)), ((steamy heavy breathing, whispering into ear, parted lips gasping softly:1.25)), (hands gripping clothes, pinned against wall or desk:1.25), ((intensely flushed face, wet glossy parted lips, half-closed lustful eyes, breathless longing gaze, anticipation expression:1.25)), trembling with sweet tension, disheveled clothing, thrilling secret encounter, heated intimate atmosphere, dramatic warm rim lighting",
       "required_outfit": "default",
       "section": "h_scenes",
       "mob_tier": 2,
