@@ -1,0 +1,15 @@
+{
+  "_schema": "oto 로스터 포즈별 추천 배경 매핑 (V3)",
+  "_note": "일상 포즈는 중립 자연광 default/studio로, 전라(049)는 무배경(none)으로, 로맨스/성인 씬(060+)은 night_room으로 매핑합니다.",
+  "default_background": "default",
+  "pose_mappings": {
+    "000-019": "default",
+    "020-047": "default",
+    "048": "studio",
+    "049": "none",
+    "050": "default",
+    "060-079": "night_room",
+    "150-199": "night_room",
+    "200-209": "night_room"
+  }
+}
