@@ -692,7 +692,7 @@ def test_phase_s4_pose_reclassification_and_qc_fixes():
     assert db_campus["036"].mob_tier == 2
     assert db_campus["036"].partner_pos == "carry"
     pos_036, neg_036, _ = assemble_sdxl_prompt(char=char, pose=db_campus["036"], bg_prompt="classroom")
-    assert "carried in male partner's arms" in pos_036.lower()
+    assert "carried in dark-haired male partner's arms" in pos_036.lower()
     assert "disembodied male hands" not in pos_036.lower()
     assert "male torso" not in neg_036.lower()
 
@@ -742,3 +742,65 @@ def test_phase_s4_pose_reclassification_and_qc_fixes():
             is_offscreen_partner=True,
         )
         assert ok_bury is True, reason_bury
+
+
+def test_mob_eyeless_bangs_style_and_carry_qc():
+    """모브 남캐 앞머리 눈가림(short black hair, hair over male eyes, bangs covering male eyes) 및 carry(036) Auto-QC 검증."""
+    from plepa_engine.qa_validator import validate_generated_image
+
+    char = _make_female_char()
+    db_campus = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+
+    # 1. #036 carry & #028 behind: 앞머리 눈가림 모브 태그 주입 + 글로벌 bangs over eyes 억제 해제 + 미남/금발/은발 전이 억제
+    pos_036, neg_036, _ = assemble_sdxl_prompt(char=char, pose=db_campus["036"], bg_prompt="classroom")
+    pos_036_low = pos_036.lower()
+    neg_036_low = neg_036.lower()
+    assert "short black hair" in pos_036_low
+    assert "male hair over eyes" in pos_036_low
+    assert "male bangs covering eyes" in pos_036_low
+    assert "tall dark-haired male mob" in pos_036_low
+    assert "partner head out of frame" not in pos_036_low
+    assert "full male head" not in neg_036_low
+    assert "visible male eyes" in neg_036_low
+    assert "silver-haired male" in neg_036_low
+    assert "(bangs over eyes:" not in neg_036_low
+    assert "(eyeless:" not in neg_036_low
+    assert "eyeless female" in neg_036_low
+    assert "female bangs over eyes" in neg_036_low
+
+    pos_028, neg_028, _ = assemble_sdxl_prompt(char=char, pose=db_campus["028"], bg_prompt="classroom")
+    assert "male hair over eyes" in pos_028.lower()
+    assert "male bangs covering eyes" in pos_028.lower()
+    assert "clear visible eyes" in pos_028.lower()
+    assert "visible male eyes" in neg_028.lower()
+
+    # 2. #036 공주님안기: 모브 머리(heads=2) + 눈가림으로 얼굴 1개(faces=1) -> PASS, 눈 노출(faces=2) -> FAIL
+    img = Image.new("RGB", (256, 384), color=(180, 180, 180))
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok_mob, reason_mob, _ = validate_generated_image(
+            img,
+            prompt=pos_036,
+            is_solo_scene=False,
+            is_two_person=True,
+            is_offscreen_partner=True,
+        )
+        assert ok_mob is True, reason_mob
+
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok_face, reason_face, _ = validate_generated_image(
+            img,
+            prompt=pos_036,
+            is_solo_scene=False,
+            is_two_person=True,
+            is_offscreen_partner=True,
+        )
+        assert ok_face is False
+        assert "얼굴 노출" in reason_face

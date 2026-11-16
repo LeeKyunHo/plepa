@@ -320,7 +320,13 @@ def validate_generated_image(
 
         is_head_contact_allowed = is_kiss or is_nursing or any(
             kw in p_text
-            for kw in ("back of male head", "back of dark-haired male head", "head between thighs", "burying face", "face buried", "head buried", "buried in her chest")
+            for kw in (
+                "back of male head", "back of dark-haired male head", "head between thighs",
+                "burying face", "face buried", "head buried", "buried in her chest",
+                "princess carry", "carried in dark-haired male", "carried in male partner",
+                "back hug", "hugging partner", "hug from behind", "grabbing from behind",
+                "dark-haired male mob",
+            )
         )
 
         if is_solo:
