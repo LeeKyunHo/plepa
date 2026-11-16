@@ -907,3 +907,121 @@ def test_phase_s7_oto_neutral_color_balance_and_mob_shadow_eyes():
     assert "male hair over eyes" not in pos_low
     assert "hair over male eyes" not in pos_low
     assert "bangs covering" not in pos_low
+
+
+def test_phase_s8a_signature_accessories_lock_and_2person_outfit_isolation():
+    """Phase S8-A: signature_accessories CLIP 75토큰 전단 우선 배치, 누드 시 페이스/헤어 소품 계승 및 #027 의상 교차 오염 방지 검증."""
+    from plepa_engine.models import CharacterConfig
+    from plepa_engine.services.character_service import default_character_service
+    from plepa_engine.services.schemas import CharacterSchema
+
+    raw_char = {
+        "prefix": "mai_s8",
+        "name": "Mai S8",
+        "gender": "female",
+        "appearance": {
+            "face_and_hair": "ash gray low ponytail, dark gray eyes",
+            "physique": "petite, busty, narrow waist",
+            "outfit": "open pure white lab coat, tailored blazer, long necktie",
+        },
+        "signature_accessories": ["rimless eyeglasses", "navy blue hair ribbon", "necktie"],
+        "sdxl_positive": (
+            "masterpiece, best quality, newest, absurdres BREAK 1girl, solo, petite, busty, narrow waist, "
+            "ash gray low ponytail, dark gray eyes, open pure white lab coat, tight ribbed sweater, "
+            "high-waist pencil skirt, black pantyhose, high heels, rimless eyeglasses, navy blue hair ribbon, necktie"
+        ),
+        "sdxl_nude_positive": "masterpiece, best quality, newest, absurdres BREAK 1girl, solo, petite, busty, narrow waist, ash gray low ponytail, dark gray eyes",
+        "sdxl_negative": "worst quality, eyeglasses, necktie, hair ribbon",
+    }
+    schema_obj = CharacterSchema.model_validate(raw_char)
+    assert schema_obj.signature_accessories == ["rimless eyeglasses", "navy blue hair ribbon", "necktie"]
+    char = CharacterConfig.from_dict(raw_char)
+
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    pos_000, neg_000, is_nude_000 = assemble_sdxl_prompt(char=char, pose=db["000"], bg_prompt="classroom")
+    assert not is_nude_000
+    chunk2_tokens = [t.strip().lower() for t in pos_000.split(" BREAK ", 1)[1].split(",")]
+    # signature_accessories 3종이 2차 청크 선두 6토큰 이내에 배치되어야 함 (후미 중복 제거)
+    head_slice = " | ".join(chunk2_tokens[:6])
+    assert "rimless eyeglasses" in head_slice
+    assert "navy blue hair ribbon" in head_slice
+    assert "necktie" in head_slice
+    assert pos_000.lower().count("rimless eyeglasses") == 1
+    assert "eyeglasses" not in neg_000.lower()
+
+    # 누드 H-씬(086): 얼굴/헤어 소품(eyeglasses, hair ribbon)은 유지, 의상 소품(necktie)은 제외
+    pos_086, _, is_nude_086 = assemble_sdxl_prompt(char=char, pose=db["086"], bg_prompt="bedroom")
+    assert is_nude_086 is True
+    pos_086_low = pos_086.lower()
+    assert "rimless eyeglasses" in pos_086_low
+    assert "navy blue hair ribbon" in pos_086_low
+    assert "necktie" not in pos_086_low
+
+    # #027 백허그 + oto kei: shirtless male이 1차 청크에서 3차 모브 BREAK 블록으로 격리되고 외투 보호 네거티브 주입
+    kei, _ = default_character_service.find_character("kei", "oto")
+    db_oto = default_pose_service.load_pose_db(engine="sdxl", roster="oto")
+    pos_027, neg_027, _ = assemble_sdxl_prompt(char=kei, pose=db_oto["027"], bg_prompt="campus")
+    chunks_027 = pos_027.split(" BREAK ")
+    assert len(chunks_027) == 3
+    assert "shirtless male" not in chunks_027[0].lower()
+    assert "shirtless male" in chunks_027[2].lower()
+    assert "partner wearing blazer" in neg_027.lower()
+
+
+def test_phase_s8b_composition_anti_drift_and_deterministic_seed(tmp_path):
+    """Phase S8-B: CompositionAntiDriftMutator 반대 구도 네거티브 주입 및 결정론적 포즈 시드 산출 검증."""
+    from plepa_engine.models import CharacterAppearance, CharacterConfig, PoseEntry
+    from plepa_engine.services.generation_service import (
+        GenerationParams,
+        GenerationService,
+        compute_deterministic_pose_seed,
+    )
+
+    char = CharacterConfig(
+        prefix="aya",
+        name="Ayame",
+        gender="female",
+        appearance=CharacterAppearance("silver hair, violet eyes", "slender", "white shirt"),
+        sdxl_positive="masterpiece BREAK 1girl, solo, silver hair, white shirt",
+        sdxl_negative="worst quality",
+    )
+
+    pose_tight = PoseEntry(code="031", section="h_scenes", label="밀착", prompt="tight bust portrait, looking at viewer")
+    _, neg_tight, _ = assemble_sdxl_prompt(char=char, pose=pose_tight, bg_prompt="bedroom")
+    assert "cowboy shot, full body, lower body, wide shot, knees, feet" in neg_tight.lower()
+
+    pose_cowboy = PoseEntry(code="020", section="poses", label="브이", prompt="cowboy shot, standing, peace sign")
+    _, neg_cowboy, _ = assemble_sdxl_prompt(char=char, pose=pose_cowboy, bg_prompt="classroom")
+    assert "tight bust portrait, close-up face, full body, wide shot, dutch angle, fisheye" in neg_cowboy.lower()
+
+    pose_full = PoseEntry(code="030", section="poses", label="전신", prompt="full body, standing, looking at viewer")
+    _, neg_full, _ = assemble_sdxl_prompt(char=char, pose=pose_full, bg_prompt="none")
+    assert "cropped legs, tight bust portrait, close-up face, dutch angle, fisheye" in neg_full.lower()
+
+    s1 = compute_deterministic_pose_seed("027", "kei")
+    s2 = compute_deterministic_pose_seed("027", "kei")
+    s3 = compute_deterministic_pose_seed("028", "kei")
+    s4 = compute_deterministic_pose_seed("027", "aya")
+    assert s1 == s2
+    assert s1 != s3
+    assert s1 != s4
+
+    svc = GenerationService()
+    db_campus = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    with patch.object(svc.char_svc, "resolve_characters", return_value=[(char, "campus")]), \
+         patch.object(svc.pose_svc, "load_pose_db", return_value={"020": db_campus["020"]}), \
+         patch.object(svc.pose_svc, "resolve_pose_codes", return_value=["020"]):
+        params = GenerationParams(
+            character_expr="aya",
+            pose_expr="020",
+            roster="campus",
+            mock=True,
+            overwrite=True,
+            auto_qc=False,
+            censor=False,
+            deterministic_pose_seed=True,
+            out_dir=str(tmp_path),
+        )
+        results = svc.run_batch(params, quiet=True)
+        assert len(results) == 1
+        assert results[0].target.seed == compute_deterministic_pose_seed("020", "aya")

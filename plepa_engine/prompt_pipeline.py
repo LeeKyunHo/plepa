@@ -433,6 +433,92 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
     return _inject_wet_skin_tags(assembled, ctx)
 
 
+_FACE_HAIR_ACCESSORY_KEYWORDS = (
+    "glasses", "eyeglasses", "sunglasses", "monocle",
+    "ribbon", "hair ribbon", "hairpin", "hair clip",
+    "beret", "hat", "cap", "headband", "earring", "earrings", "hair ornament",
+)
+
+
+def _is_face_hair_accessory(tag: str) -> bool:
+    """탈의(nude) 상태에서도 유지할 얼굴/헤어 소품인지 판별합니다."""
+    low = (tag or "").strip().lower()
+    return any(kw in low for kw in _FACE_HAIR_ACCESSORY_KEYWORDS)
+
+
+_ACCESSORY_BASE_NOUNS = _FACE_HAIR_ACCESSORY_KEYWORDS + (
+    "necktie", "tie", "bowtie", "belt", "leather belt", "choker", "necklace",
+    "gloves", "stockings", "thighhighs", "pantyhose",
+)
+
+
+def _strip_accessory_negative_conflicts(neg: str, accessories: List[str]) -> str:
+    """활성화된 signature_accessories와 충돌하는 네거티브 전체구문·핵심 소품 명사를 함께 제거합니다."""
+    if not accessories:
+        return neg
+    patterns: List[str] = []
+    for sig_acc in accessories:
+        acc_core = normalize_tag(sig_acc)
+        if not acc_core:
+            continue
+        patterns.append(re.escape(acc_core))
+        for noun in _ACCESSORY_BASE_NOUNS:
+            if re.search(rf"\b{re.escape(noun)}\b", acc_core):
+                patterns.append(re.escape(noun))
+    if not patterns:
+        return neg
+    combined = r"\b(?:" + "|".join(sorted(set(patterns), key=len, reverse=True)) + r")\b(?::[0-9\.]+)?"
+    return _strip_tags_preserving_parens(neg, combined)
+
+
+def _select_active_signature_accessories(ctx: PromptContext) -> List[str]:
+    """현재 슬롯(착의/탈의)에 맞춰 활성화할 캐릭터 고유 장신구·소품 목록을 반환합니다."""
+    raw = getattr(ctx.char, "signature_accessories", None) or []
+    items = [str(item).strip() for item in raw if str(item).strip()]
+    if ctx.nude:
+        return [item for item in items if _is_face_hair_accessory(item)]
+    return items
+
+
+def _inject_signature_accessories(base_pos: str, ctx: PromptContext) -> str:
+    """signature_accessories를 2차 청크 선두(CLIP 75토큰 이내)에 중복 없이 우선 배치합니다."""
+    active = _select_active_signature_accessories(ctx)
+    if not active:
+        return base_pos
+
+    if " BREAK " in base_pos:
+        head, char_part = base_pos.split(" BREAK ", 1)
+    else:
+        head, char_part = "", base_pos
+
+    # 기존 2차 청크에 분산·후미 배치된 동일 소품 토큰 제거 후 전단 집중 배치
+    cleaned_char = char_part
+    formatted_tags: List[str] = []
+    for acc in active:
+        core = normalize_tag(acc)
+        if not core:
+            continue
+        cleaned_char = _strip_tags_preserving_parens(
+            cleaned_char,
+            rf"\(?{re.escape(core)}(?::[0-9\.]+)?\)?",
+        )
+        formatted_tags.append(acc if ":" in acc else f"({core}:1.10)")
+
+    if not formatted_tags:
+        return base_pos
+
+    char_tokens = [t.strip() for t in cleaned_char.split(",") if t.strip()]
+    anchor_kws = ("1girl", "1boy", "solo", "androgynous", "otokonoko", "femboy")
+    insert_idx = 0
+    for idx, tok in enumerate(char_tokens[:4]):
+        tok_low = normalize_tag(tok)
+        if any(k in tok_low for k in anchor_kws):
+            insert_idx = idx + 1
+    new_char_tokens = char_tokens[:insert_idx] + formatted_tags + char_tokens[insert_idx:]
+    new_char_part = ", ".join(new_char_tokens)
+    return f"{head} BREAK {new_char_part}" if head else new_char_part
+
+
 class PositiveAssemblyMutator(PromptMutator):
     """2단계: 캐릭터 외형/의상과 포즈를 결합하여 긍정 프롬프트(Positive Prompt) 1차 조립."""
 
@@ -449,6 +535,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 theme_outfit = get_character_outfit_prompt(ctx.char, ctx.slot)
                 if theme_outfit:
                     base_pos = f"{base_pos}, {theme_outfit}"
+            base_pos = _inject_signature_accessories(base_pos, ctx)
             ctx.positive_prompt = _assemble_positive_prompt(base_pos, pose_tag, ctx)
 
         elif ctx.char.sdxl_positive:
@@ -465,6 +552,7 @@ class PositiveAssemblyMutator(PromptMutator):
                 if theme_outfit:
                     base_pos = f"{base_pos}, {theme_outfit}"
 
+            base_pos = _inject_signature_accessories(base_pos, ctx)
             ctx.positive_prompt = _assemble_positive_prompt(base_pos, pose_tag, ctx)
         else:
             char_gender_val = (ctx.char.gender or getattr(ctx.char, "default_mode", "") or "female").lower()
@@ -491,7 +579,8 @@ class PositiveAssemblyMutator(PromptMutator):
                 quality_tags = f"{ctx.custom_pos.strip()}, {quality_tags}"
             first_chunk = f"{quality_tags}, {pose_tag}" if pose_tag else quality_tags.strip()
             solo_tag = "" if ctx.is_two_person else "solo, "
-            ctx.positive_prompt = f"{first_chunk} BREAK {gender_tag}, {solo_tag}{char_desc}"
+            raw_fallback = f"{first_chunk} BREAK {gender_tag}, {solo_tag}{char_desc}"
+            ctx.positive_prompt = _inject_signature_accessories(raw_fallback, ctx)
 
 
 class NegativeBaseMutator(PromptMutator):
@@ -546,6 +635,7 @@ class NegativeBaseMutator(PromptMutator):
             for acc in ("choker", "necklace"):
                 if acc in pos_low:
                     neg = re.sub(rf",?\s*\(?\b{acc}\b(?::[0-9\.]+)?\)?", "", neg, flags=re.IGNORECASE)
+        neg = _strip_accessory_negative_conflicts(neg, _select_active_signature_accessories(ctx))
 
         if "(photorealistic, realistic, 3d" not in neg:
             char_mult_guard = "" if ctx.is_two_person else "(multiple characters, character sheet, concept art, reference sheet, mannequin:1.3), "
@@ -888,10 +978,17 @@ class TwoPersonMobMutator(PromptMutator):
                         pos = re.sub(r",?\s*\bpartner head out of frame\b", "", pos, flags=re.IGNORECASE)
                     if (getattr(ctx.pose, "section", "") or "").lower() == "poses" and ctx.partner_pos != "bury_chest":
                         # 일상/스킨십 2인 포즈(027,028,031,036)에서는 별도 BREAK 블록으로 상안부 그림자 모브 남캐를 격리하고,
-                        # 주 캐릭터 눈은 여성 한정 clear visible female eyes로 보호해 남캐 눈 역노출과 앞머리 이염을 차단
+                        # 주 캐릭터 눈은 여성 한정 clear visible female eyes로 보호해 남캐 눈 역노출과 앞머리 이염을 차단.
+                        # 또한 포즈 내 'shirtless male'이 주 캐릭터 외투/상의를 벗기는 교차 오염을 막기 위해 3차 청크로 격리함.
+                        has_shirtless_male = bool(re.search(r"\bshirtless male\b", pos, flags=re.IGNORECASE))
+                        if has_shirtless_male and not ctx.nude:
+                            pos = _strip_tags_preserving_parens(pos, r"\bshirtless male\b")
                         if "closed eyes" not in pose_tag.lower() and not ctx.is_otokonoko:
                             pos = f"{pos}, (clear visible female eyes:1.15)"
-                        pos = f"{pos} BREAK (tall dark-haired male mob:1.15), {_MOB_SHADOW_EYES_POS}"
+                        mob_tail = f"{_MOB_SHADOW_EYES_POS}, shirtless male" if (has_shirtless_male and not ctx.nude) else _MOB_SHADOW_EYES_POS
+                        pos = f"{pos} BREAK (tall dark-haired male mob:1.15), {mob_tail}"
+                        if not ctx.nude and any(k in pos.lower() for k in ("blazer", "jacket", "cardigan", "lab coat", "coat")):
+                            neg = f"{neg}, (partner wearing blazer, partner wearing jacket, partner wearing cardigan, partner wearing lab coat, sleeveless protagonist:1.2)"
                     neg = f"{neg}, {_MOB_EYELESS_BANGS_NEG}"
                 elif spec["positive_tags"]:
                     pos = f"{pos} {spec['positive_tags']}" if spec["break_chunk"] else f"{pos}, {spec['positive_tags']}"
@@ -1163,6 +1260,37 @@ def remove_conflicting_tags_from_negative(positive: str, negative: str) -> Tuple
     return new_neg, sorted(set(removed_tags))
 
 
+_COMPOSITION_ANTI_DRIFT_RULES: Tuple[Tuple[Tuple[str, ...], str], ...] = (
+    (
+        ("tight bust portrait", "close-up bust shot", "intimate close-up"),
+        "(cowboy shot, full body, lower body, wide shot, knees, feet:1.25)",
+    ),
+    (
+        ("cowboy shot",),
+        "(tight bust portrait, close-up face, full body, wide shot, dutch angle, fisheye:1.2)",
+    ),
+    (
+        ("full body",),
+        "(cropped legs, tight bust portrait, close-up face, dutch angle, fisheye:1.2)",
+    ),
+)
+
+
+class CompositionAntiDriftMutator(PromptMutator):
+    """5.5단계: 샷 사이즈별 반대 구도 이탈 방지 네거티브를 자동 주입합니다."""
+
+    def mutate(self, ctx: PromptContext) -> None:
+        pose_low = (ctx.pose_tag or "").lower()
+        if not pose_low:
+            return
+        for shot_kws, anti_neg in _COMPOSITION_ANTI_DRIFT_RULES:
+            if "full body" in shot_kws and "portrait" in pose_low:
+                continue
+            if any(kw in pose_low for kw in shot_kws):
+                ctx.negative_prompt = f"{ctx.negative_prompt}, {anti_neg}" if ctx.negative_prompt else anti_neg
+                break
+
+
 class SanitizerMutator(PromptMutator):
     """6단계: 사용자/포즈 커스텀 네거티브 보호 주입, 가중치 안전 클램핑(clamp_sdxl_weights), 태그 충돌 정제 및 BREAK 정규화."""
 
@@ -1217,6 +1345,7 @@ class SDXLPromptPipeline:
             NegativeBaseMutator(),
             DefectDefenseMutator(),
             TwoPersonMobMutator(),
+            CompositionAntiDriftMutator(),
             SanitizerMutator(),
         ]
 

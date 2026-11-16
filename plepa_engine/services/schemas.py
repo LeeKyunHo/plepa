@@ -109,6 +109,7 @@ class CharacterSchema(BaseModel):
     default_mode: Optional[str] = Field(default=None, description="기본 엔진 모드 (sdxl, flux, fast, quality 등)")
     profiles: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="의상/프로필별 오버라이드 맵")
     is_adult: bool = Field(default=True, description="성인 캐릭터 여부 (가드레일 검증용)")
+    signature_accessories: List[str] = Field(default_factory=list, description="캐릭터 고유 장신구·소품 고정 목록 (CLIP 75토큰 전단 우선 배치)")
 
     @field_validator("prefix")
     @classmethod

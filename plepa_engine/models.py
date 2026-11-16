@@ -120,6 +120,7 @@ class CharacterConfig:
     default_mode: Optional[str] = None
     file_path: Optional[Path] = None
     pose_restrictions: Dict[str, List[str]] = field(default_factory=dict)
+    signature_accessories: List[str] = field(default_factory=list)
 
     def get_outfit(self, slot: str = "default") -> Optional[str]:
         """지정된 슬롯의 의상 프롬프트를 반환합니다. 기본값은 appearance.outfit 또는 outfits['default']."""
@@ -176,6 +177,8 @@ class CharacterConfig:
         # 3. LoRA / 가중치 오버라이드
         if "ref_weight" in prof:
             self.ref_weight = float(prof["ref_weight"])
+        if "signature_accessories" in prof and isinstance(prof["signature_accessories"], list):
+            self.signature_accessories = [str(x).strip() for x in prof["signature_accessories"] if str(x).strip()]
         if "lora" in prof and isinstance(prof["lora"], dict):
             if "name" in prof["lora"]:
                 self.lora.name = prof["lora"]["name"]
@@ -222,7 +225,8 @@ class CharacterConfig:
             profiles=dict(profiles_raw) if isinstance(profiles_raw, dict) else {},
             default_mode=default_mode,
             file_path=file_path,
-            pose_restrictions=dict(data.get("pose_restrictions", {})) if isinstance(data.get("pose_restrictions"), dict) else {}
+            pose_restrictions=dict(data.get("pose_restrictions", {})) if isinstance(data.get("pose_restrictions"), dict) else {},
+            signature_accessories=[str(x).strip() for x in (data.get("signature_accessories") or []) if str(x).strip()] if isinstance(data.get("signature_accessories"), list) else [],
         )
 
 
