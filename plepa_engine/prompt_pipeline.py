@@ -83,7 +83,7 @@ class PromptContext:
         if _is_illustrious:
             self.extra_quality_kws = []
         elif self.is_steamy_h_scene:
-            self.extra_quality_kws = ["soft lighting", "delicate anime coloring", "clean pale skin"]
+            self.extra_quality_kws = ["delicate anime coloring", "clean pale skin"]
         else:
             self.extra_quality_kws = ["soft lighting", "delicate anime coloring", "soft shaded skin", "clean pale skin"]
 
@@ -130,6 +130,20 @@ _H_SCENE_WET_SKIN_TAGS = (
     "heavy facial blush, blush lines",
     "hot breath, subtle steam",
 )
+
+_H_SCENE_MOOD_LIGHTING_TAGS = (
+    "(dimly lit, moody intimate lighting, low-key atmospheric lighting:1.15)",
+    "(deep soft shadows, dramatic chiaroscuro, warm rim light on skin:1.1)",
+)
+
+_OUTDOOR_DAYLIGHT_HINTS = (
+    "outdoor", "daylight", "sunlight", "sunny", "beach", "pool", "bright daylight", "park", "rooftop"
+)
+
+
+def _is_outdoor_daylight_pose(pose_tag: str) -> bool:
+    low = (pose_tag or "").lower()
+    return any(kw in low for kw in _OUTDOOR_DAYLIGHT_HINTS)
 
 _PARTNER_POS_SPECS: Dict[str, str] = {
     "above": "male hands pressing beside shoulders, cropped male shoulders at top edge, partner head out of frame",
@@ -268,6 +282,15 @@ class PoseTagPreparationMutator(PromptMutator):
                 if "clean background" not in p_low:
                     pose_tag = f"{pose_tag}, single view, single shot, clean background, white background, solid background"
 
+        if ctx.is_steamy_h_scene and not _is_outdoor_daylight_pose(pose_tag):
+            pose_tag = re.sub(
+                r",?\s*\b(?:soft bedroom lighting|soft ambient bedroom light|bright clean atmosphere|soft lighting)\b",
+                "",
+                pose_tag,
+                flags=re.IGNORECASE,
+            )
+            pose_tag = re.sub(r"\s*,\s*", ", ", pose_tag).strip(" ,")
+
         ctx.pose_tag = pose_tag
         ctx.mob_tier = _resolve_mob_tier(ctx.pose, pose_tag)
 
@@ -324,11 +347,14 @@ def _inject_style_positive_guard(quality_clean: str, ctx: PromptContext) -> str:
 
 
 def _inject_wet_skin_tags(text: str, ctx: PromptContext) -> str:
-    """ADR-102: H-씬(is_steamy_h_scene)일 때 수분광·땀방울·열기 태그를 1번째 청크에 중복 없이 주입한다."""
+    """ADR-102/S3: H-씬(is_steamy_h_scene)일 때 수분광·땀방울·열기 및 심야 무드 라이팅 태그를 1번째 청크에 중복 없이 주입한다."""
     if not ctx.is_steamy_h_scene:
         return text
+    tags = list(_H_SCENE_WET_SKIN_TAGS)
+    if not _is_outdoor_daylight_pose(ctx.pose_tag):
+        tags.extend(_H_SCENE_MOOD_LIGHTING_TAGS)
     low = text.lower()
-    for tag in _H_SCENE_WET_SKIN_TAGS:
+    for tag in tags:
         core = tag.strip("()").split(":")[0].strip().lower()
         if core not in low and tag.lower() not in low:
             text = f"{text}, {tag}"
@@ -364,6 +390,8 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
                 quality_part,
                 flags=re.IGNORECASE,
             )
+            if not _is_outdoor_daylight_pose(pose_tag):
+                quality_clean = re.sub(r",?\s*\bsoft lighting\b", "", quality_clean, flags=re.IGNORECASE)
         for kw in ctx.extra_quality_kws:
             if kw.lower() not in quality_clean.lower():
                 quality_clean = f"{quality_clean}, {kw}"
@@ -510,8 +538,10 @@ class NegativeBaseMutator(PromptMutator):
         if ctx.is_steamy_h_scene:
             neg = _strip_tags_preserving_parens(
                 neg,
-                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin)\b(?::[0-9\.]+)?",
+                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin|warm lighting|amber lighting|amber room|golden lighting|golden glow|purple tint|blue lighting|colored ambient lighting|color tint)\b(?::[0-9\.]+)?",
             )
+            if not _is_outdoor_daylight_pose(ctx.pose_tag):
+                neg = f"{neg}, (bright daylight, harsh studio lighting, fluorescent light, flat bright lighting, overexposed background:1.25)"
 
         ctx.negative_prompt = neg
 
@@ -1097,7 +1127,7 @@ class SanitizerMutator(PromptMutator):
         if ctx.is_steamy_h_scene:
             ctx.negative_prompt = _strip_tags_preserving_parens(
                 ctx.negative_prompt,
-                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin)\b(?::[0-9\.]+)?",
+                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin|warm lighting|amber lighting|amber room|golden lighting|golden glow|purple tint|blue lighting|colored ambient lighting|color tint)\b(?::[0-9\.]+)?",
             )
 
         # 1. 긍정/부정 태그 충돌 감지 및 네거티브에서 자동 제거

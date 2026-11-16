@@ -620,3 +620,57 @@ def test_adr102_wet_h_scene_vs_daily_sweat_isolation(monkeypatch):
     assert "shiny skin" not in neg_h_low
     assert "white dots" not in neg_h_low
     assert "spots on skin" not in neg_h_low
+
+
+def test_phase_s3_h_scene_mood_lighting_and_negative_unlock(monkeypatch):
+    """Phase S3: H-씬 심야 무드 라이팅 주입, 주간 조명 제거 및 캐릭터 무드 조명 차단 네거티브 해제 검증."""
+    from plepa_engine.models import CharacterAppearance, CharacterConfig, PoseEntry
+
+    monkeypatch.delenv("PLEPA_STYLE_MODE", raising=False)
+    char = CharacterConfig(
+        prefix="aya",
+        name="Ayame",
+        gender="female",
+        appearance=CharacterAppearance(
+            face_and_hair="silver bob hair, deep violet eyes",
+            physique="slender",
+            outfit="white blouse",
+        ),
+        sdxl_positive="masterpiece, best quality, soft lighting BREAK 1girl, silver bob hair, deep violet eyes",
+        sdxl_nude_positive="masterpiece, best quality, soft lighting BREAK 1girl, silver bob hair, deep violet eyes",
+        sdxl_negative="worst quality, low quality, (warm lighting, amber lighting, purple tint, blue lighting, colored ambient lighting:1.3)",
+    )
+    daily_pose = PoseEntry(
+        code="000",
+        section="emotions",
+        label="평상",
+        prompt="upper body, standing, gentle smile",
+    )
+    h_pose = PoseEntry(
+        code="086",
+        section="h_scenes",
+        label="정상위강",
+        prompt="missionary, soft bedroom lighting, nude, looking at viewer",
+        required_outfit="nude",
+    )
+
+    # 일상 씬: soft lighting 유지, 캐릭터 네거티브 warm lighting 유지, mood lighting 미주입
+    pos_d, neg_d, _ = assemble_sdxl_prompt(char=char, pose=daily_pose, bg_prompt="classroom")
+    assert "soft lighting" in pos_d.lower()
+    assert "dimly lit, moody intimate lighting" not in pos_d.lower()
+    assert "warm lighting" in neg_d.lower()
+    assert "bright daylight" not in neg_d.lower()
+
+    # H-씬: soft lighting/soft bedroom lighting 제거, 심야 무드 라이팅 주입, warm lighting 등 해제, 대낮/형광등 억제 추가
+    pos_h, neg_h, _ = assemble_sdxl_prompt(char=char, pose=h_pose, bg_prompt="bedroom")
+    pos_h_low = pos_h.lower()
+    neg_h_low = neg_h.lower()
+    assert "soft lighting" not in pos_h_low
+    assert "soft bedroom lighting" not in pos_h_low
+    assert "dimly lit, moody intimate lighting, low-key atmospheric lighting" in pos_h_low
+    assert "deep soft shadows, dramatic chiaroscuro, warm rim light on skin" in pos_h_low
+    assert "warm lighting" not in neg_h_low
+    assert "amber lighting" not in neg_h_low
+    assert "purple tint" not in neg_h_low
+    assert "colored ambient lighting" not in neg_h_low
+    assert "bright daylight, harsh studio lighting, fluorescent light" in neg_h_low
