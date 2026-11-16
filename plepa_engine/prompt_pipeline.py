@@ -151,6 +151,8 @@ _PARTNER_POS_SPECS: Dict[str, str] = {
     "behind": "male torso behind her, male hands gripping waist from behind, partner head out of frame",
     "side_kiss": "cropped male torso and shoulder at edge, partner head out of frame, partner arms around waist",
     "offscreen": "partner head out of frame, cropped male hands at frame edge",
+    "carry": "carried in male partner's arms, male torso and shoulders supporting her, partner head out of frame",
+    "bury_chest": "back of dark-haired male head buried in her chest, male face completely obscured, partner arms around waist",
 }
 
 _MOB_TIER_SPECS: Dict[int, Dict[str, Any]] = {
@@ -848,6 +850,8 @@ class TwoPersonMobMutator(PromptMutator):
                     pos = _inject_partner_pos_inline(pos, ctx.partner_pos, pose_tag)
                 elif spec["positive_tags"]:
                     pos = f"{pos} {spec['positive_tags']}" if spec["break_chunk"] else f"{pos}, {spec['positive_tags']}"
+                    if mob_tier == 1 and ctx.partner_pos and ctx.partner_pos != "offscreen":
+                        pos = _inject_partner_pos_inline(pos, ctx.partner_pos, pose_tag)
                     if mob_tier == 3 and (
                         str(getattr(ctx.pose, "code", "")).strip().zfill(3) in ("126", "127")
                         or any(kw in pose_tag.lower() for kw in ("under desk", "under table", "책상밑"))

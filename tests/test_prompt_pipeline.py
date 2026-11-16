@@ -103,11 +103,12 @@ def test_mob_tier_pilot_8_poses_db_and_prompt_pipeline():
 
     expected_tiers = {
         "080": 0,
-        "088": 1,
-        "091": 1,
+        "088": 2,
+        "091": 2,
         "086": 2,
         "092": 2,
         "104": 2,
+        "035": 1,
         "072": 3,
         "100": 3,
     }
@@ -148,7 +149,8 @@ def test_mob_tier_pilot_8_poses_db_and_prompt_pipeline():
             assert pos.count("BREAK") == 1
             assert "faceless" not in pos_low
             assert "partner head out of frame" in pos_low
-            assert "crotch out of frame" in pos_low
+            if code in ("086", "092", "104"):
+                assert "crotch out of frame" in pos_low
             assert "penis" not in pos_low, f"Tier 2({code}) 프롬프트에 성기 태그 금지: {pos}"
             for expected_neg in ("detailed male face", "dark silhouette", "heavy shadow", "full body", "wide shot", "crotch focus"):
                 assert expected_neg in neg_low
@@ -674,3 +676,69 @@ def test_phase_s3_h_scene_mood_lighting_and_negative_unlock(monkeypatch):
     assert "purple tint" not in neg_h_low
     assert "colored ambient lighting" not in neg_h_low
     assert "bright daylight, harsh studio lighting, fluorescent light" in neg_h_low
+
+
+def test_phase_s4_pose_reclassification_and_qc_fixes():
+    """Phase S4: 2인 스킨십 포즈(027~036, 045, 088, 091) 재분류, 182 is_solo 해제 및 키스/수유/bury_chest QA 예외 검증."""
+    from plepa_engine.qa_validator import validate_generated_image
+
+    char = _make_female_char()
+    db_campus = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    db_oto = default_pose_service.load_pose_db(engine="sdxl", roster="oto")
+
+    for c in ("027", "028", "031", "088"):
+        assert db_campus[c].mob_tier == 2
+        assert db_campus[c].partner_pos == "behind"
+    assert db_campus["036"].mob_tier == 2
+    assert db_campus["036"].partner_pos == "carry"
+    pos_036, neg_036, _ = assemble_sdxl_prompt(char=char, pose=db_campus["036"], bg_prompt="classroom")
+    assert "carried in male partner's arms" in pos_036.lower()
+    assert "disembodied male hands" not in pos_036.lower()
+    assert "male torso" not in neg_036.lower()
+
+    assert db_campus["034"].mob_tier == 2
+    assert db_campus["034"].partner_pos == "bury_chest"
+    pos_034, _, _ = assemble_sdxl_prompt(char=char, pose=db_campus["034"], bg_prompt="bedroom")
+    assert "back of dark-haired male head buried in her chest" in pos_034.lower()
+
+    assert db_campus["045"].mob_tier == 0
+    assert db_campus["045"].is_solo_scene is True
+
+    assert db_campus["091"].mob_tier == 2
+    assert db_campus["091"].partner_pos == "below"
+
+    # #081, #107, #112 1boy 잔여 제거 및 #182 2인 씬 판정 검증
+    for c in ("081", "107", "112"):
+        assert "1boy" not in db_campus[c].prompt.lower()
+    assert db_oto["182"].is_two_person is True
+    assert db_oto["182"].is_solo_scene is False
+
+    # QA Validator: 오프스크린 키스/수유 faces=2 허용 및 bury_chest heads=2 허용
+    img = Image.new("RGB", (256, 384), color=(180, 180, 180))
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok_kiss, reason_kiss, _ = validate_generated_image(
+            img,
+            prompt="french kiss, cropped dark-haired male jaw and lips at extreme frame edge",
+            is_solo_scene=False,
+            is_two_person=True,
+            is_offscreen_partner=True,
+        )
+        assert ok_kiss is True, reason_kiss
+
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 200, 370), "person", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((50, 20, 150, 120), "head", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((60, 40, 140, 120), "face", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((10, 10, 30, 30), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok_bury, reason_bury, _ = validate_generated_image(
+            img,
+            prompt=pos_034,
+            is_solo_scene=False,
+            is_two_person=True,
+            is_offscreen_partner=True,
+        )
+        assert ok_bury is True, reason_bury

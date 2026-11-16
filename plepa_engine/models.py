@@ -50,10 +50,11 @@ class PoseEntry:
         return any(
             kw in p
             for kw in (
-                "1boy", "partner", "faceless male", "bald male", "kiss", "hug",
+                "1boy", "2boys", "partner", "faceless male", "bald male", "kiss", "hug",
                 "carry", "grab", "spooning", "blowjob", "missionary", "doggystyle",
                 "cowgirl", "fellatio", "cunnilingus", "paizuri", "two person",
-                "man", "penis", "oral"
+                "man", "penis", "oral", "anal sex", "clothed sex", "vaginal penetration",
+                "anal penetration", "foreplay"
             )
         )
 

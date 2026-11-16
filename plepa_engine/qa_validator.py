@@ -320,7 +320,7 @@ def validate_generated_image(
 
         is_head_contact_allowed = is_kiss or is_nursing or any(
             kw in p_text
-            for kw in ("back of male head", "back of dark-haired male head", "head between thighs", "burying face", "face buried")
+            for kw in ("back of male head", "back of dark-haired male head", "head between thighs", "burying face", "face buried", "head buried", "buried in her chest")
         )
 
         if is_solo:
@@ -348,8 +348,9 @@ def validate_generated_image(
             if metrics["faces"] > 1:
                 return False, f"1인 씬 얼굴 초과 감지 (얼굴: {metrics['faces']}개)", metrics
         elif is_two_person and is_offscreen_partner:
-            if metrics["faces"] > 1:
-                return False, f"오프스크린 파트너 씬 모브 얼굴 노출 감지 (얼굴: {metrics['faces']}개, 단독 1인 얼굴만 허용)", metrics
+            max_offscreen_faces = 2 if (is_kiss or is_nursing) else 1
+            if metrics["faces"] > max_offscreen_faces:
+                return False, f"오프스크린 파트너 씬 모브 얼굴 노출 감지 (얼굴: {metrics['faces']}개, 단독 {max_offscreen_faces}인 얼굴만 허용)", metrics
         elif not is_solo:
             if is_close_up_focus and not is_kiss and not is_nursing and metrics["faces"] > 1:
                 return False, f"상반신 밀착 씬 모브 얼굴 침범 감지 (얼굴: {metrics['faces']}개, 단독 1인 얼굴만 허용)", metrics
