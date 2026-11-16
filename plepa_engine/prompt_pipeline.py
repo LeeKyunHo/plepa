@@ -132,8 +132,8 @@ _H_SCENE_WET_SKIN_TAGS = (
 )
 
 _H_SCENE_MOOD_LIGHTING_TAGS = (
-    "(dimly lit, moody intimate lighting, low-key atmospheric lighting:1.15)",
-    "(deep soft shadows, dramatic chiaroscuro, warm rim light on skin:1.1)",
+    "(dimly lit bedroom, moody intimate lighting, low-key atmospheric lighting:1.15)",
+    "(deep soft shadows, clean ambient occlusion:1.1)",
 )
 
 _OUTDOOR_DAYLIGHT_HINTS = (
@@ -154,10 +154,12 @@ _MOB_EYELESS_BANGS_NEG = (
     "handsome male face, attractive male face, expressive male face, silver-haired male, blonde male:1.25)"
 )
 
+_STEAMY_H_NEG_UNLOCK_PATTERN = r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin)\b(?::[0-9\.]+)?"
+
 _PARTNER_POS_SPECS: Dict[str, str] = {
-    "above": "male hands pressing beside shoulders, cropped male shoulders at top edge, partner head out of frame",
-    "below": "male hands gripping waist or hips from below, partner head out of frame",
-    "behind": "male torso behind her, male hands gripping waist from behind, partner head out of frame",
+    "above": "male hands pressing beside shoulders and gripping waist tightly, chest pressed close, partner shoulders at top edge, partner head out of frame",
+    "below": "male hands gripping her waist and hips from below, intimate close embrace, partner head out of frame",
+    "behind": "male torso tightly embracing from behind, male hands gripping her hips and waist firmly, lower body occluded, partner head out of frame",
     "side_kiss": "cropped male torso and shoulder at edge, partner head out of frame, partner arms around waist",
     "offscreen": "partner head out of frame, cropped male hands at frame edge",
     "carry": "carried in dark-haired male partner's arms, male torso and shoulders supporting her",
@@ -547,10 +549,7 @@ class NegativeBaseMutator(PromptMutator):
                 neg = f"{neg}, {_STYLE_NEGATIVE_BALANCED_GUARD}"
 
         if ctx.is_steamy_h_scene:
-            neg = _strip_tags_preserving_parens(
-                neg,
-                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin|warm lighting|amber lighting|amber room|golden lighting|golden glow|purple tint|blue lighting|colored ambient lighting|color tint)\b(?::[0-9\.]+)?",
-            )
+            neg = _strip_tags_preserving_parens(neg, _STEAMY_H_NEG_UNLOCK_PATTERN)
             if not _is_outdoor_daylight_pose(ctx.pose_tag):
                 neg = f"{neg}, (bright daylight, harsh studio lighting, fluorescent light, flat bright lighting, overexposed background:1.25)"
 
@@ -1167,7 +1166,7 @@ class SanitizerMutator(PromptMutator):
         if ctx.is_steamy_h_scene:
             ctx.negative_prompt = _strip_tags_preserving_parens(
                 ctx.negative_prompt,
-                r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin|warm lighting|amber lighting|amber room|golden lighting|golden glow|purple tint|blue lighting|colored ambient lighting|color tint)\b(?::[0-9\.]+)?",
+                _STEAMY_H_NEG_UNLOCK_PATTERN,
             )
 
         # 1. 긍정/부정 태그 충돌 감지 및 네거티브에서 자동 제거

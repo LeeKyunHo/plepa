@@ -663,18 +663,20 @@ def test_phase_s3_h_scene_mood_lighting_and_negative_unlock(monkeypatch):
     assert "warm lighting" in neg_d.lower()
     assert "bright daylight" not in neg_d.lower()
 
-    # H-씬: soft lighting/soft bedroom lighting 제거, 심야 무드 라이팅 주입, warm lighting 등 해제, 대낮/형광등 억제 추가
+    # H-씬: soft lighting/soft bedroom lighting 제거, 중립 야간 무드 라이팅 주입(warm rim light/chiaroscuro 제외), 캐릭터 색조 방어 네거티브 보존, 대낮/형광등 억제 추가
     pos_h, neg_h, _ = assemble_sdxl_prompt(char=char, pose=h_pose, bg_prompt="bedroom")
     pos_h_low = pos_h.lower()
     neg_h_low = neg_h.lower()
     assert "soft lighting" not in pos_h_low
     assert "soft bedroom lighting" not in pos_h_low
-    assert "dimly lit, moody intimate lighting, low-key atmospheric lighting" in pos_h_low
-    assert "deep soft shadows, dramatic chiaroscuro, warm rim light on skin" in pos_h_low
-    assert "warm lighting" not in neg_h_low
-    assert "amber lighting" not in neg_h_low
-    assert "purple tint" not in neg_h_low
-    assert "colored ambient lighting" not in neg_h_low
+    assert "dimly lit bedroom, moody intimate lighting, low-key atmospheric lighting" in pos_h_low
+    assert "deep soft shadows, clean ambient occlusion" in pos_h_low
+    assert "warm rim light" not in pos_h_low
+    assert "dramatic chiaroscuro" not in pos_h_low
+    assert "warm lighting" in neg_h_low
+    assert "amber lighting" in neg_h_low
+    assert "purple tint" in neg_h_low
+    assert "colored ambient lighting" in neg_h_low
     assert "bright daylight, harsh studio lighting, fluorescent light" in neg_h_low
 
 
@@ -804,3 +806,54 @@ def test_mob_eyeless_bangs_style_and_carry_qc():
         )
         assert ok_face is False
         assert "얼굴 노출" in reason_face
+
+
+def test_phase_s5_tier2_embrace_promotion_and_neutral_mood_lighting():
+    """Phase S5: 087/090/093/105 mob_tier==2 밀착 구도 승격, 허리 그립 _PARTNER_POS_SPECS 및 무드 라이팅 중립화/네거티브 색조 방어 복원 검증."""
+    from plepa_engine.models import CharacterAppearance, CharacterConfig
+    from plepa_engine.prompt_pipeline import _H_SCENE_MOOD_LIGHTING_TAGS
+
+    mood_text = ", ".join(_H_SCENE_MOOD_LIGHTING_TAGS).lower()
+    assert "warm rim light" not in mood_text
+    assert "dramatic chiaroscuro" not in mood_text
+    assert "clean ambient occlusion" in mood_text
+
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    expected_t2 = {"087": "above", "090": "behind", "093": "below", "105": "behind"}
+    for code, expected_ppos in expected_t2.items():
+        pose = db[code]
+        assert pose.mob_tier == 2, f"#{code} mob_tier != 2"
+        assert pose.partner_pos == expected_ppos, f"#{code} partner_pos != {expected_ppos}"
+        assert "solo focus" not in pose.prompt.lower()
+
+    for solo_code in ("083", "084", "114", "123"):
+        assert db[solo_code].mob_tier == 0
+
+    char = CharacterConfig(
+        prefix="aya",
+        name="Ayame",
+        gender="female",
+        appearance=CharacterAppearance(
+            face_and_hair="platinum silver hair, deep violet eyes",
+            physique="slender",
+            outfit="white dress shirt",
+        ),
+        sdxl_positive="masterpiece, best quality BREAK 1girl, platinum silver hair, deep violet eyes",
+        sdxl_nude_positive="masterpiece, best quality BREAK 1girl, platinum silver hair, deep violet eyes",
+        sdxl_negative="worst quality, (yellow lighting, amber room, golden lighting, color tint, colored ambient lighting:1.35)",
+    )
+
+    pos_087, neg_087, _ = assemble_sdxl_prompt(char=char, pose=db["087"], bg_prompt="bedroom")
+    assert "chest pressed close" in pos_087.lower()
+    assert "gripping her waist and hips tightly" in pos_087.lower()
+    assert "warm rim light" not in pos_087.lower()
+    assert "amber room" in neg_087.lower()
+    assert "golden lighting" in neg_087.lower()
+    assert "color tint" in neg_087.lower()
+    assert "colored ambient lighting" in neg_087.lower()
+
+    pos_090, _, _ = assemble_sdxl_prompt(char=char, pose=db["090"], bg_prompt="bedroom")
+    assert "lower body occluded" in pos_090.lower()
+
+    pos_093, _, _ = assemble_sdxl_prompt(char=char, pose=db["093"], bg_prompt="bedroom")
+    assert "intimate close embrace" in pos_093.lower()
