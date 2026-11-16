@@ -11,8 +11,8 @@
 > - **선두 화각 프레이밍 통일**: 모든 포즈 최우선 순위 토큰(1~3번째)에 `tight bust portrait`, `cowboy shot` 등 샷 사이즈 앵커링 (원거리 축소 및 이목구비 뭉개짐 방지).
 > - **네거티브 가중치 상한 클램핑**: CLIP Latent 번아웃 및 색상 채도 죽음 방지를 위해 전수 <= 1.25 통제.
 > - **조명 충돌 정제**: 캐릭터 네거티브와 충돌하는 포즈 조명 태그 151종 중립 앰비언트 클린화.
-> - **스마트 땀 분리 & 심야 무드 라이팅 (`ADR-102`, Phase S2/S3)**: 일상(`000~055`, 샤워 `038~039` 제외) 땀 누출 제거 및 H-씬(`060+`, `is_steamy_h_scene`) 수분광·땀방울·열기(`_H_SCENE_WET_SKIN_TAGS`) + 심야 무드 라이팅(`_H_SCENE_MOOD_LIGHTING_TAGS`) 집중 활성화.
-> - **여캐 집중 4-Tier & 2-Track + 방향성 `partner_pos` 전수 완결 (`ADR-101`, Phase H2-A/B/D/S4)**: 여성 로맨스/H-씬 70종(`060~132`, `121` 제외) 전량에 `mob_tier`(`0: 12`, `1: 1(109)`, `2: 32`, `3: 25`) 및 방향성 인라인 `partner_pos`(`above: 11`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑을 완료(일상 2인 스킨십 `#027, #028, #031, #034(bury_chest), #036(carry)` Tier 2 복구 및 `#045` Tier 0 단독 정규화 포함)하고, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` 0건 정화 및 중복 7쌍(반착의 vs 전라/절정) 차별화 완료 (오토코노코 `+70` 대칭 100% 유지).
+> - **스마트 땀 분리 & 중립 저조도 무드 라이팅 (`ADR-102`/`ADR-104`, Phase S2/S3/S5)**: 일상(`000~055`, 샤워 `038~039` 제외) 땀 누출 제거 및 H-씬(`060+`, `is_steamy_h_scene`) 수분광·땀방울·열기(`_H_SCENE_WET_SKIN_TAGS`) + 중립 저조도 무드(`_H_SCENE_MOOD_LIGHTING_TAGS`: `warm rim light`/`dramatic chiaroscuro` 제거, 캐릭터 네거티브 색조 방어 유지) 활성화.
+> - **여캐 집중 4-Tier & 2-Track + 방향성 `partner_pos` 전수 완결 (`ADR-101`/`ADR-104`, Phase H2-A/B/D/S4/S5)**: 여성 로맨스/H-씬 70종(`060~132`, `121` 제외) 전량에 `mob_tier`(`0: 8`, `1: 1(109)`, `2: 36`, `3: 25`) 및 방향성 인라인 `partner_pos`(`above: 12`, `behind: 12`, `below: 6`, `side_kiss: 6`) 매핑을 완료(일상 2인 스킨십 `#027, #028, #031, #034(bury_chest), #036(carry)` Tier 2 복구, `#045` Tier 0 단독 정규화 및 `#087, #090, #093, #105` Tier 2 밀착 포옹 승격 포함)하고, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` 0건 정화 및 중복 7쌍(반착의 vs 전라/절정) 차별화 완료 (오토코노코 `+70` 대칭 100% 유지).
 
 ---
 

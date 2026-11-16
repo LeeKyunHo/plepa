@@ -1879,6 +1879,18 @@ ight_terrace(도시 야경 발코니 난간).
   2. `_apply_censor_to_asset()` 및 6개 호출 지점과 `censor_image()`/`censor_file()`에 `is_nude`/`is_otokonoko` 인자를 전파해 탈의 일상 씬과 대칭 성인 씬이 누락 없이 검열되도록 복구함.
   3. 회귀 테스트 `tests/test_censor_and_pipeline_fixes.py::test_otokonoko_censor_required_for_daily_nude_and_sym_h_poses`를 추가하고, `oto` 로스터(`kei`, `luc`, `mik`) 기존 원본 자산 대상 `--censor-only` 소급 재검열을 완료함 (`REPORT.md`: `poses` Censor Det `1.6% → 12.9%`, `scenes_otokonoko` `71.4% → 95.2%`, Outliers `37 → 28`).
 
+### ADR-104: H-씬 밀착 포옹 구도 승격(`087/090/093/105`) 및 무드 라이팅 색온도 중립화·네거티브 색조 방어선 복원 (Phase S5, 2026-11-17)
+- **배경**:
+  - `#087` 육안 검수 결과 ① `mob_tier: 0` + `cowboy shot` 조합으로 파트너가 사라진 채 하단 접합부가 노출되는 한계와, ② Phase S3 `_H_SCENE_MOOD_LIGHTING_TAGS`의 `warm rim light on skin`·`dramatic chiaroscuro` 및 캐릭터 네거티브 내 색조 억제 태그 일괄 제거로 인한 화면 황변(누런 톤)·2.5D 과음영 현상이 확인됨.
+- **결정 사항**:
+  1. **체위 4종 `mob_tier: 2` 밀착 승격 (`data/sdxl_pose_database.json`)**:
+     - `087`(정상위절정 ➔ `above`), `090`(후배위절정 ➔ `behind`), `093`(기승위절정 ➔ `below`), `105`(샤워섹스약 ➔ `behind`)을 `mob_tier: 2`로 승격하고 `solo focus`/`cowboy shot`을 제거해 상체 밀착·허리 그립으로 하단 접합부를 가림 (`083, 084, 114, 123` 단독/여운 씬은 `mob_tier: 0` 유지; 70종 분포 `0: 8, 1: 1, 2: 36, 3: 25`).
+  2. **`_PARTNER_POS_SPECS` 밀착·허리 그립 강화 (`plepa_engine/prompt_pipeline.py`)**:
+     - `above`, `below`, `behind` 스펙에 `chest pressed close`, `gripping her waist and hips tightly/firmly`, `lower body occluded` 및 `partner head out of frame`을 반영함.
+  3. **무드 라이팅 중립화 & 캐릭터 네거티브 색조 방어 복원 (`prompt_pipeline.py`)**:
+     - `_H_SCENE_MOOD_LIGHTING_TAGS`에서 `warm rim light on skin:1.1` 및 `dramatic chiaroscuro`를 제거하고 `(dimly lit bedroom, moody intimate lighting, low-key atmospheric lighting:1.15)`, `(deep soft shadows, clean ambient occlusion:1.1)`로 중립화함.
+     - `NegativeBaseMutator`와 `SanitizerMutator`의 H-씬 네거티브 해제 패턴을 `_STEAMY_H_NEG_UNLOCK_PATTERN` (`oily skin|greasy skin|shiny skin|white dots|spots on skin`)으로 통합·축소하여 `amber room`, `golden lighting`, `color tint`, `colored ambient lighting` 등 캐릭터 고유 황변/색번짐 방어선을 복원함 (`_H_SCENE_WET_SKIN_TAGS` 수분광/땀방울/홍조 유지).
+
 
 
 
