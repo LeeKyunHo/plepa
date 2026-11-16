@@ -1861,8 +1861,11 @@ ight_terrace(도시 야경 발코니 난간).
      - `PLEPA_STYLE_MODE` 환경변수 기반 `"legacy"`(기본) / `"balanced"` / `"glossy"` 분기를 도입하고, 기본값을 `"legacy"`로 확정하여 일상 씬의 원본 색감·눈동자 색·음영 밀도를 100% 보존함 (`ADR-101` 구도·체위·모브 로직은 그대로 유지).
   2. **착의 벨트 위치 방어 (`DefectDefenseMutator`)**:
      - `not ctx.nude` 상태에서 `tucked into`와 `belt`가 동시 존재할 경우 네거티브에 `(untucked shirt, shirt over belt, belt over shirt, long untucked hem:1.25)`를 자동 주입함.
-  3. **H-씬 전용 Wet & Steamy Skin 3중 족쇄 해제 (`ctx.is_steamy_h_scene`)**:
-     - 포즈 코드 `>= 60`, 성인/로맨스 섹션, 또는 샤워 씬(`038`, `039`)일 때 `is_steamy_h_scene=True`로 판별하여 ① 긍정 프롬프트 내 `glossy skin`/`wet skin`/`sweat` 삭제 정규식 우회, ② `soft shaded skin` 제외 및 `_H_SCENE_WET_SKIN_TAGS` 6종(수분광·땀방울·열기) 주입, ③ 네거티브 내 `oily skin`/`greasy skin`/`shiny skin`/`white dots`/`spots on skin` 자동 정제를 적용함 (`000~055` 비성교 일상 씬은 `False`로 격리).
+  3. **H-씬 전용 Wet & Steamy Skin + 심야 무드 라이팅 (`ctx.is_steamy_h_scene`, Phase S2/S3)**:
+     - 포즈 코드 `>= 60`, 성인/로맨스 섹션, 또는 샤워 씬(`038`, `039`)일 때 `is_steamy_h_scene=True`로 판별하여:
+       1. 긍정 프롬프트 내 `glossy skin`/`wet skin`/`sweat` 삭제 정규식 우회 및 `soft shaded skin`·`soft lighting`(주간) 제외
+       2. `_H_SCENE_WET_SKIN_TAGS` 6종(수분광·땀방울·열기) 및 야외 주간 예외를 제외한 심야 무드 라이팅 `_H_SCENE_MOOD_LIGHTING_TAGS` (`dimly lit, moody intimate lighting, low-key atmospheric lighting`, `deep soft shadows, dramatic chiaroscuro, warm rim light on skin`) 주입
+       3. 네거티브 내 `oily skin`/`greasy skin`/`shiny skin`/`white dots`/`spots on skin` 및 캐릭터 네거티브의 무드 조명 억제 태그(`warm/amber/golden/purple/blue/colored ambient lighting`, `color tint`) 자동 해제, `(bright daylight, harsh studio lighting, fluorescent light, flat bright lighting, overexposed background:1.25)` 주입으로 Low-Key 명암 대비 구현 (`000~055` 비성교 일상 씬은 `False`로 격리).
 
 
 
