@@ -1844,7 +1844,7 @@ ight_terrace(도시 야경 발코니 난간).
      - `_STYLE_POSITIVE_GUARD_TAGS` / `_STYLE_NEGATIVE_GUARD` 주입(태닝 피부·누드 예외 준수), 코믹/놀람 표정 시 `(pupil-less:1.35)`/`(blank stare:1.4)` 네거티브 제외, 착의 씬 `choker`/`necklace` 보호 및 `is_daily_or_pov`에 `poses`·`daily_events` 복구.
   5. **QA 보정(`qa_validator.py`) & 여성 H-씬 70종(`060~132`) 전수 매핑 완결**:
      - `#047` 쓰다듬기 등 1인 POV 헤드팻 `max_hands=3` 허용, `#050` 야경 키워드 시 Color Burn 임계치 `0.22 -> 0.35` 완화.
-     - 여성 로맨스/H-씬 70종(`121` 제외) 전량 `mob_tier`(`0: 12`, `1: 3(088, 091, 109)`, `2: 30`, `3: 25`) 및 `partner_pos`(`above: 11`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑 완료, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화.
+     - 여성 로맨스/H-씬 70종(`121` 제외) 전량 `mob_tier`(`0: 12`, `1: 1(109)`, `2: 32`, `3: 25`) 및 `partner_pos`(`above: 11`, `behind: 10`, `below: 5`, `side_kiss: 6`) 매핑 완료, `DUAL_SHOT`/`bald`/`faceless`/`SOLO+1BOY` **0건** 정화.
 - **검증 결과**:
   - `pytest -q`: **185 passed** (전수 계약 테스트 포함) | `precheck -r campus` (`2004`조합) & `-r oto` (`987`조합): **위반 0건 PASS**.
   - Campus 에셋 재스캔(`1,379`장): `#047` `7/7`, `#050` `12/12` 전수 통과, Color Burn 실패 `0건`.
