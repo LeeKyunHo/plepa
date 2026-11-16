@@ -1868,5 +1868,17 @@ ight_terrace(도시 야경 발코니 난간).
        2. `_H_SCENE_WET_SKIN_TAGS` 6종(수분광·땀방울·열기) 및 야외 주간 예외를 제외한 심야 무드 라이팅 `_H_SCENE_MOOD_LIGHTING_TAGS` (`dimly lit, moody intimate lighting, low-key atmospheric lighting`, `deep soft shadows, dramatic chiaroscuro, warm rim light on skin`) 주입
        3. 네거티브 내 `oily skin`/`greasy skin`/`shiny skin`/`white dots`/`spots on skin` 및 캐릭터 네거티브의 무드 조명 억제 태그(`warm/amber/golden/purple/blue/colored ambient lighting`, `color tint`) 자동 해제, `(bright daylight, harsh studio lighting, fluorescent light, flat bright lighting, overexposed background:1.25)` 주입으로 Low-Key 명암 대비 구현 (`000~055` 비성교 일상 씬은 `False`로 격리).
 
+### ADR-103: 오토코노코(`oto`) 검열 제외 코드 정정 및 `is_nude`/`is_otokonoko` 컨텍스트 전달 복원 (2026-11-17)
+- **배경**:
+  - 야간 전수 감사(`output/overnight_full_audit/REPORT.md`) 및 `projects/oto` 자산 점검 결과, 오토코노코 캐릭터(`kei`, `luc`, `mik`)의 탈의 일상 씬(`030, 038, 039, 043, 044, 045, 049`)과 `+70` 대칭 성인 씬 다수(`151~154, 171, 179~182, 184~185, 193`)에서 검열 마스크가 누락되는 현상이 확인됨.
+- **원인**:
+  1. [`plepa_engine/censor.py`](../plepa_engine/censor.py)의 `NON_EXPOSURE_H_POSES`에 여성 비노출(`081..123`)의 `+70` 대칭 코드(`151, 152, 153, 154, 171, 179, 180, 181, 182, 184, 185, 193`)가 함께 포함되어, 오토코노코 캐릭터의 노출 체위까지 검열 면제 처리됨.
+  2. [`plepa_engine/services/generation_service.py`](../plepa_engine/services/generation_service.py)의 `_apply_censor_to_asset()`과 `censor_file()`/`censor_image()` 경로에서 `is_nude`와 `is_otokonoko` 컨텍스트가 전달되지 않고 `is_pose_censor_required(..., is_nude=False)`로 평가되어 탈의 일상 포즈(`030~049`)가 전량 스킵됨.
+- **결정 사항 (`ADR-99` P2.5 검출 모델·임계값 동결은 유지)**:
+  1. `NON_EXPOSURE_H_POSES`에서 `151~193` 오토코노코 대칭 코드를 제거하고 `_is_otokonoko_context()` 헬퍼 및 `is_pose_censor_required` DB `required_outfit == "nude"` 조회를 연동함.
+  2. `_apply_censor_to_asset()` 및 6개 호출 지점과 `censor_image()`/`censor_file()`에 `is_nude`/`is_otokonoko` 인자를 전파해 탈의 일상 씬과 대칭 성인 씬이 누락 없이 검열되도록 복구함.
+  3. 회귀 테스트 `tests/test_censor_and_pipeline_fixes.py::test_otokonoko_censor_required_for_daily_nude_and_sym_h_poses`를 추가하고, `oto` 로스터(`kei`, `luc`, `mik`) 기존 원본 자산 대상 `--censor-only` 소급 재검열을 완료함 (`REPORT.md`: `poses` Censor Det `1.6% → 12.9%`, `scenes_otokonoko` `71.4% → 95.2%`, Outliers `37 → 28`).
+
+
 
 
