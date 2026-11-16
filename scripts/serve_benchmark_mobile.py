@@ -65,6 +65,8 @@ CAMPUS_BENCH = PROJECTS_DIR / "campus" / "artist_benchmark_c1_c2"
 TEST_C4_DIR = ROOT / "output" / "test_batch_c4"
 TEST_SPY_DIR = ROOT / "output" / "test_batch_spy"
 TEST_H1_DIR = ROOT / "output" / "test_batch_h1_pilot"
+OVERNIGHT_DIR = ROOT / "output" / "overnight_full_audit"
+STYLE_AB_DIR = ROOT / "output" / "style_ab_test"
 CF = ROOT / "cloudflared.exe"
 PORT = 8085
 ACCESS_TOKEN = os.environ.get("PLEPA_MOBILE_TOKEN", "").strip() or secrets.token_urlsafe(24)
@@ -89,6 +91,9 @@ for _mount_path, _mount_dir, _mount_name, _allow_html in (
     ("/test_c4", TEST_C4_DIR, "test_c4", True),
     ("/test_spy", TEST_SPY_DIR, "test_spy", True),
     ("/test_h1", TEST_H1_DIR, "test_h1", True),
+    ("/overnight", OVERNIGHT_DIR, "overnight", True),
+    ("/style_ab", STYLE_AB_DIR, "style_ab", True),
+    ("/projects", PROJECTS_DIR, "projects", False),
 ):
     if _mount_dir.is_dir():
         app.mount(_mount_path, StaticFiles(directory=_mount_dir, html=_allow_html), name=_mount_name)
