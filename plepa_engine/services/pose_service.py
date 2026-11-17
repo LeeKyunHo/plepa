@@ -334,9 +334,17 @@ class PoseService:
                         codes.append(sub_c)
             return codes
 
+        # 하위 호환 별칭 매핑 (구형 세트 ID -> 현행 V3 세트 ID)
+        legacy_set_aliases = {
+            "campus_106": "campus_108",
+            "emotions_all": "emotions_20",
+            "h_scenes_all": "h_scenes_52",
+        }
+        target_set_id = legacy_set_aliases.get(expr_lower, expr_lower)
+
         # 포즈 세트 ID 매칭 지원 (예: spy_full, genit_full, genit_costumes 등)
         for pset in self.load_pose_sets():
-            if pset.id.lower() == expr_lower:
+            if pset.id.lower() == target_set_id:
                 return [c for c in pset.codes if c in db]
 
         # 범위 연산자 지원: 00..19, 000..019, D01..D07 등
@@ -528,32 +536,40 @@ class PoseService:
     def load_pose_sets(self) -> List[PoseSetSchema]:
         """포즈 세트 목록을 로드합니다."""
         if not POSE_SETS_FILE.exists():
-            # 기본 프리셋 생성
+            # 기본 프리셋 생성 (V3 표준)
             default_sets = [
                 PoseSetSchema(
-                    id="shower_trio",
-                    name="샤워 3종 세트",
-                    description="038 샤워실 뒤태, 039 샤워창 밀착, 057 샤워벽치기",
-                    codes=["038", "039", "057"]
+                    id="sample10",
+                    name="10대 대표 골든 샘플러 (10종)",
+                    description="핵심 10대 대표 포즈: 000, 020, 034, 044, 048, 060, 088, 067, 130, 131",
+                    codes=["000", "020", "034", "044", "048", "060", "088", "067", "130", "131"],
                 ),
                 PoseSetSchema(
-                    id="adult_testing",
-                    name="체형 테스트 24~59",
-                    description="24번부터 59번까지 전신 포즈 및 H-씬",
-                    codes=[f"{i:03d}" for i in range(24, 60)]
+                    id="emotions_20",
+                    name="🎭 기본 감정 20종 (000~019)",
+                    description="V3 기본 감정 표현 스탠딩 20종 (000~019)",
+                    codes=[f"{i:03d}" for i in range(0, 20)],
                 ),
                 PoseSetSchema(
-                    id="emotions_all",
-                    name="기본 표정 20종",
-                    description="000부터 019까지 감정 표현",
-                    codes=[f"{i:03d}" for i in range(0, 20)]
+                    id="v3_daily_53",
+                    name="☀️ 일상·감정·이벤트 53종 (000~052)",
+                    description="비성인 일상 전체: 기본 감정(000~019) + 일상 전신(020~039) + 일상/캠퍼스 이벤트(040~052)",
+                    codes=[f"{i:03d}" for i in range(0, 53)],
                 ),
                 PoseSetSchema(
-                    id="h_scenes_all",
-                    name="H-씬 20종",
-                    description="040부터 059까지 성인 씬",
-                    codes=[f"{i:03d}" for i in range(40, 60)]
-                )
+                    id="h_scenes_52",
+                    name="🔥 통합 성인 H-씬 52종",
+                    description="로맨스(060~063) + 활성 봉사·성인 H-씬 52종 전체",
+                    codes=[
+                        "060", "061", "062", "063",
+                        "080", "081", "082", "083", "084", "085", "086", "087",
+                        "088", "089", "090", "091", "092", "093", "094", "095",
+                        "064", "074", "073", "099", "100", "101", "067", "103",
+                        "104", "105", "106", "107", "108", "109", "110", "111",
+                        "112", "113", "114", "115", "116", "075", "118", "119",
+                        "076", "079", "122", "123", "124", "077", "068", "069",
+                    ],
+                ),
             ]
             self.save_all_pose_sets(default_sets)
             return default_sets

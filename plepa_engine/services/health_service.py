@@ -68,7 +68,7 @@ class HealthService:
         self.comfy_host = comfy_host
 
     def check_stage_1_pose_db(self) -> DiagnosticResult:
-        """1단계: SDXL 포즈 데이터베이스 및 프리셋(sample10, campus_106 등) 무결성 검증."""
+        """1단계: SDXL 포즈 데이터베이스 및 프리셋(sample10, campus_108 등) 무결성 검증."""
         t0 = time.perf_counter()
         details: List[str] = []
         try:
@@ -93,10 +93,10 @@ class HealthService:
                 raise ValueError(f"'sample10' 프리셋이 10종이 아닌 {len(sample10_codes)}종으로 해석됨")
             details.append(f"'sample10' 골든 샘플러 프리셋 해석 성공 ({len(sample10_codes)}종)")
 
-            campus_codes = default_pose_service.resolve_pose_codes("campus_106", db)
+            campus_codes = default_pose_service.resolve_pose_codes("campus_108", db)
             if len(campus_codes) < 100:
-                raise ValueError(f"'campus_106' 프리셋 수량 이상: {len(campus_codes)}종")
-            details.append(f"'campus_106' 마스터 세트 해석 성공 ({len(campus_codes)}종)")
+                raise ValueError(f"'campus_108' 프리셋 수량 이상: {len(campus_codes)}종")
+            details.append(f"'campus_108' 마스터 세트 해석 성공 ({len(campus_codes)}종)")
 
 
             elapsed = (time.perf_counter() - t0) * 1000.0

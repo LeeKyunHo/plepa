@@ -147,24 +147,30 @@ def render_generate_page() -> None:
                 with ui.row().classes("gap-1"):
                     ui.button("🌟 10대 골든 (sample10)", icon="star", on_click=lambda: select_genit_set("sample10", "10대 대표 골든 샘플러")).props(
                         "unelevated dense size=xs color=amber-500 text-color=slate-950 font-bold"
-                    ).tooltip("000, 002, 020, 024, 034, 040, 044, 060, 080, 088 (1분 고속 검증)")
+                    ).tooltip("000, 020, 034, 044, 048, 060, 067, 088, 130, 131 (10대 대표 골든 샘플러)")
                     ui.button("🏫 캠퍼스 108종", icon="school", on_click=lambda: select_genit_set("campus_108", "캠퍼스 108종 풀패키지")).props(
                         "unelevated dense size=xs color=amber-500/20 text-color=amber-300 border border-amber-500/40"
-                    ).tooltip("000~055, 060~071, 080~127, 130~132 (108종 풀패키지, 오토코노코 자동 +70 대칭)")
+                    ).tooltip("000~052, 060~079(활성), 080~124, 130~132 (108종 풀패키지, 오토코노코 자동 +70 대칭)")
 
-            # V2 상용 표준 퀵 셀렉트 버튼 바
+            # V3 상용 표준 퀵 셀렉트 버튼 바
             with ui.row().classes("w-full items-center gap-1.5 p-1.5 bg-indigo-950/40 border border-indigo-700/50 rounded-lg mb-2 flex-wrap"):
-                ui.label("👑 V2 표준 팩:").classes("text-[11px] font-bold text-indigo-300 mr-1")
+                ui.label("👑 V3 표준 팩:").classes("text-[11px] font-bold text-indigo-300 mr-1")
+                ui.button("🎀 오토코노코 108", on_click=lambda: select_genit_set("oto_108", "오토코노코 108종 풀패키지")).props(
+                    "unelevated dense size=xs color=pink-600 text-color=white font-bold"
+                ).tooltip("000~052, 060~079(활성), 150~194, 200~202 (오토코노코 108종 표준)")
+                ui.button("☀️ 일상 53종", on_click=lambda: select_genit_set("v3_daily_53", "일상·감정·이벤트 53종 (000~052)")).props(
+                    "unelevated dense size=xs color=sky-600 text-color=white font-bold"
+                ).tooltip("감정(20) + 일상포즈(20) + 이벤트(13)")
                 ui.button("여성 100종", on_click=lambda: select_genit_set("unified_100", "여성 100종 표준 패키지")).props(
                     "unelevated dense size=xs color=indigo-500 text-color=white font-bold"
-                ).tooltip("감정(20) + 일상(20) + 이벤트(8) + 로맨스(4) + H씬(48)")
-                ui.button("마스터(148종)", on_click=lambda: select_genit_set("unified_152", "통합 마스터 148종")).props(
+                ).tooltip("감정(20) + 일상(20) + 이벤트(8) + 로맨스/봉사(14) + H씬(38)")
+                ui.button("마스터(142종)", on_click=lambda: select_genit_set("unified_152", "통합 마스터 142종")).props(
                     "outline dense size=xs color=indigo-300"
-                ).tooltip("여성 100종 + 오토코노코 성인 48종 전체")
-                ui.button("🔥 성인 H씬(52)", on_click=lambda: select_genit_set("h_scenes_52", "여성 성인 H씬 52종 (060~063, 080~127)")).props(
+                ).tooltip("여성 100종 + 오토코노코 고유 성인 42종 전체")
+                ui.button("🔥 성인 H씬(52)", on_click=lambda: select_genit_set("h_scenes_52", "여성 성인 H씬 52종 (060~079 활성, 080~124)")).props(
                     "outline dense size=xs color=rose-300"
                 )
-                ui.button("🎀 오토코노코 H(52)", on_click=lambda: select_genit_set("otokonoko_52", "오토코노코 성인 52종 (060~063, 150~197)")).props(
+                ui.button("🎀 오토코노코 H(52)", on_click=lambda: select_genit_set("otokonoko_52", "오토코노코 성인 52종 (060~079 활성, 150~194)")).props(
                     "outline dense size=xs color=pink-300"
                 )
                 ui.button("⚔️ 무협 C", on_click=lambda: select_genit_set("wuxia_actions", "무협 전용 10종 (C1~C10)")).props(
@@ -423,7 +429,7 @@ def render_generate_page() -> None:
             else:
                 state["pose_selection_mode"] = "custom"
                 ui.input(
-                    "포즈 표현식 (예: all, 000..019, 038,039,057)",
+                    "포즈 표현식 (예: all, 000..019, 020,027,080, sample10)",
                     value=state["custom_pose_expr"],
                     on_change=lambda e: state.update({"custom_pose_expr": e.value})
                 ).props("outlined dark dense").classes("w-full text-sm")
