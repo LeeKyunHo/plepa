@@ -6,12 +6,15 @@ plepa_gui.api_routes
 
 from __future__ import annotations
 
+import base64
 import hmac
+import io
 import os
 from pathlib import Path
 import re
 import shutil
 import tempfile
+import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -148,6 +151,12 @@ class ReapplyCensorAssetRequest(BaseModel):
     min_confidence: float = 0.16
     enable_anchor_fallback: bool = False
     pose_code: Optional[str] = None
+    roster: Optional[str] = None
+
+
+class RetouchAssetRequest(BaseModel):
+    rel_path: str
+    image_base64: str
     roster: Optional[str] = None
 
 
@@ -405,4 +414,37 @@ async def api_reapply_censor(req: ReapplyCensorAssetRequest) -> Dict[str, Any]:
         "censor_style": req.censor_style,
         "detected_count": int(det_count),
         "message": f"{req.censor_style} 즉시 재검열 완료 (탐지 {int(det_count)}건)",
+    }
+
+
+@api_router.post("/retouch")
+async def api_retouch_asset(req: RetouchAssetRequest) -> Dict[str, Any]:
+    """수동 캔버스 덧칠/검열 결과를 본체 에셋 파일에 원자적으로 덮어씁니다 (_origin 무손실 보존)."""
+    if req.roster:
+        _validate_roster_name(req.roster)
+    target_path = _resolve_safe_project_file(req.rel_path)
+    _ensure_not_origin_target(target_path)
+    if not target_path.is_file():
+        raise HTTPException(status_code=404, detail=f"에셋 파일을 찾을 수 없습니다: {req.rel_path}")
+
+    raw_b64 = (req.image_base64 or "").strip()
+    if not raw_b64:
+        raise HTTPException(status_code=400, detail="이미지 데이터가 비어 있습니다.")
+    if "," in raw_b64:
+        raw_b64 = raw_b64.split(",", 1)[1]
+
+    try:
+        img_bytes = base64.b64decode(raw_b64, validate=False)
+        with Image.open(io.BytesIO(img_bytes)) as opened_img:
+            img = opened_img.convert("RGB")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"유효하지 않은 이미지 데이터입니다: {exc}") from exc
+
+    _atomic_save_webp(img, target_path)
+    return {
+        "success": True,
+        "rel_path": req.rel_path,
+        "filename": target_path.name,
+        "timestamp": int(time.time()),
+        "message": "수동 검열 저장 및 파일 교체 완료",
     }

@@ -15,6 +15,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import urllib.parse
 
 from nicegui import run, ui
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
@@ -31,6 +32,11 @@ from plepa_engine.services.genit_exporter import default_genit_exporter
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
 from plepa_gui.components.header import get_active_roster, render_header
+from plepa_gui.components.retouch_editor import (
+    RETOUCH_EDITOR_CSS,
+    RETOUCH_EDITOR_HTML,
+    build_retouch_editor_script,
+)
 
 mimetypes.add_type("image/webp", ".webp")
 logger = logging.getLogger(__name__)
@@ -96,9 +102,34 @@ def render_gallery_page() -> None:
         "censor_targets": conf.get("censor_targets", "penis"),
     }
 
+    active_lightbox_retouch_cb = {"fn": None}
+
     def _update_censor_setting(field: str, value: str) -> None:
         state[field] = value
         default_config_service.save_config({field: value})
+
+    retouch_script = build_retouch_editor_script(
+        on_saved_js="if (typeof emitEvent === 'function') { emitEvent('plepa_retouch_saved', savedPayload); }",
+        on_notify_js=(
+            "if (isError && typeof emitEvent === 'function') { emitEvent('plepa_retouch_error', {msg: msg}); }"
+            " else { console.log(msg); }"
+        ),
+    )
+    ui.add_head_html(RETOUCH_EDITOR_CSS)
+    ui.add_body_html(RETOUCH_EDITOR_HTML + "\n" + retouch_script)
+
+    def _handle_gallery_retouch_saved(e) -> None:
+        cb = active_lightbox_retouch_cb.get("fn")
+        if callable(cb):
+            cb(e.args if hasattr(e, "args") else {})
+        ui.notify("✅ 수동 검열 저장 및 파일 교체가 완료되었습니다!", type="positive")
+
+    def _handle_gallery_retouch_error(e) -> None:
+        msg = (e.args or {}).get("msg", "수동 검열 저장 실패") if hasattr(e, "args") else "수동 검열 저장 실패"
+        ui.notify(str(msg), type="negative")
+
+    ui.on("plepa_retouch_saved", _handle_gallery_retouch_saved)
+    ui.on("plepa_retouch_error", _handle_gallery_retouch_error)
 
     with ui.column().classes("w-full max-w-[1550px] mx-auto p-6 gap-6"):
         # 상단 통합 컨트롤 바
@@ -571,16 +602,16 @@ def render_gallery_page() -> None:
         _apply_char_preset(
             "유키노 성인 5대 체형 및 업스케일 6종 선택 완료!",
             ["ykn_sle", "ykn_std", "ykn_mat", "ykn_crv", "ykn_gla", "ykn_gla_up"],
-            pose_set="adult_testing",
-            selected_codes=[f"{i:03d}" for i in range(24, 60)],
+            pose_set="v3_daily_53",
+            selected_codes=[f"{i:03d}" for i in range(0, 53)],
         )
 
     def select_ykn_outfit_preset():
         _apply_char_preset(
             "유키노 신규 테마 의상 6종 선택 완료!",
             ["ykn_bun", "ykn_nur", "ykn_mai", "ykn_swm", "ykn_qip", "ykn_gya"],
-            pose_set="adult_testing",
-            selected_codes=[f"{i:03d}" for i in range(24, 60)],
+            pose_set="v3_daily_53",
+            selected_codes=[f"{i:03d}" for i in range(0, 53)],
         )
 
     def select_has_assets():
@@ -597,7 +628,7 @@ def render_gallery_page() -> None:
 
     def on_set_changed(set_id: str):
         state["pose_set"] = set_id
-        if set_id in ("all", "all_80"):
+        if set_id == "all":
             state["selected_codes"] = sorted(all_poses.keys())
         else:
             s = next((item for item in pose_sets if item.id == set_id), None)
@@ -956,14 +987,50 @@ def render_gallery_page() -> None:
                             ).tooltip("해당 에셋(원본 포함)을 휴지통으로 안전하게 이동합니다 (단축키: Del)")
 
                         # _origin 무검열 원본 비교 및 복원 버튼 (2-Track 서브폴더/플랫 동시 지원)
-                        char_pfx = prefix_val or p.name.split("_")[0]
-                        cand_sub = PROJECTS_DIR / state["roster"] / "assets" / f"{char_pfx}_origin" / p.parent.name / p.name
-                        cand_flat = PROJECTS_DIR / state["roster"] / "assets" / f"{char_pfx}_origin" / p.name
+                        main_asset_p = items[nav_state["idx"]] if items else p
+                        char_pfx = prefix_val or main_asset_p.name.split("_")[0]
+                        cand_sub = PROJECTS_DIR / state["roster"] / "assets" / f"{char_pfx}_origin" / main_asset_p.parent.name / main_asset_p.name
+                        cand_flat = PROJECTS_DIR / state["roster"] / "assets" / f"{char_pfx}_origin" / main_asset_p.name
                         origin_cand = cand_sub if cand_sub.is_file() else cand_flat
+
+                        rel_main_asset = main_asset_p.relative_to(PROJECTS_DIR).as_posix()
+                        retouch_payload = {
+                            "relPath": rel_main_asset,
+                            "roster": state["roster"],
+                            "title": f"✏️ {main_asset_p.name} 수동 검열/덧칠",
+                            "imageUrl": f"/projects_static/{urllib.parse.quote(rel_main_asset, safe='/')}",
+                            "originUrl": (
+                                f"/projects_static/{urllib.parse.quote(origin_cand.relative_to(PROJECTS_DIR).as_posix(), safe='/')}"
+                                if origin_cand.is_file()
+                                else ""
+                            ),
+                        }
+
+                        def _on_retouch_saved_refresh(payload: dict) -> None:
+                            if not isinstance(payload, dict) or payload.get("rel_path") != rel_main_asset:
+                                return
+                            ts_val = payload.get("timestamp") or int(time.time())
+                            showing_origin["val"] = False
+                            curr["path"] = main_asset_p
+                            curr["url"] = f"/projects_static/{urllib.parse.quote(rel_main_asset, safe='/')}?t={ts_val}"
+                            refresh_header()
+                            refresh_img()
+                            refresh_meta()
+                            render_content()
+
+                        active_lightbox_retouch_cb["fn"] = _on_retouch_saved_refresh
+
+                        async def open_manual_retouch():
+                            await ui.run_javascript(f"openRetouchEditor({json.dumps(retouch_payload, ensure_ascii=False)});")
+
+                        ui.button("✏️ 직접 검열", icon="brush", on_click=open_manual_retouch).props(
+                            "unelevated dense size=sm color=emerald-700 text-white font-bold"
+                        ).tooltip("기존 검열 제거(원본 로드) 후 직접 화이트 브러시/지우개로 편집하고 파일을 즉시 교체합니다")
+
                         if origin_cand.is_file():
                             def on_toggle_origin():
                                 showing_origin["val"] = not showing_origin["val"]
-                                target_f = origin_cand if showing_origin["val"] else p
+                                target_f = origin_cand if showing_origin["val"] else main_asset_p
                                 curr["path"] = target_f
                                 rel = target_f.relative_to(PROJECTS_DIR).as_posix()
                                 curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
@@ -983,8 +1050,8 @@ def render_gallery_page() -> None:
                                 if ok:
                                     ui.notify("⏪ 무검열 원본으로 복원되었습니다!", type="positive")
                                     showing_origin["val"] = False
-                                    curr["path"] = p
-                                    rel = p.relative_to(PROJECTS_DIR).as_posix()
+                                    curr["path"] = main_asset_p
+                                    rel = main_asset_p.relative_to(PROJECTS_DIR).as_posix()
                                     curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
                                     refresh_header()
                                     refresh_img()

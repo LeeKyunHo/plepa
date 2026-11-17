@@ -493,3 +493,106 @@ def test_8080_reroll_and_fill_missing_inherit_config_qc(monkeypatch):
     assert enqueued[-1].strict_censor_qc is False
     assert enqueued[-1].auto_qc is False
 
+
+def test_8080_retouch_replaces_asset_preserves_origin_and_blocks_origin_write(monkeypatch, tmp_path):
+    """8080 /api/assets/retouch 호출 시 본체 파일 교체, _origin 무손실 보존 및 _origin 직접 덮어쓰기 403 차단 검증."""
+    monkeypatch.setenv("PLEPA_MOBILE_TOKEN", "mob-retouch-tok")
+    monkeypatch.setattr(api_routes_mod, "PROJECTS_DIR", tmp_path / "projects")
+
+    rel = "campus/assets/aya/02_h_scenes/aya_064_smile.webp"
+    target_file = _write_webp(api_routes_mod.PROJECTS_DIR / rel, (25, 25, 25))
+    origin_file = _write_webp(
+        api_routes_mod.PROJECTS_DIR / "campus/assets/aya_origin/02_h_scenes/aya_064_smile.webp",
+        (240, 240, 240),
+    )
+
+    b64_green = "data:image/webp;base64," + base64.b64encode(_webp_bytes((20, 220, 40))).decode("ascii")
+
+    app = FastAPI()
+    app.include_router(api_routes_mod.api_router)
+    client = TestClient(app)
+
+    # 1. 토큰 미첨부 차단(401)
+    r_unauth = client.post("/api/assets/retouch", json={"rel_path": rel, "image_base64": b64_green})
+    assert r_unauth.status_code == 401
+
+    # 2. _origin 직접 수정 차단(403)
+    r_origin_block = client.post(
+        "/api/assets/retouch",
+        headers={"X-Plepa-Token": "mob-retouch-tok"},
+        json={
+            "rel_path": "campus/assets/aya_origin/02_h_scenes/aya_064_smile.webp",
+            "image_base64": b64_green,
+            "roster": "campus",
+        },
+    )
+    assert r_origin_block.status_code == 403
+
+    # 3. 존재하지 않는 파일 404
+    r_missing = client.post(
+        "/api/assets/retouch",
+        headers={"X-Plepa-Token": "mob-retouch-tok"},
+        json={"rel_path": "campus/assets/aya/02_h_scenes/not_found.webp", "image_base64": b64_green},
+    )
+    assert r_missing.status_code == 404
+
+    # 4. 정상 수동 검열 저장 -> 본체 교체 및 _origin 보존
+    r_ok = client.post(
+        "/api/assets/retouch",
+        headers={"X-Plepa-Token": "mob-retouch-tok"},
+        json={"rel_path": rel, "image_base64": b64_green, "roster": "campus"},
+    )
+    assert r_ok.status_code == 200
+    body = r_ok.json()
+    assert body["success"] is True
+    assert body["filename"] == "aya_064_smile.webp"
+
+    r_px, g_px, b_px = _center_pixel(target_file)
+    assert g_px > 180 and r_px < 60 and b_px < 70
+    or_r, or_g, or_b = _center_pixel(origin_file)
+    assert or_r > 200 and or_g > 200 and or_b > 200
+
+
+def test_8080_retouch_editor_ui_in_mobile_and_gallery(monkeypatch):
+    """8080 모바일 뷰어 및 공용 캔버스 에디터 컴포넌트에 직접 검열/원본 제거 컨트롤이 포함되는지 검증."""
+    from plepa_gui.components.retouch_editor import RETOUCH_EDITOR_HTML
+    import plepa_gui.pages.gallery as gallery_mod
+
+    assert "plepaBtnLoadOrigin" in RETOUCH_EDITOR_HTML
+    assert "plepaBtnBrush" in RETOUCH_EDITOR_HTML
+    assert "plepaBtnEraser" in RETOUCH_EDITOR_HTML
+    assert "plepaBrushSize" in RETOUCH_EDITOR_HTML
+    assert "plepaBtnRetouchSave" in RETOUCH_EDITOR_HTML
+    assert callable(getattr(gallery_mod, "render_gallery_page", None))
+
+    monkeypatch.setattr(
+        mobile_viewer_mod,
+        "get_mobile_gallery_data",
+        lambda roster="campus": {
+            "roster": roster,
+            "chars": [{"id": "aya", "name": "아야"}],
+            "items": [
+                {
+                    "char": "aya",
+                    "char_name": "아야",
+                    "code": "064",
+                    "label": "smile",
+                    "filename": "aya_064_smile.webp",
+                    "rel_path": "campus/assets/aya/02_h_scenes/aya_064_smile.webp",
+                    "url": "/projects_static/campus/assets/aya/02_h_scenes/aya_064_smile.webp",
+                    "origin_url": "/projects_static/campus/assets/aya_origin/02_h_scenes/aya_064_smile.webp",
+                    "is_recent": True,
+                    "is_new": True,
+                }
+            ],
+            "total_missing": 0,
+        },
+    )
+    mob_html = mobile_viewer_mod.generate_mobile_viewer_html(roster="campus")
+    assert "triggerRetouch(" in mob_html
+    assert "openRetouchEditor(" in mob_html
+    assert "loadOriginToCanvas" in mob_html
+    assert "/api/assets/retouch" in mob_html
+    assert "aya_origin/02_h_scenes/aya_064_smile.webp" in mob_html
+
+

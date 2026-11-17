@@ -23,6 +23,25 @@ from nicegui import app, ui
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.services.character_service import default_character_service
 from plepa_gui.components.header import get_active_roster
+from plepa_gui.components.retouch_editor import (
+    RETOUCH_EDITOR_CSS,
+    RETOUCH_EDITOR_HTML,
+    build_retouch_editor_script,
+)
+
+
+def _find_origin_for_asset_path(assets_dir: Path, char: str, asset_file: Path) -> Optional[Path]:
+    """에셋 파일에 대응하는 {char}_origin 무검열 원본 경로를 탐색합니다."""
+    subfolder = asset_file.parent.name if asset_file.parent != (assets_dir / char) else ""
+    candidates: List[Path] = []
+    if subfolder:
+        candidates.append(assets_dir / f"{char}_origin" / subfolder / asset_file.name)
+        candidates.append(assets_dir / char / "_origin" / subfolder / asset_file.name)
+    candidates.append(assets_dir / f"{char}_origin" / asset_file.name)
+    for cand in candidates:
+        if cand.is_file():
+            return cand
+    return None
 
 
 def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
@@ -81,6 +100,12 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
 
             rel_to_projects = f.relative_to(PROJECTS_DIR).as_posix()
             web_url = "/projects_static/" + urllib.parse.quote(rel_to_projects, safe="/")
+            origin_file = _find_origin_for_asset_path(assets_dir, char, f)
+            origin_web_url = (
+                "/projects_static/" + urllib.parse.quote(origin_file.relative_to(PROJECTS_DIR).as_posix(), safe="/")
+                if origin_file is not None
+                else ""
+            )
 
             mtime = f.stat().st_mtime
             is_newly_generated = mtime >= today_start
@@ -94,6 +119,7 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
                 "label": label,
                 "filename": f.name,
                 "url": web_url,
+                "origin_url": origin_web_url,
                 "rel_path": rel_to_projects,
                 "is_recent": is_recent_mod,
                 "is_new": is_newly_generated,
@@ -124,6 +150,18 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
         f'                <button class="btn-chip" id="char_{html.escape(c["id"], quote=True)}" '
         f'onclick="setCharFilter({json.dumps(c["id"])})">{html.escape(c.get("short_name", c["id"]))}</button>'
         for c in data.get("chars", [])
+    )
+    retouch_script_html = build_retouch_editor_script(
+        on_saved_js="""
+            if (typeof filteredItems !== 'undefined' && typeof currentIndex !== 'undefined') {
+                const curItem = filteredItems[currentIndex];
+                if (curItem && curItem.rel_path === savedPayload.rel_path) {
+                    curItem.url = curItem.url.split('?')[0] + '?t=' + savedPayload.timestamp;
+                    if (typeof updateView === 'function') updateView();
+                }
+            }
+        """,
+        on_notify_js="if (typeof showToast === 'function') { showToast(msg); }",
     )
 
     return f"""<!DOCTYPE html>
@@ -199,6 +237,9 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
         .btn-origin {{
             background: rgba(217, 119, 6, 0.25); border: 1px solid rgba(251, 191, 36, 0.6); color: #fcd34d;
         }}
+        .btn-retouch {{
+            background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(52, 211, 153, 0.65); color: #6ee7b7;
+        }}
         .censor-select-mini {{
             background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(71, 85, 105, 0.8);
             color: #e2e8f0; border-radius: 6px; padding: 3px 6px; font-size: 11px; outline: none;
@@ -240,6 +281,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             border-radius: 9999px; font-size: 11px; font-weight: 800; cursor: pointer;
         }}
     </style>
+    {RETOUCH_EDITOR_CSS}
 </head>
 <body>
     <!-- 토스트 배너 -->
@@ -320,6 +362,9 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                     </button>
                     <button class="btn-action btn-origin" onclick="triggerRestoreOrigin(event)" title="무검열 원본(_origin)으로 즉시 복원">
                         🔄 원본
+                    </button>
+                    <button class="btn-action btn-retouch" onclick="triggerRetouch(event)" title="기존 검열 제거(원본 로드) 후 직접 브러시 덧칠/지우개로 수정 저장">
+                        ✏️ 직접검열
                     </button>
                     <button class="btn-action btn-recensor" onclick="triggerReapplyCensor(event)" title="원본 기반 0.2초 즉시 재검열">
                         ⚡ 재검열
@@ -574,6 +619,22 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
             }}
         }}
 
+        // 수동 캔버스 직접 검열/덧칠 에디터 열기
+        function triggerRetouch(e) {{
+            if (e) e.stopPropagation();
+            if (filteredItems.length === 0) return;
+            const item = filteredItems[currentIndex];
+            if (typeof openRetouchEditor === 'function') {{
+                openRetouchEditor({{
+                    relPath: item.rel_path,
+                    roster: rawData.roster,
+                    title: '✏️ #' + item.code + ' ' + (item.label || item.filename),
+                    imageUrl: item.url,
+                    originUrl: item.origin_url || ''
+                }});
+            }}
+        }}
+
         // 현재 포즈 단독 리롤
         async function triggerReroll(e) {{
             if (e) e.stopPropagation();
@@ -666,6 +727,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
 
         // PC 키보드 화살표
         window.addEventListener('keydown', (e) => {{
+            if (window.__plepaRetouchOpen) return;
             if (e.key === 'ArrowLeft') prev();
             if (e.key === 'ArrowRight' || e.key === ' ') next();
             if (e.key === 'Delete') triggerDelete();
@@ -675,6 +737,8 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
         // 첫 진입 시 초기화
         setCharFilter('all');
     </script>
+    {RETOUCH_EDITOR_HTML}
+    {retouch_script_html}
 </body>
 </html>"""
 
