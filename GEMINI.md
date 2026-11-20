@@ -79,6 +79,9 @@
   - `data/sdxl_pose_database.json`의 프롬프트나 라벨이 변경될 때는 반드시 루트의 [`POSE_MAPPING.md`](POSE_MAPPING.md) 및 [`docs/POSE_MAPPING_V2.md`](docs/POSE_MAPPING_V2.md)를 세트로 함께 업데이트하며, 미동기화 상태로 커밋/푸시하지 않습니다.
 - **포즈 의미 훼손 및 충돌 주입 금지 (Semantic Preservation)**:
   - 포즈 프롬프트를 보강할 때는 해당 포즈의 원래 의도(사후 여운, 전희, 특정 체위, 단독/파트너 구도)를 반드시 먼저 정독하고 확인해야 하며, 카테고리 일괄 스크립트로 엉뚱한 자세나 충돌하는 모순 태그(예: 사후 씬에 결합 태그 주입 등)를 무차별 주입하지 않습니다.
+- **남성 파트너 얼굴·눈 노출 차단 표준 준수 ([`docs/캐릭터_포즈_제작_규칙.md`](docs/캐릭터_포즈_제작_규칙.md#L177-L195))**:
+  - 2인 포즈·이벤트를 신규 추가하거나 수정할 때는 `bald`/`faceless` 마네킹 태그와 주 캐릭터 이염 위험이 있는 앞머리 눈가림(`male hair over eyes`, `bangs covering eyes`)을 절대 사용하지 않습니다.
+  - 화면 밖 크롭이 가능하면 `partner head out of frame`·`partner_pos`로 두부를 배제하고, **무릎베개·수유·가슴 파묻기(`#076`, `#120`, `#034` 등)처럼 남캐 머리가 프레임에 들어오는 포즈**(특히 `TwoPersonMobMutator`가 `_MOB_SHADOW_EYES_POS`·`_MOB_EYELESS_BANGS_NEG`를 자동 주입하지 않는 `mob_tier: 1 | 3` 또는 `events.json` 등)는 **포즈 엔트리에 직접** ① 뒤통수·상안부 그림자 음영(`back of dark-haired male head facing viewer`, `male head turned away from camera`, `shaded upper male face`, `shadow over male eyes`, `eyes obscured by shadow`, `no visible male eyes`), ② 주 캐릭터 눈 보호(`(clear visible female eyes:1.15)` — 여성 포즈 한정), ③ `negative_add` 눈·측면 얼굴 차단(`detailed male face, visible male eyes, detailed male eyes, visible male pupils, male eye, male side profile, male profile face, sideways male head, handsome male face, attractive male face, expressive male face, silver-haired male, blonde male`) 3종 세트를 명기하며 `SanitizerMutator` 충돌 상쇄가 없는지 확인합니다.
 
 ## 10. ComfyUI 협업 프로토콜 및 토큰 세이빙 규칙 (Agent Collaboration & Token Rules)
 - **10.1 역할 분담 (Role Division)**:

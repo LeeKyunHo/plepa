@@ -54,6 +54,7 @@
 14. **절차적 무결성, 승인 게이트 & 3단계 시퀀스 표준화 (Strict Approval Gate & 3-Step Sequence)**:
     - 질문 후 사용자 명시적 승인 전 임의 선행 작업 및 푸시 엄격 금지. 포즈 매핑 문서(`POSE_MAPPING.md`, `docs/POSE_MAPPING_V2.md`) 실시간 동기화 및 포즈 원래 문맥(사후 여운, 전희 등) 보존 의무화.
     - 체위 H씬 시퀀스는 **`시작 ➔ 절정 ➔ 사후`** 표준 3단계 규격을 엄격히 준수함 (예: `#112 착의섹스 시작`, `#113 착의섹스 절정`, `#114 착의섹스 사후`, `#099 펠라치오 시작`, `#100 펠라치오 절정`, `#101 펠라치오 사후`).
+   - **남캐 얼굴·눈 노출 차단 (`ADR-105` & [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md))**: 포즈 추가·수정 시 `bald`/`faceless`/앞머리 가림(`hair over eyes`)을 금지하고, 프레임 내 남캐 머리가 등장하는 구도(특히 `mob_tier: 1 | 3` 등 엔진 자동 주입 제외 구간)에는 뒤통수·상안부 그림자 음영(`shadow over male eyes, no visible male eyes`) + `(clear visible female eyes:1.15)`(여성 한정) + `negative_add` 눈·측면 얼굴 차단 3종 세트를 포즈 DB에 직접 명기함.
 15. **원클릭 하이퍼링크 의무화 (Hyperlink over Raw Text)**:
     - 모든 웹/터널/대시보드 URL은 사용자가 모바일/PC에서 복사·붙여넣기 없이 즉시 원클릭으로 열 수 있도록 반드시 마크다운 하이퍼링크(`[라벨](URL)`) 형태로 제공함.
 16. **모바일 원격 검수 2-Track & 원클릭 복원 시스템 ([`docs/REMOTE_INSPECTION_GUIDE.md`](REMOTE_INSPECTION_GUIDE.md))**:
@@ -1914,6 +1915,14 @@ ight_terrace(도시 야경 발코니 난간).
   3. **신규 `CompositionAntiDriftMutator` & `--deterministic-pose-seed` (`prompt_pipeline.py`, `generation_service.py`, `batch_generator.py`)**:
      - `TwoPersonMobMutator`와 `SanitizerMutator` 사이에 `CompositionAntiDriftMutator`를 추가하여 `tight bust portrait`, `cowboy shot`, `full body` 샷 사이즈별 반대 구도 이탈 네거티브를 자동 주입함.
      - `GenerationParams`·`GENERATION_OPTION_SPECS`·CLI에 `deterministic_pose_seed`(`--deterministic-pose-seed`)를 삼위일체 등록하고, `compute_deterministic_pose_seed()`(`numeric_code * 1000 + crc32(char.prefix) % 100000`)로 프로세스 간에도 동일한 포즈·캐릭터 기준 시드를 산출함.
+
+### ADR-107: `#128`/`#198` 복합 봉사 포즈 공식 폐기 및 향후 ControlNet 기반 고난도 구도 가이드 로드맵 (2026-11-20)
+- **폐기 사유**:
+  - `nipple lick + handjob + open eyes` 3중 희귀 프라이어 충돌과 `832x1216` 세로 화각 줌인 한계로 인해, 6차 실증 테스트(단일·6인 다중 캐릭터 배치)에서 개안·상체 접촉·하단 손 동작 분리를 동시에 만족하는 전 캐릭터 안정 수렴에 미달함.
+  - 이에 따라 `data/sdxl_pose_database.json`의 `#128`(`h_scenes`) 및 `+70` 대칭 `#198`(`scenes_otokonoko`) 항목과 매핑 문서 참조, 실험 생성본 12건을 공식 폐기(롤백)함.
+- **향후 방향성 (Roadmap)**:
+  - `campus` 로스터는 현행 순수 텍스트 파이프라인 및 기존 프로덕션 에셋 무손실 보존 원칙을 유지함.
+  - 향후 신규·비-캠퍼스 로스터에서 단일 텍스트 프롬프트만으로 안정 수렴이 불가능한 고난도 2인 인터랙션 포즈군을 도입할 때, 포즈별 선택적(Opt-in) `ControlNet (Depth/OpenPose)` 가이드 워크플로우 분기를 검토·구축함.
 
 
 

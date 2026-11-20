@@ -401,7 +401,7 @@ def test_adr101_pose_db_and_events_zero_conflicts():
         "small penis",
         "micropenis",
     )
-    clothed_romance_codes = {"060", "064", "067", "068", "069", "070", "071", "073", "074", "075", "076", "077"}
+    clothed_romance_codes = {"060", "064", "067", "068", "069", "070", "071", "073", "074", "076", "077"}
 
     for path in (Path("data/sdxl_pose_database.json"), Path("projects/campus/events.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -1025,3 +1025,63 @@ def test_phase_s8b_composition_anti_drift_and_deterministic_seed(tmp_path):
         results = svc.run_batch(params, quiet=True)
         assert len(results) == 1
         assert results[0].target.seed == compute_deterministic_pose_seed("020", "aya")
+
+
+def test_nursing_handjob_076_120_male_eye_suppression():
+    """#076/#120 수유대딸 포즈에서 남캐 뒤통수·상안부 음영 및 눈 노출 억제 태그가 충돌 제거 없이 보존되는지 검증."""
+    from plepa_engine.services.character_service import default_character_service
+
+    aya, _ = default_character_service.find_character("aya", "campus")
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    for code in ("076", "120"):
+        pos, neg, _ = assemble_sdxl_prompt(char=aya, pose=db[code], bg_prompt="bedroom")
+        pos_low = pos.lower()
+        neg_low = neg.lower()
+        assert "back of dark-haired male head facing viewer" in pos_low
+        assert "shadow over male eyes" in pos_low
+        assert "no visible male eyes" in pos_low
+        assert "clear visible female eyes" in pos_low
+        for banned in ("visible male eyes", "detailed male eyes", "visible male pupils", "male side profile", "handsome male face"):
+            assert banned in neg_low, f"#{code} missing {banned!r} in negative prompt"
+
+
+def test_pose_075_nude_slot_and_outfit_removal():
+    """#075 누드대딸이 required_outfit='nude'로 조립되어 기본 의상 토큰 없이 완전 탈의 상태로 생성되는지 검증."""
+    from plepa_engine.services.character_service import default_character_service
+
+    aya, _ = default_character_service.find_character("aya", "campus")
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    assert db["075"].required_outfit == "nude"
+    pos, neg, is_nude = assemble_sdxl_prompt(char=aya, pose=db["075"], bg_prompt="bedroom")
+    pos_low = pos.lower()
+    neg_low = neg.lower()
+    assert is_nude is True
+    assert "completely nude" in pos_low
+    assert "partially unbuttoned shirt" not in pos_low
+    assert "dress shirt" not in pos_low
+    assert "denim shorts" not in pos_low
+    assert "visible male eyes" in neg_low
+
+
+def test_pose_040_active_pounce_over_viewer_pov():
+    """#040이 #035(피제압)와 반대로 캐릭터가 유저 위를 덮쳐 내려다보는 1인칭 POV(mob_tier=0)로 조립되는지 검증."""
+    from plepa_engine.services.character_service import default_character_service
+
+    aya, _ = default_character_service.find_character("aya", "campus")
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    p040 = db["040"]
+    assert p040.mob_tier == 0
+    assert p040.is_solo_scene is True
+    assert p040.is_two_person is False
+    pos, neg, is_nude = assemble_sdxl_prompt(char=aya, pose=p040, bg_prompt="bedroom")
+    pos_low = pos.lower()
+    neg_low = neg.lower()
+    assert is_nude is False
+    assert "straddling" in pos_low
+    assert "looking down at viewer" in pos_low
+    assert "from below" in pos_low
+    assert "girl lying on back" not in pos_low
+    assert "male hands" not in pos_low
+    assert "lying on back" in neg_low
+    assert "hand near face" in neg_low
+    assert "disembodied limb" in neg_low
