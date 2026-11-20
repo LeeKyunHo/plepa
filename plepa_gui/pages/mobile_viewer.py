@@ -98,16 +98,18 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
             code = parts[1] if len(parts) >= 2 else ""
             label = parts[2] if len(parts) >= 3 else ""
 
+            mtime = f.stat().st_mtime
             rel_to_projects = f.relative_to(PROJECTS_DIR).as_posix()
-            web_url = "/projects_static/" + urllib.parse.quote(rel_to_projects, safe="/")
+            web_url = "/projects_static/" + urllib.parse.quote(rel_to_projects, safe="/") + f"?t={int(mtime * 1000)}"
             origin_file = _find_origin_for_asset_path(assets_dir, char, f)
             origin_web_url = (
-                "/projects_static/" + urllib.parse.quote(origin_file.relative_to(PROJECTS_DIR).as_posix(), safe="/")
+                "/projects_static/"
+                + urllib.parse.quote(origin_file.relative_to(PROJECTS_DIR).as_posix(), safe="/")
+                + f"?t={int(origin_file.stat().st_mtime * 1000)}"
                 if origin_file is not None
                 else ""
             )
 
-            mtime = f.stat().st_mtime
             is_newly_generated = mtime >= today_start
             is_recent_mod = mtime >= recent_start
             qc_meta = manifest_qc_map.get(code, {})
@@ -329,6 +331,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                 <button class="btn-chip {'active' if initial_mode == 'recent' else ''}" id="chipRecent" onclick="setMode('recent')">✨ 최근수정본 ({recent_count})</button>
                 <button class="btn-chip" id="chipNew" onclick="setMode('new')">🆕 방금생성됨</button>
                 <button class="btn-chip {'active' if initial_mode == 'all' else ''}" id="chipAll" onclick="setMode('all')">📂 전체</button>
+                <button class="btn-chip" id="chipSort" onclick="toggleSortOrder()">🕒 최신생성순</button>
                 <div style="width: 1px; background: rgba(71,85,105,0.4); margin: 0 4px;"></div>
                 <button class="btn-chip" id="char_all" onclick="setCharFilter('all')">전체캐릭</button>
 {char_buttons_html}
@@ -383,6 +386,7 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
         const rawData = {data_json};
         let currentMode = '{initial_mode}'; // 'recent', 'new', 'all'
         let currentChar = 'all';
+        let currentSort = 'code_asc'; // 'code_asc' or 'mtime_desc'
         let filteredItems = [];
         let currentIndex = 0;
         let lastDeletedBundle = null;
@@ -410,10 +414,24 @@ def generate_mobile_viewer_html(roster: Optional[str] = None) -> str:
                 if (currentChar !== 'all' && item.char !== currentChar) return false;
                 return true;
             }});
+            if (currentSort === 'mtime_desc') {{
+                filteredItems.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+            }}
             if (currentIndex >= filteredItems.length) {{
                 currentIndex = Math.max(0, filteredItems.length - 1);
             }}
             updateView();
+        }}
+
+        function toggleSortOrder() {{
+            currentSort = currentSort === 'mtime_desc' ? 'code_asc' : 'mtime_desc';
+            const sortBtn = document.getElementById('chipSort');
+            if (sortBtn) {{
+                sortBtn.classList.toggle('active', currentSort === 'mtime_desc');
+                sortBtn.textContent = currentSort === 'mtime_desc' ? '🕒 최신생성순 ✓' : '🕒 최신생성순';
+            }}
+            currentIndex = 0;
+            applyFilters();
         }}
 
         function setMode(mode) {{

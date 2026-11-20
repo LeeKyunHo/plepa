@@ -225,6 +225,12 @@ def _atomic_save_webp(img: Image.Image, dst: Path) -> None:
         raise
 
 
+@api_router.get("/job-status")
+async def api_job_status() -> Dict[str, Any]:
+    """전역 백그라운드 리롤/배치 대기열 및 최근 완료 기록을 반환합니다."""
+    return global_job_manager.get_status()
+
+
 @api_router.post("/delete")
 async def api_delete_asset(req: DeleteAssetRequest) -> Dict[str, Any]:
     """에셋 및 쌍둥이 파일(_origin, _censored)을 휴지통으로 안전하게 이동."""

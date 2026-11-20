@@ -25,7 +25,14 @@ class GlobalJobManager:
         self.is_running: bool = False
         self.cancel_requested: bool = False
         self.active_params: Optional[GenerationParams] = None
-        self._queue: Deque[Tuple[GenerationParams, str, Optional[Callable[[List[GenerationResult], Optional[Exception]], None]]]] = deque()
+        self._queue: Deque[
+            Tuple[
+                GenerationParams,
+                str,
+                Optional[Callable[[List[GenerationResult], Optional[Exception]], None]],
+                Dict[str, Any],
+            ]
+        ] = deque()
 
         self.current: int = 0
         self.total: int = 0
@@ -36,7 +43,55 @@ class GlobalJobManager:
         self.latest_result: Optional[Dict[str, Any]] = None
 
         self.logs: List[Dict[str, Any]] = []
+        self._job_seq: int = 0
+        self._active_job_record: Optional[Dict[str, Any]] = None
+        self._job_history: Deque[Dict[str, Any]] = deque(maxlen=80)
+        self._completed_items: Deque[Dict[str, Any]] = deque(maxlen=120)
         self._thread: Optional[threading.Thread] = None
+
+    def _create_job_record(
+        self,
+        params: GenerationParams,
+        label: str,
+        status: str,
+    ) -> Dict[str, Any]:
+        self._job_seq += 1
+        now_str = time.strftime("%H:%M:%S")
+        record = {
+            "job_id": self._job_seq,
+            "label": label or f"{params.character_expr}:{params.pose_expr}",
+            "char": params.character_expr,
+            "pose": params.pose_expr,
+            "roster": params.roster,
+            "reuse_seed": bool(getattr(params, "reuse_seed", False)),
+            "status": status,
+            "queued_at": now_str,
+            "started_at": now_str if status == "running" else None,
+            "started_ts": time.perf_counter() if status == "running" else None,
+            "finished_at": None,
+            "duration_sec": None,
+            "results": [],
+            "error": None,
+        }
+        self._job_history.append(record)
+        return record
+
+    @staticmethod
+    def _serialize_job_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        out = {k: v for k, v in record.items() if k != "started_ts"}
+        out["results"] = [dict(item) for item in record.get("results", [])]
+        return out
+
+    def clear_history(self) -> None:
+        """완료·취소·실패된 작업 기록과 완성 이미지 이력을 비웁니다 (실행 중/대기 중 항목 유지)."""
+        with self._lock:
+            kept_jobs = [
+                rec for rec in self._job_history
+                if rec.get("status") in ("running", "queued")
+            ]
+            self._job_history.clear()
+            self._job_history.extend(kept_jobs)
+            self._completed_items.clear()
 
     @staticmethod
     def _format_start_log(params: GenerationParams, prefix_label: str = "가동") -> Dict[str, Any]:
@@ -66,6 +121,7 @@ class GlobalJobManager:
             self.fail_count = 0
             self.latest_result = None
             self.logs = [self._format_start_log(params)]
+            self._active_job_record = self._create_job_record(params, "", "running")
 
             self._thread = threading.Thread(target=self._run_worker, args=(params,), daemon=True)
             self._thread.start()
@@ -95,6 +151,7 @@ class GlobalJobManager:
                 self.fail_count = 0
                 self.latest_result = None
                 self.logs = [self._format_start_log(params, prefix_label="가동")]
+                self._active_job_record = self._create_job_record(params, label, "running")
 
                 self._thread = threading.Thread(
                     target=self._run_worker, args=(params, on_complete), daemon=True
@@ -102,7 +159,8 @@ class GlobalJobManager:
                 self._thread.start()
                 return True, 0
 
-            self._queue.append((params, label, on_complete))
+            queued_record = self._create_job_record(params, label, "queued")
+            self._queue.append((params, label, on_complete, queued_record))
             pos = len(self._queue)
             desc = label or f"{params.character_expr}:{params.pose_expr}"
             self.logs.append({
@@ -118,7 +176,9 @@ class GlobalJobManager:
         """진행 중인 작업 및 대기열에 중단(취소)을 요청합니다."""
         with self._lock:
             while self._queue:
-                _, _, pending_cb = self._queue.popleft()
+                _, _, pending_cb, pending_rec = self._queue.popleft()
+                pending_rec["status"] = "cancelled"
+                pending_rec["finished_at"] = time.strftime("%H:%M:%S")
                 if pending_cb is not None:
                     try:
                         pending_cb([], InterruptedError("대기열 작업이 취소되었습니다."))
@@ -143,6 +203,10 @@ class GlobalJobManager:
                 "fail_count": self.fail_count,
                 "logs": list(self.logs),
                 "latest_result": dict(self.latest_result) if self.latest_result else None,
+                "active_job": self._serialize_job_record(self._active_job_record) if self._active_job_record else None,
+                "queued_jobs": [self._serialize_job_record(item[3]) for item in self._queue],
+                "job_history": [self._serialize_job_record(rec) for rec in reversed(self._job_history)],
+                "completed_items": [dict(item) for item in reversed(self._completed_items)],
             }
 
     def _run_worker(
@@ -156,8 +220,30 @@ class GlobalJobManager:
                 self.current = cur
                 self.total = tot
                 self.percentage = (cur / tot) if tot > 0 else 0.0
+                now_ts = time.strftime("%H:%M:%S")
+                rec = self._active_job_record
+                item_entry = {
+                    "job_id": rec["job_id"] if rec else None,
+                    "char": res.target.character_prefix or (self.active_params.character_expr if self.active_params else ""),
+                    "roster": self.active_params.roster if self.active_params else "",
+                    "code": res.target.code,
+                    "label": res.target.label,
+                    "filename": res.target.output_filename,
+                    "image_path": str(res.image_path) if res.image_path else "",
+                    "seed": getattr(res.target, "seed", None),
+                    "duration_sec": round(float(res.duration_sec or 0.0), 1),
+                    "success": bool(res.success),
+                    "qc_passed": getattr(res, "qc_passed", None),
+                    "qc_reason": getattr(res, "qc_reason", None),
+                    "error_message": getattr(res, "error_message", None),
+                    "timestamp": now_ts,
+                }
+                if rec is not None:
+                    rec["results"].append(item_entry)
+
                 if res.success:
                     self.success_count += 1
+                    self._completed_items.append(item_entry)
                     if res.image_path and res.image_path.exists():
                         self.latest_result = {
                             "image_path": str(res.image_path),
@@ -166,7 +252,7 @@ class GlobalJobManager:
                             "filename": res.target.output_filename,
                             "duration_sec": res.duration_sec,
                             "seed": getattr(res.target, "seed", None),
-                            "timestamp": time.strftime("%H:%M:%S"),
+                            "timestamp": now_ts,
                         }
                 else:
                     self.fail_count += 1
@@ -178,7 +264,7 @@ class GlobalJobManager:
                 self.logs.append({
                     "success": res.success,
                     "text": msg,
-                    "timestamp": time.strftime("%H:%M:%S")
+                    "timestamp": now_ts,
                 })
                 # 로그는 최대 200개 유지
                 if len(self.logs) > 200:
@@ -212,6 +298,20 @@ class GlobalJobManager:
                         "timestamp": time.strftime("%H:%M:%S")
                     })
 
+            with self._lock:
+                rec = self._active_job_record
+                if rec is not None:
+                    started_ts = rec.get("started_ts")
+                    rec["duration_sec"] = round(time.perf_counter() - started_ts, 1) if started_ts else None
+                    rec["finished_at"] = time.strftime("%H:%M:%S")
+                    if self.cancel_requested:
+                        rec["status"] = "cancelled"
+                    elif run_err is not None or (run_results and any(not r.success for r in run_results)):
+                        rec["status"] = "failed"
+                        rec["error"] = str(run_err) if run_err else "일부 항목 생성 실패"
+                    else:
+                        rec["status"] = "done"
+
             if current_cb is not None:
                 try:
                     current_cb(run_results, run_err)
@@ -220,7 +320,11 @@ class GlobalJobManager:
 
             with self._lock:
                 if not self.cancel_requested and self._queue:
-                    next_params, next_label, next_cb = self._queue.popleft()
+                    next_params, next_label, next_cb, next_rec = self._queue.popleft()
+                    next_rec["status"] = "running"
+                    next_rec["started_at"] = time.strftime("%H:%M:%S")
+                    next_rec["started_ts"] = time.perf_counter()
+                    self._active_job_record = next_rec
                     current_params = next_params
                     current_cb = next_cb
                     self.active_params = next_params
@@ -237,7 +341,9 @@ class GlobalJobManager:
 
                 if self.cancel_requested:
                     while self._queue:
-                        _, _, pending_cb = self._queue.popleft()
+                        _, _, pending_cb, pending_rec = self._queue.popleft()
+                        pending_rec["status"] = "cancelled"
+                        pending_rec["finished_at"] = time.strftime("%H:%M:%S")
                         if pending_cb is not None:
                             try:
                                 pending_cb([], InterruptedError("작업 취소로 인해 대기열이 비워졌습니다."))
@@ -246,6 +352,7 @@ class GlobalJobManager:
                 self.is_running = False
                 self.cancel_requested = False
                 self.active_params = None
+                self._active_job_record = None
                 break
 
 

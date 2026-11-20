@@ -13,6 +13,8 @@ import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from PIL import Image, ImageOps
+
 from plepa_engine.config import PROJECTS_DIR, ROOT_DIR
 
 
@@ -114,6 +116,44 @@ class GenitExporter:
             return clean_prefix[:2].upper()
         return (clean_prefix + "X")[:2].upper()
 
+    @staticmethod
+    def _write_export_image(
+        src_file: Path,
+        dest_file: Path,
+        target_size: Optional[Tuple[int, int]] = None,
+        webp_quality: int = 92,
+    ) -> bool:
+        """단일 WebP 에셋을 원자적으로 내보냅니다.
+
+        target_size가 지정되고 원본 해상도와 다를 때만 비율 유지 중앙 크롭(Lanczos)으로
+        리사이즈하여 저장하며, 동일 해상도이거나 target_size가 None이면 무손실 복사합니다.
+        로컬 원본(src_file)은 절대 수정하지 않습니다.
+        반환값: 리사이즈 수행 여부(True=리사이즈됨, False=원본 무손실 복사).
+        """
+        temp_dest = dest_file.parent / f".{dest_file.name}.{uuid.uuid4().hex[:8]}.tmp"
+        resized = False
+        try:
+            if target_size is not None:
+                with Image.open(src_file) as im:
+                    if (im.width, im.height) != target_size:
+                        fitted = ImageOps.fit(
+                            im.convert("RGB"),
+                            target_size,
+                            method=Image.Resampling.LANCZOS,
+                            centering=(0.5, 0.5),
+                        )
+                        fitted.save(temp_dest, format="WEBP", quality=webp_quality, method=4)
+                        resized = True
+                    else:
+                        shutil.copy2(src_file, temp_dest)
+            else:
+                shutil.copy2(src_file, temp_dest)
+            os.replace(temp_dest, dest_file)
+            return resized
+        finally:
+            if temp_dest.exists():
+                temp_dest.unlink(missing_ok=True)
+
     def export_character(
         self,
         roster: str,
@@ -121,16 +161,23 @@ class GenitExporter:
         char_name: str,
         output_dir: Optional[Path] = None,
         custom_export_code: Optional[str] = None,
+        target_size: Optional[Tuple[int, int]] = None,
+        keep_original_filename: bool = False,
+        webp_quality: int = 92,
     ) -> Tuple[int, Path, str]:
         """
-        단일 캐릭터의 생성된 에셋들을 Genit 규격(output_dir/{export_code}/{상황코드}.webp)으로 복사/내보냅니다.
-        내보내기 완료 시 해당 폴더에 [포즈코드 | 파일명 | 한글상황설명] 매핑 시트(_genit_prompt_sheet.md)를 자동 생성합니다.
+        단일 캐릭터의 생성된 에셋들을 Genit 규격으로 복사/내보냅니다.
+        - keep_original_filename=False (기본): output_dir/{export_code}/{상황코드}.webp
+        - keep_original_filename=True: output_dir/{char_prefix}/{원본파일명}.webp (예: aya/aya_000_평상.webp)
+        - target_size=(W, H): 원본이 해당 해상도와 다를 때만 비율 유지 중앙 크롭(Lanczos) 통일 (로컬 원본 무손실 보존)
         반환값: (내보낸 파일 수, 대상 폴더 경로, 결정된 캐릭터 코드)
         """
         from plepa_engine.services.pose_service import default_pose_service
 
-        export_code = self.resolve_export_code(
-            char_name, char_prefix, custom_export_code, roster=roster
+        export_code = (
+            char_prefix
+            if keep_original_filename
+            else self.resolve_export_code(char_name, char_prefix, custom_export_code, roster=roster)
         )
         target_root = output_dir or (ROOT_DIR / "dist" / "genit")
         target_dir = target_root / export_code
@@ -142,6 +189,7 @@ class GenitExporter:
 
         pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
         exported_count = 0
+        resized_count = 0
         sheet_rows = []
 
         for webp_file in sorted(assets_dir.rglob("*.webp")):
@@ -152,15 +200,16 @@ class GenitExporter:
                 continue
 
             genit_code = denormalize_genit_code(internal_code)
-            dest_file = target_dir / f"{genit_code}.webp"
+            dest_name = webp_file.name if keep_original_filename else f"{genit_code}.webp"
+            dest_file = target_dir / dest_name
 
-            temp_dest = target_dir / f".{dest_file.name}.{uuid.uuid4().hex[:8]}.tmp"
-            try:
-                shutil.copy2(webp_file, temp_dest)
-                os.replace(temp_dest, dest_file)
-            finally:
-                if temp_dest.exists():
-                    temp_dest.unlink(missing_ok=True)
+            if self._write_export_image(
+                webp_file,
+                dest_file,
+                target_size=target_size,
+                webp_quality=webp_quality,
+            ):
+                resized_count += 1
             exported_count += 1
 
             # 프롬프트 시트용 정보 추출
@@ -173,6 +222,12 @@ class GenitExporter:
                 desc = p_entry.description or p_entry.section
             sheet_rows.append(f"| `{genit_code}` | `{dest_file.name}` | **{label}** | {desc} |")
 
+        size_note = (
+            f"`{target_size[0]}x{target_size[1]}` 통일 (리사이즈 {resized_count}장 / 원본 무손실 복사 {exported_count - resized_count}장)"
+            if target_size is not None
+            else "원본 해상도 유지 (무손실 복사)"
+        )
+
         # _genit_prompt_sheet.md 마크다운 시트 원자적 생성
         sheet_path = target_dir / "_genit_prompt_sheet.md"
         sheet_content = [
@@ -181,6 +236,7 @@ class GenitExporter:
             f"- **캐릭터 식별자**: `{char_prefix}`",
             f"- **젠잇 코드**: `{export_code}`",
             f"- **내보낸 에셋 수**: {exported_count}개",
+            f"- **해상도 처리**: {size_note}",
             f"- **원본 로스터**: `{roster}`",
             f"",
             f"| 젠잇 포즈코드 | 출력 파일명 | 한글 라벨 | 상황 및 연출 설명 |",
@@ -198,6 +254,41 @@ class GenitExporter:
                 temp_sheet.unlink(missing_ok=True)
 
         return exported_count, target_dir, export_code
+
+    def export_roster(
+        self,
+        roster: str,
+        output_dir: Optional[Path] = None,
+        target_size: Optional[Tuple[int, int]] = None,
+        keep_original_filename: bool = True,
+        webp_quality: int = 92,
+    ) -> Tuple[int, Path, int]:
+        """로스터 내 모든 캐릭터의 에셋을 일괄 Genit 규격으로 내보냅니다.
+
+        반환값: (총 내보낸 파일 수, 출력 루트 경로, 처리된 캐릭터 수)
+        """
+        from plepa_engine.services.character_service import default_character_service
+
+        target_root = output_dir or (ROOT_DIR / "dist" / "genit" / roster)
+        target_root.mkdir(parents=True, exist_ok=True)
+        chars = default_character_service.list_characters(roster=roster)
+
+        total_files = 0
+        exported_chars = 0
+        for _, c_obj, _ in chars:
+            cnt, _, _ = self.export_character(
+                roster=roster,
+                char_prefix=c_obj.prefix,
+                char_name=c_obj.name,
+                output_dir=target_root,
+                target_size=target_size,
+                keep_original_filename=keep_original_filename,
+                webp_quality=webp_quality,
+            )
+            if cnt > 0:
+                total_files += cnt
+                exported_chars += 1
+        return total_files, target_root, exported_chars
 
 
 default_genit_exporter = GenitExporter()

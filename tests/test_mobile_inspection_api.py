@@ -590,6 +590,7 @@ def test_8080_retouch_editor_ui_in_mobile_and_gallery(monkeypatch):
     )
     mob_html = mobile_viewer_mod.generate_mobile_viewer_html(roster="campus")
     assert "triggerRetouch(" in mob_html
+    assert "toggleSortOrder(" in mob_html
     assert "openRetouchEditor(" in mob_html
     assert "loadOriginToCanvas" in mob_html
     assert "/api/assets/retouch" in mob_html

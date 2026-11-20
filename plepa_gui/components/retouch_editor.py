@@ -522,11 +522,20 @@ def build_retouch_editor_script(
 
             const ts = data.timestamp || Date.now();
             const cleanBaseUrl = (retouchState.imageUrl || '').split('?')[0];
+            let decodedBase = cleanBaseUrl;
+            try {{ decodedBase = decodeURIComponent(cleanBaseUrl); }} catch (e) {{}}
             if (cleanBaseUrl) {{
                 document.querySelectorAll('img').forEach(function(img) {{
-                    const curSrc = (img.getAttribute('src') || '').split('?')[0];
-                    if (curSrc === cleanBaseUrl || curSrc.endsWith('/' + retouchState.relPath)) {{
-                        img.src = cleanBaseUrl + '?t=' + ts;
+                    const rawAttr = (img.getAttribute('src') || img.currentSrc || '').split('?')[0];
+                    if (!rawAttr) return;
+                    let decodedCur = rawAttr;
+                    try {{ decodedCur = decodeURIComponent(rawAttr); }} catch (e) {{}}
+                    if (
+                        rawAttr === cleanBaseUrl
+                        || decodedCur === decodedBase
+                        || decodedCur.endsWith('/' + retouchState.relPath)
+                    ) {{
+                        img.src = rawAttr + '?t=' + ts;
                     }}
                 }});
             }}

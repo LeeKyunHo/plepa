@@ -179,7 +179,9 @@ def render_header(current_page: str = "") -> None:
                 status = global_job_manager.get_status()
                 if status["is_running"]:
                     pct = int(status["percentage"] * 100)
-                    job_badge.set_text(f"⚡ 생성 진행 중: {status['current']}/{status['total']} ({pct}%)")
+                    q_len = status.get("queue_length", 0)
+                    q_txt = f" · 대기 {q_len}" if q_len > 0 else ""
+                    job_badge.set_text(f"⚡ 생성 진행 중: {status['current']}/{status['total']} ({pct}%){q_txt}")
                     job_badge.props("color=amber-500 text-color=slate-950 font-bold")
                     job_badge.set_visibility(True)
                 else:

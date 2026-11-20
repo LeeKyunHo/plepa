@@ -29,6 +29,7 @@ from plepa_engine.services.generation_service import (
     default_generation_service,
 )
 from plepa_engine.services.genit_exporter import default_genit_exporter
+from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
 from plepa_gui.components.header import get_active_roster, render_header
@@ -70,6 +71,65 @@ def detect_best_default_roster() -> str:
     return best_roster
 
 
+def _pose_sort_key(code: str) -> tuple[int, int, str]:
+    try:
+        return (0, int(code), "")
+    except ValueError:
+        return (1, 0, code)
+
+
+def get_roster_gallery_pose_scope(roster: str) -> Dict[str, Any]:
+    """
+    현재 로스터에서 실제 이미지가 1장 이상 생성된 포즈 코드와
+    해당 로스터의 성별·보유 에셋에 부합하는 '포즈 범위' 드롭다운 옵션을 반환합니다.
+    """
+    chars = default_character_service.list_characters(roster=roster)
+    char_counts: Dict[str, int] = {}
+    existing_codes_set: set[str] = set()
+    char_genders: set[str] = set()
+
+    for _, c, _ in chars:
+        assets = default_asset_service.list_character_assets(c.prefix, roster)
+        char_counts[c.prefix] = len(assets)
+        char_genders.add((getattr(c, "gender", "") or "female").strip().lower())
+        for a in assets:
+            code = str(a.get("code") or "").strip()
+            if code:
+                existing_codes_set.add(code)
+
+    existing_codes = sorted(existing_codes_set, key=_pose_sort_key)
+    pose_sets = default_pose_service.load_pose_sets()
+    has_otokonoko = "otokonoko" in char_genders
+    otokonoko_only = char_genders == {"otokonoko"}
+    roster_l = (roster or "").strip().lower()
+
+    set_options: Dict[str, str] = {"all": f"전체 보유 포즈 ({len(existing_codes)}종)"}
+    matched_codes_by_set: Dict[str, List[str]] = {"all": list(existing_codes)}
+
+    for s in pose_sets:
+        sid = (s.id or "").lower()
+        if not has_otokonoko and (sid.startswith("oto_") or "otokonoko" in sid or sid == "unified_152"):
+            continue
+        if otokonoko_only and sid in ("h_scenes_52", "unified_100", "campus_108", "unified_152"):
+            continue
+        if sid.startswith("wuxia_") and roster_l not in ("murim", "wuxia"):
+            continue
+        if sid.startswith("spy_") and roster_l != "spy":
+            continue
+        matched = [c for c in s.codes if c in existing_codes_set]
+        if not matched:
+            continue
+        set_options[s.id] = f"{s.name} ({len(matched)}종)"
+        matched_codes_by_set[s.id] = matched
+
+    return {
+        "char_counts": char_counts,
+        "existing_codes": existing_codes,
+        "set_options": set_options,
+        "matched_codes_by_set": matched_codes_by_set,
+    }
+
+
 def render_gallery_page() -> None:
     """통합 에셋 갤러리 페이지 렌더링."""
     render_header("/gallery")
@@ -80,7 +140,7 @@ def render_gallery_page() -> None:
         return default_pose_service.load_pose_db(engine="sdxl", roster=r)
 
     all_poses = get_roster_poses(default_roster)
-    pose_sets = default_pose_service.load_pose_sets()
+    roster_scope = get_roster_gallery_pose_scope(default_roster)
 
     available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
     if not available_rosters:
@@ -94,15 +154,36 @@ def render_gallery_page() -> None:
         "roster": default_roster,
         "single_char": "",
         "selected_chars": [],
-        "selected_codes": sorted(all_poses.keys()),
+        "selected_codes": list(roster_scope["existing_codes"]),
         "pose_set": "all",
         "misc_filter": "all",
+        "matrix_sort": "code_asc",    # 'code_asc' (포즈 번호순), 'mtime_desc' (최근 생성/수정순)
         "single_sort": "mtime_desc",  # 'mtime_desc' (최신 생성순), 'code_asc' (포즈 번호순)
         "censor_style": conf.get("censor_style", "white_silhouette"),
         "censor_targets": conf.get("censor_targets", "penis"),
     }
 
     active_lightbox_retouch_cb = {"fn": None}
+    image_widgets_by_rel: Dict[str, Any] = {}
+    retouched_versions: Dict[str, int] = {}
+
+    def _asset_web_url(rel_path: str, file_path: Optional[Path] = None, mtime: Optional[float] = None) -> str:
+        ver = retouched_versions.get(rel_path)
+        if ver is None:
+            if mtime is not None:
+                ver = int(mtime * 1000)
+            elif file_path is not None:
+                try:
+                    ver = int(file_path.stat().st_mtime * 1000)
+                except OSError:
+                    ver = None
+        return f"/projects_static/{rel_path}?t={ver}" if ver else f"/projects_static/{rel_path}"
+
+    def _refresh_single_thumbnail(rel_path: str, ts_val: int) -> None:
+        retouched_versions[rel_path] = ts_val
+        widget = image_widgets_by_rel.get(rel_path)
+        if widget is not None:
+            widget.set_source(f"/projects_static/{rel_path}?t={ts_val}")
 
     def _update_censor_setting(field: str, value: str) -> None:
         state[field] = value
@@ -193,6 +274,9 @@ def render_gallery_page() -> None:
                     ui.button("⚡ 누락 채우기", icon="bolt", on_click=quick_fill_missing).props(
                         "unelevated color=amber-500 text-color=slate-950 dense size=sm font-bold"
                     ).tooltip("현재 로스터에서 비어있는 모든 포즈를 찾아 자동으로 일괄 생성합니다.")
+                    queue_drawer_btn = ui.button("📋 리롤·대기열 (0)", icon="history", on_click=lambda: toggle_queue_panel()).props(
+                        "outline color=sky-400 dense size=sm font-bold"
+                    ).tooltip("리롤 대기열 상태와 새로 완성된 이미지 목록을 확인합니다.")
                     ui.button("📊 에셋 전수 감사", icon="assessment", on_click=lambda: open_audit_dialog()).props(
                         "unelevated color=emerald-600 text-color=white dense size=sm font-bold"
                     ).tooltip("로스터 캐릭터별 에셋 완비율과 누락 포즈를 1초 만에 전수 감사하고 누락분을 즉시 생성합니다.")
@@ -215,8 +299,193 @@ def render_gallery_page() -> None:
             # 기타/비포즈 에셋 전용 필터 컨트롤
             misc_controls = ui.column().classes("w-full gap-3 pt-3 border-t border-slate-800")
 
+        # 실시간 리롤 대기열 & 새로 완성된 이미지 기록 패널 (토글식)
+        queue_panel_state = {
+            "open": False,
+            "last_sig": None,
+            "synced_done_keys": set(),
+        }
+        queue_panel = ui.card().classes("w-full bg-slate-900/95 border border-sky-700/50 p-4 rounded-xl shadow-lg")
+        queue_panel.set_visibility(False)
+
         # 메인 콘텐츠 뷰어 컨테이너
         content_container = ui.card().classes("w-full bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg overflow-x-auto min-h-[500px]")
+
+    def toggle_queue_panel() -> None:
+        queue_panel_state["open"] = not queue_panel_state["open"]
+        queue_panel.set_visibility(queue_panel_state["open"])
+        sync_queue_panel(force=True)
+
+    def _clear_reroll_history() -> None:
+        global_job_manager.clear_history()
+        queue_panel_state["synced_done_keys"].clear()
+        sync_queue_panel(force=True)
+        ui.notify("🧹 완료된 작업 기록을 비웠습니다.", type="info")
+
+    def sync_queue_panel(force: bool = False) -> None:
+        status = global_job_manager.get_status()
+        active_job = status.get("active_job")
+        queued_jobs = status.get("queued_jobs") or []
+        completed_items = status.get("completed_items") or []
+        job_history = status.get("job_history") or []
+        is_running = bool(status.get("is_running"))
+        q_len = len(queued_jobs)
+        done_len = len(completed_items)
+
+        # 새로 완성된 이미지가 생기면 배경 썸네일만 1회 갱신
+        for item in completed_items:
+            item_key = (item.get("job_id"), item.get("code"), item.get("filename"), item.get("timestamp"))
+            if item_key in queue_panel_state["synced_done_keys"]:
+                continue
+            queue_panel_state["synced_done_keys"].add(item_key)
+            img_str = item.get("image_path") or ""
+            if img_str:
+                try:
+                    rel_p = Path(img_str).relative_to(PROJECTS_DIR).as_posix()
+                    _refresh_single_thumbnail(rel_p, int(time.time()))
+                except Exception:
+                    pass
+
+        # 상단 버튼 라벨·색상 최신화 (이전 상태의 outline/unelevated/text-color 충돌 제거)
+        if is_running:
+            queue_drawer_btn.set_text(
+                f"⏳ 진행 1 · 대기 {q_len} · 완료 {done_len}" if q_len > 0 else f"⚡ 진행 1 · 완료 {done_len}"
+            )
+            queue_drawer_btn.props(
+                remove="outline",
+                add="unelevated color=sky-400 text-color=slate-950 dense size=sm font-bold",
+            )
+        elif done_len > 0:
+            queue_drawer_btn.set_text(f"✅ 새 완성 {done_len}건 확인")
+            queue_drawer_btn.props(
+                remove="outline",
+                add="unelevated color=teal-500 text-color=white dense size=sm font-bold",
+            )
+        else:
+            queue_drawer_btn.set_text("📋 리롤·대기열 (0)")
+            queue_drawer_btn.props(
+                remove="unelevated text-color",
+                add="outline color=sky-400 dense size=sm font-bold",
+            )
+
+        sig = (
+            queue_panel_state["open"],
+            is_running,
+            q_len,
+            status.get("current", 0),
+            status.get("total", 0),
+            done_len,
+            len(job_history),
+            active_job.get("job_id") if active_job else None,
+            job_history[0].get("status") if job_history else None,
+        )
+        if not force and sig == queue_panel_state["last_sig"]:
+            return
+        queue_panel_state["last_sig"] = sig
+
+        if not queue_panel_state["open"]:
+            return
+
+        queue_panel.clear()
+        with queue_panel:
+            with ui.row().classes("w-full items-center justify-between mb-3 pb-2 border-b border-slate-800 flex-wrap gap-2"):
+                with ui.row().classes("items-center gap-2 flex-wrap"):
+                    ui.icon("history", size="22px").classes("text-sky-400")
+                    ui.label("📋 리롤 대기열 & 새로 완성된 이미지 기록").classes("text-base font-bold text-slate-100")
+                    if is_running:
+                        ui.badge(f"진행 중 ({status.get('current', 0)}/{status.get('total', 0)})", color="amber-600").props("dense text-xs")
+                    if q_len > 0:
+                        ui.badge(f"대기 {q_len}건", color="sky-700").props("dense text-xs")
+                    ui.badge(f"완료 {done_len}건", color="emerald-700").props("dense text-xs")
+
+                with ui.row().classes("items-center gap-2"):
+                    if is_running or q_len > 0:
+                        ui.button("🛑 대기열 중단", on_click=lambda: (global_job_manager.cancel_job(), sync_queue_panel(force=True))).props(
+                            "outline color=rose-400 dense size=xs"
+                        )
+                    if done_len > 0 or job_history:
+                        ui.button("🧹 기록 비우기", on_click=_clear_reroll_history).props(
+                            "flat color=slate-300 dense size=xs"
+                        )
+                    ui.button(icon="close", on_click=toggle_queue_panel).props("flat round dense size=xs color=slate-400")
+
+            # 1. 진행 중 + 대기열 표시
+            if active_job or queued_jobs:
+                with ui.row().classes("w-full items-center gap-2 flex-wrap mb-3 p-2.5 bg-slate-950/70 rounded-lg border border-slate-800"):
+                    if active_job:
+                        ui.chip(
+                            f"⚡ 실행 중: {active_job.get('label', '')} ({active_job.get('started_at', '')})",
+                            color="amber-700",
+                            text_color="white",
+                        ).props("dense text-xs font-bold")
+                    for idx, qj in enumerate(queued_jobs, start=1):
+                        ui.chip(
+                            f"⏳ 대기 #{idx}: {qj.get('label', '')} ({qj.get('queued_at', '')})",
+                            color="slate-800",
+                            text_color="slate-200",
+                        ).props("dense text-xs")
+
+            # 2. 실패/취소 작업 이력 요약 (있을 때만)
+            failed_jobs = [j for j in job_history if j.get("status") in ("failed", "cancelled")]
+            if failed_jobs:
+                with ui.row().classes("w-full items-center gap-2 flex-wrap mb-3"):
+                    for fj in failed_jobs[:8]:
+                        tag_lbl = "✖ 실패" if fj.get("status") == "failed" else "⏹ 취소"
+                        ui.badge(
+                            f"{tag_lbl}: {fj.get('label', '')} ({fj.get('finished_at', '')})",
+                            color="rose-800" if fj.get("status") == "failed" else "slate-700",
+                        ).props("dense text-[11px]").tooltip(fj.get("error") or "")
+
+            # 3. 새로 완성된 이미지 목록 (클릭 시 바로 라이트박스 검수)
+            if not completed_items:
+                ui.label("아직 리롤/생성으로 새로 완성된 이미지 기록이 없습니다. 이미지를 둘러보며 리롤을 걸면 여기에 차곡차곡 쌓입니다.").classes(
+                    "text-xs text-slate-400 py-2"
+                )
+            else:
+                completed_paths: List[Path] = []
+                for c_item in completed_items:
+                    p_str = c_item.get("image_path") or ""
+                    if p_str:
+                        p_obj = Path(p_str)
+                        if p_obj.is_file():
+                            completed_paths.append(p_obj)
+
+                with ui.row().classes("w-full gap-3 overflow-x-auto pb-1"):
+                    for c_item in completed_items[:30]:
+                        p_str = c_item.get("image_path") or ""
+                        p_obj = Path(p_str) if p_str else None
+                        has_file = bool(p_obj and p_obj.is_file())
+                        rel_p = ""
+                        web_u = ""
+                        if has_file and p_obj is not None:
+                            try:
+                                rel_p = p_obj.relative_to(PROJECTS_DIR).as_posix()
+                                web_u = _asset_web_url(rel_p, file_path=p_obj)
+                            except Exception:
+                                has_file = False
+
+                        with ui.card().classes(
+                            "w-36 shrink-0 bg-slate-800/80 border border-slate-700/70 p-2 rounded-lg hover:border-emerald-400 transition-all"
+                        ):
+                            if has_file and web_u and p_obj is not None:
+                                idx_in_list = completed_paths.index(p_obj) if p_obj in completed_paths else 0
+                                ui.image(web_u).classes(
+                                    "w-full h-40 object-cover rounded cursor-pointer"
+                                ).on(
+                                    "click",
+                                    lambda u=web_u, fp=p_obj, paths=completed_paths, idx=idx_in_list: open_lightbox(u, fp, paths, idx),
+                                )
+                            ui.label(f"[{c_item.get('char', '')}] #{c_item.get('code', '')}").classes(
+                                "text-[11px] font-mono font-bold text-amber-300 mt-1 truncate w-full"
+                            )
+                            ui.label(str(c_item.get("label") or c_item.get("filename") or "")).classes(
+                                "text-xs font-bold text-slate-100 truncate w-full"
+                            )
+                            with ui.row().classes("w-full items-center justify-between text-[10px] text-slate-400 font-mono"):
+                                ui.label(f"{c_item.get('duration_sec', 0)}s")
+                                ui.label(str(c_item.get("timestamp") or ""))
+
+    ui.timer(1.5, sync_queue_panel)
 
     def switch_view_mode(mode: str):
         state["view_mode"] = mode
@@ -225,11 +494,13 @@ def render_gallery_page() -> None:
 
     def on_roster_changed(new_r: str):
         state["roster"] = new_r
-        nonlocal all_poses
+        nonlocal all_poses, roster_scope
         all_poses = get_roster_poses(new_r)
+        roster_scope = get_roster_gallery_pose_scope(new_r)
         state["selected_chars"] = []
         state["single_char"] = ""
-        state["selected_codes"] = sorted(all_poses.keys())
+        state["pose_set"] = "all"
+        state["selected_codes"] = list(roster_scope["existing_codes"])
         update_control_bars()
         render_content()
 
@@ -243,64 +514,136 @@ def render_gallery_page() -> None:
         _safe_notify(f"📂 PC 파일 탐색기에서 폴더를 열었습니다: {target.name}", type="positive")
 
     def open_genit_export_dialog():
-        """Genit 규격({{url}}캐릭터코드/상황코드.webp) 내보내기 모달 다이얼로그."""
+        """Genit 규격 내보내기 모달 다이얼로그 (해상도 통일 + 전체 일괄 내보내기 지원)."""
         chars = default_character_service.list_characters(roster=state["roster"])
         if not chars:
             ui.notify(f"로스터 '{state['roster']}'에 캐릭터가 없습니다.", type="warning")
             return
 
-        with ui.dialog() as dlg, ui.card().classes("w-[500px] p-6 bg-slate-900 border border-indigo-700/60 rounded-xl shadow-2xl"):
+        with ui.dialog() as dlg, ui.card().classes("w-[540px] max-w-[95vw] p-6 bg-slate-900 border border-indigo-700/60 rounded-xl shadow-2xl"):
             ui.label("📦 Genit 상용 규격 에셋 내보내기").classes("text-lg font-bold text-indigo-300 mb-1")
-            ui.label("규격: {{url}}캐릭터코드/상황코드.webp (예: dist/genit/AA/A1.webp)").classes("text-xs text-slate-400 mb-4")
+            ui.label("로컬 원본 에셋은 100% 무손실 보존하고, dist/genit/ 폴더로 규격 변환·해상도 통일하여 내보냅니다.").classes("text-xs text-slate-400 mb-4")
 
-            char_opts = {c.prefix: f"{c.name} ({c.prefix})" for _, c, _ in chars}
-            init_char = list(char_opts.keys())[0]
-            selected_char_prefix = {"val": init_char}
+            char_opts = {"__ALL__": f"🌟 로스터 전체 일괄 내보내기 ({len(chars)}명)"}
+            for _, c, _ in chars:
+                char_opts[c.prefix] = f"{c.name} ({c.prefix})"
+            selected_char_prefix = {"val": "__ALL__"}
 
-            init_char_obj = next(c for _, c, _ in chars if c.prefix == init_char)
-            init_export_code = default_genit_exporter.resolve_export_code(init_char_obj.name, init_char_obj.prefix)
+            init_char_obj = chars[0][1]
+            init_export_code = default_genit_exporter.resolve_export_code(
+                init_char_obj.name, init_char_obj.prefix, roster=state["roster"]
+            )
             code_input_state = {"val": init_export_code}
+            naming_state = {"val": "original_name"}
+            size_state = {"val": "1024x1536"}
 
             ui.label("1. 대상 캐릭터 선택").classes("text-xs font-bold text-amber-400 mb-1")
+
+            def _sync_code_visibility():
+                show_legacy_code = (
+                    selected_char_prefix["val"] != "__ALL__"
+                    and naming_state["val"] == "legacy_code"
+                )
+                code_box.set_visibility(show_legacy_code)
+
             def on_dialog_char_change(prefix_val):
                 selected_char_prefix["val"] = prefix_val
-                c_obj = next(c for _, c, _ in chars if c.prefix == prefix_val)
-                new_code = default_genit_exporter.resolve_export_code(c_obj.name, c_obj.prefix)
-                code_input.value = new_code
-                code_input_state["val"] = new_code
+                if prefix_val != "__ALL__":
+                    c_obj = next(c for _, c, _ in chars if c.prefix == prefix_val)
+                    new_code = default_genit_exporter.resolve_export_code(
+                        c_obj.name, c_obj.prefix, roster=state["roster"]
+                    )
+                    code_input.value = new_code
+                    code_input_state["val"] = new_code
+                _sync_code_visibility()
 
             ui.select(
                 options=char_opts,
-                value=init_char,
+                value="__ALL__",
                 on_change=lambda e: on_dialog_char_change(e.value),
             ).props("dense outlined dark options-dense").classes("w-full mb-3")
 
-            ui.label("2. 캐릭터 코드 (2글자 대문자)").classes("text-xs font-bold text-amber-400 mb-1")
-            ui.label("기본 작가 프리셋: 한지아(AA), 서아윤(BB), 정다솜(CC), 차민희(DD), 이수연(EE), 김지아(FF), 윤서희(GG), 박채은(HH)").classes("text-[11px] text-slate-400 mb-1")
-            code_input = ui.input(
-                value=init_export_code,
-                on_change=lambda e: code_input_state.update({"val": e.value.upper()})
-            ).props("dense outlined dark").classes("w-full mb-6 font-mono font-bold")
+            ui.label("2. 경로·파일명 규격").classes("text-xs font-bold text-amber-400 mb-1")
+            ui.select(
+                options={
+                    "original_name": "✨ 폴더/원본파일명 유지 (예: aya/aya_000_평상.webp — v2.2 권장)",
+                    "legacy_code": "레거시 2글자 코드 (예: AA/A0.webp)",
+                },
+                value="original_name",
+                on_change=lambda e: (naming_state.update({"val": e.value}), _sync_code_visibility()),
+            ).props("dense outlined dark options-dense").classes("w-full mb-3")
+
+            code_box = ui.column().classes("w-full mb-3 gap-1")
+            with code_box:
+                ui.label("2-1. 캐릭터 코드 (2글자 대문자)").classes("text-xs font-bold text-amber-400")
+                code_input = ui.input(
+                    value=init_export_code,
+                    on_change=lambda e: code_input_state.update({"val": e.value.upper()}),
+                ).props("dense outlined dark").classes("w-full font-mono font-bold")
+            code_box.set_visibility(False)
+
+            ui.label("3. 출력 해상도 통일").classes("text-xs font-bold text-amber-400 mb-1")
+            ui.select(
+                options={
+                    "1024x1536": "✨ 1024×1536 통일 (권장 · 2:3 고해상도, 비율유지 중앙크롭)",
+                    "832x1216": "832×1216 통일 (SDXL 세로 표준, 비율유지 중앙크롭)",
+                    "original": "원본 해상도 그대로 (무손실 복사)",
+                },
+                value="1024x1536",
+                on_change=lambda e: size_state.update({"val": e.value}),
+            ).props("dense outlined dark options-dense").classes("w-full mb-6")
 
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("취소", on_click=dlg.close).props("flat color=slate-400")
-                def do_export():
+
+                async def do_export():
                     c_prefix = selected_char_prefix["val"]
-                    c_obj = next(c for _, c, _ in chars if c.prefix == c_prefix)
-                    c_code = code_input_state["val"].strip().upper() or "AA"
+                    keep_orig = naming_state["val"] == "original_name"
+                    size_map = {
+                        "1024x1536": (1024, 1536),
+                        "832x1216": (832, 1216),
+                        "original": None,
+                    }
+                    target_sz = size_map.get(size_state["val"])
+                    size_label = size_state["val"] if target_sz else "원본"
                     dlg.close()
 
-                    count, out_path, final_code = default_genit_exporter.export_character(
-                        roster=state["roster"],
-                        char_prefix=c_prefix,
-                        char_name=c_obj.name,
-                        custom_export_code=c_code,
-                    )
-                    if count > 0:
-                        ui.notify(f"🎉 {c_obj.name} ({final_code}) 에셋 {count}개 Genit 변환 완료!", type="positive")
-                        open_in_explorer(out_path)
+                    ui.notify(f"📦 Genit 내보내기 진행 중 ({size_label})...", type="info")
+                    if c_prefix == "__ALL__":
+                        total_cnt, out_root, char_cnt = await run.io_bound(
+                            default_genit_exporter.export_roster,
+                            roster=state["roster"],
+                            target_size=target_sz,
+                            keep_original_filename=keep_orig,
+                        )
+                        if total_cnt > 0:
+                            ui.notify(
+                                f"🎉 '{state['roster']}' {char_cnt}명 총 {total_cnt}장 Genit 내보내기 완료! ({size_label})",
+                                type="positive",
+                            )
+                            open_in_explorer(out_root)
+                        else:
+                            ui.notify(f"⚠️ 내보낼 수 있는 에셋이 없습니다: {state['roster']}", type="warning")
                     else:
-                        ui.notify(f"⚠️ 내보낼 수 있는 에셋이 없습니다: {c_prefix}", type="warning")
+                        c_obj = next(c for _, c, _ in chars if c.prefix == c_prefix)
+                        c_code = code_input_state["val"].strip().upper() or "AA"
+                        count, out_path, final_code = await run.io_bound(
+                            default_genit_exporter.export_character,
+                            roster=state["roster"],
+                            char_prefix=c_prefix,
+                            char_name=c_obj.name,
+                            custom_export_code=c_code,
+                            target_size=target_sz,
+                            keep_original_filename=keep_orig,
+                        )
+                        if count > 0:
+                            ui.notify(
+                                f"🎉 {c_obj.name} ({final_code}) 에셋 {count}장 Genit 내보내기 완료! ({size_label})",
+                                type="positive",
+                            )
+                            open_in_explorer(out_path)
+                        else:
+                            ui.notify(f"⚠️ 내보낼 수 있는 에셋이 없습니다: {c_prefix}", type="warning")
 
                 ui.button("내보내기 실행", icon="check", on_click=do_export).props("unelevated color=indigo-500 font-bold")
         dlg.open()
@@ -390,8 +733,14 @@ def render_gallery_page() -> None:
         single_controls.clear()
         misc_controls.clear()
 
-        # 현재 로스터의 캐릭터 및 에셋 통계 조회
-        char_asset_counts = get_character_asset_counts(state["roster"])
+        # 현재 로스터의 캐릭터 및 보유 포즈 범위 동적 조회
+        nonlocal roster_scope
+        roster_scope = get_roster_gallery_pose_scope(state["roster"])
+        char_asset_counts = roster_scope["char_counts"]
+        set_opts = roster_scope["set_options"]
+        if state["pose_set"] not in set_opts:
+            state["pose_set"] = "all"
+            state["selected_codes"] = list(roster_scope["existing_codes"])
 
         if state["view_mode"] == "matrix":
             matrix_controls.set_visibility(True)
@@ -445,16 +794,23 @@ def render_gallery_page() -> None:
                         "flat dense size=xs color=slate-500"
                     )
 
-                    # 포즈 범위 선택 셀렉터
+                    # 포즈 범위 선택 셀렉터 (현재 로스터 보유 에셋 기준 동적 필터링)
                     ui.label("포즈 범위:").classes("text-xs text-slate-400 font-semibold ml-4")
-                    set_opts = {"all": f"전체 포즈 ({len(all_poses)}종)"}
-                    for s in pose_sets:
-                        set_opts[s.id] = f"{s.name} ({len(s.codes)}종)"
                     ui.select(
                         options=set_opts,
                         value=state["pose_set"],
                         on_change=lambda e: on_set_changed(e.value)
                     ).props("dense outlined dark options-dense").classes("w-56 text-xs")
+
+                    ui.label("정렬:").classes("text-xs text-slate-400 font-semibold ml-2")
+                    ui.toggle(
+                        {
+                            "code_asc": "🔢 포즈 번호순",
+                            "mtime_desc": "🕒 최근 생성순 (NEW 먼저)",
+                        },
+                        value=state.get("matrix_sort", "code_asc"),
+                        on_change=lambda e: (state.update({"matrix_sort": e.value}), render_content()),
+                    ).props("dense dark").classes("text-xs")
 
                 # 2. 개별 캐릭터 칩 목록 (보유 장수 뱃지 포함)
                 with ui.row().classes("items-center gap-2 flex-wrap mt-1"):
@@ -587,7 +943,7 @@ def render_gallery_page() -> None:
             "🌸 네쌍둥이 4인 (전체 포즈) 선택 완료!",
             quad_prefixes,
             pose_set="all",
-            selected_codes=sorted(all_poses.keys()),
+            selected_codes=list(roster_scope["existing_codes"]),
         )
 
     def select_ykn_braid_preset():
@@ -628,15 +984,15 @@ def render_gallery_page() -> None:
 
     def on_set_changed(set_id: str):
         state["pose_set"] = set_id
-        if set_id == "all":
-            state["selected_codes"] = sorted(all_poses.keys())
+        matched_map = roster_scope.get("matched_codes_by_set", {})
+        if set_id in matched_map:
+            state["selected_codes"] = list(matched_map[set_id])
         else:
-            s = next((item for item in pose_sets if item.id == set_id), None)
-            if s:
-                state["selected_codes"] = s.codes
+            state["selected_codes"] = list(roster_scope["existing_codes"])
         render_content()
 
     def render_content():
+        image_widgets_by_rel.clear()
         content_container.clear()
         if state["view_mode"] == "matrix":
             render_matrix_view()
@@ -677,15 +1033,17 @@ def render_gallery_page() -> None:
                 for idx, a in enumerate(assets):
                     img_path: Path = a["path"]
                     rel_path = img_path.relative_to(PROJECTS_DIR).as_posix()
-                    web_url = f"/projects_static/{rel_path}"
+                    item_mtime = a.get("mtime")
+                    web_url = _asset_web_url(rel_path, file_path=img_path, mtime=item_mtime)
                     code = a["code"]
                     pose_obj = all_poses.get(code)
                     label_str = pose_obj.label if pose_obj else a["label"]
 
                     with ui.card().classes("bg-slate-800/80 border border-slate-700/60 p-2 rounded-lg hover:border-amber-400 transition-all"):
-                        ui.image(web_url).classes(
+                        img_w = ui.image(web_url).classes(
                             "w-full h-72 object-cover rounded shadow cursor-pointer hover:scale-[1.02] transition-transform"
-                        ).on("click", lambda u=web_url, p=img_path, i=idx: open_lightbox(u, p, all_single_paths, i))
+                        ).on("click", lambda p=img_path, rp=rel_path, mt=item_mtime, i=idx: open_lightbox(_asset_web_url(rp, file_path=p, mtime=mt), p, all_single_paths, i))
+                        image_widgets_by_rel[rel_path] = img_w
 
                         with ui.row().classes("w-full items-center justify-between mt-2 px-1"):
                             with ui.column().classes("gap-0"):
@@ -717,6 +1075,36 @@ def render_gallery_page() -> None:
             return
 
         matrix = default_asset_service.get_matrix_map(prefixes, codes, roster=state["roster"])
+        codes = [
+            c for c in codes
+            if any(matrix.get(p, {}).get(c) and matrix[p][c].exists() for p in prefixes)
+        ]
+        if not codes:
+            with content_container:
+                with ui.column().classes("w-full py-12 items-center justify-center text-slate-400"):
+                    ui.icon("photo_library", size="40px").classes("text-slate-500 mb-2")
+                    ui.label("선택한 캐릭터와 포즈 범위에 표시할 생성된 이미지가 없습니다.").classes("text-sm font-semibold")
+            return
+
+        code_mtime_map: Dict[str, float] = {}
+        for c in codes:
+            best_m = 0.0
+            for p in prefixes:
+                mp = matrix.get(p, {}).get(c)
+                if mp and mp.exists():
+                    try:
+                        m = mp.stat().st_mtime
+                        if m > best_m:
+                            best_m = m
+                    except OSError:
+                        pass
+            code_mtime_map[c] = best_m
+
+        sort_mode = state.get("matrix_sort", "code_asc")
+        if sort_mode == "mtime_desc":
+            codes = sorted(codes, key=lambda c: (-code_mtime_map.get(c, 0.0), _pose_sort_key(c)))
+        else:
+            codes = sorted(codes, key=_pose_sort_key)
 
         with content_container:
             with ui.element("table").classes("w-full border-collapse text-left"):
@@ -726,13 +1114,19 @@ def render_gallery_page() -> None:
                         ui.element("th").classes("p-3 text-xs font-bold text-amber-400 w-36").add_slot(
                             "default", "캐릭터 / 포즈"
                         )
+                        now_ts = time.time()
                         for code in codes:
                             pose_obj = all_poses.get(code)
                             label_str = pose_obj.label if pose_obj else code
+                            c_mtime = code_mtime_map.get(code, 0.0)
                             with ui.element("th").classes("p-3 text-xs font-semibold text-slate-300 text-center min-w-[130px]"):
                                 with ui.column().classes("items-center gap-0"):
                                     ui.label(f"#{code}").classes("text-[10px] text-slate-400 font-mono")
                                     ui.label(label_str).classes("text-xs font-bold")
+                                    if sort_mode == "mtime_desc" and c_mtime > 0:
+                                        m_lbl = datetime.fromtimestamp(c_mtime).strftime("%m-%d %H:%M")
+                                        lbl_cls = "text-[10px] font-mono text-amber-300 font-bold" if (now_ts - c_mtime) < 3600 else "text-[10px] font-mono text-slate-500"
+                                        ui.label(m_lbl).classes(lbl_cls)
 
                 # Body: 행=캐릭터, 열=포즈
                 with ui.element("tbody"):
@@ -757,13 +1151,14 @@ def render_gallery_page() -> None:
                                 with ui.element("td").classes("p-2 text-center align-middle border-r border-slate-800/40"):
                                     if img_path and img_path.exists():
                                         rel_path = img_path.relative_to(PROJECTS_DIR).as_posix()
-                                        web_url = f"/projects_static/{rel_path}"
+                                        web_url = _asset_web_url(rel_path, file_path=img_path)
                                         c_idx = row_paths.index(img_path) if img_path in row_paths else 0
 
                                         with ui.column().classes("items-center justify-center gap-1 mx-auto"):
-                                            ui.image(web_url).classes(
+                                            img_w = ui.image(web_url).classes(
                                                 "w-28 h-40 object-cover rounded shadow cursor-pointer border border-slate-700 hover:border-amber-400 transition-all hover:scale-105"
-                                            ).on("click", lambda u=web_url, p=img_path, paths=row_paths, idx=c_idx: open_lightbox(u, p, paths, idx))
+                                            ).on("click", lambda p=img_path, rp=rel_path, paths=row_paths, idx=c_idx: open_lightbox(_asset_web_url(rp, file_path=p), p, paths, idx))
+                                            image_widgets_by_rel[rel_path] = img_w
                                     else:
                                         with ui.column().classes("items-center justify-center w-28 h-40 bg-slate-800/30 rounded border border-dashed border-slate-700/60 text-slate-600"):
                                             ui.icon("image_not_supported", size="24px")
@@ -934,17 +1329,20 @@ def render_gallery_page() -> None:
                                         callback_holder["error"] = err
                                         done_event.set()
 
+                                    target_item_path = items[nav_state["idx"]] if items else p
                                     started, queue_pos = global_job_manager.enqueue_job(
                                         r_params,
                                         label=f"갤러리 리롤 {prefix_val}:{code_val}",
                                         on_complete=_on_reroll_done,
                                     )
+                                    sync_queue_panel(force=True)
                                     if started:
                                         ui.notify(f"🔄 #{code_val} {'골든 시드 고정' if reuse_seed else '새 시드'} 리롤 시작...", type="info")
                                     else:
                                         ui.notify(f"⏳ #{code_val} 리롤이 대기열 #{queue_pos}에 등록되었습니다.", type="info")
 
                                     await run.io_bound(done_event.wait)
+                                    sync_queue_panel(force=True)
                                     if callback_holder["error"] is not None:
                                         ui.notify(f"⚠️ 리롤 중단/오류: {callback_holder['error']}", type="warning")
                                         return
@@ -952,16 +1350,24 @@ def render_gallery_page() -> None:
                                     results = callback_holder["results"]
                                     if results and results[0].success:
                                         res_img = results[0].image_path
-                                        curr["path"] = res_img
                                         rel = res_img.relative_to(PROJECTS_DIR).as_posix()
-                                        curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
-                                        ui.notify(f"🎉 #{code_val} 리롤 완료!", type="positive")
-                                        refresh_header()
-                                        refresh_img()
-                                        refresh_meta()
-                                        render_content()
+                                        ts_val = int(time.time())
+                                        if rel in image_widgets_by_rel:
+                                            _refresh_single_thumbnail(rel, ts_val)
+                                        else:
+                                            retouched_versions[rel] = ts_val
+                                        ui.notify(f"🎉 [{prefix_val}] #{code_val} 리롤 완료!", type="positive")
+
+                                        # 사용자가 여전히 같은 이미지를 보고 있는 경우에만 라이트박스 즉시 갱신
+                                        still_same = bool(dialog.value and items and items[nav_state["idx"]] == target_item_path)
+                                        if still_same:
+                                            curr["path"] = res_img
+                                            curr["url"] = f"/projects_static/{rel}?t={ts_val}"
+                                            refresh_header()
+                                            refresh_img()
+                                            refresh_meta()
                                     else:
-                                        ui.notify("❌ 리롤 생성 실패", type="negative")
+                                        ui.notify(f"❌ [{prefix_val}] #{code_val} 리롤 생성 실패", type="negative")
                                 except Exception as ex:
                                     ui.notify(f"❌ 리롤 오류: {ex}", type="negative")
 
@@ -1013,10 +1419,10 @@ def render_gallery_page() -> None:
                             showing_origin["val"] = False
                             curr["path"] = main_asset_p
                             curr["url"] = f"/projects_static/{urllib.parse.quote(rel_main_asset, safe='/')}?t={ts_val}"
+                            _refresh_single_thumbnail(rel_main_asset, ts_val)
                             refresh_header()
                             refresh_img()
                             refresh_meta()
-                            render_content()
 
                         active_lightbox_retouch_cb["fn"] = _on_retouch_saved_refresh
 
@@ -1052,11 +1458,12 @@ def render_gallery_page() -> None:
                                     showing_origin["val"] = False
                                     curr["path"] = main_asset_p
                                     rel = main_asset_p.relative_to(PROJECTS_DIR).as_posix()
-                                    curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                    ts_val = int(time.time())
+                                    curr["url"] = f"/projects_static/{rel}?t={ts_val}"
+                                    _refresh_single_thumbnail(rel, ts_val)
                                     refresh_header()
                                     refresh_img()
                                     refresh_meta()
-                                    render_content()
                                 else:
                                     ui.notify("복원 실패", type="negative")
 
@@ -1077,12 +1484,16 @@ def render_gallery_page() -> None:
                                 if res_path and res_path.exists():
                                     curr["path"] = res_path
                                     rel = res_path.relative_to(PROJECTS_DIR).as_posix()
-                                    curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                    ts_val = int(time.time())
+                                    curr["url"] = f"/projects_static/{rel}?t={ts_val}"
                                     ui.notify(f"🎉 4K 업스케일 완료: {res_path.name}", type="positive")
                                     refresh_header()
                                     refresh_img()
                                     refresh_meta()
-                                    render_content()
+                                    if rel in image_widgets_by_rel:
+                                        _refresh_single_thumbnail(rel, ts_val)
+                                    else:
+                                        render_content()
                                 else:
                                     ui.notify("❌ 4K 업스케일 생성에 실패했습니다.", type="negative")
                             except Exception as ex:
@@ -1129,7 +1540,7 @@ def render_gallery_page() -> None:
                     )
 
             def handle_keyboard(e):
-                if not dialog.value:
+                if not dialog.value or not getattr(getattr(e, "action", None), "keydown", False):
                     return
                 if e.key == "ArrowLeft":
                     go_to_index(nav_state["idx"] - 1)
@@ -1139,7 +1550,14 @@ def render_gallery_page() -> None:
                     if toggle_origin_holder.get("fn"):
                         toggle_origin_holder["fn"]()
 
-            ui.keyboard(on_key=handle_keyboard)
+            kb = ui.keyboard(on_key=handle_keyboard)
+
+            def _cleanup_lightbox():
+                kb.active = False
+                active_lightbox_retouch_cb["fn"] = None
+                dialog.delete()
+
+            dialog.on("hide", _cleanup_lightbox)
 
             refresh_header()
             refresh_img()

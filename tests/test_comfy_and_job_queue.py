@@ -115,7 +115,10 @@ def test_global_job_manager_fifo_serialization_and_cancel(monkeypatch):
     )
     assert started2 is False
     assert qpos2 == 1
-    assert mgr.get_status()["queue_length"] == 1
+    mid_status = mgr.get_status()
+    assert mid_status["queue_length"] == 1
+    assert mid_status["active_job"]["label"] == "job1"
+    assert [q["label"] for q in mid_status["queued_jobs"]] == ["job2"]
 
     release_job1.set()
     assert all_done.wait(timeout=3.0)
@@ -128,6 +131,18 @@ def test_global_job_manager_fifo_serialization_and_cancel(monkeypatch):
     assert concurrency["max"] == 1
     assert events == ["start:001", "end:001", "start:002", "end:002"]
     assert cb_results == [("job1", True, None), ("job2", True, None)]
+
+    done_status = mgr.get_status()
+    assert done_status["active_job"] is None
+    assert done_status["queued_jobs"] == []
+    assert [h["label"] for h in done_status["job_history"]] == ["job2", "job1"]
+    assert all(h["status"] == "done" for h in done_status["job_history"])
+    assert [c["code"] for c in done_status["completed_items"]] == ["002", "001"]
+
+    mgr.clear_history()
+    cleared_status = mgr.get_status()
+    assert cleared_status["job_history"] == []
+    assert cleared_status["completed_items"] == []
 
     # 취소 시 대기 중인 큐 작업 콜백도 오류와 함께 해제되는지 검증
     job_c_started = threading.Event()
@@ -158,6 +173,8 @@ def test_global_job_manager_fifo_serialization_and_cancel(monkeypatch):
     release_c.set()
     assert queued_done.wait(timeout=2.0)
     assert queued_err[0][0] == [] and queued_err[0][1] is not None
+    c2_hist = [h for h in mgr2.get_status()["job_history"] if h["label"] == "c2"]
+    assert c2_hist and c2_hist[0]["status"] == "cancelled"
 
 
 def test_comfy_upload_cache_invalidation_and_history_fallback(monkeypatch, tmp_path):

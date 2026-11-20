@@ -142,6 +142,25 @@ class TestGuiAllFeatures(unittest.TestCase):
         orders = [SECTION_METADATA[s["id"]]["order"] for s in actives]
         self.assertEqual(orders, sorted(orders), "활성 섹션 정렬 순서가 메타데이터 order와 일치하지 않습니다.")
 
+    def test_gallery_roster_pose_scope_filters_by_existing_assets_and_gender(self):
+        """갤러리 로스터별 포즈 범위가 실제 보유 에셋 코드 및 성별 대역으로만 필터링되는지 검증."""
+        from plepa_gui.pages.gallery import get_roster_gallery_pose_scope
+
+        campus_scope = get_roster_gallery_pose_scope("campus")
+        campus_codes = set(campus_scope["existing_codes"])
+        self.assertIn("000", campus_codes)
+        # campus는 여성 로스터이므로 오토코노코/타로스터 테마 코드가 노출되지 않아야 함
+        for excluded in ("133", "134", "135", "150", "200", "A00", "B01", "C01", "D01", "E01", "F01", "N01", "S01"):
+            self.assertNotIn(excluded, campus_codes, f"campus 갤러리 보유 코드에 '{excluded}'가 섞여서는 안 됩니다.")
+        for oto_set in ("oto_108", "otokonoko_52", "wuxia_actions", "spy_actions", "genit_emotions", "genit_costumes"):
+            self.assertNotIn(oto_set, campus_scope["set_options"])
+
+        oto_scope = get_roster_gallery_pose_scope("oto")
+        oto_codes = set(oto_scope["existing_codes"])
+        self.assertIn("150", oto_codes)
+        self.assertNotIn("h_scenes_52", oto_scope["set_options"])
+        self.assertNotIn("campus_108", oto_scope["set_options"])
+
 
 if __name__ == "__main__":
     unittest.main()
