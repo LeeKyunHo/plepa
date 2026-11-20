@@ -145,7 +145,10 @@ def validate_document(
     roster = meta.get("roster", "campus")
     status = meta.get("status", "active").lower()
 
-    # frozen/archived 상태이고 force_all이 아니면 스킵
+    # template 문서는 청사진 가이드이므로 항상 스킵, frozen/archived는 force_all이 아니면 스킵
+    if status == "template":
+        print(f"⏩ [SKIP] 다테마 청사진 템플릿 스킵: {file_path.name} (status: template)")
+        return True, [], True
     if status in ("frozen", "archived") and not force_all:
         print(f"⏩ [SKIP] 봉인된 완성본 검사 스킵: {file_path.name} (status: {status})")
         return True, [], True
@@ -222,13 +225,13 @@ def validate_document(
 
     # 2. 설정집 글자 수 검증
     lorebook_matches = re.findall(
-        r"### \d+\. 설정집 \d+: (.*?)\n.*?\* \*\*키워드 \(15자 이내\)\*\*: `(.*?)`\n.*?\* \*\*프롬프트 \(500자 이내\)\*\*:\n```text\n(.*?)```",
+        r"### \d+\. 설정집 \d+: (.*?)\n.*?\* \*\*키워드 \([^)]*\)\*\*: `(.*?)`\n.*?\* \*\*프롬프트 \(500자 이내\)\*\*:\n```text\n(.*?)```",
         body,
         re.DOTALL
     )
 
     min_lorebooks = int(meta.get("min_lorebooks", 0) or (6 if roster == "campus" else 1))
-    print("\n📚 [2] 설정집(Lorebook) 글자 수 및 키워드 한도 검증 (프롬프트 <= 500자, 키워드 <= 15자)")
+    print("\n📚 [2] 설정집(Lorebook) 글자 수 및 키워드 한도 검증 (프롬프트 <= 500자, 키워드 각 15자 이내 · 최대 5개)")
     if len(lorebook_matches) < min_lorebooks:
         errors.append(f"설정집 최소 기준({min_lorebooks}개) 미달 (발견: {len(lorebook_matches)}개)")
 
@@ -236,18 +239,22 @@ def validate_document(
         l_title = l_title.strip()
         kw_b = kw_b.strip()
         prompt_b = prompt_b.strip()
-        if len(kw_b) > 15:
-            errors.append(f"설정집 '{l_title}' 키워드 15자 초과: {len(kw_b)}자 (`{kw_b}`)")
+        kw_tags = [k.strip() for k in kw_b.split(",") if k.strip()]
+        if len(kw_tags) > 5:
+            errors.append(f"설정집 '{l_title}' 키워드 5개 초과: {len(kw_tags)}개 (`{kw_b}`)")
+        for kt in kw_tags:
+            if len(kt) > 15:
+                errors.append(f"설정집 '{l_title}' 개별 키워드 15자 초과: `{kt}` ({len(kt)}자)")
         if len(prompt_b) > 500:
             errors.append(f"설정집 '{l_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
-        print(f"  - {l_title}: 키워드 `{kw_b}` ({len(kw_b)}/15자) | 본문 ({len(prompt_b)}/500자)")
+        print(f"  - {l_title}: 키워드 `{kw_b}` ({len(kw_tags)}/5개) | 본문 ({len(prompt_b)}/500자)")
 
     # 3. 캐릭터 한도 검증 (로스터 실제 캐릭터 수 기반 동적 검증)
     char_match = re.search(r"# 👥 \[탭 4: 캐릭터\].*?(?=# 🧩 \[탭 5: 에셋\]|$)", body, re.DOTALL)
     char_text = char_match.group(0) if char_match else body
 
     char_matches = re.findall(
-        r"### \d+\. (.*?) \([`a-zA-Z가-힣\s]+\)\n.*?\* \*\*이름 \(20자 이내\)\*\*: `(.*?)`\n.*?\* \*\*키워드 \(15자 이내\)\*\*: `(.*?)`\n.*?\* \*\*소개 \(.*?300자 이내\)\*\*:\n```text\n(.*?)```\n.*?\* \*\*프롬프트 \(.*?500자 이내\)\*\*:\n```text\n(.*?)```",
+        r"### \d+\. (.*?) \([`a-zA-Z가-힣\s]+\)\n.*?\* \*\*이름 \(20자 이내\)\*\*: `(.*?)`\n(?:\* \*\*별명 \([^)]*\)\*\*: `.*?`\n)?.*?\* \*\*키워드 \([^)]*\)\*\*: `(.*?)`\n.*?\* \*\*소개 \(.*?300자 이내\)\*\*:\n```text\n(.*?)```\n.*?\* \*\*프롬프트 \(.*?500자 이내\)\*\*:\n```text\n(.*?)```",
         char_text,
         re.DOTALL
     )
@@ -259,7 +266,7 @@ def validate_document(
         else 1
     )
     min_chars = int(meta.get("min_characters", 0) or max(1, expected_char_count))
-    print(f"\n👥 [3] 캐릭터 ({len(char_matches)}/{min_chars}명) 한도 및 키워드 중복 검증 (프롬프트 <= 500자, 소개 <= 300자, 키워드 <= 15자)")
+    print(f"\n👥 [3] 캐릭터 ({len(char_matches)}/{min_chars}명) 한도 및 키워드 중복 검증 (프롬프트 <= 500자, 소개 <= 300자, 키워드 각 15자 이내 · 최대 5개)")
     if len(char_matches) < min_chars:
         errors.append(f"캐릭터 최소 기준({min_chars}명) 중 일부 파싱 실패 (발견: {len(char_matches)}명)")
 
@@ -270,20 +277,21 @@ def validate_document(
         intro_b = intro_b.strip()
         prompt_b = prompt_b.strip()
 
-        if len(kw_b) > 15:
-            errors.append(f"캐릭터 '{c_title}' 키워드 15자 초과: {len(kw_b)}자 (`{kw_b}`)")
+        kws = [k.strip() for k in kw_b.split(",") if k.strip()]
+        if len(kws) > 5:
+            errors.append(f"캐릭터 '{c_title}' 키워드 5개 초과: {len(kws)}개 (`{kw_b}`)")
+        for kw in kws:
+            if len(kw) > 15:
+                errors.append(f"캐릭터 '{c_title}' 개별 키워드 15자 초과: `{kw}` ({len(kw)}자)")
+            if kw in all_char_kws:
+                errors.append(f"캐릭터 키워드 중복 발견: `{kw}` (타 히로인 호출 간섭 유발)")
+            all_char_kws.append(kw)
         if len(intro_b) > 300:
             errors.append(f"캐릭터 '{c_title}' 소개 300자 초과: {len(intro_b)}자")
         if len(prompt_b) > 500:
             errors.append(f"캐릭터 '{c_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
 
-        kws = [k.strip() for k in kw_b.split(",") if k.strip()]
-        for kw in kws:
-            if kw in all_char_kws:
-                errors.append(f"캐릭터 키워드 중복 발견: `{kw}` (타 히로인 호출 간섭 유발)")
-            all_char_kws.append(kw)
-
-        print(f"  - {c_title}: 키워드 `{kw_b}` ({len(kw_b)}/15자) | 소개 ({len(intro_b)}/300자) | 프롬프트 ({len(prompt_b)}/500자)")
+        print(f"  - {c_title}: 키워드 `{kw_b}` ({len(kws)}/5개) | 소개 ({len(intro_b)}/300자) | 프롬프트 ({len(prompt_b)}/500자)")
 
     # 4. 6대 통일 변수 및 장소명 키워드 검증
     print("\n⚙️ [4] 6대 통일 변수, 키워드형 장소명 및 실제 에셋 정합성 검증")
@@ -305,7 +313,7 @@ def validate_document(
     for token in re.findall(r"(?<![a-zA-Z0-9_])(\d{3}_[가-힣a-zA-Z0-9_\(\)]+)", all_code_blocks):
         referenced_poses.add(token.strip())
 
-    for url_match in re.findall(r"\{\{url\}\}[a-z]{3}_(\d{3}_[^\s\.\n\r\t\"\'\`]+)\.webp", body):
+    for url_match in re.findall(r"\{\{url\}\}(?:[a-z]{3}/)?[a-z]{3}_(\d{3}_[^\s\.\n\r\t\"\'\`]+)\.webp", body):
         referenced_poses.add(url_match.strip())
 
     invalid_poses = []
