@@ -1,0 +1,5 @@
+{
+  "name": "maid",
+  "status": "legacy",
+  "description": "구형 메이드 세계관 로스터 (명시적 -r maid 지정 시 접근 가능)"
+}

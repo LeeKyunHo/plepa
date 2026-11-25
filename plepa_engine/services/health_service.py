@@ -126,24 +126,22 @@ class HealthService:
         t0 = time.perf_counter()
         details: List[str] = []
         try:
-            rosters = [p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and (p / "characters").is_dir()]
-            details.append(f"발견된 로스터: {', '.join(rosters)}")
+            rosters = default_character_service.list_rosters(include_legacy=False)
+            legacy_rosters = [r for r in default_character_service.list_rosters(include_legacy=True) if r not in rosters]
+            details.append(f"활성 로스터: {', '.join(rosters)}" + (f" (레거시 분리: {', '.join(legacy_rosters)})" if legacy_rosters else ""))
 
             chars = default_character_service.list_characters(roster="campus")
             if not chars:
                 raise ValueError("기본 'campus' 로스터에 등록된 캐릭터가 없습니다.")
-
             prefixes = set()
-            for r_name, c_schema, f_path in chars:
+            for _, c_schema, _ in chars:
                 if not c_schema.prefix:
                     raise ValueError(f"캐릭터 '{c_schema.name}'에 prefix가 누락되었습니다.")
                 if c_schema.prefix in prefixes:
                     raise ValueError(f"중복된 prefix 발견: '{c_schema.prefix}'")
                 prefixes.add(c_schema.prefix)
-
                 if not c_schema.appearance or not c_schema.appearance.face_and_hair or not c_schema.appearance.physique:
                     raise ValueError(f"캐릭터 '{c_schema.name}' 필수 외형 필드 누락")
-
             details.append(f"기본 'campus' 로스터 {len(chars)}명 캐릭터 외형 필드 및 prefix 고유성 검증 완료")
 
             # Spy 로스터 점검

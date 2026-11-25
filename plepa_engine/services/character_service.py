@@ -21,15 +21,38 @@ class CharacterService:
     def __init__(self, repo: Optional[Repository] = None):
         self.repo = repo or default_repo
 
-    def list_rosters(self) -> List[str]:
-        """등록된 캐릭터가 최소 1개 이상 존재하는 로스터 폴더 이름 목록을 정렬하여 반환합니다."""
+    def get_roster_metadata(self, roster: str) -> Dict[str, Any]:
+        """projects/{roster}/roster.json 메타데이터를 로드합니다 (없으면 빈 딕셔너리)."""
+        meta_path = PROJECTS_DIR / roster / "roster.json"
+        if not meta_path.is_file():
+            return {}
+        try:
+            data = self.repo.read_json(meta_path)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def get_roster_status(self, roster: str) -> str:
+        """로스터 상태 문자열('active' 또는 'legacy')을 반환합니다."""
+        meta = self.get_roster_metadata(roster)
+        return str(meta.get("status") or "active").strip().lower()
+
+    def is_legacy_roster(self, roster: str) -> bool:
+        """해당 로스터가 status='legacy'로 분리된 구형 로스터인지 판별합니다."""
+        return self.get_roster_status(roster) == "legacy"
+
+    def list_rosters(self, include_legacy: bool = False) -> List[str]:
+        """등록된 캐릭터가 1개 이상 존재하는 로스터 폴더 이름 목록을 정렬 반환합니다 (기본: legacy 제외)."""
         rosters: List[str] = []
         if not PROJECTS_DIR.exists():
             return rosters
         for p in sorted(PROJECTS_DIR.iterdir()):
             if p.is_dir() and (p / "characters").is_dir():
-                if any((p / "characters").glob("*.json")):
-                    rosters.append(p.name)
+                if not any((p / "characters").glob("*.json")):
+                    continue
+                if not include_legacy and self.is_legacy_roster(p.name):
+                    continue
+                rosters.append(p.name)
         return rosters
 
     def list_characters(self, roster: Optional[str] = None) -> List[Tuple[str, CharacterSchema, Path]]:

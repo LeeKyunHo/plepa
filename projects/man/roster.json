@@ -1,0 +1,5 @@
+{
+  "name": "man",
+  "status": "legacy",
+  "description": "구형 남성형 캐릭터 실험 로스터 (명시적 -r man 지정 시 접근 가능)"
+}

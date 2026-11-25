@@ -1,0 +1,5 @@
+{
+  "name": "murim",
+  "status": "legacy",
+  "description": "구형 무림 세계관 로스터 (명시적 -r murim 지정 시 접근 가능)"
+}

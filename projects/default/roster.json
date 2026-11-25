@@ -1,0 +1,5 @@
+{
+  "name": "default",
+  "status": "legacy",
+  "description": "구형 테스트/기본 로스터 (하위 호환 및 명시적 -r default 접근 보존)"
+}
