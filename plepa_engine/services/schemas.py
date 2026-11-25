@@ -104,10 +104,14 @@ class CharacterSchema(BaseModel):
         description="화질 및 스타일 공통 키워드"
     )
     sdxl_positive: Optional[str] = Field(default=None, description="SDXL 전용 추가 긍정 태그")
+    sdxl_nude_positive: Optional[str] = Field(default=None, description="SDXL 탈의/누드 전용 긍정 태그")
     sdxl_negative: Optional[str] = Field(default=None, description="SDXL 전용 추가 부정 태그")
     ref_weight: float = Field(default=0.7, ge=0.0, le=1.0, description="IP-Adapter 참조 이미지 가중치")
     default_mode: Optional[str] = Field(default=None, description="기본 엔진 모드 (sdxl, flux, fast, quality 등)")
+    outfits: Dict[str, str] = Field(default_factory=dict, description="테마 슬롯별 의상 프롬프트 맵")
     profiles: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="의상/프로필별 오버라이드 맵")
+    pose_restrictions: Dict[str, List[str]] = Field(default_factory=dict, description="캐릭터별 허용/제외 포즈 제한 규칙")
+    faction: Optional[str] = Field(default=None, description="소속 진영/세계관 메타데이터")
     is_adult: bool = Field(default=True, description="성인 캐릭터 여부 (가드레일 검증용)")
     signature_accessories: List[str] = Field(default_factory=list, description="캐릭터 고유 장신구·소품 고정 목록 (CLIP 75토큰 전단 우선 배치)")
 

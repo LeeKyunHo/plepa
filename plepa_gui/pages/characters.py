@@ -21,6 +21,42 @@ from plepa_engine.services.schemas import (
 from plepa_gui.components.header import render_header
 
 
+def build_updated_character_schema(char: CharacterSchema, fields: Dict[str, Any]) -> CharacterSchema:
+    """기존 CharacterSchema의 확장 필드(sdxl_nude_positive, outfits, pose_restrictions, signature_accessories, 추가 메타 등)를 무손실 보존한 채 폼 수정값만 병합합니다."""
+    base_dict = char.model_dump()
+    lora_name_val = str(fields.get("lora_name") or "").strip()
+    pos_val = str(fields.get("sdxl_positive") or "").strip()
+    neg_val = str(fields.get("sdxl_negative") or "").strip()
+    mode_val = str(fields.get("default_mode") or "").strip()
+
+    base_dict.update({
+        "prefix": fields["prefix"],
+        "name": fields["name"],
+        "gender": fields["gender"],
+        "is_adult": fields["is_adult"],
+        "appearance": {
+            **(base_dict.get("appearance") or {}),
+            "face_and_hair": fields["face_and_hair"],
+            "physique": fields["physique"],
+            "outfit": fields["outfit"],
+        },
+        "lora": {
+            **(base_dict.get("lora") or {}),
+            "name": lora_name_val if lora_name_val else None,
+            "weight": fields["lora_weight"],
+        },
+        "style_keywords": fields["style_keywords"],
+        "sdxl_positive": pos_val if pos_val else None,
+        "sdxl_negative": neg_val if neg_val else None,
+        "ref_weight": fields["ref_weight"],
+        "default_mode": mode_val if mode_val else None,
+    })
+    if "sdxl_nude_positive" in fields:
+        nude_val = str(fields.get("sdxl_nude_positive") or "").strip()
+        base_dict["sdxl_nude_positive"] = nude_val if nude_val else None
+    return CharacterSchema.model_validate(base_dict)
+
+
 def render_characters_page() -> None:
     """캐릭터 관리 페이지 렌더링."""
     render_header("/characters")
@@ -167,6 +203,7 @@ def render_characters_page() -> None:
                 "lora_weight": char.lora.weight,
                 "style_keywords": char.style_keywords,
                 "sdxl_positive": char.sdxl_positive or "",
+                "sdxl_nude_positive": char.sdxl_nude_positive or "",
                 "sdxl_negative": char.sdxl_negative or "",
                 "ref_weight": char.ref_weight,
                 "default_mode": char.default_mode or "",
@@ -229,6 +266,9 @@ def render_characters_page() -> None:
                 ui.textarea("SDXL 전용 긍정 태그 (sdxl_positive)", value=fields["sdxl_positive"], on_change=lambda e: fields.update({"sdxl_positive": e.value})).props(
                     "outlined dark autogrow rows=2"
                 ).classes("w-full")
+                ui.textarea("SDXL 탈의/누드 전용 긍정 태그 (sdxl_nude_positive)", value=fields["sdxl_nude_positive"], on_change=lambda e: fields.update({"sdxl_nude_positive": e.value})).props(
+                    "outlined dark autogrow rows=2"
+                ).classes("w-full")
                 ui.textarea("SDXL 전용 부정 태그 (sdxl_negative)", value=fields["sdxl_negative"], on_change=lambda e: fields.update({"sdxl_negative": e.value})).props(
                     "outlined dark autogrow rows=2"
                 ).classes("w-full")
@@ -236,27 +276,7 @@ def render_characters_page() -> None:
             # 저장 콜백 함수
             def save_current_form():
                 try:
-                    updated_data = CharacterSchema(
-                        prefix=fields["prefix"],
-                        name=fields["name"],
-                        gender=fields["gender"],
-                        is_adult=fields["is_adult"],
-                        appearance=CharacterAppearanceSchema(
-                            face_and_hair=fields["face_and_hair"],
-                            physique=fields["physique"],
-                            outfit=fields["outfit"],
-                        ),
-                        lora=LoraSchema(
-                            name=fields["lora_name"] if fields["lora_name"].strip() else None,
-                            weight=fields["lora_weight"],
-                        ),
-                        style_keywords=fields["style_keywords"],
-                        sdxl_positive=fields["sdxl_positive"] if fields["sdxl_positive"].strip() else None,
-                        sdxl_negative=fields["sdxl_negative"] if fields["sdxl_negative"].strip() else None,
-                        ref_weight=fields["ref_weight"],
-                        default_mode=fields["default_mode"] if fields["default_mode"].strip() else None,
-                        profiles=char.profiles,
-                    )
+                    updated_data = build_updated_character_schema(char, fields)
                     saved = default_character_service.save_character(
                         roster=state["selected_roster"],
                         char=updated_data,
@@ -294,9 +314,9 @@ def render_characters_page() -> None:
                     dialog.close()
                     ui.notify(f"새 캐릭터 '{new_n}' 복제 성공!", type="positive")
                     refresh_char_list()
-                    # 신규 복제본 선택
-                    new_char_obj = default_character_service.find_character(new_p, roster=state["selected_roster"])[0]
-                    new_schema = CharacterSchema.model_validate(new_char_obj.__dict__)
+                    # 신규 복제본 무손실 선택
+                    raw_cloned = default_character_service.repo.read_json(saved_path)
+                    new_schema = CharacterSchema.model_validate(raw_cloned)
                     select_character(new_schema, saved_path)
                 except Exception as ce:
                     ui.notify(f"복제 실패: {ce}", type="negative")

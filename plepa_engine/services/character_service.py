@@ -177,33 +177,46 @@ class CharacterService:
         src_char, _ = self.find_character(src_prefix, roster=src_roster)
         dest_roster = target_roster or src_roster
 
-        # CharacterConfig -> dict -> CharacterSchema
-        char_dict = {
-            "prefix": new_prefix,
-            "name": new_name,
-            "gender": src_char.gender,
-            "appearance": {
-                "face_and_hair": src_char.appearance.face_and_hair,
-                "physique": src_char.appearance.physique,
-                "outfit": src_char.appearance.outfit,
-            },
-            "lora": {
-                "name": src_char.lora.name,
-                "weight": src_char.lora.weight,
-            },
-            "style_keywords": src_char.style_keywords,
-            "sdxl_positive": src_char.sdxl_positive,
-            "sdxl_negative": src_char.sdxl_negative,
-            "ref_weight": src_char.ref_weight,
-            "profiles": dict(src_char.profiles),
-            "is_adult": True,
-        }
+        # 원본 JSON 전체 딕셔너리를 무손실 로드하여 sdxl_nude_positive, outfits, pose_restrictions,
+        # signature_accessories 및 사용자 정의 확장 메타데이터까지 100% 보존합니다.
+        if src_char.file_path and src_char.file_path.exists():
+            import copy
+            char_dict = copy.deepcopy(self.repo.read_json(src_char.file_path))
+        else:
+            char_dict = {
+                "prefix": src_char.prefix,
+                "name": src_char.name,
+                "gender": src_char.gender,
+                "appearance": {
+                    "face_and_hair": src_char.appearance.face_and_hair,
+                    "physique": src_char.appearance.physique,
+                    "outfit": src_char.appearance.outfit,
+                },
+                "lora": {
+                    "name": src_char.lora.name,
+                    "weight": src_char.lora.weight,
+                },
+                "style_keywords": src_char.style_keywords,
+                "sdxl_positive": src_char.sdxl_positive,
+                "sdxl_nude_positive": src_char.sdxl_nude_positive,
+                "sdxl_negative": src_char.sdxl_negative,
+                "ref_weight": src_char.ref_weight,
+                "default_mode": src_char.default_mode,
+                "outfits": dict(src_char.outfits),
+                "profiles": dict(src_char.profiles),
+                "pose_restrictions": dict(src_char.pose_restrictions),
+                "signature_accessories": list(src_char.signature_accessories),
+                "is_adult": True,
+            }
+
+        char_dict["prefix"] = new_prefix
+        char_dict["name"] = new_name
 
         if overrides:
-            if "appearance" in overrides and isinstance(overrides["appearance"], dict):
-                char_dict["appearance"].update(overrides["appearance"])
             for k, v in overrides.items():
-                if k != "appearance":
+                if isinstance(v, dict) and isinstance(char_dict.get(k), dict):
+                    char_dict[k] = {**char_dict[k], **v}
+                else:
                     char_dict[k] = v
 
         new_schema = CharacterSchema.model_validate(char_dict)
