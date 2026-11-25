@@ -10,8 +10,10 @@
   • 포즈 SSOT: data/sdxl_pose_database.json (175키: 활성 151 + 구형보존 24)
   • 단일 매핑표: POSE_MAPPING.md (포즈·라벨·모브·배경·deprecated 전체 조회)
 
-[활성 로스터 12종]
-  campus | spy | oto | ykn | sns | maid | murim | school | hey | man | don | default
+[활성 로스터 7종 + 구형 보존 5종]
+  • 현역 활성(7종): campus | spy | oto | ykn | sns | school | hey
+  • 구형 보존(legacy 5종): maid | murim | man | don | default
+    (-r all 기본 순회에서는 제외되며, -r maid 등 직접 지정 또는 --include-legacy 로 포함)
 
 
 --------------------------------------------------------------------------------
@@ -104,13 +106,16 @@
     --naming {hybrid|code|label} : 파일명 규격 (기본 hybrid: prefix_000_라벨.webp)
     --out-dir <폴더>             : 별도 출력 루트 폴더 ({out_dir}/{roster}/{char}/)
 
-  [후처리 & Auto-QC]
+  [로스터 조회·후처리 & Auto-QC]
+    --include-legacy                     : status=legacy 구형 5개 로스터를 -r all 대상에 포함
     --face-detailer / --no-face-detailer : 얼굴 디테일러 (기본: ON)
     --hand-detailer / --no-hand-detailer : 손 디테일러 (기본: OFF)
     --freeu / --no-freeu                 : FreeU 화질 부스팅 (기본: ON)
     --upscale                            : 4x-UltraSharp AI 초해상화 (기본: OFF)
-    --no-qc                              : Auto-QC 자동 품질 판정 비활성화
+    --auto-qc / --no-qc                  : Auto-QC 자동 품질 판정 토글 (기본: ON)
+    --retry-qc-failed / --no-retry-qc-failed : QC 불량 이력 자동 재시도 토글 (기본: ON)
     --max-retries <횟수>                 : Auto-QC 실패 시 최대 리롤 횟수 (기본: 3)
+    --prompt-alert-threshold <횟수>      : 연속 불량 시 프롬프트 점검 경고 임계치 (기본: 2)
     --strict-censor-qc                   : 필수 노출 씬 성기 미검출 시 자동 리롤
 
   [자동 검열 (Phase P2.5)]
@@ -124,12 +129,15 @@
       * slim_bar                 * shadow               * mosaic
       * debug_bbox (신뢰도·BBox 진단 시각화 모드)
 
-  [체크포인트·배경·IP-Adapter·디버깅]
+  [체크포인트·LoRA·배경·IP-Adapter·디버깅]
     --ckpt <체크포인트파일>      : 커스텀 SDXL 체크포인트 (checkpoint_profiles 자동 연동)
+    --ckpt-tag <태그>            : 비교용 서브폴더 태그 (assets/{prefix}/ckpt_{태그}/ 분리 저장)
+    --lora <파일명[,파일명:강도]> : SDXL LoRA 동적 체이닝 ('none'=비활성, 빈값=캐릭터 JSON 사용)
+    --lora-weight <실수>         : LoRA 기본 강도 오버라이드 (미지정 시 캐릭터 설정 또는 0.8)
     --steps / --cfg / --sampler / --scheduler / --width / --height
     --bg <영문태그>              : 즉석 커스텀 배경 문장 직접 주입
     --bg-preset <키>             : projects/{roster}/background.json 프리셋 키 지정
-    --custom-pos / --custom-neg  : 추가 긍정/부정 태그 결합
+    --custom-pos / --custom-neg  : 추가 긍정/부정 태그 결합 (`--custom_pos`/`--custom_neg` 호환)
     --use-ref / --ref-weight <w> : IP-Adapter 참조 이미지 활성화 (기본: --no-ref)
     --dry-run                    : ComfyUI 호출·디스크 저장 없이 조립 프롬프트만 점검
     --mock                       : 0.001초 더미 WebP 생성 (E2E 파일 저장 구조 테스트)

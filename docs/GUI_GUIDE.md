@@ -17,7 +17,7 @@
 * **공통 상단 네비게이션바 (`plepa_gui/components/header.py`)**:
   - **로고 (`⚡ PLEPA`)**: 클릭 시 메인 대시보드(`/gallery`) 이동.
   - **8대 메뉴 탭**: `캐릭터 관리` (`/characters`), `포즈 DB` (`/poses`), `배경 프리셋` (`/backgrounds`), `포즈 세트` (`/pose-sets`), `배치 생성` (`/generate`), `갤러리` (`/gallery`), `📱 모바일 뷰어` (`/mobile`), `환경 설정` (`/settings`).
-  - **전역 활성 로스터 셀렉터**: 선택한 로스터(`campus`, `spy`, `oto` 등 12개)를 전 페이지에 실시간 동기화.
+  - **전역 활성 로스터 셀렉터**: 현역 활성 로스터(`campus`, `spy`, `oto` 등 7개, `status=legacy` 구형 5종 기본 분리)를 전 페이지에 실시간 동기화.
   - **우측 상태 뱃지**: `🩺 진단`(HealthService 10단계 무결성 자가 진단), 백그라운드 배치 진행률(`GlobalJobManager` FIFO), ComfyUI(`127.0.0.1:8188`) 연결 감시.
 
 ---
@@ -40,10 +40,10 @@
 * `data/pose_sets.json`의 V3 표준 세트(`sample10`, `v3_daily_53`, `campus_108`, `oto_108`, `unified_100`, `unified_152` 등 142종 포함) 생성·수정·영숫자 정렬 저장.
 
 ### ⑤ 배치 생성 (`/generate`)
-* **V3 표준 퀵바 & 옵션 동적 렌더링 (`GENERATION_OPTION_SPECS`)**:
+* **V3 표준 퀵바 & 옵션 동적 렌더링 (`GENERATION_OPTION_SPECS`, 29종)**:
   - **퀵 프리셋**: `sample10`, `v3_daily_53`, `campus_108`, `oto_108`, `unified_152` 등 원클릭 선택.
-  - **11개 삼위일체 동기화 옵션**: `Face Detailer`, `Hand Detailer`, `FreeU`, `4x AI 업스케일` (`3328×4864` / `4864×3328`), `화이트 실루엣 검열`, `검열 스타일(11종)`, `검열 대상(penis/pussy/all)`, `골든 시드 고정`, `포즈 고정 시드(--deterministic-pose-seed)`, `엄격 검열 리롤`, `안전 앵커 폴백`.
-* **예상 목록 미리보기 (`dry_run`)**: `GlobalJobManager` FIFO 대기열 등록 전 대상 캐릭터 × 포즈·실효 파라미터(`params > config > profile`) 확인.
+  - **29종 삼위일체 동기화 옵션 (`option_controls.py`)**: 체크박스(`Face Detailer`, `Hand Detailer`, `FreeU`, `4x AI 업스케일`, `Auto-QC`, `QC 재시도`, `검열`, `엄격 검열 리롤`, `골든 시드`, `포즈 시드`, `앵커 폴백`, `소급 검열`, `Mock`, `Dry-Run`), 선택형(`검열 스타일 11종`, `검열 대상`, `파일명 규칙`), 수치형(`최대 리롤`, `경고 임계치`, `시드`, `IP-Adapter/LoRA 가중치`), 고급 접이식 텍스트(`LoRA 체이닝`, `즉석 배경`, `추가 긍정/부정`, `ckpt_tag`).
+* **FIFO 대기열 일원화**: `/generate` 및 `/gallery`의 누락 채우기·리롤 요청은 모두 `GlobalJobManager.enqueue_job()` FIFO 대기열을 통해 ComfyUI 경합 없이 순차 실행됩니다.
 
 ### ⑥ 에셋 갤러리 & 통합 작업실 (`/gallery`)
 * **최신 생성순/포즈순 정렬 & 서브필터**: `NEW` 뱃지, 성별·섹션·미생성 필터, 라이트박스 확대 및 `📦 Genit 내보내기` (`GenitExporter.export_roster()` — 로컬 원본 100% 보존 + 패키지용 `1024×1536` Lanczos 중앙 크롭 통일).

@@ -25,8 +25,8 @@
 8. **검열 엔진 `Phase P2.5` 동결(`ADR-99`) & 터치 협업**: [`censor.py`](../plepa_engine/censor.py)는 `deepghs` + `models/censor_seg.pt` (`YOLO11s-seg`) + `sam2.1_s.pt` 하이브리드 및 `white_silhouette` 기본(총 11종, `enable_anchor_fallback=False`)으로 프로덕션 동결되었습니다. 미세 보정은 웹/모바일 `✏️ 터치 덧칠`(`retouch_editor.py`)로 처리합니다.
 9. **오토코노코(`oto`) 검열 & 톤 동기화**: `150~209` H-씬 전수 스캔 + 탈의 일상(`030,038,039,043~045,049`) `is_nude` 컨텍스트 전파를 강제하며, `oto` 배경·네거티브는 `campus` 중립 색감에 동기화됩니다.
 10. **Auto-QC 딥러닝 자동 검증 (`qa_validator.py`)**: 인원·얼굴·머리·손·눈·Color Burn·상반신 화각 드리프트(`_check_closeup_aspect_drift`)·Laplacian 흐림 검사를 수행하며 `strict_censor_qc`는 `mob_tier not in (0, 1, 2)`에서만 작동합니다.
-11. **CLI · Engine · GUI 삼위일체 동기화 (`Trinity Sync`)**: 생성 옵션 추가 시 `GENERATION_OPTION_SPECS` ↔ `GenerationParams` ↔ `batch_generator.py` CLI ↔ `plepa_gui` UI ↔ `tests/test_cli_gui_sync.py` + `tests/test_contract_guards.py`를 1세트로 유지합니다.
-12. **비동기 FIFO 대기열 & 원격 토큰 보안**: 8080 스튜디오는 `GlobalJobManager`, 8085 벤치마크 서버는 `RerollQueueManager`가 단일 워커 FIFO로 GPU 경합을 차단하며, `start_remote.py` 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 검증이 활성화됩니다.
+11. **CLI · Engine · GUI 삼위일체 동기화 (`Trinity Sync`)**: 생성 옵션 추가 시 [`generation_options.py`](../plepa_engine/services/generation_options.py) `GENERATION_OPTION_SPECS`(29종) ↔ `GenerationParams` ↔ `batch_generator.py` CLI ↔ `plepa_gui` (`option_controls.py`) ↔ `tests/test_cli_gui_sync.py` + `tests/test_contract_guards.py`를 1세트로 유지합니다.
+12. **비동기 FIFO 대기열 & 원격 토큰 보안**: 8080 스튜디오(`/generate`, `/gallery`, `/api`)는 `GlobalJobManager`(`enqueue_job`/`enqueue_censor_only`), 8085 벤치마크 서버는 `RerollQueueManager`가 단일 워커 FIFO로 GPU 경합을 차단하며, `start_remote.py` 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 검증이 활성화됩니다.
 13. **원자적 I/O & 안전 백업**: 모든 JSON·이미지 덮어쓰기는 임시 파일 생성 + `os.replace` 원자적 교체를 사용하며(선행 `unlink()` 금지), 수정·삭제 시 `.plepa_backup/`(20개 순환) 및 `_trash/`를 활용합니다.
 14. **Antigravity 레일형 거버넌스 & AST 래칫**: `.agents/hooks.json`(`plepa_guard.py`)이 에셋 직접 접근·레거시·`sync_to_kiro`·민감 커밋을 물리 차단하고, `.agents/skills/` 6종이 작업 레일을 안내합니다. 신규 `.py` 파일 `<= 350줄`, 신규 함수 `<= 120줄` 래칫을 강제합니다.
 15. **레거시 `kiro` 브릿지 차단 & 문서 규율**: `scripts/sync_to_kiro.py`는 `--force-unsafe` 없이 차단(`exit 2`)됩니다. 통계 과장 금지(Rule 8), 질문 후 승인 게이트(Rule 9), 비민감 한국어 커밋(Rule 2)을 상시 준수합니다.
@@ -55,3 +55,4 @@
 - **ADR-102 / ADR-103 (2026-11-16~17)**: 일상 `style_mode="legacy"` 확정 + H-씬 수분광 부스터, `oto` `151~193` 검열 면제 해제 및 `is_nude`/`is_otokonoko` 컨텍스트 전파 복원(`oto` 검열률 `71.4%→95.2%`).
 - **ADR-104 / ADR-105 (2026-11-17)**: 체위 4종(`087/090/093/105`) `mob_tier: 2` 밀착 포옹 승격 및 H-씬 무드 조명 중립화(`clean ambient occlusion`), `oto` 일상 중립 톤 동기화 및 모브 **상안부 그림자 음영(`_MOB_SHADOW_EYES_POS`)** 전면 전환.
 - **ADR-106 / ADR-107 (2026-11-17~20)**: `signature_accessories` 2차 청크 전단 고정 + `CompositionAntiDriftMutator` + `--deterministic-pose-seed` 삼위일체 도입, `#128`/`#198` 복합 봉사 포즈 공식 폐기 및 ControlNet 향후 로드맵 수립.
+- **ADR-108 (2026-11-26, Wave 3)**: `PoseEntry`/`PoseItemSchema` 양방향 통일, `GlobalJobManager` GUI 전체 FIFO 큐 일원화, `GENERATION_OPTION_SPECS` 29종 삼위일체(`generation_options.py`·`option_controls.py`·CLI), `LoraLoader` 조건부 직렬 체이닝(미지정 시 무변경 바이패스) 및 구형 5종 로스터 `status: legacy` 분리.
