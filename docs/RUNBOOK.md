@@ -1,198 +1,95 @@
-# 📘 [PLEPA Operations & Troubleshooting Runbook] 운영 및 장애 진단 통합 런북
+# 🛠️ 플에파(PLEPA) 운영 및 트러블슈팅 런북 (RUNBOOK)
 
-> **문서 목적**: ComfyUI 로컬 서버 관리, 이미지 에셋 배치 생성 파이프라인(`batch_generator.py`) 가동, VRAM 부족(OOM) 대응 및 **6대 계층별 장애 진단 체크리스트**를 하나로 통합한 실무 운영 매뉴얼(SOP)입니다.  
-> **기반 사양**: Windows 11, Python, NVIDIA RTX 4060 Ti 8GB + 48GB System RAM, ComfyUI (`127.0.0.1:8188`).  
-> **표준 엔진**: **SDXL 단일 파이프라인** (`unholyDesireMixSinister_v90.safetensors`, CFG `5.0`, Steps `28`, `dpmpp_2m` + `karras`, `832x1216`).
+> **목적**: 개발자·에이전트·다중 PC 이식 환경에서 플에파를 에러 없이 즉시 가동, 검증, 배포하기 위한 **실전 운영 절차서 (How-To)**입니다.
 
 ---
 
-## ⚡ 1. 10초 원클릭 긴급 진단 명령어
+## 1. 환경 구축 & 필수 모델 체크리스트 (Fresh Setup)
 
-장애나 이상 징후 발생 시 터미널에서 아래 명령어들을 순서대로 실행하여 문제 지점을 즉시 격리합니다:
+### 1.1 Python 가상환경 & 의존성 검증
+```powershell
+cd C:\Users\rbsgh\plepa
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe batch_generator.py --test
+```
 
-| 점검 목적 | CLI 명령어 | 정상 기대 결과 |
-| :--- | :--- | :--- |
-| **시스템 10단계 통합 무결성 진단 (`--test`)** | `python batch_generator.py --test` | `10 PASS, 0 WARN, 0 FAIL (10개 코어 무결성 100%)` |
-| **전 로스터 1초 에셋 전수 감사 (`-r all --audit`)** | `python batch_generator.py -r all --audit` | 전체 10개 로스터별 보유/기대 수량, 완비율 표 연속 출력 |
-| **단일 로스터 1초 에셋 전수 감사 (`--audit`)** | `python batch_generator.py -r campus --audit` | 캐릭터별 보유/기대 수량, 완비율, 백업 현황 표 출력 |
-| **ComfyUI 서버 헬스체크** | `Invoke-RestMethod -Uri "http://127.0.0.1:8188/system_stats" \| ConvertTo-Json -Depth 3` | GPU/VRAM JSON 응답 반환 |
-| **로스터 5단계 사전점검** | `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus` | `✔ [PASS] 위반 사항 0건!` |
-| **프롬프트 조립 점검 (GPU 미사용)** | `python batch_generator.py -r campus -c aya -p 000,060,080 --dry-run` | 조립된 긍정/부정 프롬프트 출력 |
-| **모바일 원격 검수 서버 기동** | `.\.venv\Scripts\python.exe scripts/serve_benchmark_mobile.py` | 로컬 Wi-Fi IP 및 Cloudflare 터널 토큰 URL(`?token=...`) 동시 출력 |
-| **모바일 갤러리 HTML 갱신** | `.\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py` | `inspection_batch/index.html` 최신 에셋 동적 조립 |
-| **단위 테스트 전수 검증** | `.\.venv\Scripts\python.exe -m pytest -q` | `121 passed (100% ALL PASS)` |
-
+### 1.2 ComfyUI 필수 모델 & 확장팩 (`127.0.0.1:8188`)
+* **체크포인트 (`ComfyUI/models/checkpoints/`)**:
+  - 기본 SSOT: `UnholyDesireMixSinisterAesthetic_V9_Illustrious.safetensors` (`CFG 4.0`, `Steps 28`, `dpmpp_2m / karras`)
+  - 선택 프리셋: `waiIllustriousSDXL_v170.safetensors`, `loxsHEXMIX_hexmixV50.safetensors`, `ponyDiffusionV6XL.safetensors`
+* **FaceDetailer / HandDetailer (`ComfyUI/models/ultralytics/bbox/`)**:
+  - `face_yolov8m.pt` (필수), `hand_yolov8s.pt` (`--hand-detailer` 시)
+* **Upscaler (`ComfyUI/models/upscale_models/`)**: `4x-UltraSharp.pth`
+* **IP-Adapter (`--use-ref` 시)**: `ip-adapter-plus_sdxl_vit-h.safetensors` + `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors`
+* **필수 커스텀 노드**: `ComfyUI-Impact-Pack`, `ComfyUI_IPAdapter_plus` (사전 점검: `--check-comfy`)
+* **로컬 Phase P2.5 검열 모델 (`plepa/models/` & 루트)**:
+  - `models/censor_seg.pt` (Hold-out 클린 학습 YOLO11s-seg) + `sam2.1_s.pt` (자동 다운로드/로드) + `deepghs/anime_censor_detection`
 
 ---
 
-## 🚀 2. 에셋 생성 및 검열 실전 명령어 (`batch_generator.py`)
+## 2. 표준 운영 파이프라인 (Day-to-Day Operation)
 
-### 2.0 2대 통합 섹터(01_normal, 02_h_scenes)별 전수 정밀 감사 스크립트
+### 2.1 작업 전·후 무결성 Gate (오프라인 필수 검증)
 ```powershell
-# 2대 통합 섹터(01_normal, 02_h_scenes)별 파일수, 검열본, 원본백업, 검열이상, Auto-QC 전수 검수
-python scripts/audit_sector_assets.py --roster campus
-python scripts/audit_sector_assets.py --roster ykn
+# 1. 전체 단위·계약 테스트 (로컬 에셋 무변경 세션 가드 + AST 래칫 포함)
+.\.venv\Scripts\python.exe -m pytest -q
+
+# 2. 주요 활성 로스터 7단계 사전 점검 (착의/누드/테마/배경/POSE_MAPPING.md 동기화)
+.\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus
+.\.venv\Scripts\python.exe -m plepa_engine.precheck -r oto
+.\.venv\Scripts\python.exe -m plepa_engine.precheck -r spy
+
+# 3. Gen-IT v2.2 완성본 무결성 검증
+.\.venv\Scripts\python.exe scripts/validate_genit_work.py --force
 ```
 
-### 2.1 전 로스터 / 단일 / 다중 캐릭터 배치 생성
-- **신규 엔진 최적화 (기본 탑재)**:
-  - `--freeu`: ComfyUI 내장 `FreeU_Advanced` 노드로 선명도 & 콘트라스트 부스팅 (기본값: 활성화)
-  - `동적 종횡비(Dynamic Aspect Ratio)`: 상반신/바스트/클로즈업 씬은 물리적 줌인을 유도하는 `1024x1024` 정방형 규격으로 자동 전환.
-  - `지능형 프롬프트 결함 자가 진단`: 동일 포즈 2회 이상 연속 불량 시 `🚨 [프롬프트 점검 경고]` 및 구체적 원인 가이드 즉시 출력.
+### 2.2 배치 생성 · 검열 표준 실행
 ```powershell
-# 0) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 기준점 1장(000) 초고속 생성 (외형 전수 점검)
-python batch_generator.py -r all --all-chars -p 000 --censor
+# 드라이런으로 프롬프트 및 파일명 점검 (디스크/매니페스트 무접촉)
+.\.venv\Scripts\python.exe batch_generator.py -r campus -c aya -p sample10 --dry-run
 
-# 1) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 10대 골든샘플(sample10) 일괄 생성
-python batch_generator.py -r all --all-chars -p sample10 --censor
+# 실서버 생성 (하이브리드 해상도: 000~024 832x1216, 025+ 1216x832 / white_silhouette 검열)
+.\.venv\Scripts\python.exe batch_generator.py -r campus -c aya -p sample10 --censor --deterministic-pose-seed
 
-# 2) [전 로스터 일괄] 전체 10개 로스터 전 캐릭터 V2 108종 풀 에셋 일괄 생성
-python batch_generator.py -r all --all-chars -p all --censor
+# 기존 원본({_origin}) 유지한 채 검열 마스크만 0.2초 일괄 재적용
+.\.venv\Scripts\python.exe batch_generator.py -r oto --all-chars -p all --censor-only
 
-# 3) [캠퍼스 108종 풀패키지] 108종 에셋 일괄 생성 + 화이트 실루엣 자동 검열
-python batch_generator.py -r campus --all-chars -p campus_108 --censor
-
-# 3-1) 단일 로스터 전체 캐릭터 일괄 생성 + 화이트 실루엣 자동 검열
-python batch_generator.py -r sns --all-chars -p all --censor
-python batch_generator.py -r campus --all-chars -p all --censor
-
-# 4) 특정 캐릭터의 특정 포즈만 강제 덮어쓰기 재생성 (--overwrite / -f)
-python batch_generator.py -r campus -c aya -p 051,060,061 --overwrite --censor
-
-# 5) 오토코노코 캐릭터 생성 (여성 번호 080~130 입력 시 자동으로 +70 대칭 번호 150~200으로 변환)
-python batch_generator.py -r campus -c mio -p all --censor
+# 에셋 정합성·2섹터 구조 전수 감사
+.\.venv\Scripts\python.exe scripts/audit_asset_alignment.py --roster campus
+.\.venv\Scripts\python.exe scripts/audit_sector_assets.py --roster campus
 ```
 
-### 2.2 정밀 외곽선 실루엣 / 모자이크 및 진단 디버그 자동 검열 (`--censor` & `--censor-only`)
-- **동작 원리**: `dghs-imgutils` 성기 감지(`penis` + `pussy`) + 하단 기저부 적응형 42% 확장(`m_bot=0.42`) + Skin Density Gate(18% 피부톤 미달 시 허공 박스 원천 폐기) + 하반신 1.6x Lanczos 줌인 ROI 2중 스캔 + `apply_silhouette`(Convex Hull 캡슐 결합) / `apply_mosaic`(소프트 알파 블렌딩) / `apply_debug_bbox`(BBox 테두리 및 점수 시각화).
-- **저장 구조**:
-  - 검열이 완료된 파일은 `projects/{roster}/assets/{char}/` 내의 해당 파일을 직접 교체합니다.
-  - 노출이 감지되어 검열된 파일의 **무검열 원본**은 `projects/{roster}/assets/{char}_origin/` 폴더에 동일한 파일명으로 안전하게 격리 백업됩니다.
+### 2.3 웹 스튜디오 & 원격 모바일 검수 서버 운용
 ```powershell
-# 1) 이미 생성된 에셋 폴더에 대해 ComfyUI 호출 없이 소급 검열만 단독 실행 (장당 0.2초)
-python batch_generator.py -r campus -c aya -p all --censor-only
+# A. PC 로컬 NiceGUI 스튜디오 (8대 탭 + 수동 터치 덧칠 + Genit 1024x1536 일괄 내보내기)
+.\.venv\Scripts\python.exe -m plepa_gui.app
 
-# 2) 검열 스타일 지정 (기본값: white_silhouette [젠잇 심의 표준], 대안: black_silhouette, debug_bbox)
-python batch_generator.py -r campus -c aya -p 080 --censor --censor-style white_silhouette
+# B. 원격 스마트폰 접속 (8080 기동 + PLEPA_MOBILE_TOKEN 발급 + Cloudflare Tunnel URL 출력)
+.\.venv\Scripts\python.exe scripts/start_remote.py
 
-# 3) QA 진단용 BBox 및 신뢰도 점수 시각화 디버그 모드 (마스킹 없이 감지 영역 직사각형 및 점수 표기)
-python batch_generator.py -r campus -c aya -p all --censor-only --censor-style debug_bbox
-```
-
-
-### 2.4 모바일 인터랙티브 검수 갤러리, 원클릭 터치 덧칠 에디터 및 P2.5 Residual Span 정량 벤치마크 (ADR-86 / ADR-95 ~ ADR-99)
-- **동작 원리**:
-  - **P2.5 Residual Span 2-Way + Semantic-Guided SAM 2.1 파이프라인 (프로덕션 기준선 동결)**: `DeepGHS` + 자체 학습 `YOLO11s-seg` (`models/censor_seg.pt`, `imgsz=1024, mask_ratio=2, val Mask Recall=0.600`) 합의 시 부분 커버 구간을 ① 교차 손 분할 Sub-BBox(편측 대각 X축 클램핑) 또는 ② Union Span + 연장 코리도(`_compute_prior_extension_corridor`)로 2-Way 복원하며, 경계 파편/이탈 프라이어 배제·`Case A 0.19` 구제·상단 14%/비손분할 하단 Echo 게이트와 외곽 선화 스냅(`+1~3px`)을 적용함. (SPY 10인 510장 실전 배치 검증 완료 및 프로덕션 동결 확정)
-  - 모바일 검수 갤러리(port: 8085)에서 에셋별 `[✏️ 터치 덧칠]` 버튼을 탭하여 풀스크린 캔버스 에디터 진입 및 `/test_c4/`에서 `white_p25`(기본), `white_p2`, `white_p1`, `white_p05`, `white_p0`, `white_c7` 1:1 시각 비교 가능, `/test_spy/`에서 SPY 10인 510장 1:1 토글 갤러리 검수 가능.
-  - 사용자가 스마트폰 화면에서 터치 브러시로 모자란 부분을 1~2초 덧칠하고 `[💾 저장 완료]` 시 `POST /api/retouch_censor`를 통해 원본 파일 영구 덮어쓰기 저장 및 `output/benchmarks/ground_truth/` 정답 데이터 자동 아카이브.
-  - 클린 데이터셋 추출기(`extract_censor_seg_dataset.py`)는 `spy_holdout` 40장을 학습 세트에서 100% 격리(`holdout_leaks=0`)하며 이격 여백이 강화된(`max(45px, GT 높이 × 35%)`) 부분 네거티브(`--inscene-neg-limit 18`) 및 극단 구도 오버샘플(`--extreme-pose-oversample 3`)을 지원함.
-```powershell
-# 1) 모바일 검수 갤러리 및 Cloudflare 공인 터널 서버 구동 (포트 8085)
-python scripts/serve_benchmark_mobile.py
-
-# 2) 검수 뷰어 HTML 갱신
+# C. (특수 벤치마크·HTML 뷰어 전용 :8085 서버, FIFO 리롤 대기열 & Ground Truth 수집)
 .\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py
-
-# 3) Hold-out 격리 클린 + 이격 부분 네거티브 데이터셋 추출 및 YOLO11s-seg(1024px, mask_ratio=2) 학습·배포 (Phase P2.5)
-.\.venv\Scripts\python.exe scripts/train_censor_seg.py --clean-spy-dir <SPY_ASSETS_DIR> --gt-dir output/benchmarks/ground_truth --model yolo11s-seg.pt --epochs 80 --imgsz 1024 --batch 4 --mask-ratio 2
-
-# 4) Hold-out 정답셋 기반 P2.5 정량 벤치마크 & test_c4 A/B 비교 실행
-.\.venv\Scripts\python.exe scripts/benchmark_censor_metrics.py --label P2.5 --save-c4-suffix p25 --out-json output/benchmarks/p4_p25_result.json --compare-json output/benchmarks/p4_p2_result.json
-
-# 5) SPY 10인 510장 대규모 전수 검열 및 1:1 토글 웹 갤러리 (/test_spy/) 생성
-.\.venv\Scripts\python.exe scripts/benchmark_spy_batch.py
+.\.venv\Scripts\python.exe scripts/serve_benchmark_mobile.py
 ```
 
-### 2.3 Auto-QC 불량 자동 감지 및 리롤 루프
-- 생성 직후 [`plepa_engine/qa_validator.py`](../plepa_engine/qa_validator.py)가 4대 결함(① 색감 과포화 Color Burn, ② 남성 모브 분신 2명 이상, ③ 단독/여운 씬 남성 난입, ④ 9~10등신 기형 장신)을 검사하여 불량 시 새 시드로 자동 재시도합니다(기본 3회):
+### 2.4 Gemini 노트북 상시 싱크 (`scripts/export_context.py`)
 ```powershell
-# 최대 재시도 횟수 5회로 상향
-python batch_generator.py -r campus -c aya -p 034 --max-retries 5
-
-# Auto-QC 비활성화 (1회 강제 생성)
-python batch_generator.py -r campus -c aya -p 034 --no-qc
+# context_snapshot/ 내 고정 5개 파일 (00~30 + 50_REFACTORING_PLAN.md) 자동 덮어쓰기 & 구파일 정리
+.\.venv\Scripts\python.exe scripts/export_context.py
 ```
-
-### 2.4 보정 디테일러(Face & Hand Detailer) 및 동적 배경 운영
-- **Face Detailer (얼굴 보정)**: 기본 활성화되어 이목구비 뭉개짐을 자동 보정합니다. 비활성화 시 `--no-face-detailer` 플래그를 사용합니다.
-- **Hand Detailer (손 보정)**: 손가락 왜곡이 잦은 복합 씬에서 손 디테일러를 체이닝합니다 (`--hand-detailer`).
-- **포즈별 동적 배경**: `projects/{roster}/pose_background_mapping.json`을 통해 각 포즈의 맥락에 맞는 최적 배경(카페, 도서관, 캠퍼스거리, 연구실, 침실 등)이 자동 주입됩니다.
-```powershell
-# Face Detailer 끄기 (순수 체크포인트 렌더링)
-python batch_generator.py -r campus -c aya -p 000 --no-face-detailer
-
-# Hand Detailer 체이닝 활성화 (손 보정)
-python batch_generator.py -r campus -c aya -p 000..019 --hand-detailer
-```
-
-### 2.5 형제 프로젝트(`kiro`) 양방향 시너지 동기화
-```powershell
-# 1) 변경점 사전 시뮬레이션 (--dry-run)
-python scripts/sync_to_kiro.py --dry-run
-
-# 2) 포즈 DB, 오버라이드, 배경 매핑, censor.py, qa_validator.py 전파 실행
-python scripts/sync_to_kiro.py
-```
+- **노트북 워크플로우**: `context_snapshot/` 5개 고정 파일을 NotebookLM/Gemini 소스로 유지하면, 덮어쓰기 후 소스 새로고침만으로 전체 코드맵·헌법·Wave 리팩토링 현황이 즉시 동기화됩니다.
+- **형제 레포(`kiro`) 안내**: [`scripts/sync_to_kiro.py`](../scripts/sync_to_kiro.py)는 최신 Kiro(Wave 0~4 / P1~P4) 덮어쓰기 파손을 막기 위해 기본 실행이 차단(`exit 2`, `--force-unsafe` 전용)되어 있습니다. 필요한 기능은 수동 어댑팅으로 이식합니다.
 
 ---
 
-## 🛠️ 3. 6대 계층별 장애 진단 체크리스트 (Troubleshooting SOP)
+## 3. 자주 발생하는 장애 대응 (Troubleshooting)
 
-```mermaid
-flowchart TD
-    Start["⚠️ 이미지 생성 또는 품질 이상 발생"] --> Q1{"1. ComfyUI 연결/VRAM 에러인가?<br>(Port 8188 / CUDA OOM)"}
-    Q1 -->|"YES"| L1["[계층 1] 인프라 점검<br>• ComfyUI 재기동 / /free 호출<br>• 체크포인트 파일명 확인"]
-    Q1 -->|"NO"| Q2{"2. JSON 로드/포즈 누락인가?"}
-    Q2 -->|"YES"| L2["[계층 2] 데이터 점검<br>• precheck.py 실행<br>• .plepa_backup 복원"]
-    Q2 -->|"NO"| Q3{"3. 구도 파괴 / 의상 잔류 / 태그 충돌인가?"}
-    Q3 -->|"YES"| L3["[계층 3] 프롬프트 파이프라인 점검<br>• --dry-run 확인<br>• SanitizerMutator 충돌 로그 확인"]
-    Q3 -->|"NO"| Q4{"4. 색감 과포화(Color Burn) / 뷰파인더 테두리인가?"}
-    Q4 -->|"YES"| L4["[계층 4] 가중치 & 워크플로우 점검<br>• clamp_sdxl_weights (1.15/1.25)<br>• 단일 CLIPTextEncode 및 CFG 5.0 확인"]
-    Q4 -->|"NO"| L5["[계층 5~6] 검열(censor.py) & 웹 GUI(8080) 점검"]
-```
-
-### 🔌 [계층 1] 인프라 & ComfyUI 서버 (VRAM / 포트 8188)
-- **증상**: `ConnectionRefusedError` 또는 `CUDA out of memory`.
-- **조치**:
-  1. ComfyUI 메모리 즉시 반환:
-     ```powershell
-     Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8188/free" -Body '{"unload_models": true, "free_memory": true}' -ContentType "application/json"
-     ```
-  2. 좀비 프로세스 강제 종료:
-     ```powershell
-     Get-NetTCPConnection -LocalPort 8188 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
-     ```
-
-### 💾 [계층 2] 데이터 & 스키마 무결성 (`data/` & `projects/`)
-- **증상**: `JSONDecodeError`, 특정 포즈 번호 누락, 성별 프롬프트 오주입.
-- **조치**:
-  1. `.\.venv\Scripts\python.exe -m plepa_engine.precheck -r {roster}` 실행하여 누락 필드 및 규칙 위반 코드 즉시 검출.
-  2. 파일 손상 시 `.plepa_backup/` 디렉토리의 직전 타임스탬프 백업본으로 복원.
-
-### 🧠 [계층 3] 프롬프트 파이프라인 (`plepa_engine/prompt_pipeline.py`)
-- **증상**: 탈의 씬에서 평상복이 안 벗겨지거나, 여주인공 네거티브 태그가 사라짐.
-- **조치**:
-  1. 포즈의 `required_outfit`이 `"nude"`로 지정되어 있는지, 캐릭터 JSON에 `sdxl_nude_positive`가 존재하는지 확인.
-  2. `SanitizerMutator`가 `[WARN] 프롬프트 태그 충돌 감지`를 출력할 경우, 긍정 프롬프트와 캐릭터 네거티브에 동일 단어가 중복 기입되었는지 점검 (모브 `BREAK` 블록 및 구조 제어 태그는 자동 보호됨).
-
-### 🎨 [계층 4] 색감 과포화(Color Burn) 및 뷰파인더(`⌜ ⌝`) 방어
-- **증상**: 피부가 붉게 타거나 화면 네 모서리에 카메라 뷰파인더(`⌜ ⌝`)가 찍힘.
-- **조치**:
-  1. `clamp_sdxl_weights()`가 긍정 가중치 `1.15`, 부정 가중치 `1.25` 상한선을 유지하는지 확인.
-  2. 포즈 프롬프트 내에 `camera` 단어가 있으면 `viewer`로 치환하고, 네거티브에 `camera frame, viewfinder, HUD`가 포함되었는지 확인.
-
-### 🛡️ [계층 5] 실루엣 검열 (`plepa_engine/censor.py`)
-- **증상**: 검열 후 입술/혀가 하얗게 지워지거나, 성인 결합 씬에서 성기가 미탐지됨.
-- **조치**:
-  1. `censor.py`의 상반신 얼굴/입술 보호 가드(`y < H * 0.42`) 및 적색/분홍색 입술·혀 HSV 마스킹 + Hole Filling이 활성화되어 있는지 확인.
-  2. 결합 씬(`080~130`, `150~200`)에서 1차+2차 멀티스케일 감지가 모두 실패할 경우 `POSE_SAFE_ANCHORS` 안전 앵커 보조 스캔이 동작하며, 콘솔의 `[WARN] 성인 결합 씬 성기 미탐지` 로그를 통해 확인 가능.
-
-
-## 4. 외부망(LTE/5G) 원격 접속 (Cloudflare Quick Tunnel)
-
-- **실행**: 루트의 `원격접속.bat` 더블클릭 (또는 `powershell -ExecutionPolicy Bypass -File scripts\start_remote.ps1`)
-- 동작: NiceGUI(8080) 기동/재사용 → `cloudflared` 아웃바운드 터널 개설 → 공개 URL 출력 및 `/mobile` 주소 클립보드 복사
-- 원리: PC가 Cloudflare로 먼저 암호화 터널을 연결(Outbound)하므로 공유기 포트포워딩·Windows 방화벽 설정이 필요 없음
-- 주의: Quick Tunnel URL은 **실행할 때마다 바뀜**. 고정 주소가 필요하면 Cloudflare 계정 + Named Tunnel로 전환
-- 보안: URL을 아는 사람은 누구나 접속 가능하므로 링크를 외부에 공유하지 말 것 (GUI 인증 도입 전까지)
-- `cloudflared.exe`는 `.gitignore` 처리됨 (없으면 스크립트가 자동 다운로드)
+| 증상 | 근본 원인 | 즉시 조치 명령어 / 해법 |
+| :--- | :--- | :--- |
+| **`WinError 32` / 탐색기 파일 잠금** | Windows COM Surrogate(`dllhost.exe`)의 WebP 썸네일 점유 | `taskkill /f /im dllhost.exe` |
+| **포트 `8080` 또는 `8085` 충돌** | 백그라운드 웹 서버/터널 프로세스 잔존 | `Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue \| ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }` |
+| **원격 `/mobile` 401/403 오류** | `PLEPA_MOBILE_TOKEN` 누락 또는 잘못된 Referer/Origin | `scripts/start_remote.py` 콘솔에 출력된 `?token=...` 전체 하이퍼링크로 재접속 |
+| **검열 과다/누락 (P2.5 동결 이후)** | `ADR-99` 기준 임계치 동결 정책(예외 케이스) | 웹 `/gallery`·`/mobile`의 **`✏️ 터치 덧칠`**(0.5초 마스킹/지우개) 또는 **`🔄 원본`** 복원 사용 (임계치 임의 튜닝 금지) |
+| **모브 남캐 눈/얼굴 노출 또는 헤어 이염** | `mob_tier 1/3` 또는 `events.json` 포즈 자체 음영/차단 누락 | [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)의 뒤통수·상안부 그림자 음영 3종 세트 직접 명기 (`bald`/`faceless`/앞머리 가림 금지) |
+| **계약 테스트(`test_contract_guards.py`) 실패** | 모듈 `>350줄` / 함수 `>120줄` 초과 또는 레이어/CLI-GUI 불일치 | 함수 분리로 제한 준수 + `GENERATION_OPTION_SPECS`/`batch_generator.py` 4곳 삼위일체 동기화 |
+| **`scripts/export_context.py` 후 `docs/AI_HANDOVER_GUIDE.md` 반영 누락** | 구 `context_snapshot/` 잔여 파일 존재 | Wave 2 이후 자동 정리됨 (`00_README_FOR_AI`, `10_TIER1`, `20_TIER2`, `30_TIER3`, `50_REFACTORING_PLAN`) |

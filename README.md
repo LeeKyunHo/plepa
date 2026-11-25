@@ -1,98 +1,85 @@
-# 플에파 (PLEPA: High-Performance Anime Asset Pipeline)
+# ⚡ 플에파 (PLEPA: Prompt-Light Engine for Portrait Assets)
 
-> **SDXL (`unholyDesireMixSinister_v90.safetensors`) 단일 파이프라인 기반 초고화질 2D 애니 캐릭터 챗봇 에셋 배치 생성 엔진**  
-> ComfyUI 로컬 API(`127.0.0.1:8188`)와 연동하여 V2 표준 포즈 에셋(여성 100종 / 캠퍼스 106종 / 오토코노코 `+70` 대칭 매핑)을 고속 생성하고, **AI 자동 품질 검수(Auto-QC)**, **정밀 외곽선 실루엣 검열(`white_silhouette`)**, **얼굴 정밀 보정(Face Detailer)** 및 **4x AI 업스케일**까지 원스톱으로 수행합니다.
+ComfyUI 로컬 API(`127.0.0.1:8188`)를 기반으로 캐릭터 챗봇용 고화질 2D 애니메이션 스탠딩·일상·성인 에셋을 일관성 있게 대량 생산하는 **데이터 주도형 AI 에셋 파이프라인 & 웹 스튜디오**입니다.
 
 ---
 
-## 🚀 빠른 시작 (Quick Start)
+## 🚀 1. 프로젝트 개요 및 기술 스택 (SDXL 단일 표준)
 
-### 1. ComfyUI 환경 준비
-본 파이프라인은 로컬에서 구동 중인 ComfyUI(`http://127.0.0.1:8188`)와 통신합니다.
+- **생성 엔진**: ComfyUI 로컬 API (`http://127.0.0.1:8188`) + SDXL Illustrious 단일 파이프라인
+- **기본 체크포인트 & 사양**: `UnholyDesireMixSinisterAesthetic_V9_Illustrious.safetensors` (`CFG 4.0`, `Steps 28`, `dpmpp_2m / karras`, `CLIP Skip -2`, `FreeU` 활성)
+- **하이브리드 최적 해상도**: `000~024` 세로형 (`832×1216`) / `025+` 가로형 (`1216×832`, `--width`/`--height` 지정 시 우선)
+- **후처리·검열**: `FaceDetailer` (기본 활성) / `HandDetailer` (선택) / `4x-UltraSharp` 업스케일 / **Phase P2.5 하이브리드 검열** (`deepghs` + `censor_seg.pt` YOLO11s-seg + `sam2.1_s.pt`, 기본 `white_silhouette` 총 11종, `{char}_origin/` 100% 무손실 보존)
+- **V3 포즈 데이터베이스 ([`data/sdxl_pose_database.json`](data/sdxl_pose_database.json))**:
+  - 코어 DB `175`개 키(활성 `151`종 + 호환 보존 `24`종) · 포즈 단일 매핑 SSOT: **[`POSE_MAPPING.md`](POSE_MAPPING.md)**
+  - `000~019` 감정(20) · `020~050` 일상(31) · `051~055` 로스터 이벤트(`events.json`) · `060~079` 로맨스/공통 봉사(20) · `080~127` 여성 성인(활성 35) · `130~132` 여성 특수(3) · `150~197` 오토코노코 성인(활성 39) · `133~135`/`200~202` 오토 특수
+- **지원 로스터 (`12`개)**: `campus`, `spy`, `oto`, `ykn`, `sns`, `maid`, `murim`, `school`, `hey`, `man`, `don`, `default`
 
-1. **필수 모델 배치**:
-   - **SDXL 메인 체크포인트**:
-     - `unholyDesireMixSinister_v90.safetensors` ➡️ `ComfyUI/models/checkpoints/`
-   - **보정 & 업스케일러**:
-     - BBox 얼굴 감지: `face_yolov8m.pt` ➡️ `ComfyUI/models/ultralytics/bbox/`
-     - 4x 업스케일러: `4x-UltraSharp.pth` ➡️ `ComfyUI/models/upscale_models/`
-2. **필수 확장 노드 (Custom Nodes)**:
-   - `ComfyUI-Manager`
-   - `ComfyUI-Impact-Pack` (Face Detailer 얼굴 자동 정밀 보정)
+---
 
-### 2. 파이프라인 실전 실행 (`batch_generator.py`)
-별도의 엔진 옵션을 주지 않아도 **SDXL 단일 파이프라인(CFG 5.0, 28 Steps, `dpmpp_2m` + `karras`, 장당 약 11.8초)**으로 생성됩니다.
+## ⚙️ 2. 빠른 실행 (CLI & NiceGUI 웹 스튜디오)
 
+### A. 웹 스튜디오 (`:8080`) & 원격 모바일 접속
 ```powershell
-# 1) 캠퍼스 로스터 전체 캐릭터 V2 106종 배치 생성 + 자동 실루엣 검열
-python batch_generator.py -r campus -c all -p all --censor
+# PC 로컬 스튜디오 기동 (http://localhost:8080)
+.\.venv\Scripts\python.exe -m plepa_gui.app
 
-# 2) 특정 캐릭터의 특정 포즈만 재생성 (기존 에셋 덮어쓰기)
-python batch_generator.py -r campus -c aya -p 051,060,061 --overwrite --censor
+# 원격 모바일 터널 & 토큰 보안 URL 자동 발급 (/mobile?token=...)
+.\.venv\Scripts\python.exe scripts/start_remote.py
+```
 
-# 3) 이미 생성된 에셋 폴더에 대해 정밀 실루엣 검열만 단독 수행 (_origin 원본 자동 보존)
-python batch_generator.py -r campus -c aya -p all --censor-only
-
-# 4) 이미지 생성 전 5단계 무결성 사전 점검 (Precheck)
+### B. CLI 배치 생성 & 사전 무결성 검증
+```powershell
+# 등록 캐릭터 목록 및 로스터 사전 점검 (착의·누드·테마·매핑·문서 7단계 검증)
+.\.venv\Scripts\python.exe batch_generator.py -r campus -l
 .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus
 
-# 5) 플에파 골든 스테이트를 형제 프로젝트(kiro)로 동기화 전파
-python scripts/sync_to_kiro.py
+# 10대 대표 골든 샘플 생성 / 특정 캐릭터 누락분 채우기 / 소급 재검열
+.\.venv\Scripts\python.exe batch_generator.py -r campus -c aya -p sample10 --censor
+.\.venv\Scripts\python.exe batch_generator.py -r campus --all-chars -p all --censor
+.\.venv\Scripts\python.exe batch_generator.py -r oto --all-chars -p all --censor-only
+
+# 전체 계약·단위 회귀 테스트 (240+종) & Gemini 노트북 스냅샷 갱신
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe scripts/export_context.py
 ```
 
 ---
 
-## 💎 핵심 아키텍처 및 차별화 기능 (Key Features)
+## 🏗️ 3. 핵심 아키텍처 요약
 
-1. **SDXL 단일 파이프라인 & 6대 Mutator 체인 (`plepa_engine/prompt_pipeline.py`)**:
-   - `PoseTagPreparation` ➔ `PositiveAssembly` ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `Sanitizer` 6단계 미들웨어 체인으로 프롬프트 조립, 태그 충돌 자동 정제(`remove_conflicting_tags_from_negative`), 가중치 안전 클램핑(`clamp_sdxl_weights`)을 수행합니다.
-2. **V2 포즈 아키텍처 (`000~200`) 및 오토코노코 `+70` 대칭 법칙**:
-   - 공용 감정(`000~019`), 일상 포즈(`020~039`), 이벤트(`040~052`), 로맨스(`060~063`)와 함께, 여성 성인 씬(`080~127`, `130`)에 정확히 `+70`을 더하면 오토코노코 성인 씬(`150~197`, `200`)과 1:1 대칭 매핑됩니다.
-3. **정밀 외곽선 실루엣 검열 (`white_silhouette` & `_origin` 원본 보존)**:
-   - `dghs-imgutils` 성기 감지(`penis` + `pussy`) + 고환 하단 35% 확장 + MobileSAM 외곽선 추출 + 멀티스케일 2x 타일 스캔 + `POSE_SAFE_ANCHORS` 안전 앵커 폴백을 결합하여, 입술/혀 침범 없이 노출 부위만 정밀 백색 실루엣 처리하고 원본은 `{char}_origin/`에 무손실 보존합니다.
-4. **AI 자동 품질 검수 (Auto-QC 4대 감지기, `plepa_engine/qa_validator.py`)**:
-   - 생성 직후 ① 색감 과포화(Color Burn), ② 남성 모브 분신(Multi-Male Clone), ③ 여운/단독 씬 남성 난입(Solo Intrusion), ④ 기형적 장신(9~10등신)을 자동 판별하여 불량 시 시드를 바꿔 즉시 재생성합니다.
+1. **7단계 프롬프트 Mutator 체인 (`plepa_engine/prompt_pipeline.py`)**:
+   - `PoseTagPreparation` ➔ `PositiveAssembly` ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` (`mob_tier 0~3` · `partner_pos` · 상안부 그림자 음영) ➔ `CompositionAntiDrift` ➔ `Sanitizer` (가중치 상한: 긍정 `1.15`, 부정 `1.25`).
+2. **CLI · Engine · GUI 삼위일체 동기화 (`Trinity Sync`)**:
+   - `GENERATION_OPTION_SPECS` ↔ `GenerationParams` ↔ `batch_generator.py` CLI ↔ `plepa_gui` Web UI 자동 렌더링 ↔ AST·파서 정밀 계약 테스트(`tests/test_cli_gui_sync.py`, `tests/test_contract_guards.py`).
+3. **NiceGUI 8대 탭 + 수동 터치 덧칠 (`plepa_gui`)**:
+   - `/characters` · `/poses` · `/backgrounds` · `/pose-sets` · `/generate` · `/gallery` · `/mobile` · `/settings` + 공용 캔버스 리터치(`retouch_editor.py`) + `GenitExporter` (`1024×1536` 일괄 패키징).
+4. **Antigravity 에이전트 레일 (`.agents/`)**:
+   - `PreToolUse` 물리 차단 Hook([`.agents/hooks.json`](.agents/hooks.json)) + 6종 전담 스킬([`.agents/skills/`](.agents/skills))로 에셋·레거시 보호 및 검증 게이트 자동 강제.
 
 ---
 
-## 📂 프로젝트 디렉토리 구조
+## 📁 4. 디렉토리 구조 (Active Layout)
 
 ```text
 plepa/
-├── batch_generator.py           # 플에파 메인 실행 CLI (생성, Auto-QC, 검열 통합)
-├── flux_batch_generator.py      # 하위 호환용 경량 CLI 래퍼 (batch_generator 위임)
-├── run_gui.bat                  # NiceGUI 기반 웹 대시보드 실행기
-├── GEMINI.md                    # 에이전트 최상위 프로젝트 헌법 및 규칙
-├── data/                        # 프롬프트 데이터베이스 (SSOT)
-│   ├── sdxl_pose_database.json  # SDXL V2 마스터 포즈 DB (000~200 + 레거시 호환)
-│   ├── pose_sets.json           # V2 표준 포즈 세트 정의 (unified_100, campus_106 등)
-│   ├── themes/                  # 의상/장르 테마 팩 JSON
-│   └── legacy/                  # 아카이브된 구버전 데이터
-├── plepa_engine/                # 플에파 핵심 백엔드 엔진
-│   ├── config.py                # 전역 상수, 해상도(832x1216), 샘플러 설정
-│   ├── prompt_pipeline.py       # SDXL 6대 Mutator 체인 및 태그 충돌 정제기
-│   ├── prompt_builder.py        # 프롬프트 조립 퍼사드 및 가중치 클램핑
-│   ├── censor.py                # 정밀 외곽선 실루엣 검열기 (MobileSAM + 멀티스케일 + 안전 앵커)
-│   ├── qa_validator.py          # Auto-QC 4대 불량 감지기
-│   ├── precheck.py              # 배치 생산 전 5단계 무결성 사전 점검기
-│   ├── comfy_client.py          # 비동기 ComfyUI 웹소켓/REST 클라이언트
-│   ├── workflow_templates.py    # SDXL 단일 CLIPTextEncode + Face Detailer 워크플로우
-│   └── services/                # 캐릭터, 포즈, 배경, 생성 서비스 레이어
-├── plepa_gui/                   # NiceGUI 기반 웹 프론트엔드
-├── projects/                    # 로스터별 캐릭터 JSON, 오버라이드, 에셋 폴더
-│   ├── campus/                  # 캠퍼스 로스터 (6명 x 106종 완비)
-│   ├── spy/                     # 1960s 첩보 살롱 로스터 (10명)
-│   └── ...                      # maid, school, cafe, bani, dark_generals 등
-├── scripts/                     # 유틸리티 스크립트
-│   ├── sync_to_kiro.py          # plepa ➔ kiro 골든 스테이트 자동 전파 브릿지
-│   ├── plepa_upscaler.py        # 독립 실행형 4x AI 업스케일러
-│   └── archive/                 # 구버전 일회성 마이그레이션 스크립트 보관소
-├── docs/                        # 핵심 아키텍처 및 운영 문서
-│   ├── AI_HANDOVER_GUIDE.md     # 아키텍처 결정 기록(ADR 1~48) 및 마스터 인계서
-│   ├── DOCUMENTATION_GUIDE.md   # 문서 동기화 및 푸시 5단계 표준 프로토콜
-│   ├── POSE_CATALOG.md          # V2 포즈 카탈로그 (000~200)
-│   ├── POSE_MAPPING_V2.md       # V1 ↔ V2 포즈 번호 1:1 매핑 사전
-│   ├── KIRO_SYNC_REPORT.md      # plepa ↔ kiro 양방향 시너지 전파 리포트
-│   └── archive/                 # 구버전 완료 문서 보관소
-└── tests/                       # pytest 자동화 테스트 스위트 (57종)
+├── GEMINI.md                     # 최상위 에이전트 행동 헌법 (규칙 1~11)
+├── POSE_MAPPING.md               # ⭐ 전체 포즈·모브·배경·deprecated 단일 매핑 SSOT
+├── batch_generator.py            # 통합 CLI 진입점 (삼위일체 동기화)
+├── 사용법.txt                    # CLI 명령어 치트시트
+├── data/
+│   ├── sdxl_pose_database.json   # 코어 포즈 DB (175키, SSOT)
+│   ├── pose_sets.json            # V3 프리셋 포즈 묶음 (sample10, campus_108 등)
+│   ├── themes/                   # 공용 테마 의상 팩
+│   └── legacy/                   # [격리] 구 FLUX DB (열람/수정 금지)
+├── plepa_engine/
+│   ├── prompt_pipeline.py        # 7단계 Mutator 체인 & 2인 모브 격리
+│   ├── censor.py                 # Phase P2.5 하이브리드 검열 엔진 (동결 기준선)
+│   ├── qa_validator.py           # Auto-QC 품질/구도 자동 감지기
+│   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증
+│   └── services/                 # CLI·GUI 공용 서비스 & GENERATION_OPTION_SPECS
+├── plepa_gui/                    # NiceGUI 8대 탭 & REST API (/api/assets/*)
+├── scripts/                      # context_exporter, start_remote, audit, validate_genit_work 등
+├── docs/                         # Active SSOT 매뉴얼 & docs/archive/ (이력 보관소)
+└── projects/{roster}/            # 12개 로스터별 캐릭터, 배경, events.json, 에셋(_origin 포함)
 ```

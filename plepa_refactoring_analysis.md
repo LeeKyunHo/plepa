@@ -221,7 +221,7 @@ flowchart LR
 ### 5.2 실행 진척도 추적 (Execution Tracker)
 - [x] **Wave 0 완료 (`8ea43b4`)**: 기준선 5단 분할 커밋, `.gitignore`(204.4MB 격리), 라이트박스 매니페스트 핫픽스(`gallery.py`), 캐릭터 무손실 저장(`schemas.py`, `character_service.py`, `characters.py`), 설정 우선순위(`generation_service.py`, `settings.py`), `sync_to_kiro.py` 차단 가드 및 회귀 테스트(`test_wave0_hotfixes.py`).
 - [x] **Wave 1 완료**: `.agents/tasks/`(23건) 아카이브 이관, `.agents/hooks.json`(`plepa_guard.py` `PreToolUse`), `.agents/skills/` 미니 에이전트 6종, `GEMINI.md` 11장 라우팅, 세션 에셋 불변 가드(`conftest.py`), AST 줄수/레이어/큐/파서/스키마 계약 테스트(`test_contract_guards.py`, `test_agent_hooks_and_skills.py`).
-- [ ] **Wave 2 대기**: 문서 90% 다이어트(`AI_HANDOVER_GUIDE.md`, `개발일지.md`, 루트 `POSE_MAPPING.md` 단일 SSOT 통합) 및 `scripts/export_context.py` v2 노트북 상시 링크 개통.
+- [x] **Wave 2 완료**: 포즈 SSOT 단일화(`POSE_MAPPING.md` 통합 + `POSE_CATALOG`/`POSE_MAPPING_V2`/`KIRO_SYNC_REPORT`/`ykn_*` `docs/archive/` 이관), Active 문서 90% 다이어트(`AI_HANDOVER_GUIDE.md` 64L + `ADR_HISTORY_FULL.md`, `개발일지.md` 246L+ + 중기 아카이브, `README`/`사용법`/`RUNBOOK`/`GUI_GUIDE`/`기능명세`/`제작규칙`/`REMOTE` 최신화) 및 `scripts/export_context.py` v2 (`context_exporter/` 5모듈 · 고정 5파일 `34KB` · `50_REFACTORING_PLAN.md`) 개통.
 - [ ] **Wave 3 대기**: `PoseEntry`/`PoseItemSchema` 단일화, `GlobalJobManager` 큐 통합, `GENERATION_OPTION_SPECS` 확장, `LoraLoader` 연결, 로스터 `active/legacy` 메타 도입.
 - [ ] **Wave 4 대기**: 엔진 `>=350L` 거대 파일 분해(`censor/` 7모듈, `pipeline/`, `generation_service`, `pose_service`, `health_service`).
 - [ ] **Wave 5 대기**: GUI 정적 에셋 분리(`mobile_viewer`, `retouch_editor`, `gallery`) 및 `scripts/` 계층 정리.

@@ -1,195 +1,147 @@
-==============================================================================
-  플에파 (batch_generator.py) — 사용자 가이드 & 원클릭 실행 치트시트 (V2 표준)
-  사람이 읽고 바로 복사해 실행하는 간편 매뉴얼 (키로 100% 문법 호환, SDXL 단일 표준)
-==============================================================================
+================================================================================
+   플에파(PLEPA) 통합 CLI & 스튜디오 사용 가이드 (V3 SDXL 단일 표준)
+================================================================================
 
-  [이 문서의 성격과 목적]
-  • 목적: 터미널에서 복사해 바로 실행할 수 있는 실전 명령어와 최신 V2 기능 치트시트 제공.
-  • 엔진: SDXL (unholyDesireMixSinister_v90.safetensors) 단일 표준 가동 (CFG 5.0, 28 Steps, 장당 약 11.8초).
-  • 특징: 키로(Kiro) 명령어 문법(--char, --codes, --all-chars) 및 플에파 단축 문법(-c, -p) 100% 호환!
-  • 연계 핵심 문서 (Diátaxis 4분할 체계):
-    - 🛠️ 운영 및 장애 진단 런북          → docs/RUNBOOK.md
-    - 🎨 캐릭터/포즈 제작 & 사전점검 규칙 → docs/캐릭터_포즈_제작_규칙.md
-    - ⚙️ 파이프라인/엔진 기술 명세서      → docs/플에파_기능명세.md
-    - 📋 V2 포즈 카탈로그 (000~200)      → docs/POSE_CATALOG.md
-    - 🖥️ 웹 GUI 가이드 및 아키텍처 명세서 → docs/GUI_GUIDE.md
-    - 📱 모바일 원격 검수 갤러리 가이드   → docs/REMOTE_INSPECTION_GUIDE.md
-    - 📘 아키텍처 결정(ADR) & 인계서     → docs/AI_HANDOVER_GUIDE.md
+[기본 시스템 사양]
+  • 엔진: SDXL (UnholyDesireMixSinisterAesthetic_V9_Illustrious.safetensors)
+  • 기본값: CFG 4.0 | Steps 28 | Sampler dpmpp_2m | Scheduler karras | FreeU ON
+  • 해상도: 하이브리드 자동 (000~024 세로 832x1216 / 025+ 가로 1216x832)
+            (--width / --height 명시 시 사용자 지정 해상도 고정)
+  • 포즈 SSOT: data/sdxl_pose_database.json (175키: 활성 151 + 구형보존 24)
+  • 단일 매핑표: POSE_MAPPING.md (포즈·라벨·모브·배경·deprecated 전체 조회)
+
+[활성 로스터 12종]
+  campus | spy | oto | ykn | sns | maid | murim | school | hey | man | don | default
 
 
-==============================================================================
-  1. 가장 많이 쓰는 명령어 (원클릭 치트시트)
-==============================================================================
+--------------------------------------------------------------------------------
+1. 웹 스튜디오 & 원격 모바일 검수 기동
+--------------------------------------------------------------------------------
+  • PC 웹 스튜디오(포트 8080, 8대 탭):
+    .\.venv\Scripts\python.exe -m plepa_gui.app
+    ➔ 접속: http://localhost:8080 (/gallery, /generate, /mobile, /settings 등)
 
-  ── [0] ⚡ 실전 핵심 치트코드 원클릭 모음 (전 로스터 순회 · 골든 시드 · 엄격 리롤 · 전수 감사) ──
-  # 📱 [모바일 원격 검수] 로컬 Wi-Fi 및 Cloudflare Tunnel 2-Track 인터랙티브 갤러리 기동 (상단고정/터치덧칠/원본복원)
-  python scripts/serve_benchmark_mobile.py
-  # (접속: 집 안 Wi-Fi → http://<LAN_IP>:8085/inspect | 외부망 → 터널 HTTPS URL)
-
-  # 📑 [검수 뷰어 재빌드] inspection_batch 디렉토리 에셋 스캔 및 index.html 최신 갱신
-  python scripts/generate_inspection_viewer.py
-  # 🌐 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 기준점 1장(000)만 초고속 생성 (외형/화풍 전수 점검)
-  python batch_generator.py -r all --all-chars -p 000 --censor
-
-  # 👑 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 10대 골든샘플(sample10) 일괄 생성
-  python batch_generator.py -r all --all-chars -p sample10 --censor
-
-  # 📊 [전 로스터 원클릭] 전체 10개 로스터 전 캐릭터 에셋 완비율/누락 포즈 1초 전수 감사 리포트
-  python batch_generator.py -r all --audit
-
-  # 🩺 시스템 10단계 통합 무결성 자가 진단 (포즈DB, 캐릭터, 파이프라인, 검열, Auto-QC, ComfyUI 등 전수 점검)
-  python batch_generator.py --test
-
-  # 🔍 2대 통합 섹터(01_normal, 02_h_scenes)별 파일수/검열본/백업/오검열 전수 정밀 감사
-  python scripts/audit_sector_assets.py --roster campus
-  python scripts/audit_sector_assets.py --roster ykn
-
-  # 🎯 단일 로스터 1초 에셋 전수 감사 (완비율, 누락 포즈, _origin 백업 현황 1초 출력)
-  python batch_generator.py -r campus --audit
-
-  # 🏫 캠퍼스 108종 풀패키지 완비 생성 (000~055, 060~071, 080~127, 130~132)
-  python batch_generator.py -r campus -c aya -p campus_108 --censor
-
-  # 🌟 10대 대표 골든 샘플러 (핵심 10종만 고속 검증: 000, 020, 034, 044, 048, 060, 088, 102, 130, 131)
-  python batch_generator.py -r campus -c aya -p sample10
-
-  # 🔒 골든 시드 고정 재생성 (기존 매니페스트 시드를 고정해 동일 구도로 의상/프롬프트만 미세 재생성)
-  python batch_generator.py -r campus -c aya -p 000..019 --reuse-seed -f
-
-  # 🛡️ 필수 성인 노출/결합 씬 성기 미탐지(구도 이탈) 시 자동 리롤
-  python batch_generator.py -r campus -c aya -p h_scenes --censor --strict-censor-qc
-
-  # 🚀 ComfyUI 호출 없이 기존 에셋 초고속(0.2초) 일괄 실루엣 소급 검열
-  python batch_generator.py -r campus --all-chars -p all --censor-only
+  • 원격 모바일 뷰어 + Cloudflare Quick Tunnel + 토큰 인증 자동 기동:
+    .\.venv\Scripts\python.exe scripts/start_remote.py
+    ➔ 출력된 [Mobile Link] (https://*.trycloudflare.com/mobile?token=...) 클릭
 
 
+--------------------------------------------------------------------------------
+2. 필수 조회 · 사전 검증 · 테스트 명령
+--------------------------------------------------------------------------------
+  • 로스터 내 캐릭터 목록 확인:
+    .\.venv\Scripts\python.exe batch_generator.py -r campus -l
+    .\.venv\Scripts\python.exe batch_generator.py -r all -l
 
-  ── [1] 작품(로스터) 전체 캐릭터 V2 표준 에셋 일괄 생성 + 자동 실루엣 검열 ──
-  python batch_generator.py -r all --all-chars -p all --censor      # 등록된 전 로스터(10개) 전원 일괄 생성
-  python batch_generator.py -r sns --all-chars -p all --censor      # SNS 인스타 인플루언서 4인 전원 (108종)
-  python batch_generator.py -r campus --all-chars -p all --censor   # 캠퍼스 6인 전원 (1인당 108종)
-  python batch_generator.py -r spy --all-chars -p all --censor      # 스파이 살롱 10인 전원
-  python batch_generator.py -r maid --all-chars -p all --censor     # 메이드 카페 전원
+  • 생산 전 7단계 사전 무결성 검증 (착의고정/누드전환/테마스왑/배경/문서동기화):
+    .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus
+    .\.venv\Scripts\python.exe -m plepa_engine.precheck -r oto
+    .\.venv\Scripts\python.exe -m plepa_engine.precheck -r spy --check-comfy
 
-  ── [2] 단일 캐릭터 전체 에셋 생성 (성별에 맞춰 오토코노코 자동 매핑) ──
-  python batch_generator.py -r campus -c aya -p all --censor        # 아야 (여성 108종: 000~052, 060~063, 080~127, 130~132)
-  python batch_generator.py -r campus -c mio -p all --censor        # 미오 (오토코노코 108종: 000~052, 060~063, 150~197, 133~135)
-  python batch_generator.py -r spy -c chl -p all --censor           # 클로에 전체 생성
+  • 1초 로스터 에셋 완비율 및 정합성 감사:
+    .\.venv\Scripts\python.exe batch_generator.py -r campus --audit
+    .\.venv\Scripts\python.exe scripts/audit_asset_alignment.py --roster campus
+    .\.venv\Scripts\python.exe scripts/audit_sector_assets.py --roster campus
 
-  ── [3] 특정 포즈 번호만 골라서 생성 / 강제 덮어쓰기 (--overwrite / -f) ──
-  python batch_generator.py -r campus -c aya -p 000                 # 000번(평상) 단 1장 테스트
-  python batch_generator.py -r campus -c aya -p 051,060,061 -f      # 051(공부/연구), 060(딥키스), 061(알몸키스) 재생성
-  python batch_generator.py -r campus -c all -p 130 -f --censor     # 6인 전원 130번(오토코노코는 133번 자동변환) 재생성
-  python batch_generator.py -r campus -c aya -p "080..091" --censor # 정상위/후배위/기승위 구간만 생성
-
-  ── [4] 섹션별 및 골든 샘플러 묶음 생성 ─────────────────────────────────────
-  python batch_generator.py -r campus -c aya -p sample10           # 10대 대표 골든 샘플러 (000, 020, 034, 044, 048, 060, 088, 102, 130, 131)
-  python batch_generator.py -r campus -c aya -p emotions            # 000~019 감정 20종
-  python batch_generator.py -r campus -c aya -p poses               # 020~039 일상/스킨십 20종
-  python batch_generator.py -r campus -c aya -p events              # 040~052 이벤트 씬
-  python batch_generator.py -r campus -c aya -p romance             # 060~063 로맨스 4종 (딥키스/알몸키스/허그/스푸닝)
-  python batch_generator.py -r campus -c aya -p h_scenes --censor   # 080~130 여성 성인 H씬
-  python batch_generator.py -r campus -c mio -p otokonoko --censor  # 150~200 오토코노코 성인 H씬
-
-  ── [5] 특수 테마 의상 팩 개별 생성 (수영복 / 바니걸 / BDSM / 무협 / 첩보) ──
-  python batch_generator.py -r spy -c chl -p swimsuit               # 수영복 팩 7종 (D01~D07)
-  python batch_generator.py -r spy -c chl -p bunny                  # 바니걸 팩 7종 (F01~F07)
-  python batch_generator.py -r spy -c chl -p bdsm                   # BDSM 팩 8종 (E01~E08)
-  python batch_generator.py -r spy -c chl -p S01..S10               # 첩보 살롱 전용 10종
-
-  ── [6] 정밀 외곽선 실루엣/모자이크/디버그 자동 검열 (--censor & --censor-only) ────
-  # • 검열본은 assets/{char}/에 교체 배치되고, 무검열 원본은 assets/{char}_origin/에 무손실 백업됩니다.
-  # • 이미 생성된 에셋들을 ComfyUI 호출 없이 0.2초 만에 소급 검열할 때:
-  python batch_generator.py -r campus -c aya -p all --censor-only
-  python batch_generator.py -r campus --all-chars -p all --censor-only
-  # • 검열 스타일 변경(기본값: white_silhouette [젠잇 심의 표준]):
-  #   --censor-style {white_silhouette, black_silhouette, debug_bbox, bar, shadow, mosaic}
-  # • QA 점검용 BBox 및 신뢰도 점수 시각화 디버그 모드 (마스킹 없이 초록/시안 BBox와 점수 출력):
-  python batch_generator.py -r campus -c aya -p all --censor-only --censor-style debug_bbox
-
-  ── [7] Auto-QC 자동 품질 검수, 골든 시드 고정 재생성 & 엄격 검열 리롤 ───────
-  # • 색감 과포화, 남성 분신, 단독 씬 남성 난입 감지 시 시드를 바꿔 자동 재생성(기본 3회):
-  python batch_generator.py -r campus -c aya -p 034 --max-retries 5 # 최대 5회까지 리롤 허용
-  python batch_generator.py -r campus -c aya -p 034 --no-qc         # Auto-QC 비활성화 (1회 강제 생성)
-  # • _batch_manifest.json의 이전 골든 시드를 고정 재사용하여 구도 유지 채색/재생성:
-  python batch_generator.py -r campus -c aya -p 000..019 --reuse-seed
-  # • 포즈 코드 및 캐릭터 식별자 기반 결정론적 시드 자동 고정(실행 간 구도 편차 억제):
-  python batch_generator.py -r campus -c aya -p 000..050 --deterministic-pose-seed -f
-  # • 필수 성인 노출/결합 씬에서 성기 미탐지(구도 이탈) 시 자동 리롤:
-  python batch_generator.py -r campus -c aya -p h_scenes --censor --strict-censor-qc
-  # • Auto-QC 리롤 한도 초과 결함 추적 및 배치 최종 포즈 수정 권장 종합 보고서:
-  #   최대 재시도(3회) 후에도 Auto-QC를 통과하지 못한 이미지는 강제 저장 후
-  #   캐릭터별 및 전체 최종 종합 보고서에 결함 포즈 목록과 사유를 정리하고,
-  #   포즈 프롬프트 수정을 권장하는 안내 메시지를 자동 출력합니다.
-
-  ── [7.1] 얼굴 및 손 보정 디테일러 옵션 (Face Detailer & Hand Detailer) ───────
-  # • Face Detailer는 기본 활성화되어 얼굴을 자동 보정합니다 (비활성화 시 --no-face-detailer):
-  python batch_generator.py -r campus -c aya -p 000 --no-face-detailer
-  # • Hand Detailer 체이닝 활성화 (손 모델이 있을 때 손가락/손 형태를 자동 추론하여 보정):
-  python batch_generator.py -r campus -c aya -p 000..019 --hand-detailer
-
-  ── [8] 1초 에셋 전수 감사, 사전 점검(Precheck), kiro 동기화 및 AI 스냅샷 ────
-  python batch_generator.py -r campus --audit                       # 캠퍼스 로스터 전원 완비율, 누락 포즈, _origin 백업 1초 감사
-  .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus     # 캠퍼스 로스터 5단계 사전 점검
-  .\.venv\Scripts\python.exe -m plepa_engine.precheck -r spy        # 스파이 로스터 5단계 사전 점검
-  python scripts/sync_to_kiro.py --dry-run                          # kiro 동기화 시뮬레이션
-  python scripts/sync_to_kiro.py                                    # plepa 골든 스테이트를 kiro로 전파
-  python scripts/export_context.py                                  # 외부 AI(Gemini Notebook 등) 코드 리뷰용 3-Tier 스냅샷 생성
-  python scripts/export_context.py --full-code                      # Tier 2 핵심 모듈 원문(40_CORE_CODE.md) 포함 번들링
-
-  ── [9] 80인 작가 화풍 벤치마크 (400장) 및 모바일/PC 웹 갤러리 서빙 (ADR-80) ────
-  # 🎨 1차 40인 벤치마크 생성 (하율 20인, 유아 20인 × 5개 포즈 = 200장)
-  python scripts/run_artist_benchmark.py
-
-  # 🎨 2차 40인 벤치마크 생성 (세린 14인, 시아 13인, 유키노 13인 × 5개 포즈 = 200장)
-  python scripts/run_artist_benchmark_v2.py
-
-  # 📱 모바일/PC 갤러리 웹 서버 구동 (포트 8080에서 1차 /bench1, 2차 /bench2 원클릭 서빙)
-  python scripts/mobile_gallery.py
-  # 브라우저 접속: http://127.0.0.1:8080/bench1/  및  http://127.0.0.1:8080/bench2/
-
-  ── [10] 전역 포즈 모바일 품질 검수 갤러리 및 원클릭 터치 덧칠 에디터 (ADR-86) ────
-  # 🔬 모바일 전용 인터랙티브 검수 갤러리 + Cloudflare 공인 터널 서빙 (포트 8085)
-  python scripts/serve_benchmark_mobile.py
-  # 브라우저 접속: http://127.0.0.1:8085/inspect/  (터미널에 출력되는 Cloudflare 링크로 폰에서 바로 접속 가능)
-  # [✏️ 터치 덧칠] 버튼 클릭 시 모바일 풀스크린 캔버스 에디터 오픈
-  # 모바일 화면에서 흰색 소프트 브러시로 1~2초 덧칠 후 [💾 저장 완료] 시 서버 파일 즉시 영구 저장!
-  # 🧪 P2.5 Residual Span 2-Way + YOLO-seg 리콜 회복 재학습 및 P4 정량 벤치마크 (프로덕션 기준선 동결)
-  python scripts/train_censor_seg.py --epochs 80 --imgsz 1024 --batch 4 --mask-ratio 2
-  python scripts/benchmark_censor_metrics.py --label P2.5 --save-c4-suffix p25 --out-json output/benchmarks/p4_p25_result.json --compare-json output/benchmarks/p4_p2_result.json
-  # 🕵️ SPY 10인 510장 대규모 전수 검열 및 1:1 토글 웹 갤러리 (/test_spy/) 생성
-  python scripts/benchmark_spy_batch.py
-  # 브라우저 접속: http://127.0.0.1:8085/test_spy/ (또는 /test_c4/)
+  • 전체 회귀·계약 테스트 및 Gemini 노트북 스냅샷 갱신:
+    .\.venv\Scripts\python.exe -m pytest -q
+    .\.venv\Scripts\python.exe scripts/export_context.py
 
 
+--------------------------------------------------------------------------------
+3. 기본 이미지 배치 생성 (Smart Skip: 없는 파일만 자동 생성)
+--------------------------------------------------------------------------------
+  • 대표 10종 골든 샘플러(sample10: 000,020,034,044,048,060,088,067,130,131):
+    .\.venv\Scripts\python.exe batch_generator.py -r campus -c aya -p sample10 --censor
 
-==============================================================================
-  2. V3 포즈 번호 체계 요약 (코어 범용 & 로스터 격리 + 오토코노코 +70 대칭 법칙)
-==============================================================================
+  • 특정 캐릭터 누락분 전체 생성 (성별에 맞는 활성 코드만 자동 필터링):
+    .\.venv\Scripts\python.exe batch_generator.py -r campus -c aya -p all --censor
 
-  • 000 ~ 019 [01_emotions]   : 공용 감정/표정 20종 (평상, 미소, 활짝웃음, 수줍은홍조, 토라짐 등)
-  • 020 ~ 050 [02_daily]      : 공용 일상/스탠딩/휴식 31종 (048 테이블휴식, 049 스트릿스냅, 050 야경테라스 등)
-  • 051 ~ 059 [03_events]     : 로스터 고유 일상 이벤트 (캠퍼스: 051 서가연구실, 052 복도, 053 자취방요리 등 - events.json 격리)
-  • 060 ~ 079 [04_romance]    : 공용 소프트 로맨스 & 구강 봉사 12종 (060 딥키스, 064 남근핥기, 065 펠라치오 등)
-  • 080 ~ 129 [05_h_scenes]   : 여성 기본 성인 H-씬 37종 (체위별 약/강/절정/사후, 착의 성교 등)
-  • 130 ~ 139 [06_special_h]  : 여성 로스터 특색 이벤트 H-씬 (캠퍼스: 130 빈강의실, 131 보건실, 132 화장실펠라 - events.json 격리)
-  • 150 ~ 199 [05_h_scenes]   : 오토코노코 기본 성인 H-씬 37종 (여성 080~129에 정확히 +70을 더한 1:1 거울 대칭)
-  • 200 ~ 209 [06_special_h]  : 오토코노코 로스터 특색 이벤트 H-씬 (여성 130~139에 +70을 더한 1:1 거울 대칭)
+  • 로스터 전체 캐릭터 일괄 생성:
+    .\.venv\Scripts\python.exe batch_generator.py -r campus --all-chars -p all --censor
+
+  • 전 로스터(-r all) 일괄 순회 생성:
+    .\.venv\Scripts\python.exe batch_generator.py -r all --all-chars -p sample10 --censor
 
 
-==============================================================================
-  3. 에셋 파일명 및 2대 통합 서브폴더 구조 (검토 최적화)
-==============================================================================
+--------------------------------------------------------------------------------
+4. 포즈 선택 표현식 (-p / --pose) — V3 코어 & 프리셋
+--------------------------------------------------------------------------------
+  [섹션별 선택]
+    emotions        : 000~019 (감정 표현 20종)
+    poses           : 020~050 (일상·스킨십·전라·야경 31종)
+    daily_events    : 051~055 (로스터 events.json 고유 일상)
+    romance         : 060~079 (키스·공동샤워 + 공통 봉사 대역 20종)
+    h_scenes        : 080~132 (여성 성인 체위 + 특수 이벤트, deprecated 자동 제외)
+    special_h       : 130~132 (여성 특수 이벤트 3종)
+    otokonoko       : 150~197, 133~135 / events 200~202 (오토코노코 성인 씬)
+    special_otokonoko : 133~135 / events 200~202 (오토코노코 특수 이벤트)
 
-  • 대역별 서브폴더 : projects/{roster}/assets/{char}/{대역폴더}/{char}_{code}_{label}.webp
-    - 01_normal/   : 000~059 (감정표현 20종 + 범용일상 31종 + 로스터 고유 일상 이벤트)
-    - 02_h_scenes/ : 060~209+ (로맨스/구강 20종 + 범용 H-씬 37종 + 특색 H-씬)
-    (예: assets/aya/01_normal/aya_000_평상.webp, assets/aya/02_h_scenes/aya_080_삽입조르기.webp)
-  • 3-Track 탐색기  : 신규 2대 서브폴더 우선 + 구버전 6대 서브폴더 폴백 + 기존 루트 플랫 디렉토리 자동 폴백 호환
-  • 검열 원본 백업  : projects/{roster}/assets/{char}_origin/{대역폴더}/{char}_{code}_{label}.webp
-    (--censor 실행 시 노출이 감지된 성인/탈의 씬의 무검열 원본만 선제 자동 보관)
-  • 동적 배경 주입  : 기본 생성 시 각 포즈마다 pose_background_mapping.json을 참조하여 최적 배경 자동 주입
-    (048 -> 카페 테라스, 049 -> 도서관 서가, 050 -> 캠퍼스 벤치/거리, 051 -> 연구실, 060/080 -> 침실)
-  • 웹 GUI 갤러리 : run_gui.bat 더블클릭 (http://localhost:8080)
-    - 라이트박스 뷰어에서 [🔄 리롤], [👁️ 원본/검열본 토글], [⏪ 무검열 복원] 1클릭 지원
-    - Genit 상용 규격 원클릭 패키징 및 _genit_prompt_sheet.md 프롬프트 매핑 시트 자동 생성
+  [V3 주요 포즈 세트 (data/pose_sets.json)]
+    sample10        : 10대 골든 샘플러 (000,020,034,044,048,060,088,067,130,131)
+    v3_daily_53     : 일상·감정·이벤트 53종 (000~052)
+    campus_108      : 캠퍼스 여성 표준 108종
+    oto_108         : 오토코노코 표준 108종
+    unified_100     : 통합 100종 여성 풀패키지
+    unified_152     : 통합 142종 마스터 세트 (여성 100 + 오토 42)
+    h_scenes_52 / otokonoko_52 : 성인 풀세트
+
+  [범위 / 복합 지정]
+    -p 088          : 단일 포즈
+    -p 064,067,088  : 쉼표 목록
+    -p 080..095     : 연속 범위 (하위 호환 00..19도 지원)
+
+
+--------------------------------------------------------------------------------
+5. 주요 CLI 플래그 전체 레퍼런스 (GENERATION_OPTION_SPECS 동기화)
+--------------------------------------------------------------------------------
+  [기본·재생성·시드]
+    -f, --overwrite              : 기존 파일이 있어도 강제 덮어쓰기 (리롤/수정 반영)
+    --seed <정수>                : 특정 시드 번호 고정
+    --reuse-seed                 : _batch_manifest.json에 저장된 이전 골든 시드 재사용
+    --deterministic-pose-seed    : 포즈+캐릭터 해시 기반 결정론적 시드 자동 고정
+    --profile <프로필명>         : 캐릭터 JSON 내 보조 의상/헤어 프로필 전환
+    --naming {hybrid|code|label} : 파일명 규격 (기본 hybrid: prefix_000_라벨.webp)
+    --out-dir <폴더>             : 별도 출력 루트 폴더 ({out_dir}/{roster}/{char}/)
+
+  [후처리 & Auto-QC]
+    --face-detailer / --no-face-detailer : 얼굴 디테일러 (기본: ON)
+    --hand-detailer / --no-hand-detailer : 손 디테일러 (기본: OFF)
+    --freeu / --no-freeu                 : FreeU 화질 부스팅 (기본: ON)
+    --upscale                            : 4x-UltraSharp AI 초해상화 (기본: OFF)
+    --no-qc                              : Auto-QC 자동 품질 판정 비활성화
+    --max-retries <횟수>                 : Auto-QC 실패 시 최대 리롤 횟수 (기본: 3)
+    --strict-censor-qc                   : 필수 노출 씬 성기 미검출 시 자동 리롤
+
+  [자동 검열 (Phase P2.5)]
+    --censor                     : 자동 검열 활성화 (무검열 원본은 {char}_origin/ 보존)
+    --censor-only                : ComfyUI 없이 기존 {_origin} 원본에 0.2초 일괄 재검열
+    --censor-targets <대상>      : penis (기본) | pussy | all
+    --anchor-fallback            : 탐지 0건 시 DB 안전 앵커 폴백 허용 (기본: OFF)
+    --censor-style <스타일>      : 총 11종 선택 가능
+      * white_silhouette (기본)  * black_silhouette     * manga_bar
+      * manga_glow               * silhouette           * bar / wide_bar
+      * slim_bar                 * shadow               * mosaic
+      * debug_bbox (신뢰도·BBox 진단 시각화 모드)
+
+  [체크포인트·배경·IP-Adapter·디버깅]
+    --ckpt <체크포인트파일>      : 커스텀 SDXL 체크포인트 (checkpoint_profiles 자동 연동)
+    --steps / --cfg / --sampler / --scheduler / --width / --height
+    --bg <영문태그>              : 즉석 커스텀 배경 문장 직접 주입
+    --bg-preset <키>             : projects/{roster}/background.json 프리셋 키 지정
+    --custom-pos / --custom-neg  : 추가 긍정/부정 태그 결합
+    --use-ref / --ref-weight <w> : IP-Adapter 참조 이미지 활성화 (기본: --no-ref)
+    --dry-run                    : ComfyUI 호출·디스크 저장 없이 조립 프롬프트만 점검
+    --mock                       : 0.001초 더미 WebP 생성 (E2E 파일 저장 구조 테스트)
+
+
+--------------------------------------------------------------------------------
+6. Gen-IT 5탭 완성본 검증 & 주의 사항
+--------------------------------------------------------------------------------
+  • Gen-IT v2.2 완성본 무결성 검증:
+    .\.venv\Scripts\python.exe scripts/validate_genit_work.py --force
+
+  • 주의: 구 V2 덮어쓰기 브릿지(scripts/sync_to_kiro.py)는 최신 Kiro 보호를 위해
+    기본 실행이 차단(exit 2)되어 있습니다. (수동 어댑팅 이식만 허용)
+  • 상세 가이드: docs/AI_HANDOVER_GUIDE.md | docs/RUNBOOK.md | docs/GUI_GUIDE.md
+================================================================================
