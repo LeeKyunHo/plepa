@@ -5,8 +5,8 @@
 1. 디렉토리 기반 다각화: docs/genit/ 내 모든 완성본 마크다운(*.md) 자동 탐색
 2. 생애주기 관리 (Frontmatter): status: active(상시 검사) vs frozen/archived(스킵)
 3. 스마트 해시 캐싱 (.cache/genit_cache.json): 변경 없는 문서는 0.001초 만에 [Cached PASS] 스킵
-4. 에셋 연쇄 동기화: 실제 디스크 에셋(108종) 대비 오타/환각/404 포즈 실시간 검출
-5. 6대 통일 변수, 글자수 한도(8,000자), 설정집/캐릭터 키워드 한도 전수 검증
+4. 에셋 연쇄 동기화: 로스터 실제 디스크 에셋 대비 오타/환각/404 포즈 실시간 전수 검출
+5. 8대 통일 변수, 글자수 한도(8,000자), 설정집/캐릭터 키워드 한도 전수 검증
 """
 
 from __future__ import annotations
@@ -293,14 +293,14 @@ def validate_document(
 
         print(f"  - {c_title}: 키워드 `{kw_b}` ({len(kws)}/5개) | 소개 ({len(intro_b)}/300자) | 프롬프트 ({len(prompt_b)}/500자)")
 
-    # 4. 6대 통일 변수 및 장소명 키워드 검증
-    print("\n⚙️ [4] 6대 통일 변수, 키워드형 장소명 및 실제 에셋 정합성 검증")
+    # 4. 8대 통일 변수 및 장소명 키워드 검증
+    print("\n⚙️ [4] 8대 통일 변수, 키워드형 장소명 및 실제 에셋 정합성 검증")
     all_code_blocks = "\n".join(re.findall(r"```(?:text|markdown|jsx)?\n(.*?)```", body, re.DOTALL))
 
     legacy_vars = ["team_prog", "cha_affinity", "cha_stress", "heroine_affinity", "heroine_stress"]
     for lv in legacy_vars:
         if re.search(r"\b" + re.escape(lv) + r"\b", all_code_blocks):
-            errors.append(f"구버전 레거시 변수 감지: `{lv}` (6대 통일 변수로 교체 필요)")
+            errors.append(f"구버전 레거시 변수 감지: `{lv}` (8대 통일 변수로 교체 필요)")
 
     banned_loc_prefixes = ["공학관", "인문관", "304호", "402호", "101호", "3층", "2층", "1층", "중앙도서관", "학생회관"]
     for blp in banned_loc_prefixes:

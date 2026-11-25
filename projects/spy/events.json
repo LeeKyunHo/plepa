@@ -1,0 +1,94 @@
+{
+  "_description": "스파이(spy) 로스터 전용 특색 이벤트 및 특수 H씬 데이터베이스 (V3 규격)",
+  "daily_events": {
+    "051": {
+      "label": "스파이_기밀문서열람",
+      "description": "스파이 프로젝트 전용: 어두운 첩보 아카이브 조명 아래에서 양손으로 극비 기밀 서류철을 들고 진지하게 열람하는 포즈",
+      "prompt": "cowboy shot, 1girl, solo, ((holding open classified dossier folder with both hands at chest:1.25)), ((reading secret documents, focused gaze:1.2)), standing by wooden archive desk, calm serious expression, warm amber desk lamp lighting, retro noir espionage office",
+      "negative_add": "(multiple folders:1.3), (extra hands:1.35)",
+      "required_outfit": "default"
+    },
+    "052": {
+      "label": "스파이_권총겨누기",
+      "description": "스파이 프로젝트 전용: 야간 길거리·어두운 골목에서 양손으로 소음 권총 한 정을 견착 파지해 어깨·눈높이 수평으로 팔을 쭉 뻗어 화면 너머 표적을 차갑게 겨누는 측면 첩보 대치 포즈",
+      "prompt": "cowboy shot, side view, three-quarter profile, 1girl, solo, (aiming handgun horizontally at eye level, gun barrel raised parallel to ground, arms stretched straight out horizontally at shoulder height:1.25), (two-handed firearm grip, holding a single compact silenced pistol, aiming to the side at off-screen target:1.25), looking along gun sights toward target, sharp cold glare, tense shooting stance, dark night city alleyway, brick wall and dim streetlamp in background, dramatic noir street lighting",
+      "negative_add": "(low ready stance, aiming downwards, gun pointing down, lowered gun, lowered arms, arms angled down, hands below chest, hands at waist, bookshelf, library, indoor office, wooden paneling, looking at viewer, facing viewer, aiming at viewer, pointing gun at camera, dual wielding, two guns, multiple guns, rifle:1.25), (extra hands, extra fingers:1.25)",
+      "required_outfit": "default"
+    },
+    "053": {
+      "label": "스파이_살롱술접대",
+      "description": "스파이 프로젝트 전용: 비밀 살롱 VIP 바 카운터에 기대어 크리스탈 위스키 잔을 들고 유혹하듯 미소 짓는 포즈",
+      "prompt": "cowboy shot, eye level, 1girl, solo, ((holding crystal whiskey glass in hand, offering drink:1.25)), ((leaning gracefully against polished wooden bar counter:1.2)), alluring seductive smile, looking at viewer, opulent secret salon lounge, warm amber lighting",
+      "negative_add": "",
+      "required_outfit": "default"
+    },
+    "054": {
+      "label": "스파이_도청감청",
+      "description": "스파이 프로젝트 전용: 한 손으로 귀의 통신 이어피스를 누르고 도청 녹음기를 조작하며 기밀 대화를 감청하는 포즈",
+      "prompt": "tight bust portrait, eye level, 1girl, solo, ((one hand pressing compact communication earpiece to ear:1.25)), ((listening intently to covert wiretap transmission:1.2)), head slightly tilted, calm attentive expression, looking at viewer, dim surveillance room lighting",
+      "negative_add": "",
+      "required_outfit": "default"
+    },
+    "055": {
+      "label": "스파이_밀실심문유혹",
+      "description": "스파이 프로젝트 전용: 심문실 책상 모서리에 걸터앉아 다리를 꼬고 상체를 숙여 도발적으로 내려다보는 압박 심문 포즈",
+      "prompt": "cowboy shot, 1girl, solo, ((sitting on edge of wooden office desk with legs crossed:1.25)), ((leaning slightly forward with hands resting on desk edge:1.2)), looking down at viewer, dominant seductive smirk, half-closed eyes, secret interrogation office",
+      "negative_add": "",
+      "required_outfit": "default"
+    }
+  },
+  "special_female_h": {
+    "130": {
+      "label": "밀실심문_책상섹스",
+      "description": "스파이 프로젝트 전용: 기밀 서류가 흩어진 정보국 심문실 책상 위에 엎드려 후방 결합하며 뒤돌아보는 스릴 착의 섹스 포즈",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, 1girl, 1boy, ((fully clothed except bottom, wearing clothes, top on:1.25)), ((bent over mahogany office desk:1.25)), ((leaning forward on desk surface, classified papers scattered on desk:1.2)), ((partner behind gripping hips:1.25)), ((doggystyle, sex from behind:1.25)), ((hands gripping desk edge:1.2)), ((looking back over shoulder at viewer:1.25)), thrilling ecstatic expression, half-lidded eyes, heavy blush, parted lips panting, ((skirt lifted, underwear aside:1.25)), retro intelligence office background, ((single male partner:1.25))",
+      "required_outfit": "default",
+      "target_gender": "female",
+      "mob_tier": 2,
+      "partner_pos": "behind"
+    },
+    "131": {
+      "label": "살롱밀실_침대섹스",
+      "description": "스파이 프로젝트 전용: 비밀 살롱 VIP 침실 벨벳 침대 위에서 의상을 반쯤 풀어헤친 채 파트너 위에 올라타 허리를 흔드는 상위 결합 포즈",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, 1girl, 1boy, ((on luxury velvet boudoir bed, straddling partner:1.25)), ((cowgirl sex, riding partner:1.25)), ((unbuttoned top wide open, exposed bare breasts and bare skin, clothes slipping off shoulders:1.25)), ((bottomless, bare hips and bare thighs, lower body nudity:1.25)), ((intense rhythmic motion, deep vaginal penetration, actively bouncing on partner:1.25)), hands pressed on partner chest, deeply arched back, head tilted back in ecstasy, intensely flushed face, breathless panting, secret salon boudoir candlelight, ((single male partner:1.25))",
+      "required_outfit": "default",
+      "target_gender": "female",
+      "negative_add": "(wearing shorts:1.25), (wearing pants:1.25), (fully clothed:1.25), (neat shirt:1.25), (buttoned shirt:1.25)",
+      "mob_tier": 2,
+      "partner_pos": "above"
+    },
+    "132": {
+      "label": "밀실포박_구강봉사",
+      "description": "스파이 프로젝트 전용: 어두운 밀실 심문실 안에서 무릎을 꿇고 올려다보며 흐트러진 의상 차림으로 구강 봉사하는 착의 펠라 포즈",
+      "prompt": "tight bust portrait, face focus, 1girl, 1boy, ((fully clothed, wearing clothes, top on, disheveled collar:1.25)), ((kneeling on floor in dim interrogation room:1.25)), ((clothed fellatio, blowjob:1.25)), ((looking up at partner with deeply flushed submissive eyes:1.25)), mouth open taking shaft, saliva trail, parted lips, heavy blush, intimate close-up, ((single male partner:1.25))",
+      "required_outfit": "default",
+      "target_gender": "female",
+      "mob_tier": 3,
+      "partner_pos": null
+    }
+  },
+  "special_otokonoko_h": {
+    "200": {
+      "label": "밀실심문_책상섹스",
+      "description": "스파이 프로젝트 전용: 정보국 심문실 책상 위에 엎드려 후방 아날 결합하는 착의 포즈 (오토코노코 대칭)",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, 1otokonoko, 1boy, crossdressing, male partner, ((fully clothed except bottom, wearing clothes, top on:1.25)), ((bent over mahogany office desk:1.25)), ((partner behind gripping hips:1.25)), ((anal doggystyle, anal sex from behind:1.25)), ((looking back over shoulder at viewer:1.25)), thrilling ecstatic expression, slender body, flat chest, blushing heavily, parted lips moaning, ((skirt lifted, underwear aside:1.25)), retro intelligence office background, ((single male partner:1.25))",
+      "required_outfit": "default",
+      "target_gender": "otokonoko"
+    },
+    "201": {
+      "label": "살롱밀실_침대섹스",
+      "description": "스파이 프로젝트 전용: 비밀 살롱 침대 위에서 파트너 위에 올라타 아날 상위 결합하는 착의 포즈 (오토코노코 대칭)",
+      "prompt": "angled medium shot, head to hips, upper three-quarter view, 2boys, crossdressing, otokonoko, ((on luxury velvet boudoir bed, straddling partner:1.25)), ((cowgirl anal sex, riding partner:1.25)), ((unbuttoned loose top, exposed slender bare chest and shoulders:1.25)), ((bottomless, removed skirt, bare slender hips and thighs:1.25)), ((intense rhythmic motion, deep anal penetration:1.25)), hands pressed on partner chest, head tilted back in ecstasy, secret salon boudoir candlelight, ((single male partner:1.25))",
+      "required_outfit": "default",
+      "target_gender": "otokonoko",
+      "negative_add": "(wearing shorts:1.25), (wearing pants:1.25), (wearing skirt:1.25), (fully clothed:1.25)"
+    },
+    "202": {
+      "label": "밀실포박_구강봉사",
+      "description": "스파이 프로젝트 전용: 밀실 심문실 안에서 무릎을 꿇고 올려다보며 구강 봉사하는 착의 펠라 포즈 (오토코노코 대칭)",
+      "prompt": "tight bust portrait, face focus, 1otokonoko, 1boy, crossdressing, male partner, ((fully clothed, wearing clothes, top on, collar loosened:1.25)), ((kneeling on floor in dim interrogation room:1.25)), ((clothed fellatio, blowjob:1.25)), ((looking up submissively with flushed teary eyes:1.25)), slender boy kneeling, mouth open taking shaft, saliva trail, intimate close-up, ((single male partner:1.25))",
+      "required_outfit": "default",
+      "target_gender": "otokonoko"
+    }
+  }
+}
