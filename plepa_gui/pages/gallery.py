@@ -14,7 +14,7 @@ from pathlib import Path
 import threading
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import urllib.parse
 
 from nicegui import run, ui
@@ -585,8 +585,8 @@ def render_gallery_page() -> None:
             ui.label("3. 출력 해상도 통일").classes("text-xs font-bold text-amber-400 mb-1")
             ui.select(
                 options={
-                    "1024x1536": "✨ 1024×1536 통일 (권장 · 2:3 고해상도, 비율유지 중앙크롭)",
-                    "832x1216": "832×1216 통일 (SDXL 세로 표준, 비율유지 중앙크롭)",
+                    "1024x1536": "✨ 1024×1536 / 가로 1536×1024 통일 (권장 · 방향 자동 감지 고해상도)",
+                    "832x1216": "832×1216 / 가로 1216×832 통일 (SDXL 표준 · 방향 자동 감지)",
                     "original": "원본 해상도 그대로 (무손실 복사)",
                 },
                 value="1024x1536",
@@ -1217,7 +1217,32 @@ def render_gallery_page() -> None:
             items.insert(0, file_path)
         cur_idx = current_idx if (0 <= current_idx < len(items)) else items.index(file_path)
         nav_state = {"idx": cur_idx}
-        curr = {"url": img_url, "path": file_path}
+        manifest_cache: Dict[Path, Dict[str, Any]] = {}
+        dim_cache: Dict[Path, Tuple[Optional[Tuple[int, int]], bool]] = {}
+        url_cache: Dict[Path, str] = {}
+
+        def _get_cached_url(p: Path) -> str:
+            cached = url_cache.get(p)
+            if cached is not None:
+                return cached
+            try:
+                rel = p.relative_to(PROJECTS_DIR).as_posix()
+            except ValueError:
+                rel = str(p)
+            u = _asset_web_url(rel, file_path=p)
+            url_cache[p] = u
+            return u
+
+        def _get_cached_dims(p: Path) -> Tuple[Optional[Tuple[int, int]], bool]:
+            if p not in dim_cache:
+                dims = default_upscale_service.get_image_dimensions(p)
+                is_4k = default_upscale_service.is_already_4k(p) if dims else False
+                dim_cache[p] = (dims, is_4k)
+            return dim_cache[p]
+
+        if img_url:
+            url_cache[file_path] = img_url
+        curr = {"url": img_url or _get_cached_url(file_path), "path": file_path}
         showing_origin = {"val": False}
         toggle_origin_holder = {"fn": None}
 
@@ -1226,6 +1251,12 @@ def render_gallery_page() -> None:
         ):
             header_box = ui.row().classes("w-full justify-between items-center mb-3 px-2 pb-2 border-b border-slate-800 flex-wrap gap-2")
             img_box = ui.column().classes("w-full flex-1 items-center justify-center py-2")
+            with img_box:
+                ui.html(
+                    f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 400px;">'
+                    f'<img id="plepaLightboxImg" src="{curr["url"]}" alt="{curr["path"].name}" style="max-height: 75vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
+                    f'</div>'
+                )
             meta_box = ui.row().classes("w-full justify-between items-center mt-2 px-2 pt-2 border-t border-slate-800/80 text-xs text-slate-400 font-mono flex-wrap gap-2")
 
             def go_to_index(idx: int):
@@ -1234,31 +1265,43 @@ def render_gallery_page() -> None:
                 nav_state["idx"] = idx % len(items)
                 new_path = items[nav_state["idx"]]
                 curr["path"] = new_path
-                rel = new_path.relative_to(PROJECTS_DIR).as_posix()
-                curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                curr["url"] = _get_cached_url(new_path)
                 showing_origin["val"] = False
-                refresh_header()
                 refresh_img()
+                refresh_header()
                 refresh_meta()
 
             def refresh_meta():
                 meta_box.clear()
                 p = curr["path"]
-                import json, re
+                import re
                 m_code = re.match(r"^([a-zA-Z0-9]+)_([a-zA-Z0-9]+)", p.name)
                 prefix_val = m_code.group(1) if m_code else None
                 code_val = m_code.group(2) if m_code else None
 
-                # 매니페스트 경로: 서브폴더(p.parent.parent) 및 플랫(p.parent) 동시 지원
+                # 매니페스트 경로: 서브폴더(p.parent.parent) 및 플랫(p.parent) 동시 지원 (메모리 캐시)
                 manifest_p = (p.parent.parent / "_batch_manifest.json") if (p.parent.parent / "_batch_manifest.json").is_file() else (p.parent / "_batch_manifest.json")
-                manifest_item = {}
-                if manifest_p.is_file():
-                    try:
-                        with open(manifest_p, "r", encoding="utf-8") as f:
-                            m_json = json.load(f)
-                            manifest_item = m_json.get("items", {}).get(f"{prefix_val}_{code_val}", {})
-                    except Exception as exc:
-                        logger.debug("매니페스트 로드 스킵 (%s): %s", manifest_p, exc)
+                if manifest_p not in manifest_cache:
+                    loaded_m: Dict[str, Any] = {}
+                    if manifest_p.is_file():
+                        try:
+                            with open(manifest_p, "r", encoding="utf-8") as f:
+                                raw_doc = json.load(f) or {}
+                            top_ts = raw_doc.get("timestamp", "-") if isinstance(raw_doc, dict) else "-"
+                            raw_items = raw_doc.get("items", []) if isinstance(raw_doc, dict) else []
+                            if isinstance(raw_items, list):
+                                for it in raw_items:
+                                    if isinstance(it, dict) and "code" in it:
+                                        entry = dict(it)
+                                        entry.setdefault("timestamp", top_ts)
+                                        loaded_m[str(it["code"]).strip()] = entry
+                            elif isinstance(raw_items, dict):
+                                loaded_m = raw_items
+                        except Exception as exc:
+                            logger.debug("매니페스트 로드 스킵 (%s): %s", manifest_p, exc)
+                    manifest_cache[manifest_p] = loaded_m
+                manifest_map = manifest_cache[manifest_p]
+                manifest_item = manifest_map.get(str(code_val or ""), {}) or manifest_map.get(f"{prefix_val}_{code_val}", {})
 
                 seed_val = manifest_item.get("seed") or "미기록"
                 ts_val = manifest_item.get("timestamp", "-")
@@ -1288,10 +1331,9 @@ def render_gallery_page() -> None:
                         ui.icon("zoom_in", size="20px").classes("text-amber-400")
                         ui.label(p.name).classes("text-sm md:text-base font-bold text-slate-100 font-mono")
 
-                        dims = default_upscale_service.get_image_dimensions(p)
+                        dims, is_4k = _get_cached_dims(p)
                         if dims:
                             dim_text = f"{dims[0]}x{dims[1]}"
-                            is_4k = default_upscale_service.is_already_4k(p)
                             if is_4k:
                                 ui.badge("4K UHD", color="emerald-600").props("dense text-xs")
                             ui.badge(dim_text, color="slate-800").props("dense text-xs border border-slate-700 text-slate-300 font-mono")
@@ -1363,6 +1405,9 @@ def render_gallery_page() -> None:
                                         if still_same:
                                             curr["path"] = res_img
                                             curr["url"] = f"/projects_static/{rel}?t={ts_val}"
+                                            url_cache[res_img] = curr["url"]
+                                            dim_cache.pop(res_img, None)
+                                            manifest_cache.clear()
                                             refresh_header()
                                             refresh_img()
                                             refresh_meta()
@@ -1419,6 +1464,7 @@ def render_gallery_page() -> None:
                             showing_origin["val"] = False
                             curr["path"] = main_asset_p
                             curr["url"] = f"/projects_static/{urllib.parse.quote(rel_main_asset, safe='/')}?t={ts_val}"
+                            url_cache[main_asset_p] = curr["url"]
                             _refresh_single_thumbnail(rel_main_asset, ts_val)
                             refresh_header()
                             refresh_img()
@@ -1438,8 +1484,7 @@ def render_gallery_page() -> None:
                                 showing_origin["val"] = not showing_origin["val"]
                                 target_f = origin_cand if showing_origin["val"] else main_asset_p
                                 curr["path"] = target_f
-                                rel = target_f.relative_to(PROJECTS_DIR).as_posix()
-                                curr["url"] = f"/projects_static/{rel}?t={int(time.time())}"
+                                curr["url"] = _get_cached_url(target_f)
                                 toggle_btn.text = "🛡️ 검열본" if showing_origin["val"] else "👁️ 원본"
                                 refresh_img()
 
@@ -1460,6 +1505,7 @@ def render_gallery_page() -> None:
                                     rel = main_asset_p.relative_to(PROJECTS_DIR).as_posix()
                                     ts_val = int(time.time())
                                     curr["url"] = f"/projects_static/{rel}?t={ts_val}"
+                                    url_cache[main_asset_p] = curr["url"]
                                     _refresh_single_thumbnail(rel, ts_val)
                                     refresh_header()
                                     refresh_img()
@@ -1474,7 +1520,7 @@ def render_gallery_page() -> None:
                             toggle_origin_holder["fn"] = None
 
                         # 4K AI 업스케일 버튼
-                        is_already = default_upscale_service.is_already_4k(p)
+                        _, is_already = _get_cached_dims(p)
 
                         async def on_upscale_click():
                             upscale_btn.props("loading")
@@ -1486,6 +1532,8 @@ def render_gallery_page() -> None:
                                     rel = res_path.relative_to(PROJECTS_DIR).as_posix()
                                     ts_val = int(time.time())
                                     curr["url"] = f"/projects_static/{rel}?t={ts_val}"
+                                    url_cache[res_path] = curr["url"]
+                                    dim_cache.pop(res_path, None)
                                     ui.notify(f"🎉 4K 업스케일 완료: {res_path.name}", type="positive")
                                     refresh_header()
                                     refresh_img()
@@ -1530,14 +1578,22 @@ def render_gallery_page() -> None:
                         ).tooltip("호스트 PC 파일 탐색기에서 해당 파일 위치 열기")
                         ui.button(icon="close", on_click=dialog.close).props("flat round dense color=slate-300")
 
-            def refresh_img():
-                img_box.clear()
-                with img_box:
-                    ui.html(
-                        f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 400px;">'
-                        f'<img src="{curr["url"]}" alt="{curr["path"].name}" style="max-height: 75vh; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); display: block;" />'
-                        f'</div>'
-                    )
+            def refresh_img(preload: bool = True):
+                preload_urls: List[str] = []
+                if preload and len(items) > 1:
+                    n = len(items)
+                    idx = nav_state["idx"]
+                    for offset in (1, -1):
+                        adj_p = items[(idx + offset) % n]
+                        u = _get_cached_url(adj_p)
+                        if u != curr["url"]:
+                            preload_urls.append(u)
+                js_code = (
+                    "const im = document.getElementById('plepaLightboxImg');"
+                    f"if (im) {{ im.alt = {json.dumps(curr['path'].name)}; im.src = {json.dumps(curr['url'])}; }}"
+                    + "".join(f"new Image().src = {json.dumps(pu)};" for pu in preload_urls)
+                )
+                ui.run_javascript(js_code)
 
             def handle_keyboard(e):
                 if not dialog.value or not getattr(getattr(e, "action", None), "keydown", False):

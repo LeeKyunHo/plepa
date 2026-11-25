@@ -93,6 +93,45 @@ class TestGenitExporter(unittest.TestCase):
             with Image.open(small_src) as orig0:
                 self.assertEqual(orig0.size, (832, 1216))
 
+    def test_export_character_auto_matches_portrait_and_landscape_orientation(self):
+        exporter = GenitExporter()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            projects_dir = tmp_path / "projects"
+            src_norm = projects_dir / "campus" / "assets" / "har" / "01_normal"
+            src_h = projects_dir / "campus" / "assets" / "har" / "02_h_scenes"
+            src_norm.mkdir(parents=True, exist_ok=True)
+            src_h.mkdir(parents=True, exist_ok=True)
+            out_root = tmp_path / "dist"
+
+            portrait_src = src_norm / "har_003_수줍은홍조.webp"
+            landscape_src = src_h / "har_060_딥키스.webp"
+            Image.new("RGB", (832, 1216), (180, 120, 210)).save(portrait_src, format="WEBP")
+            Image.new("RGB", (1216, 832), (80, 190, 160)).save(landscape_src, format="WEBP")
+
+            with patch("plepa_engine.services.genit_exporter.PROJECTS_DIR", projects_dir):
+                cnt, out_dir, final_code = exporter.export_character(
+                    roster="campus",
+                    char_prefix="har",
+                    char_name="하루",
+                    output_dir=out_root,
+                    target_size=(1024, 1536),
+                    keep_original_filename=True,
+                )
+
+            self.assertEqual(cnt, 2)
+            self.assertEqual(final_code, "har")
+
+            # 세로 원본은 1024x1536, 가로 원본은 1536x1024로 방향을 보존해 통일 리사이즈됨
+            with Image.open(out_dir / "har_003_수줍은홍조.webp") as im_p:
+                self.assertEqual(im_p.size, (1024, 1536))
+            with Image.open(out_dir / "har_060_딥키스.webp") as im_l:
+                self.assertEqual(im_l.size, (1536, 1024))
+
+            # 로컬 원본 해상도는 무손실 보존됨
+            with Image.open(landscape_src) as orig_l:
+                self.assertEqual(orig_l.size, (1216, 832))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -135,10 +135,12 @@ class GenitExporter:
         try:
             if target_size is not None:
                 with Image.open(src_file) as im:
-                    if (im.width, im.height) != target_size:
+                    short_t, long_t = min(target_size[0], target_size[1]), max(target_size[0], target_size[1])
+                    eff_target = (long_t, short_t) if im.width > im.height else (short_t, long_t)
+                    if (im.width, im.height) != eff_target:
                         fitted = ImageOps.fit(
                             im.convert("RGB"),
-                            target_size,
+                            eff_target,
                             method=Image.Resampling.LANCZOS,
                             centering=(0.5, 0.5),
                         )
