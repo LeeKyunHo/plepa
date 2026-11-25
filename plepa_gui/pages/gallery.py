@@ -33,6 +33,28 @@ from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
 from plepa_gui.components.header import get_active_roster, render_header
+
+
+def parse_manifest_items_map(raw_doc: Any) -> Dict[str, Dict[str, Any]]:
+    """_batch_manifest.json 문서(items 리스트 또는 레거시 딕셔너리)를 포즈 코드 기준 맵으로 안전하게 정규화합니다."""
+    if not isinstance(raw_doc, dict):
+        return {}
+    top_ts = raw_doc.get("timestamp", "-")
+    raw_items = raw_doc.get("items", [])
+    loaded_m: Dict[str, Dict[str, Any]] = {}
+    if isinstance(raw_items, list):
+        for it in raw_items:
+            if isinstance(it, dict) and "code" in it:
+                entry = dict(it)
+                entry.setdefault("timestamp", top_ts)
+                loaded_m[str(it["code"]).strip()] = entry
+    elif isinstance(raw_items, dict):
+        for k, v in raw_items.items():
+            if isinstance(v, dict):
+                entry = dict(v)
+                entry.setdefault("timestamp", top_ts)
+                loaded_m[str(k).strip()] = entry
+    return loaded_m
 from plepa_gui.components.retouch_editor import (
     RETOUCH_EDITOR_CSS,
     RETOUCH_EDITOR_HTML,
@@ -1286,17 +1308,7 @@ def render_gallery_page() -> None:
                     if manifest_p.is_file():
                         try:
                             with open(manifest_p, "r", encoding="utf-8") as f:
-                                raw_doc = json.load(f) or {}
-                            top_ts = raw_doc.get("timestamp", "-") if isinstance(raw_doc, dict) else "-"
-                            raw_items = raw_doc.get("items", []) if isinstance(raw_doc, dict) else []
-                            if isinstance(raw_items, list):
-                                for it in raw_items:
-                                    if isinstance(it, dict) and "code" in it:
-                                        entry = dict(it)
-                                        entry.setdefault("timestamp", top_ts)
-                                        loaded_m[str(it["code"]).strip()] = entry
-                            elif isinstance(raw_items, dict):
-                                loaded_m = raw_items
+                                loaded_m = parse_manifest_items_map(json.load(f))
                         except Exception as exc:
                             logger.debug("매니페스트 로드 스킵 (%s): %s", manifest_p, exc)
                     manifest_cache[manifest_p] = loaded_m

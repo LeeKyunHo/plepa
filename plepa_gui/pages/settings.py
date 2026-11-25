@@ -6,6 +6,8 @@ plepa_gui.pages.settings
 
 from __future__ import annotations
 
+from typing import Any, Dict
+
 from nicegui import ui
 from plepa_engine.comfy_client import ComfyClient
 from plepa_engine.config import (
@@ -22,6 +24,39 @@ from plepa_engine.config import (
 )
 from plepa_engine.services.config_service import DEFAULT_CONFIG, default_config_service
 from plepa_gui.components.header import render_header
+
+
+def apply_settings_preset(
+    preset_key: str,
+    form: Dict[str, Any],
+    config_svc: Any = default_config_service,
+) -> Dict[str, Any]:
+    """원클릭 체크포인트 프리셋을 폼에 반영하고 즉시 설정 파일(.plepa_state/config.json)에 영구 저장합니다."""
+    if preset_key == "unholy":
+        updates: Dict[str, Any] = {
+            "sdxl_ckpt": DEFAULT_SDXL_CKPT,
+            "sdxl_width": DEFAULT_SDXL_WIDTH,
+            "sdxl_height": DEFAULT_SDXL_HEIGHT,
+            "sdxl_steps": DEFAULT_SDXL_STEPS,
+            "sdxl_cfg": DEFAULT_SDXL_CFG,
+            "sdxl_sampler": DEFAULT_SDXL_SAMPLER,
+            "sdxl_scheduler": DEFAULT_SDXL_SCHEDULER,
+        }
+    elif preset_key == "wai":
+        updates = {
+            "sdxl_ckpt": "waiIllustriousSDXL_v160.safetensors",
+            "sdxl_width": 896,
+            "sdxl_height": 1152,
+            "sdxl_steps": 28,
+            "sdxl_cfg": 6.0,
+            "sdxl_sampler": "euler_ancestral",
+            "sdxl_scheduler": "normal",
+        }
+    else:
+        raise ValueError(f"알 수 없는 프리셋 키입니다: {preset_key}")
+
+    form.update(updates)
+    return config_svc.save_config(form)
 
 
 def render_settings_page() -> None:
@@ -104,29 +139,13 @@ def render_settings_page() -> None:
                 ui.label("⚡ 원클릭 프로필 프리셋:").classes("text-xs font-bold text-emerald-300 mr-1")
 
                 def apply_unholy():
-                    form.update({
-                        "sdxl_ckpt": DEFAULT_SDXL_CKPT,
-                        "sdxl_width": DEFAULT_SDXL_WIDTH,
-                        "sdxl_height": DEFAULT_SDXL_HEIGHT,
-                        "sdxl_steps": DEFAULT_SDXL_STEPS,
-                        "sdxl_cfg": DEFAULT_SDXL_CFG,
-                        "sdxl_sampler": DEFAULT_SDXL_SAMPLER,
-                        "sdxl_scheduler": DEFAULT_SDXL_SCHEDULER,
-                    })
-                    ui.notify(f"🔥 Unholy Desire v9.0 프로필 적용 완료 ({DEFAULT_SDXL_WIDTH}x{DEFAULT_SDXL_HEIGHT}, CFG {DEFAULT_SDXL_CFG}, {DEFAULT_SDXL_STEPS}스텝)", type="positive")
+                    apply_settings_preset("unholy", form)
+                    ui.notify(f"🔥 Unholy Desire v9.0 프로필 저장 완료 ({DEFAULT_SDXL_WIDTH}x{DEFAULT_SDXL_HEIGHT}, CFG {DEFAULT_SDXL_CFG}, {DEFAULT_SDXL_STEPS}스텝)", type="positive")
                     ui.navigate.reload()
 
                 def apply_wai():
-                    form.update({
-                        "sdxl_ckpt": "waiIllustriousSDXL_v160.safetensors",
-                        "sdxl_width": 896,
-                        "sdxl_height": 1152,
-                        "sdxl_steps": 28,
-                        "sdxl_cfg": 6.0,
-                        "sdxl_sampler": "euler_ancestral",
-                        "sdxl_scheduler": "normal",
-                    })
-                    ui.notify("✨ WAI-Illustrious v16 프로필 적용 완료 (896x1152, CFG 6.0, 28스텝)", type="positive")
+                    apply_settings_preset("wai", form)
+                    ui.notify("✨ WAI-Illustrious v16 프로필 저장 완료 (896x1152, CFG 6.0, 28스텝)", type="positive")
                     ui.navigate.reload()
 
                 ui.button("🔥 Unholy Desire v9.0 (기본)", icon="bolt", on_click=apply_unholy).props(

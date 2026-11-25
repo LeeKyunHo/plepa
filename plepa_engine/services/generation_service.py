@@ -299,6 +299,51 @@ GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
 ]
 
 
+def resolve_effective_sdxl_params(
+    params: GenerationParams,
+    conf: Dict[str, Any],
+    profile: Any,
+) -> Tuple[int, int, int, float, str, str]:
+    """
+    실효 SDXL 생성 파라미터 산출 우선순위:
+    1) params.* (CLI/API 호출 시 명시적으로 지정된 값)
+    2) conf['sdxl_*'] (/settings 전역 설정 저장값 — 단, params.ckpt로 다른 체크포인트를 일회성 오버라이드한 경우에는 해당 체크포인트 profile 우선)
+    3) profile.* (체크포인트 프로필 기본값)
+    """
+    saved_ckpt = str(conf.get("sdxl_ckpt") or "").strip()
+    explicit_ckpt = str(params.ckpt or "").strip()
+    use_saved_conf = (not explicit_ckpt) or (explicit_ckpt == saved_ckpt)
+
+    def _pick_int(param_val: Optional[int], conf_key: str, prof_val: int) -> int:
+        if param_val is not None:
+            return int(param_val)
+        if use_saved_conf and conf.get(conf_key) is not None:
+            return int(conf[conf_key])
+        return int(prof_val)
+
+    def _pick_float(param_val: Optional[float], conf_key: str, prof_val: float) -> float:
+        if param_val is not None:
+            return float(param_val)
+        if use_saved_conf and conf.get(conf_key) is not None:
+            return float(conf[conf_key])
+        return float(prof_val)
+
+    def _pick_str(param_val: Optional[str], conf_key: str, prof_val: str) -> str:
+        if param_val is not None and str(param_val).strip():
+            return str(param_val).strip()
+        if use_saved_conf and conf.get(conf_key):
+            return str(conf[conf_key]).strip()
+        return str(prof_val)
+
+    width = _pick_int(params.width, "sdxl_width", profile.width)
+    height = _pick_int(params.height, "sdxl_height", profile.height)
+    steps = _pick_int(params.steps, "sdxl_steps", profile.steps)
+    cfg = _pick_float(params.cfg, "sdxl_cfg", profile.cfg)
+    sampler = _pick_str(params.sampler, "sdxl_sampler", profile.sampler)
+    scheduler = _pick_str(params.scheduler, "sdxl_scheduler", profile.scheduler)
+    return width, height, steps, cfg, sampler, scheduler
+
+
 class GenerationService:
     """배치 이미지 생성 파이프라인 서비스."""
 
@@ -415,13 +460,8 @@ class GenerationService:
         checkpoint_svc = CheckpointService()
         profile = checkpoint_svc.get_profile_for_checkpoint(ckpt_name)
 
-        # 우선순위: 사용자 명시 > 프로필 값 > Config 설정 > 기본값
-        width = params.width if params.width is not None else profile.width
-        height = params.height if params.height is not None else profile.height
-        steps = params.steps if params.steps is not None else profile.steps
-        cfg = params.cfg if params.cfg is not None else profile.cfg
-        sampler = params.sampler if params.sampler is not None else profile.sampler
-        scheduler = params.scheduler if params.scheduler is not None else profile.scheduler
+        # 우선순위: CLI/API 명시값(params) > 전역 저장 설정(conf, 다른 체크포인트 일회성 오버라이드가 아닐 때) > 체크포인트 프로필(profile)
+        width, height, steps, cfg, sampler, scheduler = resolve_effective_sdxl_params(params, conf, profile)
 
         if not quiet and params.ckpt:
             print(f"  체크포인트 프로필: '{profile.name}' 자동 적용")
