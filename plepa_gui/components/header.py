@@ -9,30 +9,43 @@ from typing import List, Optional
 from nicegui import ui, run
 from plepa_engine.comfy_client import ComfyClient
 from plepa_engine.config import COMFY_HOST, DEFAULT_ROSTER, PROJECTS_DIR
+from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.health_service import (
     DiagnosticResult,
     default_health_service,
 )
 from plepa_engine.services.job_manager import global_job_manager
 
-_ACTIVE_ROSTER = {"value": DEFAULT_ROSTER}
+_ACTIVE_ROSTER = {"value": ""}
 
 
-def get_available_rosters() -> List[str]:
-    """사용 가능한 로스터 폴더 목록을 반환합니다."""
-    rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
-    return rosters or [DEFAULT_ROSTER]
+def get_available_rosters(
+    include_legacy: bool = False,
+    ensure_roster: Optional[str] = None,
+) -> List[str]:
+    """사용 가능한 로스터 폴더 목록을 반환합니다 (기본: status='legacy' 제외)."""
+    rosters = default_character_service.list_rosters(include_legacy=include_legacy)
+    if (
+        ensure_roster
+        and ensure_roster not in rosters
+        and (PROJECTS_DIR / ensure_roster / "characters").is_dir()
+    ):
+        rosters = [*rosters, ensure_roster]
+    return rosters or default_character_service.list_rosters(include_legacy=True) or [DEFAULT_ROSTER]
 
 
 def get_active_roster() -> str:
     """현재 전역 활성 로스터를 반환합니다."""
+    current = _ACTIVE_ROSTER["value"]
     available = get_available_rosters()
-    if _ACTIVE_ROSTER["value"] in available:
-        return _ACTIVE_ROSTER["value"]
+    if current and (current in available or (PROJECTS_DIR / current / "characters").is_dir()):
+        return current
     if DEFAULT_ROSTER in available:
         _ACTIVE_ROSTER["value"] = DEFAULT_ROSTER
     elif available:
         _ACTIVE_ROSTER["value"] = available[0]
+    else:
+        _ACTIVE_ROSTER["value"] = DEFAULT_ROSTER
     return _ACTIVE_ROSTER["value"]
 
 

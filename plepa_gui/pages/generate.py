@@ -23,19 +23,25 @@ from plepa_engine.config import (
     DEFAULT_SDXL_WIDTH,
     PROJECTS_DIR,
 )
-from plepa_engine.models import GenerationResult
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
 from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.generation_service import (
     GENERATION_OPTION_SPECS,
     GenerationParams,
-    default_generation_service,
 )
 from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_background_service import default_pose_bg_service
 from plepa_engine.services.pose_service import default_pose_service
-from plepa_gui.components.header import get_active_roster, render_header
+from plepa_gui.components.header import (
+    get_active_roster,
+    get_available_rosters,
+    render_header,
+)
+from plepa_gui.components.option_controls import (
+    normalize_option_values,
+    render_option_controls,
+)
 
 
 def render_generate_page() -> None:
@@ -111,9 +117,7 @@ def render_generate_page() -> None:
         f = spec["field"]
         state[f] = conf.get(f, spec["default"]) if spec.get("widget") == "select" else spec["default"]
 
-    available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
-    if not available_rosters:
-        available_rosters = [DEFAULT_ROSTER]
+    available_rosters = get_available_rosters(ensure_roster=state["roster"])
 
     all_chars = default_character_service.list_characters(roster=state["roster"])
     pose_sets = default_pose_service.load_pose_sets()
@@ -221,34 +225,13 @@ def render_generate_page() -> None:
 
             model_select_container = ui.column().classes("w-full mb-3")
 
-            # 레지스트리 기반 옵션 체크박스 및 선택형 위젯 동적 렌더링
+            # 레지스트리 기반 옵션 위젯 동적 렌더링 (checkbox / select / int / float / text)
             def _on_option_changed(field_name: str, value: object, persist: bool = False) -> None:
                 state.update({field_name: value})
                 if persist:
                     default_config_service.save_config({field_name: value})
 
-            checkbox_specs = [s for s in GENERATION_OPTION_SPECS if s.get("widget") != "select"]
-            select_specs = [s for s in GENERATION_OPTION_SPECS if s.get("widget") == "select"]
-
-            with ui.row().classes("w-full items-center gap-3 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 mb-3 flex-wrap"):
-                for spec in checkbox_specs:
-                    f = spec["field"]
-                    ui.checkbox(
-                        spec["label"],
-                        value=state[f],
-                        on_change=lambda e, field=f: _on_option_changed(field, e.value),
-                    ).props("dark dense").tooltip(spec["tooltip"])
-
-            if select_specs:
-                with ui.row().classes("w-full items-center gap-3 p-2.5 bg-slate-800/30 rounded-lg border border-slate-700/40 mb-6 flex-wrap"):
-                    for spec in select_specs:
-                        f = spec["field"]
-                        ui.select(
-                            options=spec["choices"],
-                            value=state[f],
-                            label=spec["label"],
-                            on_change=lambda e, field=f: _on_option_changed(field, e.value, persist=True),
-                        ).props("dense outlined dark options-dense").classes("w-44 text-xs").tooltip(spec["tooltip"])
+            render_option_controls(GENERATION_OPTION_SPECS, state, _on_option_changed)
 
             # 생성 시작 및 취소 버튼
             with ui.row().classes("w-full justify-between items-center"):
@@ -441,10 +424,6 @@ def render_generate_page() -> None:
             ui.notify("생성 중단 요청이 전달되었습니다.", type="warning")
 
     def start_generation():
-        if global_job_manager.is_running:
-            ui.notify("이미 다른 배치 작업이 진행 중입니다.", type="warning")
-            return
-
         if not state["selected_chars"]:
             ui.notify("최소 1명 이상의 캐릭터를 선택해 주십시오.", type="warning")
             return
@@ -465,7 +444,7 @@ def render_generate_page() -> None:
 
         char_expr = ",".join(state["selected_chars"])
 
-        option_kwargs = {spec["field"]: state.get(spec["field"], spec["default"]) for spec in GENERATION_OPTION_SPECS}
+        option_kwargs = normalize_option_values(GENERATION_OPTION_SPECS, state)
         params = GenerationParams(
             character_expr=char_expr,
             pose_expr=pose_expr,
@@ -476,16 +455,17 @@ def render_generate_page() -> None:
             **option_kwargs,
         )
 
-        log_box.clear()
+        started, q_pos = global_job_manager.enqueue_job(
+            params, label=f"배치 생성 {char_expr} ({pose_expr})"
+        )
         nonlocal rendered_log_count
-        rendered_log_count = 0
-
-        started = global_job_manager.start_job(params)
         if started:
+            log_box.clear()
+            rendered_log_count = 0
             ui.notify("백그라운드 배치 작업 시작! 다른 페이지로 이동해도 멈추지 않고 계속 생성됩니다.", type="positive")
-            sync_job_status()
         else:
-            ui.notify("작업 시작 실패 (이미 실행 중)", type="warning")
+            ui.notify(f"📋 대기열 #{q_pos} 등록: 진행 중인 작업 완료 후 순차 실행됩니다.", type="info")
+        sync_job_status()
 
     # 전역 백그라운드 작업 상태 실시간 동기화
     rendered_log_count = 0

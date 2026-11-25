@@ -26,13 +26,16 @@ from plepa_engine.services.config_service import default_config_service
 from plepa_engine.services.generation_service import (
     GENERATION_OPTION_SPECS,
     GenerationParams,
-    default_generation_service,
 )
 from plepa_engine.services.genit_exporter import default_genit_exporter
 from plepa_engine.services.job_manager import global_job_manager
 from plepa_engine.services.pose_service import default_pose_service
 from plepa_engine.services.upscale_service import default_upscale_service
-from plepa_gui.components.header import get_active_roster, render_header
+from plepa_gui.components.header import (
+    get_active_roster,
+    get_available_rosters,
+    render_header,
+)
 
 
 def parse_manifest_items_map(raw_doc: Any) -> Dict[str, Dict[str, Any]]:
@@ -74,22 +77,20 @@ def _safe_notify(msg: str, type: str = "info") -> None:
 
 
 def detect_best_default_roster() -> str:
-    """전역 활성 로스터를 기본값으로 사용하고 없을 시 자동 감지."""
+    """전역 활성 로스터를 기본값으로 사용하고 없을 시 활성 로스터 중 최다 에셋 로스터를 선택."""
     active_r = get_active_roster()
     if (PROJECTS_DIR / active_r).is_dir():
         return active_r
-    best_roster = DEFAULT_ROSTER
+    best_roster = get_available_rosters()[0]
     max_count = 0
-    for p in PROJECTS_DIR.iterdir():
-        if not p.is_dir() or p.name.startswith("."):
-            continue
-        assets_dir = p / "assets"
+    for r_name in get_available_rosters():
+        assets_dir = PROJECTS_DIR / r_name / "assets"
         if not assets_dir.is_dir():
             continue
         webp_count = len([f for f in assets_dir.rglob("*.webp") if "_origin" not in f.parts])
         if webp_count > max_count:
             max_count = webp_count
-            best_roster = p.name
+            best_roster = r_name
     return best_roster
 
 
@@ -164,9 +165,7 @@ def render_gallery_page() -> None:
     all_poses = get_roster_poses(default_roster)
     roster_scope = get_roster_gallery_pose_scope(default_roster)
 
-    available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
-    if not available_rosters:
-        available_rosters = [default_roster]
+    available_rosters = get_available_rosters(ensure_roster=default_roster)
 
     conf = default_config_service.get_config()
     censor_spec_map = {s["field"]: s for s in GENERATION_OPTION_SPECS if s["field"] in ("censor_style", "censor_targets")}
@@ -277,21 +276,18 @@ def render_gallery_page() -> None:
                         if tot == 0:
                             ui.notify("✨ 모든 포즈가 완비되었습니다!", type="positive")
                             return
-                        ui.notify(f"⚡ 누락 포즈 {tot}개 백그라운드 생성 가동...", type="info")
+                        enqueued_chars = 0
                         for c_pfx, c_codes in missing_map.items():
                             if not c_codes:
                                 continue
                             g_params = GenerationParams(
-                                character_expr=c_pfx,
-                                pose_expr=",".join(c_codes),
-                                roster=state["roster"],
-                                overwrite=False,
-                                censor=True,
-                                censor_style=state["censor_style"],
-                                censor_targets=state["censor_targets"],
+                                character_expr=c_pfx, pose_expr=",".join(c_codes), roster=state["roster"],
+                                overwrite=False, censor=True, censor_style=state["censor_style"], censor_targets=state["censor_targets"],
                             )
-                            run.io_bound(default_generation_service.run_batch, g_params)
-                        ui.notify(f"🚀 총 {tot}개 누락 포즈 생성이 시작되었습니다.", type="positive")
+                            global_job_manager.enqueue_job(g_params, label=f"누락 채우기 {c_pfx} ({len(c_codes)}종)")
+                            enqueued_chars += 1
+                        sync_queue_panel(force=True)
+                        ui.notify(f"🚀 {enqueued_chars}명 / 총 {tot}개 누락 포즈를 작업 대기열에 등록했습니다.", type="positive")
 
                     ui.button("⚡ 누락 채우기", icon="bolt", on_click=quick_fill_missing).props(
                         "unelevated color=amber-500 text-color=slate-950 dense size=sm font-bold"
@@ -728,19 +724,14 @@ def render_gallery_page() -> None:
                                 if missing:
                                     async def trigger_missing(char_p=r["prefix"], miss_codes=missing):
                                         dlg.close()
-                                        ui.notify(f"⚡ {char_p} 누락 포즈 {len(miss_codes)}개 생성 시작...", type="info")
-                                        from plepa_engine.services.generation_service import GenerationParams, default_generation_service
                                         m_params = GenerationParams(
-                                            character_expr=char_p,
-                                            pose_expr=",".join(miss_codes),
-                                            roster=state["roster"],
-                                            censor=True,
-                                            censor_style=state["censor_style"],
-                                            censor_targets=state["censor_targets"],
+                                            character_expr=char_p, pose_expr=",".join(miss_codes), roster=state["roster"],
+                                            censor=True, censor_style=state["censor_style"], censor_targets=state["censor_targets"],
                                         )
-                                        await run.io_bound(default_generation_service.run_batch, m_params)
-                                        ui.notify(f"🎉 {char_p} 결손 에셋 생성 완료!", type="positive")
-                                        render_content()
+                                        started, pos = global_job_manager.enqueue_job(m_params, label=f"결손 보완 {char_p} ({len(miss_codes)}종)")
+                                        msg = f"⚡ {char_p} 누락 포즈 {len(miss_codes)}개 생성 시작!" if started else f"📋 {char_p} 대기열 #{pos} 등록!"
+                                        ui.notify(msg, type="info")
+                                        sync_queue_panel(force=True)
 
                                     ui.button("⚡ 누락분 즉시 생성", on_click=trigger_missing).props(
                                         "unelevated dense size=xs color=amber-500 text-color=slate-950 font-bold"

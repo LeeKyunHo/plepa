@@ -8,22 +8,23 @@ from __future__ import annotations
 from nicegui import ui
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.services.background_service import default_background_service
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import (
+    get_active_roster,
+    get_available_rosters,
+    render_header,
+)
 
 
 def render_backgrounds_page() -> None:
     """배경 프리셋 관리 페이지 렌더링."""
     render_header("/backgrounds")
 
+    available_rosters = get_available_rosters()
     state = {
-        "selected_roster": DEFAULT_ROSTER,
+        "selected_roster": get_active_roster(),
         "selected_key": "default",
         "current_prompt": "",
     }
-
-    available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
-    if not available_rosters:
-        available_rosters = [DEFAULT_ROSTER]
 
     with ui.row().classes("w-full max-w-7xl mx-auto p-6 gap-6 items-start"):
         # 좌측: 로스터 및 프리셋 목록

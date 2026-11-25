@@ -146,8 +146,8 @@ class GenerationParams:
     sampler: Optional[str] = None
     scheduler: Optional[str] = None
     unet: Optional[str] = None
-    lora: str = "modern-anime-lora.safetensors"
-    lora_weight: float = 0.9
+    lora: Optional[str] = None
+    lora_weight: Optional[float] = None
     width: Optional[int] = None
     height: Optional[int] = None
     naming: str = "hybrid"
@@ -169,134 +169,11 @@ class GenerationParams:
     out_dir: Optional[str] = None  # 별도 테스트 출력 루트 폴더 (지정 시 out_dir/{roster}/{char}/에 저장)
 
 
-# CLI와 GUI가 단일 진실 공급원(SSOT)으로 공유하는 생성 옵션 메타데이터 레지스트리
-GENERATION_OPTION_SPECS: List[Dict[str, Any]] = [
-    {
-        "field": "face_detailer",
-        "cli_flag": "--face-detailer",
-        "label": "Face Detailer",
-        "tooltip": "얼굴 디테일러(Face Detailer) 후처리 적용 (기본 권장)",
-        "default": True,
-    },
-    {
-        "field": "hand_detailer",
-        "cli_flag": "--hand-detailer",
-        "label": "Hand Detailer",
-        "tooltip": "손 디테일러(Hand Detailer) 체이닝으로 손가락 왜곡 자동 보정",
-        "default": False,
-    },
-    {
-        "field": "freeu",
-        "cli_flag": "--freeu",
-        "label": "FreeU 화질 부스팅",
-        "tooltip": "ComfyUI FreeU 노드로 SDXL 선명도, 콘트라스트 및 피부 질감 극대화",
-        "default": True,
-    },
-    {
-        "field": "upscale",
-        "cli_flag": "--upscale",
-        "label": "4x AI 업스케일",
-        "tooltip": "4x-UltraSharp 모델을 통한 4K 초해상화",
-        "default": False,
-    },
-    {
-        "field": "censor",
-        "cli_flag": "--censor",
-        "label": "화이트 실루엣 검열",
-        "tooltip": "YOLO 자동 탐지 기반 화이트 실루엣 검열 (_origin 백업 유지)",
-        "default": True,
-    },
-    {
-        "field": "censor_style",
-        "cli_flag": "--censor-style",
-        "label": "검열 스타일",
-        "tooltip": "자동 검열 시 적용할 마스킹 스타일",
-        "default": "white_silhouette",
-        "widget": "select",
-        "choices": {
-            "white_silhouette": "화이트 실루엣",
-            "black_silhouette": "블랙 실루엣",
-            "manga_bar": "망가 회전 바",
-            "manga_glow": "망가 화이트 글로우",
-            "silhouette": "실루엣(기본)",
-            "bar": "와이드 솔리드 바",
-            "wide_bar": "와이드 바",
-            "slim_bar": "슬림 사선 바",
-            "shadow": "그림자 음영",
-            "mosaic": "모자이크",
-            "debug_bbox": "디버그 BBox",
-        },
-    },
-    {
-        "field": "censor_targets",
-        "cli_flag": "--censor-targets",
-        "label": "검열 대상",
-        "tooltip": "검열 탐지 및 마스킹 대상 부위",
-        "default": "penis",
-        "widget": "select",
-        "choices": {
-            "penis": "남성기 (penis)",
-            "pussy": "여성기 (pussy)",
-            "all": "전체 (all)",
-        },
-    },
-    {
-        "field": "reuse_seed",
-        "cli_flag": "--reuse-seed",
-        "label": "🔒 골든 시드 고정",
-        "tooltip": "_batch_manifest.json의 이전 시드를 재사용하여 구도를 유지하고 의상/태그만 갱신",
-        "default": False,
-    },
-    {
-        "field": "deterministic_pose_seed",
-        "cli_flag": "--deterministic-pose-seed",
-        "label": "🧭 포즈 고정 시드",
-        "tooltip": "포즈 코드와 캐릭터 기반의 결정론적 시드를 자동 산출하여 실행 간 구도 편차를 억제",
-        "default": False,
-    },
-    {
-        "field": "strict_censor_qc",
-        "cli_flag": "--strict-censor-qc",
-        "label": "🛡️ 엄격 검열 리롤 (Auto-QC)",
-        "tooltip": "성인 H씬에서 성기 미탐지(구도 왜곡 등) 시 통과시키지 않고 자동 리롤",
-        "default": False,
-    },
-    {
-        "field": "anchor_fallback",
-        "cli_flag": "--anchor-fallback",
-        "label": "안전 앵커 폴백",
-        "tooltip": "성기 미탐지 시 체위별 안전 앵커 좌표로 폴백 마스킹 (오검열 방지를 위해 기본 비활성)",
-        "default": False,
-    },
-    {
-        "field": "censor_only",
-        "cli_flag": "--censor-only",
-        "label": "⚡ 0.2초 소급 검열 전용",
-        "tooltip": "신규 생성 없이 기존 에셋에 실루엣 검열만 즉시 일괄 적용",
-        "default": False,
-    },
-    {
-        "field": "overwrite",
-        "cli_flag": "--overwrite",
-        "label": "강제 덮어쓰기 (리롤)",
-        "tooltip": "기존에 완료된 에셋을 건너뛰지 않고 새로 생성하여 덮어씁니다",
-        "default": False,
-    },
-    {
-        "field": "no_ref",
-        "cli_flag": "--no-ref",
-        "label": "순수 프롬프트 (IP-Adapter 끄기)",
-        "tooltip": "레퍼런스 이미지(IP-Adapter) 색감·화풍 간섭 차단 (기본 권장)",
-        "default": True,
-    },
-    {
-        "field": "mock",
-        "cli_flag": "--mock",
-        "label": "Mock 시뮬레이션",
-        "tooltip": "ComfyUI 서버 연동 없이 0.001초 가상 생성 테스트",
-        "default": False,
-    },
-]
+# CLI·Engine·GUI 단일 진실 공급원(SSOT) 레지스트리 및 LoRA 해석기 하위 호환 재노출
+from plepa_engine.services.generation_options import (
+    GENERATION_OPTION_SPECS,
+    resolve_workflow_loras,
+)
 
 
 def resolve_effective_sdxl_params(
@@ -688,24 +565,14 @@ class GenerationService:
                     elif sdxl_seed < 0 and params.deterministic_pose_seed:
                         sdxl_seed = compute_deterministic_pose_seed(code, char.prefix)
                     workflow = build_sdxl_workflow(
-                        positive_prompt=pos_prompt,
-                        negative_prompt=neg_prompt,
-                        output_prefix=f"{char.prefix}_{code}",
-                        seed=sdxl_seed,
-                        width=eff_w,
-                        height=eff_h,
-                        steps=steps,
-                        cfg=cfg,
-                        sampler=sampler,
-                        scheduler=scheduler,
-                        ckpt_name=ckpt_name,
-                        use_face_detailer=params.face_detailer,
-                        use_hand_detailer=params.hand_detailer,
-                        use_freeu=params.freeu,
-                        use_upscale=params.upscale,
-                        ref_image_name=ref_file_name,
-                        ref_weight=ref_weight,
-                        ref_mode=ref_mode,
+                        positive_prompt=pos_prompt, negative_prompt=neg_prompt,
+                        output_prefix=f"{char.prefix}_{code}", seed=sdxl_seed,
+                        width=eff_w, height=eff_h, steps=steps, cfg=cfg,
+                        sampler=sampler, scheduler=scheduler, ckpt_name=ckpt_name,
+                        use_face_detailer=params.face_detailer, use_hand_detailer=params.hand_detailer,
+                        use_freeu=params.freeu, use_upscale=params.upscale,
+                        ref_image_name=ref_file_name, ref_weight=ref_weight, ref_mode=ref_mode,
+                        loras=resolve_workflow_loras(char, params),
                     )
     
                     # 워크플로우 시드 추출 및 reuse_seed 처리

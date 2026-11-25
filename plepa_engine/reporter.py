@@ -218,3 +218,77 @@ def print_overall_batch_summary(
         print("✨ 축하합니다! 모든 캐릭터의 에셋이 결함 없이 100% 정상 품질로 완성되었습니다! (QC 결함 0건)")
 
     print(banner + "\n")
+
+
+def report_roster_characters(roster: str) -> int:
+    """로스터 내 등록된 캐릭터들의 프로필 목록을 콘솔 테이블로 출력합니다."""
+    import json
+    from plepa_engine.config import PROJECTS_DIR
+    from plepa_engine.models import CharacterConfig
+
+    char_dir = PROJECTS_DIR / roster / "characters"
+    if not char_dir.exists():
+        print(f"\n[오류] 로스터 캐릭터 폴더를 찾을 수 없습니다: {char_dir}")
+        return 1
+
+    files = sorted(char_dir.glob("*.json"))
+    if not files:
+        print(f"\n[안내] 로스터 '{roster}'에 등록된 캐릭터 JSON 파일이 없습니다.")
+        return 0
+
+    print("=" * 82)
+    print(f"  [플에파] 로스터 캐릭터 목록: {roster} (총 {len(files)}명)")
+    print("=" * 82)
+    print(f"  {'식별자(ID)':<12} {'한글명 (영문명)':<24} {'성별':<8} {'프로필(의상)':<18} {'기본 의상 요약'}")
+    print("  " + "-" * 78)
+
+    for path in files:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            char = CharacterConfig.from_dict(data, file_path=path)
+            prof_list = list(char.profiles.keys())
+            prof_str = ", ".join(prof_list) if prof_list else "default"
+            outfit_text = char.appearance.outfit.replace("\n", " ").strip()
+            outfit_summary = (outfit_text[:28] + "..") if len(outfit_text) > 28 else (outfit_text or "-")
+            print(f"  {char.prefix:<12} {char.name:<24} {char.gender:<8} {prof_str:<18} {outfit_summary}")
+        except Exception as e:
+            print(f"  {path.stem:<12} [오류: {e}]")
+
+    print("=" * 82)
+    return 0
+
+
+def report_roster_audit(roster: str) -> int:
+    """로스터 내 캐릭터들의 에셋 완비율, 누락 포즈, 검열 원본 백업 여부를 전수 감사하여 출력합니다."""
+    from plepa_engine.services.asset_service import default_asset_service
+
+    reports = default_asset_service.audit_roster_assets(roster=roster)
+    if not reports:
+        print(f"\n[안내] 로스터 '{roster}'에 감사할 캐릭터가 없습니다.")
+        return 0
+
+    print("=" * 95)
+    print(f"  [플에파 에셋 전수 감사 리포트] 로스터: {roster} (총 {len(reports)}명)")
+    print("=" * 95)
+    print(f"  {'식별자':<8} {'이름':<14} {'성별':<10} {'보유 / 기대':<14} {'완비율':<10} {'_origin 백업':<14} {'라벨불일치':<10} {'누락 코드'}")
+    print("  " + "-" * 91)
+
+    for r in reports:
+        cnt_str = f"{r['present_count']} / {r['expected_count']}"
+        rate_str = f"{r['completion_rate']}%"
+        origin_str = f"{r['origin_count']}장"
+        outdated_str = f"{r['outdated_labels']}건" if r["outdated_labels"] > 0 else "0건"
+        missing = r["missing_codes"]
+        if not missing:
+            missing_str = "완벽 (누락 없음)"
+        elif len(missing) <= 6:
+            missing_str = ",".join(missing)
+        else:
+            missing_str = f"{','.join(missing[:5])}.. (+{len(missing) - 5}개)"
+
+        print(f"  {r['prefix']:<8} {r['name']:<14} {r['gender']:<10} {cnt_str:<14} {rate_str:<10} {origin_str:<14} {outdated_str:<10} {missing_str}")
+
+    print("=" * 95)
+    return 0
+

@@ -18,7 +18,11 @@ from plepa_engine.services.schemas import (
     CharacterSchema,
     LoraSchema,
 )
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import (
+    get_active_roster,
+    get_available_rosters,
+    render_header,
+)
 
 
 def build_updated_character_schema(char: CharacterSchema, fields: Dict[str, Any]) -> CharacterSchema:
@@ -61,18 +65,13 @@ def render_characters_page() -> None:
     """캐릭터 관리 페이지 렌더링."""
     render_header("/characters")
 
-    # 반응형 상태 저장소
+    available_rosters = get_available_rosters()
     state = {
-        "selected_roster": DEFAULT_ROSTER,
+        "selected_roster": get_active_roster(),
         "selected_prefix": None,
         "current_char": None,
         "current_file": None,
     }
-
-    # 전체 로스터 목록 탐색
-    available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
-    if not available_rosters:
-        available_rosters = [DEFAULT_ROSTER]
 
     with ui.row().classes("w-full max-w-7xl mx-auto p-6 gap-6 items-start"):
         # ==========================================

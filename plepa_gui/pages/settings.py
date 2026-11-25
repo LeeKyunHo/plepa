@@ -23,7 +23,7 @@ from plepa_engine.config import (
     PROJECTS_DIR,
 )
 from plepa_engine.services.config_service import DEFAULT_CONFIG, default_config_service
-from plepa_gui.components.header import render_header
+from plepa_gui.components.header import get_available_rosters, render_header
 
 
 def apply_settings_preset(
@@ -65,9 +65,7 @@ def render_settings_page() -> None:
 
     config = default_config_service.get_config()
 
-    available_rosters = sorted([p.name for p in PROJECTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")])
-    if not available_rosters:
-        available_rosters = [DEFAULT_ROSTER]
+    available_rosters = get_available_rosters()
 
     # ComfyUI 실시간 모델 목록 조회 (체크포인트, GGUF UNet, 업스케일러 등)
     comfy_client = ComfyClient(host=config.get("comfy_host", COMFY_HOST))

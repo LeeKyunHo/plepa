@@ -62,9 +62,9 @@ def load_pose_db(engine: str = DEFAULT_ENGINE, path: Optional[Path] = None) -> D
     return default_pose_service.load_pose_db(engine=engine, path=path)
 
 
-def get_available_rosters() -> List[str]:
-    """등록된 캐릭터가 존재하는 모든 로스터 폴더 목록 반환."""
-    return default_character_service.list_rosters()
+def get_available_rosters(include_legacy: bool = False) -> List[str]:
+    """등록된 캐릭터가 존재하는 로스터 폴더 목록 반환 (기본: legacy 제외)."""
+    return default_character_service.list_rosters(include_legacy=include_legacy)
 
 
 def find_character(char_name: str, roster: str = DEFAULT_ROSTER) -> tuple[CharacterConfig, str]:
@@ -100,71 +100,14 @@ def resolve_pose_codes(expr: str, db: Dict[str, PoseEntry], roster: Optional[str
 
 def print_roster_characters(roster: str = DEFAULT_ROSTER) -> int:
     """로스터 내 등록된 캐릭터들의 프로필 목록을 콘솔 테이블로 출력합니다."""
-    char_dir = PROJECTS_DIR / roster / "characters"
-    if not char_dir.exists():
-        print(f"\n[오류] 로스터 캐릭터 폴더를 찾을 수 없습니다: {char_dir}")
-        return 1
-
-    files = sorted(char_dir.glob("*.json"))
-    if not files:
-        print(f"\n[안내] 로스터 '{roster}'에 등록된 캐릭터 JSON 파일이 없습니다.")
-        return 0
-
-    print("=" * 82)
-    print(f"  [플에파] 로스터 캐릭터 목록: {roster} (총 {len(files)}명)")
-    print("=" * 82)
-    header = f"  {'식별자(ID)':<12} {'한글명 (영문명)':<24} {'성별':<8} {'프로필(의상)':<18} {'기본 의상 요약'}"
-    print(header)
-    print("  " + "-" * 78)
-
-    for path in files:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            char = CharacterConfig.from_dict(data, file_path=path)
-            prof_list = list(char.profiles.keys())
-            prof_str = ", ".join(prof_list) if prof_list else "default"
-            outfit_text = char.appearance.outfit.replace("\n", " ").strip()
-            outfit_summary = (outfit_text[:28] + "..") if len(outfit_text) > 28 else (outfit_text or "-")
-            print(f"  {char.prefix:<12} {char.name:<24} {char.gender:<8} {prof_str:<18} {outfit_summary}")
-        except Exception as e:
-            print(f"  {path.stem:<12} [오류: {e}]")
-
-    print("=" * 82)
-    return 0
+    from plepa_engine.reporter import report_roster_characters
+    return report_roster_characters(roster=roster)
 
 
 def print_roster_audit(roster: str = DEFAULT_ROSTER) -> int:
-    """로스터 내 캐릭터들의 에셋 완비율, 누락 포즈, 검열 원본 백업 여부를 전수 감사하여 콘솔 테이블로 출력합니다."""
-    reports = default_asset_service.audit_roster_assets(roster=roster)
-    if not reports:
-        print(f"\n[안내] 로스터 '{roster}'에 감사할 캐릭터가 없습니다.")
-        return 0
-
-    print("=" * 95)
-    print(f"  [플에파 에셋 전수 감사 리포트] 로스터: {roster} (총 {len(reports)}명)")
-    print("=" * 95)
-    header = f"  {'식별자':<8} {'이름':<14} {'성별':<10} {'보유 / 기대':<14} {'완비율':<10} {'_origin 백업':<14} {'라벨불일치':<10} {'누락 코드'}"
-    print(header)
-    print("  " + "-" * 91)
-
-    for r in reports:
-        cnt_str = f"{r['present_count']} / {r['expected_count']}"
-        rate_str = f"{r['completion_rate']}%"
-        origin_str = f"{r['origin_count']}장"
-        outdated_str = f"{r['outdated_labels']}건" if r['outdated_labels'] > 0 else "0건"
-        missing = r['missing_codes']
-        if not missing:
-            missing_str = "완벽 (누락 없음)"
-        elif len(missing) <= 6:
-            missing_str = ",".join(missing)
-        else:
-            missing_str = f"{','.join(missing[:5])}.. (+{len(missing)-5}개)"
-
-        print(f"  {r['prefix']:<8} {r['name']:<14} {r['gender']:<10} {cnt_str:<14} {rate_str:<10} {origin_str:<14} {outdated_str:<10} {missing_str}")
-
-    print("=" * 95)
-    return 0
+    """로스터 내 캐릭터들의 에셋 완비율, 누락 포즈, 검열 원본 백업 여부를 전수 감사하여 출력합니다."""
+    from plepa_engine.reporter import report_roster_audit
+    return report_roster_audit(roster=roster)
 
 
 def run_self_test() -> int:
@@ -187,7 +130,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("-c", "--character", "--char", help="생성할 캐릭터 이름 (예: bjh, sample_character, all)")
     parser.add_argument("-p", "--pose", "--codes", default="all", help="생성할 포즈 코드/범위 (all, emotions, 000..019, 000,001 등)")
     parser.add_argument("--all-chars", action="store_true", help="로스터 내 등록된 모든 캐릭터 일괄 순차 생성 (Kiro 호환 문법)")
-    parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER})")
+    parser.add_argument("-r", "--roster", default=DEFAULT_ROSTER, help=f"로스터 폴더 (기본: {DEFAULT_ROSTER}, all: 활성 로스터 순회)")
+    parser.add_argument("--include-legacy", action="store_true", help="status=legacy 구형 로스터까지 -r all 및 목록 대상에 포함")
     parser.add_argument("-l", "--list", action="store_true", help="로스터 내 등록된 캐릭터 프로필 목록을 콘솔 테이블로 출력")
     parser.add_argument("--profile", default=None, help="캐릭터 프로필/의상 선택 (JSON 내 profiles 섹션)")
     parser.add_argument("--engine", choices=["sdxl"], default=DEFAULT_ENGINE, help=f"이미지 생성 엔진 (기본: {DEFAULT_ENGINE} [SDXL 단일 파이프라인])")
@@ -195,8 +139,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ckpt-tag", default=None, dest="ckpt_tag", help="체크포인트 비교용 서브폴더 태그 (예: wai, unholy) - 지정 시 assets/prefix/ckpt_태그/ 폴더에 저장")
     parser.add_argument("--bg", default=None, help="즉석 배경 프롬프트 직접 주입 (지정 시 --bg-preset 보다 우선 적용)")
     parser.add_argument("--bg-preset", default="default", help="배경 프리셋 키 (기본: default)")
-    parser.add_argument("--custom_pos", "--style", default=None, help="추가 긍정 프롬프트 또는 특정 작가 화풍 태그 주입 (예: 'art by ratatatat74')")
-    parser.add_argument("--custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
+    parser.add_argument("--custom_pos", "--custom-pos", "--style", dest="custom_pos", default=None, help="추가 긍정 프롬프트 또는 특정 작가 화풍 태그 주입 (예: 'art by ratatatat74')")
+    parser.add_argument("--custom_neg", "--custom-neg", dest="custom_neg", default=None, help="추가 네거티브 프롬프트/태그 (SDXL 모드에 결합)")
     parser.add_argument("--ref_image", "--ref-image", default=None, help="IP-Adapter 참조 이미지 파일 경로 (생략 시 references/{prefix}.webp 자동 탐색)")
     parser.add_argument("--ref_weight", "--ref-weight", type=float, default=None, help="IP-Adapter 영향력 가중치 (0.0~1.0, 기본: 캐릭터 설정치 또는 0.0)")
     parser.add_argument("--no_ref", "--no-ref", dest="no_ref", action="store_true", default=True, help="레퍼런스 이미지(IP-Adapter) 비활성화 (기본값: True, 순수 프롬프트 생성)")
@@ -217,8 +161,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sampler", default=None, help=f"샘플러 알고리즘 (기본: {DEFAULT_SDXL_SAMPLER})")
     parser.add_argument("--scheduler", default=None, help=f"스케줄러 (기본: {DEFAULT_SDXL_SCHEDULER})")
     parser.add_argument("--unet", default=None, help=argparse.SUPPRESS)
-    parser.add_argument("--lora", default="modern-anime-lora.safetensors", help=argparse.SUPPRESS)
-    parser.add_argument("--lora-weight", type=float, default=0.9, help=argparse.SUPPRESS)
+    parser.add_argument("--lora", default=None, help="LoRA 파일명/체이닝 목록 (쉼표 구분, 'none' 지정 시 비활성, 미지정 시 캐릭터 설정 사용)")
+    parser.add_argument("--lora-weight", type=float, default=None, help="LoRA 적용 강도 (미지정 시 캐릭터 기본값 또는 0.8)")
     parser.add_argument("--width", type=int, default=None, help=f"이미지 가로 폭 (기본: {DEFAULT_SDXL_WIDTH})")
     parser.add_argument("--height", type=int, default=None, help=f"이미지 세로 높이 (기본: {DEFAULT_SDXL_HEIGHT})")
     parser.add_argument(
@@ -247,25 +191,22 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deterministic-pose-seed", action="store_true", help="포즈 코드 및 캐릭터 식별자 기반 결정론적 시드를 자동 산출하여 구도 편차 억제")
     parser.add_argument("--strict-censor-qc", action="store_true", help="필수 성인 결합/노출 씬에서 성기 미탐지 시 구도 불량으로 판정하여 자동 리롤")
     parser.add_argument("--audit", action="store_true", help="지정된 로스터의 캐릭터별 에셋 완비율, 누락 포즈, 검열 원본 백업 여부 1초 전수 감사 리포트 출력")
-    parser.add_argument("--no-qc", action="store_true", help="Auto-QC 품질 검증 및 불량 시 자동 재시도 비활성화")
+    parser.add_argument("--auto-qc", dest="auto_qc", action="store_true", default=True, help="Auto-QC 품질 검증 및 불량 시 자동 재시도 활성화 (기본: 활성화)")
+    parser.add_argument("--no-qc", dest="auto_qc", action="store_false", help="Auto-QC 품질 검증 및 불량 시 자동 재시도 비활성화")
+    parser.add_argument("--retry-qc-failed", dest="retry_qc_failed", action="store_true", default=True, help="QC 불량 이력 에셋 자동 재시도 (기본: 활성화)")
+    parser.add_argument("--no-retry-qc-failed", dest="retry_qc_failed", action="store_false", help="QC 불량 이력 에셋 자동 재시도 비활성화")
     parser.add_argument("--max-retries", type=int, default=3, help="Auto-QC 불량 시 최대 재시도(리롤) 횟수 (기본: 3)")
+    parser.add_argument("--prompt-alert-threshold", type=int, default=2, help="연속 불량 시 프롬프트 점검 경고 발령 임계치 (기본: 2)")
     parser.add_argument("--test", action="store_true", help="시스템 무결성 자가 진단 실행")
 
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = create_parser()
-    args = parser.parse_args(argv)
-
-    is_all_rosters = args.roster.strip().lower() in ("all", "전체", "*")
-
-    if args.test:
-        return run_self_test()
-
+def _run_roster_inspection(args: argparse.Namespace, is_all_rosters: bool) -> int:
+    """--list 또는 --audit 로스터 점검 커맨드를 실행합니다."""
+    rosters = get_available_rosters(include_legacy=args.include_legacy) if is_all_rosters else [args.roster]
     if args.audit:
         if is_all_rosters:
-            rosters = get_available_rosters()
             print("=" * 95)
             print(f"  [플에파 전 로스터 전수 감사 리포트] 총 {len(rosters)}개 로스터: {', '.join(rosters)}")
             print("=" * 95)
@@ -274,29 +215,38 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 0
         return print_roster_audit(roster=args.roster)
 
-    if args.list:
-        if is_all_rosters:
-            rosters = get_available_rosters()
-            print("=" * 82)
-            print(f"  [플에파 전 로스터 캐릭터 목록] 총 {len(rosters)}개 로스터: {', '.join(rosters)}")
-            print("=" * 82)
-            for r in rosters:
-                print_roster_characters(roster=r)
-            return 0
-        return print_roster_characters(roster=args.roster)
+    if is_all_rosters:
+        print("=" * 82)
+        print(f"  [플에파 전 로스터 캐릭터 목록] 총 {len(rosters)}개 로스터: {', '.join(rosters)}")
+        print("=" * 82)
+        for r in rosters:
+            print_roster_characters(roster=r)
+        return 0
+    return print_roster_characters(roster=args.roster)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = create_parser()
+    args = parser.parse_args(argv)
+    is_all_rosters = args.roster.strip().lower() in ("all", "전체", "*")
+
+    if args.test:
+        return run_self_test()
+    if args.audit or args.list:
+        return _run_roster_inspection(args, is_all_rosters)
 
     if args.all_chars:
         args.character = "all"
-
     if not args.character:
         parser.print_help()
-        if is_all_rosters:
-            print("\n[오류] 전 로스터(-r all) 실행 시 --all-chars (또는 -c all) 옵션으로 대상 캐릭터를 지정해야 합니다.")
-        else:
-            print("\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다 (캐릭터 목록 확인: -l / --list).")
+        print(
+            "\n[오류] 전 로스터(-r all) 실행 시 --all-chars (또는 -c all) 옵션으로 대상 캐릭터를 지정해야 합니다."
+            if is_all_rosters
+            else "\n[오류] -c/--character 인수로 캐릭터를 지정해야 합니다 (캐릭터 목록 확인: -l / --list)."
+        )
         return 1
 
-    target_rosters = get_available_rosters() if is_all_rosters else [args.roster]
+    target_rosters = get_available_rosters(include_legacy=args.include_legacy) if is_all_rosters else [args.roster]
     if not target_rosters:
         print(f"\n[오류] 생성 대상 로스터를 찾을 수 없습니다: {args.roster}")
         return 1
@@ -308,63 +258,32 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("=" * 82)
 
     all_results: List[GenerationResult] = []
-
     for r_idx, target_roster in enumerate(target_rosters, 1):
         if is_all_rosters:
             print(f"\n▶ [{r_idx}/{total_rosters}] 로스터 작업 시작: '{target_roster}'")
-
         params = GenerationParams(
-            character_expr=args.character,
-            pose_expr=args.pose,
-            roster=target_roster,
-            profile=args.profile,
-            engine=args.engine,
-            ckpt=args.ckpt,
-            bg=args.bg,
-            bg_preset=args.bg_preset,
-            custom_pos=args.custom_pos,
-            custom_neg=args.custom_neg,
-            ref_image=args.ref_image,
-            ref_weight=args.ref_weight,
-            no_ref=args.no_ref,
-            mock=args.mock,
-            dry_run=args.dry_run,
-            overwrite=args.overwrite,
-            face_detailer=args.face_detailer,
-            hand_detailer=args.hand_detailer,
-            freeu=args.freeu,
-            upscale=args.upscale,
-            steps=args.steps,
-            cfg=args.cfg,
-            sampler=args.sampler,
-            scheduler=args.scheduler,
-            unet=args.unet,
-            lora=args.lora,
-            lora_weight=args.lora_weight,
-            width=args.width,
-            height=args.height,
-            naming=args.naming,
-            censor=(args.censor or args.censor_only),
-            censor_style=args.censor_style,
-            censor_targets=args.censor_targets,
-            censor_only=args.censor_only,
-            ckpt_tag=args.ckpt_tag,
-            auto_qc=(not args.no_qc),
-            max_retries=args.max_retries,
-            reuse_seed=args.reuse_seed,
-            deterministic_pose_seed=args.deterministic_pose_seed,
-            strict_censor_qc=args.strict_censor_qc,
-            anchor_fallback=args.anchor_fallback,
-            seed=args.seed,
-            out_dir=args.out_dir,
+            character_expr=args.character, pose_expr=args.pose, roster=target_roster,
+            profile=args.profile, engine=args.engine, ckpt=args.ckpt, bg=args.bg, bg_preset=args.bg_preset,
+            custom_pos=args.custom_pos, custom_neg=args.custom_neg,
+            ref_image=args.ref_image, ref_weight=args.ref_weight, no_ref=args.no_ref,
+            mock=args.mock, dry_run=args.dry_run, overwrite=args.overwrite,
+            face_detailer=args.face_detailer, hand_detailer=args.hand_detailer,
+            freeu=args.freeu, upscale=args.upscale, steps=args.steps, cfg=args.cfg,
+            sampler=args.sampler, scheduler=args.scheduler, unet=args.unet,
+            lora=args.lora, lora_weight=args.lora_weight, width=args.width, height=args.height,
+            naming=args.naming, censor=(args.censor or args.censor_only),
+            censor_style=args.censor_style, censor_targets=args.censor_targets,
+            censor_only=args.censor_only, ckpt_tag=args.ckpt_tag,
+            auto_qc=args.auto_qc, max_retries=args.max_retries,
+            retry_qc_failed=args.retry_qc_failed, prompt_alert_threshold=args.prompt_alert_threshold,
+            reuse_seed=args.reuse_seed, deterministic_pose_seed=args.deterministic_pose_seed,
+            strict_censor_qc=args.strict_censor_qc, anchor_fallback=args.anchor_fallback,
+            seed=args.seed, out_dir=args.out_dir,
         )
-
         try:
-            results = default_generation_service.run_batch(params)
-            all_results.extend(results)
+            all_results.extend(default_generation_service.run_batch(params))
         except ConnectionError as ce:
-            print(f"\n[오류] {ce}")
-            print("(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
+            print(f"\n[오류] {ce}\n(프롬프트 구성 점검은 --dry-run, 가상 생성 시뮬레이션은 --mock 옵션을 사용하세요)")
             return 1
         except Exception as e:
             if is_all_rosters:
@@ -377,14 +296,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("\n" + "=" * 82)
         print(f"  [플에파 전 로스터 일괄 순회 완료] 총 {len(all_results)}건 처리 완료")
         print("=" * 82)
-
-    # 마지막 에셋 폴더 탐색기 열기
     if not args.dry_run and all_results:
         for r in reversed(all_results):
             if r.image_path and r.image_path.parent.exists():
                 open_in_explorer(r.image_path.parent.parent)
                 break
-
     return 0
 
 
