@@ -86,4 +86,7 @@ output/
 # Archived Binary Assets & Benchmarks (Local backup only)
 docs/archive/assets/
 docs/archive/benchmarks/
+benchmarks/
+projects/*/assets_archive*/
+
 
