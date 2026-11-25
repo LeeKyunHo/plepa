@@ -48,7 +48,6 @@ _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
     "scripts/benchmark_censor_metrics.py": 372,
     "scripts/benchmark_spy_batch.py": 674,
     "scripts/evaluate_h1_pilot.py": 857,
-    "scripts/export_context.py": 687,
     "scripts/extract_censor_seg_dataset.py": 956,
     "scripts/generate_inspection_viewer.py": 1408,
     "scripts/mobile_gallery.py": 574,

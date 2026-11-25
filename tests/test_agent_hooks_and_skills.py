@@ -147,6 +147,10 @@ def test_all_six_mini_agent_skills_valid():
             {"toolCall": {"name": "run_command", "args": {"CommandLine": "python scripts/sync_to_kiro.py --dry-run"}}},
             "deny",
         ),
+        (
+            {"toolCall": {"name": "run_command", "args": {"CommandLine": "git add -- scripts/sync_to_kiro.py"}}},
+            "allow",
+        ),
         # 7. 커밋 메시지 검증 (기술적 메시지 허용 / 민감어 차단)
         (
             {"toolCall": {"name": "run_command", "args": {"CommandLine": 'git commit -m "feat: SDXL 파이프라인 계약 테스트 보강"'}}},

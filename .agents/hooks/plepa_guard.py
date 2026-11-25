@@ -205,7 +205,8 @@ def _check_run_command(args: Dict[str, Any]) -> Dict[str, str]:
     for seg in segments:
         seg_low = seg.lower()
 
-        if "sync_to_kiro" in seg_low and "--force-unsafe" not in seg_low:
+        is_git_meta_cmd = bool(re.match(r"^\s*git\s+(?:add|commit|restore|reset|checkout|status|diff|log)\b", seg_low))
+        if (not is_git_meta_cmd) and "sync_to_kiro" in seg_low and "--force-unsafe" not in seg_low:
             return _deny(
                 "[PLEPA Guard] scripts/sync_to_kiro.py 실행은 최신 Kiro(Wave 0~4) 파손 방지를 위해 차단되었습니다. "
                 "단위 기능별 어댑팅 이식을 사용하세요."

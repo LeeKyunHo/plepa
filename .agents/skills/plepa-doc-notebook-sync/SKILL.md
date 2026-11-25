@@ -12,7 +12,7 @@ description: >-
 
 ## 1. 허용 파일 (Whitelist)
 - Active SSOT 서류: [`GEMINI.md`](../../../GEMINI.md), [`POSE_MAPPING.md`](../../../POSE_MAPPING.md), [`사용법.txt`](../../../사용법.txt), [`README.md`](../../../README.md), [`docs/DOCUMENTATION_GUIDE.md`](../../../docs/DOCUMENTATION_GUIDE.md), [`docs/AI_HANDOVER_GUIDE.md`](../../../docs/AI_HANDOVER_GUIDE.md), [`docs/RUNBOOK.md`](../../../docs/RUNBOOK.md), [`docs/GUI_GUIDE.md`](../../../docs/GUI_GUIDE.md), [`docs/플에파_기능명세.md`](../../../docs/플에파_기능명세.md), [`docs/캐릭터_포즈_제작_규칙.md`](../../../docs/캐릭터_포즈_제작_규칙.md), [`docs/개발일지.md`](../../../docs/개발일지.md)
-- 스냅샷 도구: [`scripts/export_context.py`](../../../scripts/export_context.py), `context_snapshot/*` (`.gitignore` 대상)
+- 스냅샷 도구: [`scripts/export_context.py`](../../../scripts/export_context.py), `scripts/context_exporter/*.py`, `context_snapshot/*` (`.gitignore` 대상)
 
 ## 2. 절대 금지 (Blacklist)
 - `docs/archive/` 구버전 문서 열람·수정 금지 (`GEMINI.md` 10조).

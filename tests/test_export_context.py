@@ -73,7 +73,7 @@ def test_build_tier1_content():
     }
     tier1_md = build_tier1(dummy_snap)
     assert "TEST-SNAPSHOT-ID" in tier1_md
-    assert "V2 포즈 번호 대역" in tier1_md
+    assert "V3 포즈 번호 대역" in tier1_md
     assert "플에파(PLEPA) 에이전트 규칙" in tier1_md
 
 
@@ -108,3 +108,37 @@ def test_build_readme_content():
     assert "외부 AI 읽기 규칙" in readme_md
     assert "폐지 목록 (Deprecation Ledger)" in readme_md
     assert "censor.py" in readme_md
+
+
+def test_export_context_v2_fixed_five_files_cleanup_and_budget(tmp_path):
+    """v2 익스포터가 고정 5종을 생성하고 구버전/비사용 40_CORE_CODE를 정리하며 총량 <=160KB를 준수하는지 검증."""
+    from scripts.export_context import export_context_snapshot
+
+    stale = tmp_path / "00_README_SYNC.md"
+    stale.write_text("legacy stale file", encoding="utf-8")
+    stale_code = tmp_path / "40_CORE_CODE.md"
+    stale_code.write_text("old bundle", encoding="utf-8")
+
+    res = export_context_snapshot(out_dir=tmp_path, full_code=False)
+
+    created_mds = sorted(p.name for p in tmp_path.glob("*.md"))
+    assert created_mds == [
+        "00_README_FOR_AI.md",
+        "10_TIER1_CONSTITUTION.md",
+        "20_TIER2_CORE_LOGIC.md",
+        "30_TIER3_RUNTIME.md",
+        "50_REFACTORING_PLAN.md",
+    ]
+    assert not stale.exists()
+    assert not stale_code.exists()
+    assert "00_README_SYNC.md" in res["removed_stale"]
+    assert res["base_total_bytes"] <= 160 * 1024
+
+    readme = (tmp_path / "00_README_FOR_AI.md").read_text(encoding="utf-8")
+    assert "폐지 목록 (Deprecation Ledger)" in readme
+    assert "plepa-pose-curator" in readme
+    assert "Active SSOT 문서 맵" in readme
+
+    plan_md = (tmp_path / "50_REFACTORING_PLAN.md").read_text(encoding="utf-8")
+    assert "Live AST 래칫 텔레메트리" in plan_md
+    assert "외부 Gemini 노트북" in plan_md
