@@ -79,7 +79,7 @@ plepa/
 │   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증
 │   └── services/                 # CLI·GUI 공용 서비스 & GENERATION_OPTION_SPECS
 ├── plepa_gui/                    # NiceGUI 8대 탭 & REST API (/api/assets/*)
-├── scripts/                      # context_exporter, start_remote, audit, validate_genit_work 등
-├── docs/                         # Active SSOT 매뉴얼 & docs/archive/ (이력 보관소)
+├── scripts/                      # context_exporter, start_remote, audit, validate_genit_work, novelchat_* 등
+├── docs/                         # Active SSOT(젠잇·노벨챗 제작법, platforms/) & docs/archive/ (이력 보관소)
 └── projects/{roster}/            # 12개 로스터별 캐릭터, 배경, events.json, 에셋(_origin 포함)
 ```

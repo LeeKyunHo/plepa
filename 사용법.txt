@@ -144,10 +144,18 @@
 
 
 --------------------------------------------------------------------------------
-6. Gen-IT 5탭 완성본 검증 & 주의 사항
+6. Gen-IT & NovelChat 상용 플랫폼 패키징 · 원고 검증 & 주의 사항
 --------------------------------------------------------------------------------
   • Gen-IT v2.2 완성본 무결성 검증:
     .\.venv\Scripts\python.exe scripts/validate_genit_work.py --force
+
+  • NovelChat(노벨챗) 에셋 자동 태깅 & 500장 예산 패키징:
+    .\.venv\Scripts\python.exe scripts/novelchat_asset_mapper.py --roster campus --include-adult --trim-to-limit
+    .\.venv\Scripts\python.exe scripts/novelchat_asset_mapper.py --roster spy --include-adult --trim-to-limit --dry-run
+
+  • NovelChat 6탭 원고 자동 검증:
+    .\.venv\Scripts\python.exe scripts/validate_novelchat_work.py docs/novelchat/NOVELCHAT_MULTI_THEME_TEMPLATE_v1.0.md
+    .\.venv\Scripts\python.exe scripts/validate_novelchat_work.py [원고.md] --manifest dist/novelchat/{roster}/upload_manifest.json
 
   • 주의: 구 V2 덮어쓰기 브릿지(scripts/sync_to_kiro.py)는 최신 Kiro 보호를 위해
     기본 실행이 차단(exit 2)되어 있습니다. (수동 어댑팅 이식만 허용)
