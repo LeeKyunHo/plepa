@@ -132,6 +132,7 @@ class PoseService:
                     canonical_code=item.get("canonical_code"),
                     mob_tier=item.get("mob_tier"),
                     partner_pos=item.get("partner_pos"),
+                    mob_shadow=bool(item.get("mob_shadow", False)),
                 )
 
         # 로스터 전용 포즈 오버라이드 파일 (projects/{roster}/pose_overrides.json) 로드
@@ -186,6 +187,7 @@ class PoseService:
                             canonical_code=item.get("canonical_code"),
                             mob_tier=item.get("mob_tier"),
                             partner_pos=item.get("partner_pos"),
+                            mob_shadow=bool(item.get("mob_shadow", False)),
                         )
 
             except Exception as exc:
@@ -248,7 +250,6 @@ class PoseService:
 
 
     ROSTER_THEME_MAP: Dict[str, List[str]] = {
-        "spy": ["spy_actions"],
         "murim": ["wuxia_actions"],
         "wuxia": ["wuxia_actions"],
         "maid": ["maid"],

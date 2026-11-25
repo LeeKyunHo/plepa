@@ -28,6 +28,7 @@ class PoseEntry:
     canonical_code: Optional[str] = None
     mob_tier: Optional[int] = None
     partner_pos: Optional[str] = None
+    mob_shadow: bool = False
 
 
     def get_prompt(self, gender: str = "female") -> str:

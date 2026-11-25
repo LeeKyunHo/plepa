@@ -151,6 +151,14 @@ def run_pregeneration_check(roster: str = "campus", check_comfy: bool = False) -
                         f"[포즈규칙] sdxl:{code} 공용 섹션({entry.section}) 내 prompt_otokonoko 분기 없이 1girl 하드코딩 금지 위반"
                     )
 
+            # 공용 섹션(emotions/poses/romance/h_scenes/scenes_otokonoko) 내 로스터 종속 배경 하드코딩 금지
+            if entry.section in ("emotions", "poses", "romance", "h_scenes", "scenes_otokonoko"):
+                for bad_bg in ("classroom", "school hallway", "cafe setting", "salon lounge", "maid cafe"):
+                    if re.search(r"\b" + re.escape(bad_bg) + r"\b", low):
+                        report.errors.append(
+                            f"[포즈규칙] sdxl:{code} ({field_name}) 공용 섹션 내 로스터 종속 배경 하드코딩 금지 위반 ({bad_bg!r}) — projects/{{roster}}/pose_background_mapping.json에 위임하세요"
+                        )
+
     # -------------------------------------------------------------------------
     # [2단계] 캐릭터 JSON 외형·비율·가중치·슬롯 무결성 검사
     # -------------------------------------------------------------------------

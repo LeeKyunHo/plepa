@@ -32,7 +32,7 @@ def test_trinity_defaults_and_cli_parser_sync():
     dc = config_service.DEFAULT_CONFIG
     assert dc["default_engine"] == "sdxl"
     assert dc["default_roster"] == "default"
-    assert dc["sdxl_steps"] == 24
+    assert dc["sdxl_steps"] == 28
     assert dc["sdxl_cfg"] == 4.0
     assert dc["sdxl_sampler"] == "dpmpp_2m"
     assert dc["sdxl_scheduler"] == "karras"

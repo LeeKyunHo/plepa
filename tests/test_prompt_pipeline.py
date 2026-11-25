@@ -113,11 +113,14 @@ def test_mob_tier_pilot_8_poses_db_and_prompt_pipeline():
         "100": 3,
     }
 
+    w_emo, h_emo = get_optimal_resolution_for_pose(db["000"], 832, 1216, engine="sdxl", user_specified=False)
+    assert (w_emo, h_emo) == (832, 1216), f"#000 감정 포즈 세로 해상도 유지 실패: {(w_emo, h_emo)}"
+
     for code, expected_tier in expected_tiers.items():
         pose = db[code]
         assert pose.mob_tier == expected_tier, f"#{code} mob_tier 불일치: {pose.mob_tier}"
         w, h = get_optimal_resolution_for_pose(pose, 832, 1216, engine="sdxl", user_specified=False)
-        assert (w, h) == (832, 1216), f"#{code} 세로 해상도 유지 실패: {(w, h)}"
+        assert (w, h) == (1216, 832), f"#{code} 020+ 가로 해상도 분기 실패: {(w, h)}"
 
         pos, neg, _ = assemble_sdxl_prompt(char=char, pose=pose, bg_prompt="bedroom")
         pos_low = pos.lower()
@@ -146,13 +149,19 @@ def test_mob_tier_pilot_8_poses_db_and_prompt_pipeline():
         elif expected_tier == 2:
             assert pose.is_two_person is True
             assert pose.is_offscreen_partner is True
-            assert pos.count("BREAK") == 1
+            expected_breaks = 2 if pose.mob_shadow else 1
+            assert pos.count("BREAK") == expected_breaks
             assert "faceless" not in pos_low
             assert "partner head out of frame" in pos_low
             if code in ("086", "092", "104"):
                 assert "crotch out of frame" in pos_low
             assert "penis" not in pos_low, f"Tier 2({code}) 프롬프트에 성기 태그 금지: {pos}"
-            for expected_neg in ("detailed male face", "dark silhouette", "heavy shadow", "full body", "wide shot", "crotch focus"):
+            neg_required = (
+                ("detailed male face", "full body", "wide shot", "crotch focus")
+                if pose.mob_shadow
+                else ("detailed male face", "dark silhouette", "heavy shadow", "full body", "wide shot", "crotch focus")
+            )
+            for expected_neg in neg_required:
                 assert expected_neg in neg_low
             assert "male hair" not in neg_low
         elif expected_tier == 3:
@@ -472,9 +481,20 @@ def test_h2d_068_to_070_tier3_and_kiss_vs_side_partner_pos():
         assert "partially visible glans, compact shaft" in pos.lower()
 
     for kiss_code in ("060", "061"):
-        pos_kiss, _, _ = assemble_sdxl_prompt(char=char, pose=db[kiss_code], bg_prompt="bedroom")
+        pos_kiss, neg_kiss, _ = assemble_sdxl_prompt(char=char, pose=db[kiss_code], bg_prompt="bedroom")
         assert "cropped dark-haired male jaw and lips at extreme frame edge" in pos_kiss.lower()
+        assert "over-the-shoulder angle from behind dark-haired male partner" in pos_kiss.lower()
         assert "back of dark-haired male head" not in pos_kiss.lower()
+        assert "break (tall dark-haired male mob:1.15)" in pos_kiss.lower()
+        assert "heavy shadow over upper face" in pos_kiss.lower()
+        assert "heavy shadow," not in neg_kiss.lower()
+
+    oto_char = _make_otokonoko_char()
+    pos_oto_kiss, neg_oto_kiss, _ = assemble_sdxl_prompt(char=oto_char, pose=db["060"], bg_prompt="bedroom")
+    assert "break (tall dark-haired male mob:1.15)" in pos_oto_kiss.lower()
+    assert "heavy shadow over upper face" in pos_oto_kiss.lower()
+    assert "male eyelashes" in neg_oto_kiss.lower()
+    assert "heavy shadow," not in neg_oto_kiss.lower()
 
     pos_side, _, _ = assemble_sdxl_prompt(char=char, pose=db["108"], bg_prompt="bedroom")
     assert "cropped male torso and shoulder at edge" in pos_side.lower()
@@ -1085,3 +1105,32 @@ def test_pose_040_active_pounce_over_viewer_pov():
     assert "lying on back" in neg_low
     assert "hand near face" in neg_low
     assert "disembodied limb" in neg_low
+
+
+def test_selective_mob_shadow_h_scenes_vs_standard_h_scenes():
+    """선택형 mob_shadow=True 대면·압박 H씬 10종은 모브 상안부 음영 블록을 받고, 미지정 H씬(#088)은 기존 1-BREAK를 유지한다."""
+    from plepa_engine.services.character_service import default_character_service
+
+    chl, _ = default_character_service.find_character("chl", "spy")
+    db = default_pose_service.load_pose_db(engine="sdxl", roster="spy")
+
+    shadow_codes = ("081", "082", "085", "086", "107", "108", "115", "116", "118", "119")
+    for code in shadow_codes:
+        pose = db[code]
+        assert pose.mob_shadow is True, f"#{code} mob_shadow 누락"
+        pos, neg, _ = assemble_sdxl_prompt(char=chl, pose=pose, bg_prompt="luxury bedroom")
+        pos_low = pos.lower()
+        neg_low = neg.lower()
+        assert pos.count("BREAK") == 2, f"#{code} 모브 음영 BREAK 미생성: {pos}"
+        assert "tall dark-haired male mob" in pos_low, f"#{code} tall dark-haired male mob 누락"
+        assert "shadow over male eyes" in pos_low, f"#{code} shadow over male eyes 누락"
+        assert "clear visible female eyes" in pos_low, f"#{code} clear visible female eyes 누락"
+        assert "heavy shadow," not in neg_low, f"#{code} heavy shadow 네거티브 잔류"
+
+    # 비대면/뒤쪽 구도(#088 등)는 mob_shadow=False로 기존 1-BREAK 동작 보존
+    pose_088 = db["088"]
+    assert pose_088.mob_shadow is False
+    pos_088, neg_088, _ = assemble_sdxl_prompt(char=chl, pose=pose_088, bg_prompt="luxury bedroom")
+    assert pos_088.count("BREAK") == 1
+    assert "tall dark-haired male mob" not in pos_088.lower()
+    assert "heavy shadow" in neg_088.lower()

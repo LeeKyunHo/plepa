@@ -61,6 +61,19 @@ from plepa_engine.workflow_templates import build_sdxl_workflow
 logger = logging.getLogger(__name__)
 
 
+def is_portrait_emotion_pose(pose_obj: Any) -> bool:
+    """세로형 비율 포즈(000~024 또는 emotions/genit_emotions 섹션)인지 판별합니다."""
+    if pose_obj is None:
+        return True
+    code_s = str(getattr(pose_obj, "code", "") or "").strip()
+    if code_s.isdigit():
+        return 0 <= int(code_s) <= 24
+    section = str(getattr(pose_obj, "section", "") or "").strip().lower()
+    if section in ("emotions", "genit_emotions"):
+        return True
+    return False
+
+
 def get_optimal_resolution_for_pose(
     pose_obj: Any,
     default_w: int,
@@ -69,10 +82,18 @@ def get_optimal_resolution_for_pose(
     user_specified: bool = False,
 ) -> Tuple[int, int]:
     """
-    모든 포즈에서 챗봇 UI 레이아웃 일관성 및 검열기(censor.py) Y축 좌표 정합성을 보장하기 위해
-    단일 세로형 표준 해상도(기본 832x1216)를 일관되게 반환합니다.
+    포즈 대역별 하이브리드 최적 해상도(V3.2):
+    - 사용자가 --width / --height를 명시한 경우(user_specified=True): 사용자 지정값(default_w, default_h) 그대로 반환
+    - 000~024 (감정 표현 / emotions 및 초반 단독 포즈): 세로형 (short_side, long_side) 기본 832x1216
+    - 025+ (일상·이벤트·로맨스·성인 H-씬): 가로형 (long_side, short_side) 기본 1216x832
     """
-    return default_w, default_h
+    if user_specified:
+        return default_w, default_h
+    short_side = min(default_w, default_h)
+    long_side = max(default_w, default_h)
+    if is_portrait_emotion_pose(pose_obj):
+        return short_side, long_side
+    return long_side, short_side
 
 
 def generate_mock_image(output_path: Path) -> None:
@@ -864,6 +885,14 @@ class GenerationService:
                                     if hasattr(pose, "get_prompt") and callable(pose.get_prompt)
                                     else (pose.prompt or "")
                                 )
+                                pose_partner_pos = (getattr(pose, "partner_pos", None) or "").strip().lower()
+                                qc_allow_partner_head = (
+                                    pose_mob_tier == 2
+                                    or (
+                                        qc_is_two_person
+                                        and pose_partner_pos in ("behind", "above", "below", "side_kiss", "carry", "bury_chest")
+                                    )
+                                )
                                 is_kiss = "kiss" in qc_prompt.lower() or str(target.code) in ("060", "061", "019")
                                 passed, fail_reason, _ = validate_generated_image(
                                     image=out_path,
@@ -871,6 +900,7 @@ class GenerationService:
                                     is_two_person=qc_is_two_person,
                                     is_offscreen_partner=qc_is_offscreen,
                                     is_kiss_scene=is_kiss,
+                                    allow_partner_head=qc_allow_partner_head,
                                     section=target.section,
                                     prompt=qc_prompt,
                                 )
@@ -880,7 +910,10 @@ class GenerationService:
                                     if attempt + 1 >= params.prompt_alert_threshold:
                                         guide_msg = ""
                                         if "인원" in fail_reason or "머리" in fail_reason or "얼굴" in fail_reason:
-                                            guide_msg = "단독 씬인데 제3자가 침범하고 있습니다. 프롬프트의 1girl/solo/partner 태그 충돌을 점검하세요."
+                                            if qc_is_solo:
+                                                guide_msg = "단독 씬인데 제3자가 침범하고 있습니다. 프롬프트의 1girl/solo/partner 태그 충돌을 점검하세요."
+                                            else:
+                                                guide_msg = "2인 씬에서 허용된 인원·머리·얼굴 상한을 초과했습니다. mob_tier/partner_pos 및 모브 얼굴 차단 네거티브를 점검하세요."
                                         elif "손 증식" in fail_reason or "손" in fail_reason:
                                             guide_msg = "손이 비정상 증식하고 있습니다. 스킨십/손 태그 가중치를 낮추거나 Hand Detailer를 활성화하세요."
                                         elif "화각 드리프트" in fail_reason:

@@ -147,11 +147,12 @@ def _is_outdoor_daylight_pose(pose_tag: str) -> bool:
 
 _MOB_SHADOW_EYES_POS = (
     "(dark-haired male mob:1.15), (short black hair, shaded upper face, "
-    "shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2)"
+    "heavy shadow over upper face, shadow over male eyes, eyes obscured by shadow, no visible male eyes:1.2)"
 )
 _MOB_EYELESS_BANGS_NEG = (
     "(visible male eyes, detailed male eyes, visible male pupils, detailed male face, "
-    "handsome male face, attractive male face, expressive male face, silver-haired male, blonde male:1.25)"
+    "handsome male face, attractive male face, expressive male face, male eyelashes, "
+    "detailed male side profile, visible male eye crease, silver-haired male, blonde male:1.25)"
 )
 
 _STEAMY_H_NEG_UNLOCK_PATTERN = r"\b(?:oily skin|greasy skin|shiny skin|white dots|spots on skin)\b(?::[0-9\.]+)?"
@@ -417,6 +418,8 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
             if kw.lower() not in quality_clean.lower():
                 quality_clean = f"{quality_clean}, {kw}"
         quality_clean = _inject_style_positive_guard(quality_clean, ctx)
+        if "unholy-aesthetic" not in quality_clean.lower():
+            quality_clean = f"unholy-aesthetic, {quality_clean}" if quality_clean else "unholy-aesthetic"
         prefix_tags = f"{ctx.custom_pos.strip()}, {quality_clean.strip()}" if ctx.custom_pos and ctx.custom_pos.strip() else quality_clean.strip()
         first_chunk = f"{prefix_tags}, {clean_pose_tag}" if clean_pose_tag else prefix_tags
         first_chunk = _inject_wet_skin_tags(first_chunk, ctx)
@@ -428,6 +431,8 @@ def _assemble_positive_prompt(base_pos: str, pose_tag: str, ctx: PromptContext) 
     if ctx.is_two_person:
         base_pos = re.sub(r",?\s*\b(solo|1girl, solo)\b", ", 1girl", base_pos, flags=re.IGNORECASE)
     base_pos = _inject_style_positive_guard(base_pos, ctx)
+    if "unholy-aesthetic" not in base_pos.lower():
+        base_pos = f"unholy-aesthetic, {base_pos}" if base_pos else "unholy-aesthetic"
     prefix_tags = f"{ctx.custom_pos.strip()}, {base_pos}" if ctx.custom_pos and ctx.custom_pos.strip() else base_pos
     assembled = f"{prefix_tags}, {clean_pose_tag}" if clean_pose_tag else prefix_tags
     return _inject_wet_skin_tags(assembled, ctx)
@@ -929,7 +934,11 @@ def _inject_partner_pos_inline(pos: str, partner_pos: Optional[str], pose_tag: s
     """2인 구도 시 범용 BREAK 대신 첫 청크 후미(BREAK 앞)에 방향성 파트너 엣지 크롭 태그를 인라인 주입한다."""
     pose_low = (pose_tag or "").lower()
     if partner_pos == "side_kiss" and any(kw in pose_low for kw in ("kiss", "french kiss")):
-        tags = "cropped dark-haired male jaw and lips at extreme frame edge, male eyes out of frame, partner arms around waist"
+        tags = (
+            "over-the-shoulder angle from behind dark-haired male partner, "
+            "cropped dark-haired male jaw and lips at extreme frame edge, "
+            "male upper face turned away in deep shadow, male eyes out of frame, partner arms around waist"
+        )
     else:
         tags = _PARTNER_POS_SPECS.get(partner_pos or "", "partner head out of frame, cropped male shoulders at frame edge")
     if not tags:
@@ -969,26 +978,40 @@ class TwoPersonMobMutator(PromptMutator):
                 neg = re.sub(r",?\s*\bmale\b(?!\s+(?:face|partner|body|head|eyes|clothes|hair|torso))", "", neg, flags=re.IGNORECASE)
                 common_guard = _build_common_interactive_negative_guard(ctx, is_multi_partner=False)
                 tier_neg = spec["negative_tags"]
+                is_kiss_scene = ctx.partner_pos == "side_kiss" and any(
+                    kw in pose_tag.lower() for kw in ("kiss", "french kiss")
+                )
+                is_poses_section = (getattr(ctx.pose, "section", "") or "").lower() == "poses"
+                is_mob_shadow = bool(getattr(ctx.pose, "mob_shadow", False))
                 if mob_tier == 2 and ctx.partner_pos == "carry":
                     tier_neg = _strip_tags_preserving_parens(tier_neg, r"\bfull male head\b")
+                if mob_tier == 2 and (is_poses_section or is_kiss_scene or is_mob_shadow):
+                    tier_neg = _strip_tags_preserving_parens(tier_neg, r"\b(?:heavy shadow|dark silhouette)\b")
                 neg = f"{neg}, {common_guard}, {tier_neg}"
                 if mob_tier == 2:
                     pos = _inject_partner_pos_inline(pos, ctx.partner_pos, pose_tag)
                     if ctx.partner_pos == "carry":
                         pos = re.sub(r",?\s*\bpartner head out of frame\b", "", pos, flags=re.IGNORECASE)
-                    if (getattr(ctx.pose, "section", "") or "").lower() == "poses" and ctx.partner_pos != "bury_chest":
-                        # 일상/스킨십 2인 포즈(027,028,031,036)에서는 별도 BREAK 블록으로 상안부 그림자 모브 남캐를 격리하고,
-                        # 주 캐릭터 눈은 여성 한정 clear visible female eyes로 보호해 남캐 눈 역노출과 앞머리 이염을 차단.
+                    if (is_poses_section or is_kiss_scene or is_mob_shadow) and ctx.partner_pos != "bury_chest":
+                        # 일상/스킨십 2인 포즈(027,028,031,036) 및 밀착 키스 씬(060,061)에서는 별도 BREAK 블록으로
+                        # 상안부 그림자 모브 남캐를 격리하고, 주 캐릭터 눈은 여성 한정 clear visible female eyes로 보호해
+                        # 남캐 눈 역노출과 앞머리 이염을 차단.
                         # 또한 포즈 내 'shirtless male'이 주 캐릭터 외투/상의를 벗기는 교차 오염을 막기 위해 3차 청크로 격리함.
                         has_shirtless_male = bool(re.search(r"\bshirtless male\b", pos, flags=re.IGNORECASE))
                         if has_shirtless_male and not ctx.nude:
                             pos = _strip_tags_preserving_parens(pos, r"\bshirtless male\b")
-                        if "closed eyes" not in pose_tag.lower() and not ctx.is_otokonoko:
+                        if "closed eyes" in pose_tag.lower():
+                            pos = _strip_tags_preserving_parens(
+                                pos, r"\b(?:finely detailed beautiful eyes|ultra detailed eyes)\b"
+                            )
+                        elif not ctx.is_otokonoko:
                             pos = f"{pos}, (clear visible female eyes:1.15)"
                         mob_tail = f"{_MOB_SHADOW_EYES_POS}, shirtless male" if (has_shirtless_male and not ctx.nude) else _MOB_SHADOW_EYES_POS
                         pos = f"{pos} BREAK (tall dark-haired male mob:1.15), {mob_tail}"
                         if not ctx.nude and any(k in pos.lower() for k in ("blazer", "jacket", "cardigan", "lab coat", "coat")):
                             neg = f"{neg}, (partner wearing blazer, partner wearing jacket, partner wearing cardigan, partner wearing lab coat, sleeveless protagonist:1.2)"
+                        if ctx.is_otokonoko and "ponytail" in pos.lower():
+                            neg = f"{neg}, (partner with ponytail, male mob with ponytail, two ponytails, matching hairstyles:1.25)"
                     neg = f"{neg}, {_MOB_EYELESS_BANGS_NEG}"
                 elif spec["positive_tags"]:
                     pos = f"{pos} {spec['positive_tags']}" if spec["break_chunk"] else f"{pos}, {spec['positive_tags']}"

@@ -29,8 +29,8 @@ COMFY_WS_URL = f"ws://{COMFY_HOST}/ws"
 
 # ── SDXL 메인 엔진 기본 식별자 및 파라미터 (ADR 4, ADR 19 확정) ──
 DEFAULT_ENGINE = os.environ.get("PLEPA_DEFAULT_ENGINE", "sdxl")
-DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "unholyDesireMixSinister_v90.safetensors")
-DEFAULT_SDXL_STEPS = 24
+DEFAULT_SDXL_CKPT = os.environ.get("PLEPA_SDXL_CKPT", "UnholyDesireMixSinisterAesthetic_V9_Illustrious.safetensors")
+DEFAULT_SDXL_STEPS = 28
 DEFAULT_SDXL_CFG = 4.0
 DEFAULT_SDXL_SAMPLER = "dpmpp_2m"
 DEFAULT_SDXL_SCHEDULER = "karras"

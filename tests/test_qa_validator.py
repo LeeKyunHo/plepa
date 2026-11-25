@@ -137,6 +137,77 @@ class TestQAValidator(unittest.TestCase):
             )
             self.assertTrue(passed, reason)
 
+    def test_allow_partner_head_and_companion_romance_scenes(self):
+        """allow_partner_head=True 및 #062/#063 동반 로맨스 씬은 머리 2개 허용 + 모브 얼굴 노출 차단 유지."""
+        from unittest.mock import patch
+
+        img = Image.new("RGB", (256, 256), color=(200, 200, 200))
+
+        # 1. allow_partner_head=True + heads=2, faces=1 -> PASS
+        with patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 100, 200), "person", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_heads", return_value=[((20, 20, 80, 80), "head", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_faces", return_value=[((25, 25, 75, 75), "face", 0.9)]), \
+             patch("plepa_engine.qa_validator.detect_hands", return_value=[]):
+            passed, reason, _ = validate_generated_image(
+                img,
+                is_solo_scene=False,
+                is_two_person=True,
+                is_offscreen_partner=True,
+                allow_partner_head=True,
+                prompt="1girl, 1boy, shower",
+            )
+            self.assertTrue(passed, reason)
+
+        # 2. allow_partner_head=True + heads=2, faces=2 (비키스) -> FAIL (모브 얼굴 노출 차단 유지)
+        with patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 100, 200), "person", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_heads", return_value=[((20, 20, 80, 80), "head", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_faces", return_value=[((25, 25, 75, 75), "face", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_hands", return_value=[]):
+            passed, reason, _ = validate_generated_image(
+                img,
+                is_solo_scene=False,
+                is_two_person=True,
+                is_offscreen_partner=True,
+                allow_partner_head=True,
+                prompt="1girl, 1boy, shower",
+            )
+            self.assertFalse(passed)
+            self.assertIn("얼굴 노출", reason)
+
+        # 3. allow_partner_head=True + heads=3, faces=1 -> FAIL (머리 초과)
+        with patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 100, 200), "person", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_heads", return_value=[((20, 20, 80, 80), "head", 0.9)] * 3), \
+             patch("plepa_engine.qa_validator.detect_faces", return_value=[((25, 25, 75, 75), "face", 0.9)]), \
+             patch("plepa_engine.qa_validator.detect_hands", return_value=[]):
+            passed, reason, _ = validate_generated_image(
+                img,
+                is_solo_scene=False,
+                is_two_person=True,
+                is_offscreen_partner=True,
+                allow_partner_head=True,
+                prompt="1girl, 1boy, shower",
+            )
+            self.assertFalse(passed)
+            self.assertIn("머리 초과", reason)
+
+        # 4. #062(washing partner) / #063(spooning position) 원문 프롬프트만으로도 heads=2, faces=1 -> PASS
+        for raw_prompt in (
+            "angled medium shot, 1girl, 1boy, washing partner, shower",
+            "angled medium shot, 1girl, 1boy, lying on side on bed, spooning position, intimate embrace",
+        ):
+            with patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 100, 200), "person", 0.9)] * 2), \
+                 patch("plepa_engine.qa_validator.detect_heads", return_value=[((20, 20, 80, 80), "head", 0.9)] * 2), \
+                 patch("plepa_engine.qa_validator.detect_faces", return_value=[((25, 25, 75, 75), "face", 0.9)]), \
+                 patch("plepa_engine.qa_validator.detect_hands", return_value=[]):
+                passed, reason, _ = validate_generated_image(
+                    img,
+                    is_solo_scene=False,
+                    is_two_person=True,
+                    is_offscreen_partner=True,
+                    prompt=raw_prompt,
+                )
+                self.assertTrue(passed, f"{raw_prompt}: {reason}")
+
     def test_faceless_male_and_is_kiss_scene_preservation(self):
         """2인 중거리 샷 faceless 위반 차단 및 호출자 is_kiss_scene 인자 보존 검증."""
         from unittest.mock import patch

@@ -213,6 +213,7 @@ def validate_generated_image(
     is_two_person: bool = False,
     is_offscreen_partner: bool = False,
     is_kiss_scene: bool = False,
+    allow_partner_head: bool = False,
     section: Optional[str] = None,
     conf_threshold: float = 0.55,
     prompt: Optional[str] = None,
@@ -318,13 +319,14 @@ def validate_generated_image(
         valid_heads = [h for h in raw_heads if h[2] >= conf_threshold]
         metrics["heads"] = len(valid_heads)
 
-        is_head_contact_allowed = is_kiss or is_nursing or any(
+        is_head_contact_allowed = bool(allow_partner_head) or is_kiss or is_nursing or any(
             kw in p_text
             for kw in (
                 "back of male head", "back of dark-haired male head", "head between thighs",
                 "burying face", "face buried", "head buried", "buried in her chest",
                 "princess carry", "carried in dark-haired male", "carried in male partner",
                 "back hug", "hugging partner", "hug from behind", "grabbing from behind",
+                "washing partner", "spooning position", "intimate embrace",
                 "dark-haired male mob",
             )
         )
