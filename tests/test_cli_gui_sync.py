@@ -153,6 +153,7 @@ def test_system_health_diagnostics():
     assert not fails, f"시스템 무결성 진단 실패 항목 발견: {[f'{r.stage_index}. {r.name}: {r.message}' for r in fails]}"
 
 
+@pytest.mark.local_assets
 def test_grounding_production_asset_lossless_guardrail():
     """캠퍼스 및 YKN 프로덕션 에셋과 원본 백업이 훼손·삭제되지 않았는지 동적으로 스캔하여 검증."""
     for roster, min_assets, min_origins in [("campus", 108, 70), ("ykn", 115, 50)]:

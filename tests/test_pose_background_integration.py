@@ -81,7 +81,7 @@ def test_assembled_prompt_contains_dynamic_background():
         assert first_tag in pos, f"배경 프리셋 '{bg_key}'의 핵심 태그 '{first_tag}'가 조립 프롬프트에 포함되어야 합니다."
 
 
-def test_generation_service_dynamic_background_batch():
+def test_generation_service_dynamic_background_batch(tmp_path: Path):
     """GenerationService에서 mock 배치 실행 시 포즈별 동적 배경이 적용되어 정상 완료되는지 검증."""
     chars = default_character_service.list_characters(roster="campus")
     first_prefix = chars[0][1].prefix
@@ -91,6 +91,7 @@ def test_generation_service_dynamic_background_batch():
         character_expr=first_prefix,
         pose_expr="000,048,050",
         roster="campus",
+        out_dir=str(tmp_path),
         mock=True,
         censor=False,
         no_ref=True,

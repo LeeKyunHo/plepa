@@ -761,7 +761,7 @@ class GenerationService:
                         (str(getattr(char, "gender", "") or "").strip().lower() == "otokonoko")
                         or ("otokonoko" in (getattr(char, "sdxl_positive", "") or "").lower())
                     )
-                    should_censor = params.censor and is_pose_censor_required(
+                    should_censor = (not params.dry_run) and params.censor and is_pose_censor_required(
                         pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster, is_otokonoko=is_char_otokonoko
                     )
 
@@ -1088,7 +1088,7 @@ class GenerationService:
         results: List[GenerationResult],
     ) -> None:
         """배치 실행 기록을 _batch_manifest.json에 원자적으로 저장합니다."""
-        if not results:
+        if not results or getattr(params, "dry_run", False):
             return
 
         manifest_path = output_dir / "_batch_manifest.json"
