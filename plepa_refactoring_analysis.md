@@ -217,3 +217,11 @@ flowchart LR
 2. **Wave 1 AST 줄수 가드 래칫(Ratchet) 적용**: 아직 분해 전인 기존 30개 비대 파일은 현행 줄수를 상한으로 Allowlist에 등록하여 줄수 증가만 차단하고, 신규 파일 및 Wave 3~5 분해 완료 파일에 `<= 350~400L` 상한을 강제하여 전 구간 `pytest` 100% PASS를 유지한다.
 3. **Wave 2 포즈 SSOT 일괄 참조 동기화**: `docs/POSE_MAPPING_V2.md` 아카이브 시 `GEMINI.md`, `docs/DOCUMENTATION_GUIDE.md`, `tests/test_pose_doc_sync.py`, `scripts/export_context.py`의 참조를 단일 트랜잭션으로 동시 갱신한다.
 4. **구형 로스터 에셋 절대 무접촉**: 구형 5개 로스터(`default`, `maid`, `man`, `don`, `murim`)는 로스터 메타데이터(`status: legacy`)로만 분리하며 기존 `assets/` 및 `*_origin/` 폴더는 단 1장도 접촉하지 않는다.
+
+### 5.2 실행 진척도 추적 (Execution Tracker)
+- [x] **Wave 0 완료 (`8ea43b4`)**: 기준선 5단 분할 커밋, `.gitignore`(204.4MB 격리), 라이트박스 매니페스트 핫픽스(`gallery.py`), 캐릭터 무손실 저장(`schemas.py`, `character_service.py`, `characters.py`), 설정 우선순위(`generation_service.py`, `settings.py`), `sync_to_kiro.py` 차단 가드 및 회귀 테스트(`test_wave0_hotfixes.py`).
+- [x] **Wave 1 완료**: `.agents/tasks/`(23건) 아카이브 이관, `.agents/hooks.json`(`plepa_guard.py` `PreToolUse`), `.agents/skills/` 미니 에이전트 6종, `GEMINI.md` 11장 라우팅, 세션 에셋 불변 가드(`conftest.py`), AST 줄수/레이어/큐/파서/스키마 계약 테스트(`test_contract_guards.py`, `test_agent_hooks_and_skills.py`).
+- [ ] **Wave 2 대기**: 문서 90% 다이어트(`AI_HANDOVER_GUIDE.md`, `개발일지.md`, 루트 `POSE_MAPPING.md` 단일 SSOT 통합) 및 `scripts/export_context.py` v2 노트북 상시 링크 개통.
+- [ ] **Wave 3 대기**: `PoseEntry`/`PoseItemSchema` 단일화, `GlobalJobManager` 큐 통합, `GENERATION_OPTION_SPECS` 확장, `LoraLoader` 연결, 로스터 `active/legacy` 메타 도입.
+- [ ] **Wave 4 대기**: 엔진 `>=350L` 거대 파일 분해(`censor/` 7모듈, `pipeline/`, `generation_service`, `pose_service`, `health_service`).
+- [ ] **Wave 5 대기**: GUI 정적 에셋 분리(`mobile_viewer`, `retouch_editor`, `gallery`) 및 `scripts/` 계층 정리.
