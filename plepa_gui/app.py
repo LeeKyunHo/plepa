@@ -52,7 +52,11 @@ from plepa_gui.pages.backgrounds import render_backgrounds_page
 from plepa_gui.pages.characters import render_characters_page
 from plepa_gui.pages.gallery import render_gallery_page
 from plepa_gui.pages.generate import render_generate_page
-from plepa_gui.pages.mobile_viewer import generate_mobile_viewer_html, render_mobile_viewer_page
+from plepa_gui.pages.mobile_viewer import (
+    generate_mobile_viewer_html,
+    get_mobile_gallery_data,
+    render_mobile_viewer_page,
+)
 from plepa_gui.pages.pose_sets import render_pose_sets_page
 from plepa_gui.pages.poses import render_poses_page
 from plepa_gui.pages.settings import render_settings_page
@@ -149,6 +153,12 @@ def setup_routes():
         """스마트폰 전용 무경량 고속 터치 스와이프 뷰어 (Vue/Quasar 미로드, 덮어쓰기 버그 원천 차단)."""
         target_roster = roster or get_active_roster()
         return HTMLResponse(content=generate_mobile_viewer_html(target_roster))
+
+    @app.get("/api/mobile/gallery")
+    def api_mobile_gallery_data(roster: Optional[str] = None):
+        """모바일 뷰어 로스터 즉시 전환용 갤러리 JSON API."""
+        target_roster = roster or get_active_roster()
+        return get_mobile_gallery_data(target_roster)
 
     @app.get("/otoko")
     @app.get("/o")

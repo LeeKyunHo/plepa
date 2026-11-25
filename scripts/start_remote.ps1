@@ -1,4 +1,4 @@
-# PLEPA 원격(외부망) 접속 런처
+﻿# PLEPA 원격(외부망) 접속 런처
 # NiceGUI 서버(8080) + Cloudflare Quick Tunnel을 함께 기동하고 공개 URL을 출력합니다.
 # 사용법: 루트에서 `powershell -ExecutionPolicy Bypass -File scripts\start_remote.ps1`
 # 주의: Quick Tunnel URL은 실행할 때마다 새로 발급됩니다.

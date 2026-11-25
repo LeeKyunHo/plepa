@@ -372,7 +372,7 @@ def test_viewers_render_recensor_controls_and_censor_options(monkeypatch, tmp_pa
     )
     mob_html = mobile_viewer_mod.generate_mobile_viewer_html(roster="campus")
     assert "censorStyleSelect" in mob_html
-    assert "anchorFallbackToggle" in mob_html
+    assert "anchorFallbackToggle" not in mob_html
     assert "triggerRestoreOrigin(" in mob_html
     assert "triggerReapplyCensor(" in mob_html
     assert "/api/assets/reapply-censor" in mob_html
@@ -595,5 +595,86 @@ def test_8080_retouch_editor_ui_in_mobile_and_gallery(monkeypatch):
     assert "loadOriginToCanvas" in mob_html
     assert "/api/assets/retouch" in mob_html
     assert "aya_origin/02_h_scenes/aya_064_smile.webp" in mob_html
+
+
+def test_mobile_viewer_v2_ux_sequential_and_roster_switch(monkeypatch, tmp_path):
+    """모바일 뷰어 UI/UX 개편 계약(로스터 즉시 전환, QC 필터, Kiro 순차 청크 로딩, 중복 prefix 제거) 검증."""
+    import json
+    from types import SimpleNamespace
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import plepa_engine.config as cfg_mod
+
+    projects_dir = tmp_path / "projects"
+    _write_webp(projects_dir / "spy" / "assets" / "chl" / "01_normal" / "chl_000_평상.webp", (40, 40, 40))
+    _write_webp(projects_dir / "campus" / "assets" / "oes" / "02_h_scenes" / "oes_056_스탠딩섹스.webp", (50, 50, 50))
+    (projects_dir / "campus" / "assets" / "oes" / "_batch_manifest.json").write_text(
+        json.dumps({"items": [{"code": "056", "qc_passed": False, "qc_reason": "모브 얼굴 노출"}]}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(cfg_mod, "PROJECTS_DIR", projects_dir)
+    monkeypatch.setattr(mobile_viewer_mod, "PROJECTS_DIR", projects_dir)
+    monkeypatch.setattr(
+        mobile_viewer_mod.default_character_service,
+        "list_rosters",
+        lambda: ["campus", "spy"],
+    )
+    monkeypatch.setattr(
+        mobile_viewer_mod.default_character_service,
+        "list_characters",
+        lambda roster=None: (
+            [("campus", SimpleNamespace(prefix="oes", name="오은서", gender="female"), "oes.json")]
+            if roster == "campus"
+            else [("spy", SimpleNamespace(prefix="chl", name="클로에", gender="female"), "chl.json")]
+        ),
+    )
+    monkeypatch.setattr(
+        "plepa_engine.services.asset_service.default_asset_service.get_missing_poses_by_character",
+        lambda roster=None: {},
+    )
+
+    campus_data = mobile_viewer_mod.get_mobile_gallery_data(roster="campus")
+    assert campus_data["roster"] == "campus"
+    assert campus_data["rosters"] == ["campus", "spy"]
+    assert campus_data["items"][0]["char_short_name"] == "오은서"
+    assert campus_data["items"][0]["qc_passed"] is False
+
+    mob_html = mobile_viewer_mod.generate_mobile_viewer_html(roster="campus")
+    assert 'id="rosterSelect"' in mob_html
+    assert "switchRoster(" in mob_html
+    assert "/api/mobile/gallery" in mob_html
+    assert 'id="chipQc"' in mob_html
+    assert 'id="viewToggleBtn"' in mob_html
+    assert 'id="gridView"' in mob_html
+    assert "MOBILE_CHUNK_SIZE" in mob_html
+    assert "MAX_CONCURRENT_IMG" in mob_html
+    assert "IntersectionObserver" in mob_html
+    assert "formatCharSubtitle(" in mob_html
+    assert '<option value="spy">spy</option>' in mob_html
+    assert 'id="jobQueueBadge"' in mob_html
+    assert "pollJobStatus(" in mob_html
+    assert "/api/assets/job-status" in mob_html
+    assert "refreshGalleryData(" in mob_html
+    assert 'id="queueStatusPanel"' in mob_html
+    assert "renderQueuePanel(" in mob_html
+    assert "리롤 대기열에 등록하시겠습니까?" in mob_html
+    assert 'id="refreshBtn"' in mob_html
+    assert "manualRefreshGallery(" in mob_html
+
+    # /api/mobile/gallery JSON API 전환 동작 검증
+    api_app = FastAPI()
+
+    @api_app.get("/api/mobile/gallery")
+    def _mobile_gallery(roster: str = "campus"):
+        return mobile_viewer_mod.get_mobile_gallery_data(roster)
+
+    client = TestClient(api_app)
+    res_spy = client.get("/api/mobile/gallery?roster=spy")
+    assert res_spy.status_code == 200
+    payload = res_spy.json()
+    assert payload["roster"] == "spy"
+    assert payload["items"][0]["char_short_name"] == "클로에"
+
 
 
