@@ -14,7 +14,7 @@ description: >-
 - [`data/sdxl_pose_database.json`](../../../data/sdxl_pose_database.json) (단, 전체 열람 금지 — 타겟 라인 범위 250줄 이하 또는 Python 키 추출만 허용)
 - [`data/themes/*.json`](../../../data/themes)
 - `projects/*/events.json`
-- [`POSE_MAPPING.md`](../../../POSE_MAPPING.md) (및 아카이브 전까지 [`docs/POSE_MAPPING_V2.md`](../../../docs/POSE_MAPPING_V2.md))
+- [`POSE_MAPPING.md`](../../../POSE_MAPPING.md) (단일 포즈 매핑 SSOT)
 
 ## 2. 절대 금지 (Blacklist)
 - `plepa_engine/` 파이프라인 코드 임의 수정 금지 (파이프라인 변경이 필요하면 `plepa-pipeline-qc-tuner` 사용).

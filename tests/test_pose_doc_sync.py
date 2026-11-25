@@ -20,13 +20,14 @@ def test_root_pose_mapping_sync():
     assert len(missing) == 0
 
 
-def test_docs_pose_mapping_v2_sync():
-    """docs/POSE_MAPPING_V2.md가 SDXL 포즈 DB의 모든 3자리 코드를 100% 포함하는지 검증."""
-    doc_path = ROOT_DIR / "docs" / "POSE_MAPPING_V2.md"
-    assert doc_path.exists(), "docs/POSE_MAPPING_V2.md가 존재해야 합니다."
-
-    ok, missing = default_pose_service.check_pose_doc_sync(doc_path=doc_path)
-    assert ok, f"docs/POSE_MAPPING_V2.md에 누락된 포즈 코드가 있습니다: {missing}"
+def test_pose_mapping_single_ssot_and_archive():
+    """POSE_MAPPING.md 단일 SSOT 정합성 및 구 POSE_MAPPING_V2/POSE_CATALOG 아카이브 이관 상태를 검증."""
+    assert (ROOT_DIR / "POSE_MAPPING.md").exists(), "루트 POSE_MAPPING.md가 존재해야 합니다."
+    assert not (ROOT_DIR / "docs" / "POSE_MAPPING_V2.md").exists(), "docs/POSE_MAPPING_V2.md는 docs/archive/로 이관되어야 합니다."
+    assert not (ROOT_DIR / "docs" / "POSE_CATALOG.md").exists(), "docs/POSE_CATALOG.md는 docs/archive/로 이관되어야 합니다."
+    assert (ROOT_DIR / "docs" / "archive" / "POSE_MAPPING_V2.md").exists(), "아카이브된 POSE_MAPPING_V2.md가 존재해야 합니다."
+    ok, missing = default_pose_service.check_pose_doc_sync(doc_path=ROOT_DIR / "POSE_MAPPING.md")
+    assert ok, f"POSE_MAPPING.md 단일 SSOT에 누락된 포즈 코드가 있습니다: {missing}"
     assert len(missing) == 0
 
 

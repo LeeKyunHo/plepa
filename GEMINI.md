@@ -21,13 +21,13 @@
 - 기존 주석 및 독스트링을 임의로 훼손하지 않습니다.
 - 프롬프트 데이터는 `data/` (`data/sdxl_pose_database.json`, `data/themes/`)에, 파이프라인 로직은 `plepa_engine/`에 철저히 격리합니다.
 - **FLUX 완전 배제 및 SDXL 단일화 원칙 (Token Optimization)**:
-  - 플에파는 SDXL 단일 파이프라인(Danbooru 쉼표 태그, BREAK 문법, 6대 Mutator 체인)으로 영구 일원화되었습니다.
+  - 플에파는 SDXL 단일 파이프라인(Danbooru 쉼표 태그, BREAK 문법, 7단계 Mutator 체인)으로 영구 일원화되었습니다.
   - FLUX 관련 파일(`data/legacy/`, `plepa_engine/legacy/`)은 일체 열람·수정하거나 동기화하지 마십시오. (토큰 낭비 및 불필요한 이중 작업 엄격 금지)
   - 모든 포즈 작업의 단일 진실 공급원(SSOT)은 오직 **`data/sdxl_pose_database.json`** 하나입니다.
 - **CLI · Engine · GUI 삼위일체 동기화 원칙 (Trinity Sync Rule)**:
   - `plepa_engine/services/`에 새로운 파라미터나 생성 옵션을 추가·수정할 때는 반드시 **① `plepa_engine` (`GENERATION_OPTION_SPECS` / `GenerationParams`) ➔ ② `batch_generator.py` (CLI 옵션) ➔ ③ `plepa_gui` (Web UI 자동 렌더링) ➔ ④ `tests/test_cli_gui_sync.py`** 4곳을 한 세트로 묶어 동기화하며, 어느 한쪽에만 기능을 방치하지 않습니다.
 - **포즈 매핑 문서 실시간 동기화 원칙 (Pose Mapping Sync Rule)**:
-  - 포즈가 신규 추가되거나 라벨·프롬프트가 수정될 때는 단일 진실 공급원(SSOT)인 `data/sdxl_pose_database.json`뿐만 아니라, **루트의 [`POSE_MAPPING.md`](POSE_MAPPING.md) 및 [`docs/POSE_MAPPING_V2.md`](docs/POSE_MAPPING_V2.md)를 반드시 세트로 함께 업데이트**하여 포즈 매핑 현황의 단일 정합성을 유지합니다.
+  - 포즈가 신규 추가되거나 라벨·프롬프트가 수정될 때는 단일 진실 공급원(SSOT)인 `data/sdxl_pose_database.json`뿐만 아니라, **루트의 [`POSE_MAPPING.md`](POSE_MAPPING.md) 단일 SSOT 문서를 반드시 함께 업데이트**하여 포즈 매핑 현황의 단일 정합성을 유지합니다. (구 `docs/POSE_MAPPING_V2.md`·`docs/POSE_CATALOG.md`는 아카이브 이관 완료)
 
 ## 4. 인계 및 지식 연속성 (Handover & Continuity)
 - 새로운 세션이나 다른 컴퓨터의 Antigravity 에이전트가 투입되었을 때:
@@ -76,10 +76,10 @@
 - **질문 후 임의 선행 작업 엄격 금지 (Strict Approval Gate)**:
   - 다음 단계 진행 방향이나 선택지를 사용자에게 질문(`ask_question` 또는 텍스트)한 후에는, **사용자의 명시적 승인 응답("진행해", "ㄱ" 등)이 도착하기 전까지 절대로 다음 단계의 코드/DB를 임의로 수정하거나 푸시하지 않습니다.**
 - **포즈 라벨/프롬프트 수정 시 문서 실시간 동기화 의무화**:
-  - `data/sdxl_pose_database.json`의 프롬프트나 라벨이 변경될 때는 반드시 루트의 [`POSE_MAPPING.md`](POSE_MAPPING.md) 및 [`docs/POSE_MAPPING_V2.md`](docs/POSE_MAPPING_V2.md)를 세트로 함께 업데이트하며, 미동기화 상태로 커밋/푸시하지 않습니다.
+  - `data/sdxl_pose_database.json`의 프롬프트나 라벨이 변경될 때는 반드시 루트의 [`POSE_MAPPING.md`](POSE_MAPPING.md) 단일 SSOT 문서를 즉시 함께 업데이트하며, 미동기화 상태로 커밋/푸시하지 않습니다.
 - **포즈 의미 훼손 및 충돌 주입 금지 (Semantic Preservation)**:
   - 포즈 프롬프트를 보강할 때는 해당 포즈의 원래 의도(사후 여운, 전희, 특정 체위, 단독/파트너 구도)를 반드시 먼저 정독하고 확인해야 하며, 카테고리 일괄 스크립트로 엉뚱한 자세나 충돌하는 모순 태그(예: 사후 씬에 결합 태그 주입 등)를 무차별 주입하지 않습니다.
-- **남성 파트너 얼굴·눈 노출 차단 표준 준수 ([`docs/캐릭터_포즈_제작_규칙.md`](docs/캐릭터_포즈_제작_규칙.md#L177-L195))**:
+- **남성 파트너 얼굴·눈 노출 차단 표준 준수 ([`docs/캐릭터_포즈_제작_규칙.md`](docs/캐릭터_포즈_제작_규칙.md#L189-L198))**:
   - 2인 포즈·이벤트를 신규 추가하거나 수정할 때는 `bald`/`faceless` 마네킹 태그와 주 캐릭터 이염 위험이 있는 앞머리 눈가림(`male hair over eyes`, `bangs covering eyes`)을 절대 사용하지 않습니다.
   - 화면 밖 크롭이 가능하면 `partner head out of frame`·`partner_pos`로 두부를 배제하고, **무릎베개·수유·가슴 파묻기(`#076`, `#120`, `#034` 등)처럼 남캐 머리가 프레임에 들어오는 포즈**(특히 `TwoPersonMobMutator`가 `_MOB_SHADOW_EYES_POS`·`_MOB_EYELESS_BANGS_NEG`를 자동 주입하지 않는 `mob_tier: 1 | 3` 또는 `events.json` 등)는 **포즈 엔트리에 직접** ① 뒤통수·상안부 그림자 음영(`back of dark-haired male head facing viewer`, `male head turned away from camera`, `shaded upper male face`, `shadow over male eyes`, `eyes obscured by shadow`, `no visible male eyes`), ② 주 캐릭터 눈 보호(`(clear visible female eyes:1.15)` — 여성 포즈 한정), ③ `negative_add` 눈·측면 얼굴 차단(`detailed male face, visible male eyes, detailed male eyes, visible male pupils, male eye, male side profile, male profile face, sideways male head, handsome male face, attractive male face, expressive male face, silver-haired male, blonde male`) 3종 세트를 명기하며 `SanitizerMutator` 충돌 상쇄가 없는지 확인합니다.
 

@@ -36,12 +36,12 @@ logger = logging.getLogger("sync_to_kiro")
 PLEPA_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_KIRO_ROOT = Path("C:/Users/rbsgh/kiro")
 PLEPA_DB_PATH = PLEPA_ROOT / "data" / "sdxl_pose_database.json"
-V2_MAPPING_PATH = PLEPA_ROOT / "docs" / "POSE_MAPPING_V2.md"
+V2_MAPPING_PATH = PLEPA_ROOT / "docs" / "archive" / "POSE_MAPPING_V2.md"
 
 
 def load_v2_mapping(mapping_file: Path = V2_MAPPING_PATH) -> Dict[str, str]:
     """
-    docs/POSE_MAPPING_V2.md를 파싱하여 (구 번호 -> 신 번호) 매핑 사전을 반환합니다.
+    docs/archive/POSE_MAPPING_V2.md를 파싱하여 (구 번호 -> 신 번호) 매핑 사전을 반환합니다.
     테이블 포맷: | 새 번호 | 기존 번호 | 기존 섹션 | 포즈 라벨 | 의상 요구 | 검열 대상 | 비고 |
     """
     if not mapping_file.is_file():
