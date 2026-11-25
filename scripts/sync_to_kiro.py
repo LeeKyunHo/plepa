@@ -26,6 +26,7 @@ import logging
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -281,8 +282,8 @@ def rename_kiro_assets(kiro_root: Path, dry_run: bool = False) -> int:
     return len(rename_plan)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="PLEPA -> KIRO 전파 브릿지 동기화 도구")
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description="PLEPA -> KIRO 전파 브릿지 동기화 도구 (레거시 안전 차단 활성화)")
     parser.add_argument("--kiro-dir", type=Path, default=DEFAULT_KIRO_ROOT, help="KIRO 레포지토리 루트 경로")
     parser.add_argument("--dry-run", action="store_true", help="실제 변경 없이 시뮬레이션 출력만 수행")
     parser.add_argument("--all", action="store_true", help="포즈 DB, 프로젝트 설정, 코어 모듈, 에셋 리네임 전체 수행")
@@ -290,8 +291,22 @@ def main():
     parser.add_argument("--configs-only", action="store_true", help="프로젝트 설정(오버라이드/배경) 동기화만 수행")
     parser.add_argument("--modules-only", action="store_true", help="핵심 모듈(censor, qa_validator) 전파만 수행")
     parser.add_argument("--rename-assets", action="store_true", help="KIRO 에셋 V2 2-Pass 리네임만 수행")
+    parser.add_argument(
+        "--force-unsafe",
+        action="store_true",
+        help="[위험/비권장] 최신 Kiro(Wave 0~4 / P1~P4) 덮어쓰기 파손 위험을 인지하고 레거시 강제 실행",
+    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    if not args.force_unsafe:
+        logger.error(
+            "[DEPRECATED / BLOCKED] scripts/sync_to_kiro.py 실행이 안전 차단 가드에 의해 중단되었습니다.\n"
+            "  • 사유: 최신 Kiro(Wave 0~4 / P1~P4)와 스키마·모듈 구조가 분기되어 덮어쓰기 실행 시\n"
+            "          censor/qa_validator 의존성 충돌, V2 events 섹션 소실, background 스키마 불일치 및 에셋 리네임 파손이 발생합니다.\n"
+            "  • 안내: 단위 기능별 수동 어댑팅 이식을 수행하십시오. (불가피한 강제 실행 시에만 --force-unsafe 명시)"
+        )
+        return 2
 
     kiro_root = args.kiro_dir.resolve()
     if not kiro_root.is_dir():
@@ -321,4 +336,4 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())
