@@ -17,9 +17,9 @@ from typing import Dict, Iterable, List, Set, Tuple
 
 from batch_generator import create_parser
 from plepa_engine.config import ROOT_DIR
-from plepa_engine.models import CharacterConfig
+from plepa_engine.models import CharacterConfig, PoseEntry
 from plepa_engine.services.generation_service import GENERATION_OPTION_SPECS
-from plepa_engine.services.schemas import CharacterSchema, PoseSetSchema
+from plepa_engine.services.schemas import CharacterSchema, PoseItemSchema, PoseSetSchema
 
 
 _MODULE_LINE_LIMIT = 350
@@ -27,16 +27,14 @@ _FUNCTION_LINE_LIMIT = 120
 
 # Wave 3~5 분해 전까지 현행 줄수 상한을 동결하는 래칫 Allowlist (줄수 감소 시 하향 조정, 신규 추가 금지)
 _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
-    "batch_generator.py": 392,
     "plepa_engine/censor.py": 3787,
     "plepa_engine/comfy_client.py": 462,
     "plepa_engine/precheck.py": 392,
     "plepa_engine/prompt_pipeline.py": 1381,
     "plepa_engine/qa_validator.py": 404,
     "plepa_engine/services/asset_service.py": 438,
-    "plepa_engine/services/generation_service.py": 1166,
+    "plepa_engine/services/generation_service.py": 1044,
     "plepa_engine/services/health_service.py": 712,
-    "plepa_engine/services/job_manager.py": 360,
     "plepa_engine/services/pose_service.py": 646,
     "plepa_gui/api_routes.py": 456,
     "plepa_gui/components/retouch_editor.py": 563,
@@ -60,7 +58,6 @@ _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
 
 # (rel_posix_path, func_name) -> 현재 최대 줄수 상한 래칫
 _FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {
-    ("batch_generator.py", "main"): 132,
     ("plepa_engine/censor.py", "_extract_hand_occlusion_mask"): 130,
     ("plepa_engine/censor.py", "_extract_semantic_sam_prompts"): 130,
     ("plepa_engine/censor.py", "apply_silhouette"): 534,
@@ -71,7 +68,6 @@ _FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {
     ("plepa_engine/prompt_pipeline.py", "mutate"): 242,
     ("plepa_engine/qa_validator.py", "validate_generated_image"): 195,
     ("plepa_engine/services/generation_service.py", "run_batch"): 658,
-    ("plepa_engine/services/job_manager.py", "_run_worker"): 145,
     ("plepa_engine/services/pose_service.py", "resolve_pose_codes"): 131,
     ("plepa_engine/workflow_templates.py", "build_sdxl_workflow"): 226,
     ("plepa_gui/components/retouch_editor.py", "build_retouch_editor_script"): 356,
@@ -112,7 +108,7 @@ _LEGACY_IMPORT_ALLOWLIST: Set[str] = {
     "plepa_engine/prompt_builder.py",
     "plepa_engine/workflow_templates.py",
 }
-_GUI_DIRECT_RUN_BATCH_ALLOWLIST: Set[str] = {"plepa_gui/pages/gallery.py"}
+_GUI_DIRECT_RUN_BATCH_ALLOWLIST: Set[str] = set()
 
 
 def _iter_active_python_files() -> Iterable[Path]:
@@ -229,6 +225,17 @@ def test_character_config_and_schema_field_parity():
     schema_fields = set(CharacterSchema.model_fields.keys())
     missing = sorted(cfg_fields - schema_fields)
     assert not missing, f"CharacterSchema에 누락된 CharacterConfig 필드: {missing}"
+
+
+def test_pose_entry_and_schema_field_parity():
+    """PoseEntry의 핵심 직렬화 필드가 PoseItemSchema에도 모두 선언되어 있는지 검증합니다."""
+    entry_fields = {
+        f.name for f in dataclasses.fields(PoseEntry)
+        if f.name not in {"code", "section"}
+    }
+    schema_fields = set(PoseItemSchema.model_fields.keys())
+    missing = sorted(entry_fields - schema_fields)
+    assert not missing, f"PoseItemSchema에 누락된 PoseEntry 필드: {missing}"
 
 
 def test_pose_sets_alphanumeric_sort_roundtrip():

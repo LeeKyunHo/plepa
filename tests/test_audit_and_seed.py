@@ -87,13 +87,21 @@ def test_manifest_seed_merge(tmp_path: Path):
 
 
 def test_list_rosters_and_all_flag():
-    """CharacterService.list_rosters()가 실제 디스크의 활성 로스터 디렉토리들을 누락 없이 동적 탐색하는지 검증."""
-    rosters = default_character_service.list_rosters()
-    assert isinstance(rosters, list)
+    """CharacterService.list_rosters()가 status=legacy 분리를 준수하며 활성/전체 로스터를 정확히 조회하는지 검증."""
+    active_rosters = default_character_service.list_rosters()
+    all_rosters = default_character_service.list_rosters(include_legacy=True)
+    assert isinstance(active_rosters, list)
 
-    expected_dirs = [
+    expected_all = [
         d.name for d in sorted(PROJECTS_DIR.iterdir())
         if d.is_dir() and (d / "characters").is_dir() and any((d / "characters").glob("*.json"))
     ]
-    for exp in expected_dirs:
-        assert exp in rosters, f"활성 로스터 '{exp}'가 list_rosters()에서 누락되었습니다."
+    for exp in expected_all:
+        assert exp in all_rosters, f"로스터 '{exp}'가 list_rosters(include_legacy=True)에서 누락되었습니다."
+
+    for legacy_name in ("default", "maid", "man", "don", "murim"):
+        assert legacy_name not in active_rosters, f"legacy 로스터 '{legacy_name}'가 기본 활성 목록에 포함되었습니다."
+        assert legacy_name in all_rosters, f"legacy 로스터 '{legacy_name}'가 include_legacy=True 목록에 없습니다."
+        assert default_character_service.is_legacy_roster(legacy_name) is True
+        # 명시적 로스터 지정 조회는 하위 호환성으로 그대로 동작해야 함
+        assert len(default_character_service.list_characters(roster=legacy_name)) > 0

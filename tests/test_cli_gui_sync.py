@@ -185,3 +185,16 @@ def test_no_ref_default_and_use_ref_toggle():
     assert parser.parse_args(["--no-ref"]).no_ref is True
     assert parser.parse_args(["--use-ref"]).no_ref is False
     assert GenerationParams(character_expr="aya", pose_expr="072").no_ref is True
+
+
+def test_option_specs_widgets_supported_by_gui():
+    """GENERATION_OPTION_SPECS의 모든 위젯 유형이 option_controls 렌더러에서 지원되는지 검증."""
+    from plepa_gui.components.option_controls import normalize_option_values
+
+    allowed_widgets = {None, "checkbox", "select", "int", "float", "text"}
+    for spec in GENERATION_OPTION_SPECS:
+        assert spec.get("widget") in allowed_widgets, f"미지원 위젯 유형: {spec}"
+
+    defaults = normalize_option_values(GENERATION_OPTION_SPECS, {})
+    for spec in GENERATION_OPTION_SPECS:
+        assert defaults[spec["field"]] == spec["default"]
