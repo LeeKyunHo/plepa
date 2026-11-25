@@ -43,6 +43,58 @@ REQUIRED_CUSTOM_NODES: Dict[str, str] = {
 }
 
 
+def _normalize_lora_specs(
+    loras: Optional[Any] = None,
+    lora_name: Optional[str] = None,
+    lora_weight: float = 0.8,
+) -> list[tuple[str, float]]:
+    """단일·복수 LoRA 입력을 유효한 (파일명, 강도) 튜플 목록으로 정규화합니다."""
+    specs: list[tuple[str, float]] = []
+    candidates: list[Any] = list(loras) if loras is not None else []
+    if lora_name is not None:
+        candidates.insert(0, (lora_name, lora_weight))
+    seen: set[str] = set()
+    for item in candidates:
+        name, weight = "", 0.8
+        if isinstance(item, (tuple, list)) and item:
+            name = str(item[0] or "").strip()
+            weight = float(item[1]) if len(item) > 1 and item[1] is not None else 0.8
+        elif isinstance(item, dict):
+            name, weight = str(item.get("name") or "").strip(), float(item.get("weight", 0.8))
+        elif hasattr(item, "name"):
+            name = str(getattr(item, "name") or "").strip()
+            weight = float(getattr(item, "weight", 0.8) or 0.8)
+        elif isinstance(item, str):
+            name, weight = item.strip(), float(lora_weight)
+        if not name or name.lower() in {"none", "null", "off", "false"}:
+            continue
+        key = name.lower()
+        if key not in seen:
+            seen.add(key)
+            specs.append((name, weight))
+    return specs
+
+
+def _apply_lora_chain(
+    graph: WorkflowGraph,
+    base_model: Any,
+    clip_ref: Any,
+    loras: list[tuple[str, float]],
+) -> tuple[Any, Any]:
+    """활성 LoRA가 있을 때만 LoraLoader 노드를 직렬 체이닝합니다."""
+    for name, weight in loras:
+        lora_id = graph.add_node(
+            "LoraLoader",
+            model=base_model,
+            clip=clip_ref,
+            lora_name=name,
+            strength_model=float(weight),
+            strength_clip=float(weight),
+        )
+        base_model, clip_ref = graph.out(lora_id, 0), graph.out(lora_id, 1)
+    return base_model, clip_ref
+
+
 def build_sdxl_workflow(
     positive_prompt: str,
     negative_prompt: str,
@@ -66,10 +118,13 @@ def build_sdxl_workflow(
     ipadapter_model: str = "ip-adapter-plus_sdxl_vit-h.safetensors",
     clip_vision_model: str = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
     hand_detector_model: str = "bbox/hand_yolov8s.pt",
+    loras: Optional[Any] = None,
+    lora_name: Optional[str] = None,
+    lora_weight: float = 0.8,
 ) -> Dict[str, Any]:
     """
     ComfyUI 로컬 API 전송용 SDXL(Illustrious-XL / NTR MIX XIII 등) 단독 체크포인트 워크플로우 템플릿.
-    - WorkflowGraph 동적 노드 ID 할당 및 자동 배선을 사용합니다.
+    - WorkflowGraph 동적 노드 ID 할당 및 자동 배선을 사용하며, LoRA가 지정되면 LoraLoader를 체이닝합니다.
     - ref_image_name 지정 시 IP-Adapter-Plus(SDXL) 노드 그래프를 동적으로 체이닝합니다.
     - ref_mode:
         - "full": 정적 1인 착의 씬(000~019 등), 1차 KSampler와 2차 FaceDetailer 모두 IP-Adapter 연결
@@ -83,9 +138,12 @@ def build_sdxl_workflow(
 
     # 1. Checkpoint 로더
     ckpt_id = graph.add_node("CheckpointLoaderSimple", ckpt_name=ckpt_name)
-    base_model = graph.out(ckpt_id, 0)
-    clip_ref = graph.out(ckpt_id, 1)
-    vae_ref = graph.out(ckpt_id, 2)
+    base_model, clip_ref, vae_ref = graph.out(ckpt_id, 0), graph.out(ckpt_id, 1), graph.out(ckpt_id, 2)
+
+    # 1.1. (선택) LoRA 다중 체이닝 — 미지정 시 그래프 무변경 바이패스
+    active_loras = _normalize_lora_specs(loras=loras, lora_name=lora_name, lora_weight=lora_weight)
+    if active_loras:
+        base_model, clip_ref = _apply_lora_chain(graph, base_model, clip_ref, active_loras)
 
     # 2. Illustrious 공식 표준: CLIP Skip 노드 연결
     if clip_skip > 1:
@@ -94,14 +152,7 @@ def build_sdxl_workflow(
 
     # 2.1. FreeU 노드 (SDXL 선명도, 콘트라스트 및 피부 질감 부스팅, SDXL 표준 파라미터)
     if use_freeu:
-        freeu_id = graph.add_node(
-            "FreeU",
-            model=base_model,
-            b1=1.02,
-            b2=1.03,
-            s1=0.95,
-            s2=0.2,
-        )
+        freeu_id = graph.add_node("FreeU", model=base_model, b1=1.02, b2=1.03, s1=0.95, s2=0.2)
         base_model = graph.out(freeu_id, 0)
 
     # 3. IP-Adapter 결합 (PrepImageForClipVision + 2-Track 하이브리드)
@@ -110,11 +161,8 @@ def build_sdxl_workflow(
         ipa_loader_id = graph.add_node("IPAdapterUnifiedLoader", model=base_model, preset="PLUS (high strength)")
         load_img_id = graph.add_node("LoadImage", image=ref_image_name)
         prep_img_id = graph.add_node(
-            "PrepImageForClipVision",
-            image=graph.out(load_img_id, 0),
-            interpolation="LANCZOS",
-            crop_position="top",
-            sharpening=0.05,
+            "PrepImageForClipVision", image=graph.out(load_img_id, 0),
+            interpolation="LANCZOS", crop_position="top", sharpening=0.05,
         )
 
         if ref_mode == "face_only":

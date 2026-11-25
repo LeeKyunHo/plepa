@@ -118,22 +118,7 @@ class PoseService:
             sec_dict = data.get(section, {})
             for code, item in sec_dict.items():
                 code_str = self.normalize_code(code)
-                entries[code_str] = PoseEntry(
-                    code=code_str,
-                    section=section,
-                    label=item.get("label", "미상"),
-                    prompt=item.get("prompt", ""),
-                    description=item.get("description", ""),
-                    required_outfit=item.get("required_outfit", ""),
-                    prompt_female=item.get("prompt_female", ""),
-                    prompt_otokonoko=item.get("prompt_otokonoko", ""),
-                    negative_add=item.get("negative_add", ""),
-                    status=item.get("status", "active"),
-                    canonical_code=item.get("canonical_code"),
-                    mob_tier=item.get("mob_tier"),
-                    partner_pos=item.get("partner_pos"),
-                    mob_shadow=bool(item.get("mob_shadow", False)),
-                )
+                entries[code_str] = PoseEntry.from_dict(code_str, section, item, engine=engine)
 
         # 로스터 전용 포즈 오버라이드 파일 (projects/{roster}/pose_overrides.json) 로드
         theme_files: List[Path] = []
@@ -166,28 +151,13 @@ class PoseService:
                         continue
                     for code, item in sec_dict.items():
                         code_str = self.normalize_code(code)
-                        prompt_val = item.get(f"{engine.lower()}_prompt") or item.get("prompt", "")
-                        prompt_f = item.get(f"{engine.lower()}_prompt_female") or item.get("prompt_female", "")
-                        prompt_oto = item.get(f"{engine.lower()}_prompt_otokonoko") or item.get("prompt_otokonoko", "")
-                        target_g = item.get("target_gender")
-                        allowed_r = item.get("allowed_rosters") or ([roster] if roster and tf.name in ("pose_overrides.json", "events.json") else None)
-                        entries[code_str] = PoseEntry(
-                            code=code_str,
-                            section=sec_name,
-                            label=item.get("label", "미상"),
-                            prompt=prompt_val,
-                            description=item.get("description", ""),
-                            required_outfit=item.get("required_outfit", ""),
-                            prompt_female=prompt_f,
-                            prompt_otokonoko=prompt_oto,
-                            target_gender=target_g,
-                            allowed_rosters=allowed_r,
-                            negative_add=item.get("negative_add", ""),
-                            status=item.get("status", "active"),
-                            canonical_code=item.get("canonical_code"),
-                            mob_tier=item.get("mob_tier"),
-                            partner_pos=item.get("partner_pos"),
-                            mob_shadow=bool(item.get("mob_shadow", False)),
+                        default_allowed = [roster] if roster and tf.name in ("pose_overrides.json", "events.json") else None
+                        entries[code_str] = PoseEntry.from_dict(
+                            code_str,
+                            sec_name,
+                            item,
+                            engine=engine,
+                            default_allowed_rosters=default_allowed,
                         )
 
             except Exception as exc:
@@ -268,7 +238,7 @@ class PoseService:
         expr_lower = expr.lower()
 
         def _is_active(entry: PoseEntry) -> bool:
-            return getattr(entry, "status", "active") != "deprecated"
+            return entry.is_active
 
         if expr_lower == "all":
             allowed_themes = set(self.ROSTER_THEME_MAP.get(roster.lower(), [])) if roster else set()

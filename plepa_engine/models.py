@@ -29,6 +29,56 @@ class PoseEntry:
     mob_tier: Optional[int] = None
     partner_pos: Optional[str] = None
     mob_shadow: bool = False
+    flags: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(
+        cls,
+        code: str,
+        section: str,
+        data: Dict[str, Any],
+        engine: str = "sdxl",
+        default_allowed_rosters: Optional[List[str]] = None,
+    ) -> PoseEntry:
+        """포즈 DB/테마 JSON 딕셔너리에서 단일 SSOT `PoseEntry`를 생성합니다."""
+        eng = (engine or "sdxl").lower().strip()
+        item = data if isinstance(data, dict) else {}
+        prompt_val = str(item.get(f"{eng}_prompt") or item.get("prompt") or "")
+        prompt_f = str(item.get(f"{eng}_prompt_female") or item.get("prompt_female") or "")
+        prompt_oto = str(item.get(f"{eng}_prompt_otokonoko") or item.get("prompt_otokonoko") or "")
+        allowed_r = item.get("allowed_rosters") if "allowed_rosters" in item else default_allowed_rosters
+        if allowed_r is None and default_allowed_rosters is not None:
+            allowed_r = default_allowed_rosters
+        raw_flags = item.get("flags")
+        flags_dict = dict(raw_flags) if isinstance(raw_flags, dict) else None
+        return cls(
+            code=str(code),
+            section=str(section),
+            label=str(item.get("label") or "미상"),
+            prompt=prompt_val,
+            description=str(item.get("description") or ""),
+            required_outfit=str(item.get("required_outfit") or ""),
+            prompt_female=prompt_f,
+            prompt_otokonoko=prompt_oto,
+            target_gender=item.get("target_gender"),
+            allowed_rosters=list(allowed_r) if isinstance(allowed_r, list) else allowed_r,
+            negative_add=str(item.get("negative_add") or ""),
+            status=str(item.get("status") or "active"),
+            canonical_code=item.get("canonical_code"),
+            mob_tier=item.get("mob_tier"),
+            partner_pos=item.get("partner_pos"),
+            mob_shadow=bool(item.get("mob_shadow", False)),
+            flags=flags_dict,
+        )
+
+    @property
+    def is_active(self) -> bool:
+        """deprecated 또는 flags.disabled가 아닌 활성 포즈 여부를 반환합니다."""
+        if self.status == "deprecated":
+            return False
+        if isinstance(self.flags, dict) and self.flags.get("disabled"):
+            return False
+        return True
 
 
     def get_prompt(self, gender: str = "female") -> str:
@@ -110,6 +160,7 @@ class CharacterConfig:
     gender: str
     appearance: CharacterAppearance
     lora: LoraConfig = field(default_factory=LoraConfig)
+    loras: List[LoraConfig] = field(default_factory=list)
     style_keywords: str = "masterpiece quality, ultra-detailed anime digital art, 8k resolution"
     sdxl_positive: Optional[str] = None
     sdxl_nude_positive: Optional[str] = None
@@ -201,6 +252,14 @@ class CharacterConfig:
             name=lora_raw.get("name"),
             weight=float(lora_raw.get("weight", 0.8))
         )
+        loras_list: List[LoraConfig] = []
+        raw_loras = data.get("loras")
+        if isinstance(raw_loras, list):
+            for l_item in raw_loras:
+                if isinstance(l_item, str) and l_item.strip():
+                    loras_list.append(LoraConfig(name=l_item.strip(), weight=0.8))
+                elif isinstance(l_item, dict) and str(l_item.get("name") or "").strip():
+                    loras_list.append(LoraConfig(name=str(l_item["name"]).strip(), weight=float(l_item.get("weight", 0.8))))
         sdxl_pos = data.get("sdxl_positive") or data.get("positive")
         sdxl_nude_pos = data.get("sdxl_nude_positive")
         sdxl_neg = data.get("sdxl_negative") or data.get("negative")
@@ -217,6 +276,7 @@ class CharacterConfig:
             gender=data.get("gender", "female"),
             appearance=appearance,
             lora=lora,
+            loras=loras_list,
             style_keywords=data.get("style_keywords", "masterpiece quality, 8k resolution"),
             sdxl_positive=sdxl_pos,
             sdxl_nude_positive=sdxl_nude_pos,

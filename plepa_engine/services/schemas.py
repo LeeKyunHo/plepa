@@ -24,21 +24,47 @@ class PoseFlags(BaseModel):
 
 
 class PoseItemSchema(BaseModel):
-    """포즈 1개 항목 스키마."""
+    """포즈 1개 항목 스키마 (`PoseEntry` 도메인 모델과 단일 SSOT 필드 대칭)."""
     model_config = ConfigDict(extra="allow")
 
-    label: str = Field(min_length=1, max_length=20, description="포즈 간략 명칭 (권장 6글자 이하)")
-    description: Optional[str] = Field(default="", description="포즈 한글 상세 설명")
-    prompt: str = Field(min_length=1, description="엔진별 프롬프트 (FLUX 자연어 또는 SDXL 태그)")
-    flags: Optional[PoseFlags] = Field(default=None, description="포즈 메타데이터 플래그")
+    label: str = Field(min_length=1, max_length=32, description="포즈 간략 명칭")
+    description: str = Field(default="", description="포즈 한글 상세 설명")
+    prompt: str = Field(default="", description="SDXL 기본 프롬프트")
+    required_outfit: str = Field(default="", description="요구 의상 슬롯 (default/nude/wedding 등)")
+    prompt_female: str = Field(default="", description="여성 캐릭터 전용 분기 프롬프트")
+    prompt_otokonoko: str = Field(default="", description="오토코노코 전용 분기 프롬프트")
+    target_gender: Optional[str] = Field(default=None, description="대상 성별 제한 (female/otokonoko)")
+    allowed_rosters: Optional[List[str]] = Field(default=None, description="허용 로스터 목록")
+    negative_add: str = Field(default="", description="포즈별 추가 네거티브 태그")
+    status: str = Field(default="active", description="포즈 활성 상태 (active/deprecated)")
+    canonical_code: Optional[str] = Field(default=None, description="deprecated 시 통합 기준 코드")
     mob_tier: Optional[Literal[0, 1, 2, 3]] = Field(
         default=None,
-        description="2인 파트너/모브 노출 등급 (0=오프스크린 POV/솔로, 1=손·극부위 크롭, 2=실루엣 밀착, 3=콤팩트 봉사)",
+        description="2인 파트너/모브 노출 등급 (0=솔로 POV, 1=손·팔 크롭, 2=실루엣 밀착, 3=콤팩트 봉사)",
     )
-    partner_pos: Optional[Literal["above", "below", "behind", "side_kiss", "offscreen"]] = Field(
+    partner_pos: Optional[Literal["above", "below", "behind", "side_kiss", "offscreen", "carry", "bury_chest"]] = Field(
         default=None,
-        description="2인 구도 시 파트너 상대 위치 (above/below/behind/side_kiss/offscreen)",
+        description="2인 구도 시 파트너 상대 위치",
     )
+    mob_shadow: bool = Field(default=False, description="상안부 그림자 음영 가드 활성화 여부")
+    flags: Optional[PoseFlags] = Field(default=None, description="포즈 메타데이터 플래그")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_pose_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not d.get("prompt") and d.get("sdxl_prompt"):
+            d["prompt"] = d.get("sdxl_prompt")
+        for txt_key in ("description", "prompt", "required_outfit", "prompt_female", "prompt_otokonoko", "negative_add"):
+            if d.get(txt_key) is None:
+                d[txt_key] = ""
+        if d.get("status") is None:
+            d["status"] = "active"
+        if d.get("mob_shadow") is None:
+            d["mob_shadow"] = False
+        return d
 
     @field_validator("label")
     @classmethod
@@ -48,9 +74,36 @@ class PoseItemSchema(BaseModel):
             raise ValueError("포즈 라벨은 공백일 수 없습니다.")
         return s
 
+    def to_pose_entry(self, code: str, section: str) -> Any:
+        """검증된 스키마를 도메인 불변 모델 `PoseEntry`로 변환합니다."""
+        from plepa_engine.models import PoseEntry
+
+        return PoseEntry.from_dict(code=code, section=section, data=self.model_dump())
+
+    @classmethod
+    def from_pose_entry(cls, entry: Any) -> PoseItemSchema:
+        """도메인 `PoseEntry` 인스턴스로부터 `PoseItemSchema`를 생성합니다."""
+        return cls.model_validate({
+            "label": entry.label,
+            "description": entry.description,
+            "prompt": entry.prompt,
+            "required_outfit": entry.required_outfit,
+            "prompt_female": entry.prompt_female,
+            "prompt_otokonoko": entry.prompt_otokonoko,
+            "target_gender": entry.target_gender,
+            "allowed_rosters": entry.allowed_rosters,
+            "negative_add": entry.negative_add,
+            "status": entry.status,
+            "canonical_code": entry.canonical_code,
+            "mob_tier": entry.mob_tier,
+            "partner_pos": entry.partner_pos,
+            "mob_shadow": entry.mob_shadow,
+            "flags": entry.flags,
+        })
+
 
 class PoseDatabaseSchema(BaseModel):
-    """포즈 데이터베이스 전체 스키마 (emotions, daily, poses, romance, daily_events, h_scenes, special_h, scenes_otokonoko, otokonoko)."""
+    """포즈 데이터베이스 전체 스키마 (V3 전체 섹션 및 하위 호환 섹션)."""
     model_config = ConfigDict(extra="allow")
 
     schema_info: Optional[Dict[str, Any]] = Field(default=None, alias="_schema")
@@ -61,7 +114,10 @@ class PoseDatabaseSchema(BaseModel):
     daily_events: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     h_scenes: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     special_h: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    special_female_h: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     scenes_otokonoko: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    special_otokonoko: Dict[str, PoseItemSchema] = Field(default_factory=dict)
+    special_otokonoko_h: Dict[str, PoseItemSchema] = Field(default_factory=dict)
     otokonoko: Dict[str, PoseItemSchema] = Field(default_factory=dict)
 
     @model_validator(mode="before")
@@ -99,6 +155,7 @@ class CharacterSchema(BaseModel):
     gender: str = Field(default="female", description="성별 (female, male, otokonoko 등)")
     appearance: CharacterAppearanceSchema = Field(default_factory=CharacterAppearanceSchema)
     lora: LoraSchema = Field(default_factory=LoraSchema)
+    loras: List[LoraSchema] = Field(default_factory=list, description="추가 LoRA 체이닝 목록")
     style_keywords: str = Field(
         default="masterpiece quality, ultra-detailed anime digital art, 8k resolution",
         description="화질 및 스타일 공통 키워드"
