@@ -11,10 +11,10 @@ description: >-
 이 스킬이 활성화되면 **CLI · Engine · GUI · Test** 4곳을 반드시 세트로 동기화합니다 (`GEMINI.md` 3조).
 
 ## 1. 허용 파일 (Whitelist)
-- [`plepa_engine/services/*`](../../../plepa_engine/services) (단, `plepa_gui` 역방향 import 금지)
+- [`plepa_engine/services/`](../../../plepa_engine/services) (`generation/` 서브패키지 · `generation_options.py` · `asset_helpers.py` · `pose_resolver.py` · `pose_storage.py` · `health_checks_core.py` · `health_checks_ops.py` 등 — 전 모듈 `<=350L` · 함수 `<=120L`, `plepa_gui` 역방향 import 금지)
 - [`batch_generator.py`](../../../batch_generator.py)
 - `plepa_gui/**`
-- [`tests/test_cli_gui_sync.py`](../../../tests/test_cli_gui_sync.py), [`tests/test_gui_all_features.py`](../../../tests/test_gui_all_features.py), [`tests/test_mobile_inspection_api.py`](../../../tests/test_mobile_inspection_api.py), [`tests/test_wave0_hotfixes.py`](../../../tests/test_wave0_hotfixes.py)
+- [`tests/test_cli_gui_sync.py`](../../../tests/test_cli_gui_sync.py), [`tests/test_gui_all_features.py`](../../../tests/test_gui_all_features.py), [`tests/test_mobile_inspection_api.py`](../../../tests/test_mobile_inspection_api.py), [`tests/test_wave0_hotfixes.py`](../../../tests/test_wave0_hotfixes.py), [`tests/test_wave4b2_service_modules.py`](../../../tests/test_wave4b2_service_modules.py)
 
 ## 2. 절대 금지 (Blacklist)
 - `GENERATION_OPTION_SPECS` / `GenerationParams` / `batch_generator.py` / `plepa_gui` 중 어느 한쪽에만 옵션을 방치하지 마십시오.

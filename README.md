@@ -72,14 +72,15 @@ plepa/
 │   ├── pose_sets.json            # V3 프리셋 포즈 묶음 (sample10, campus_108 등)
 │   ├── themes/                   # 공용 테마 의상 팩
 │   └── legacy/                   # [격리] 구 FLUX DB (열람/수정 금지)
-├── plepa_engine/
+├── plepa_engine/                 # 엔진 전체 74모듈 <=350L / 전 함수 <=120L (Allowlist 0건)
 │   ├── pipeline/                 # 7단계 Mutator 체인 서브패키지 (11모듈, <=285L)
 │   ├── prompt_pipeline.py        # Mutator 체인 호환 파사드 (78L)
+│   ├── workflow_templates.py     # SDXL 워크플로우 그래프 빌더 (workflow_nodes.py 분리)
 │   ├── comfy_client.py           # ComfyUI REST/WS 클라이언트 (<=316L, comfy_transport.py 분리)
 │   ├── censor/                   # Phase P2.5 하이브리드 검열 서브패키지 (19모듈, <=322L)
 │   ├── qa_validator.py           # Auto-QC 품질/구도 자동 감지기 (qa_checks.py 규칙 분리)
 │   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증 (precheck_rules.py 분리)
-│   └── services/                 # CLI·GUI 공용 서비스 & GENERATION_OPTION_SPECS
+│   └── services/                 # CLI·GUI 공용 서비스 (generation/ 6모듈 · asset_helpers · pose_resolver/storage · health_checks_core/ops · GENERATION_OPTION_SPECS 29종)
 ├── plepa_gui/                    # NiceGUI 8대 탭 & REST API (/api/assets/*)
 ├── scripts/                      # context_exporter, start_remote, audit, validate_genit_work, novelchat_* 등
 ├── docs/                         # Active SSOT(젠잇·노벨챗 제작법, platforms/) & docs/archive/ (이력 보관소)
