@@ -27,10 +27,6 @@ _FUNCTION_LINE_LIMIT = 120
 
 # Wave 3~5 분해 전까지 현행 줄수 상한을 동결하는 래칫 Allowlist (줄수 감소 시 하향 조정, 신규 추가 금지)
 _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
-    "plepa_engine/comfy_client.py": 462,
-    "plepa_engine/precheck.py": 392,
-    "plepa_engine/prompt_pipeline.py": 1381,
-    "plepa_engine/qa_validator.py": 404,
     "plepa_engine/services/asset_service.py": 438,
     "plepa_engine/services/generation_service.py": 1044,
     "plepa_engine/services/health_service.py": 712,
@@ -57,10 +53,6 @@ _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
 
 # (rel_posix_path, func_name) -> 현재 최대 줄수 상한 래칫
 _FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {
-    ("plepa_engine/comfy_client.py", "generate_image"): 196,
-    ("plepa_engine/precheck.py", "run_pregeneration_check"): 268,
-    ("plepa_engine/prompt_pipeline.py", "mutate"): 242,
-    ("plepa_engine/qa_validator.py", "validate_generated_image"): 195,
     ("plepa_engine/services/generation_service.py", "run_batch"): 658,
     ("plepa_engine/services/pose_service.py", "resolve_pose_codes"): 131,
     ("plepa_engine/workflow_templates.py", "build_sdxl_workflow"): 226,
