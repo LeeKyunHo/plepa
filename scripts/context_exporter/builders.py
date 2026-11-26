@@ -193,7 +193,7 @@ def build_tier2(snap: Dict[str, Any], include_prompts: bool = False) -> str:
     """`20_TIER2_CORE_LOGIC.md`: 7대 Mutator, Trinity Sync 매트릭스, FastAPI/GUI 라우트, P2.5 검열 & QC, 포즈 요약."""
     pp_path = PLEPA_ROOT / "plepa_engine" / "prompt_pipeline.py"
     gs_path = PLEPA_ROOT / "plepa_engine" / "services" / "generation_service.py"
-    ce_path = PLEPA_ROOT / "plepa_engine" / "censor.py"
+    ce_dir = PLEPA_ROOT / "plepa_engine" / "censor"
     qa_path = PLEPA_ROOT / "plepa_engine" / "qa_validator.py"
     p_stats = snap.get("pose_stats") or summarize_pose_db()
 
@@ -218,12 +218,23 @@ def build_tier2(snap: Dict[str, Any], include_prompts: bool = False) -> str:
         fields = extract_dataclass_fields(gs_path, "GenerationParams")
         out.append(f"- `GenerationParams` fields ({len(fields)}): " + ", ".join(f"`{f[0]}`" for f in fields))
 
-    out.extend(["", "## 3. `censor.py` (Phase P2.5 동결) & Auto-QC 파라미터 (`qa_validator.py`)"])
-    if ce_path.is_file():
-        ce_const = format_constants_snippet(ce_path, ["NON_EXPOSURE_H_POSES", "POSE_SAFE_ANCHORS"])
+    out.extend(["", "## 3. `plepa_engine/censor/` (Phase P2.5 동결) & Auto-QC 파라미터 (`qa_validator.py`)"])
+    ce_const_path = ce_dir / "constants.py"
+    if ce_const_path.is_file():
+        ce_const = format_constants_snippet(ce_const_path, ["NON_EXPOSURE_H_POSES", "POSE_SAFE_ANCHORS"])
         if ce_const:
             out.append("```python\n" + ce_const + "\n```")
-        out.append("- Censor 공개 API: " + ", ".join(f"`{s}`" for s in extract_signatures(ce_path, ["censor_image", "censor_file", "is_pose_censor_required", "unload_censor_models"])))
+    ce_sigs: List[str] = []
+    for sub_name, fn_names in (
+        ("pipeline.py", ["censor_image", "censor_file"]),
+        ("policy.py", ["is_pose_censor_required"]),
+        ("models.py", ["unload_censor_models"]),
+    ):
+        sub_path = ce_dir / sub_name
+        if sub_path.is_file():
+            ce_sigs.extend(extract_signatures(sub_path, fn_names))
+    if ce_sigs:
+        out.append("- Censor 공개 API: " + ", ".join(f"`{s}`" for s in ce_sigs))
     if qa_path.is_file():
         out.append("- Auto-QC API: " + ", ".join(f"`{s}`" for s in extract_signatures(qa_path, ["validate_generated_image", "configure_qa_runtime"])))
 

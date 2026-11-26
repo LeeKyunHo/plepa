@@ -14,7 +14,7 @@ description: >-
 - [`plepa_engine/prompt_pipeline.py`](../../../plepa_engine/prompt_pipeline.py) (`pipeline/` 분할 포함)
 - [`plepa_engine/prompt_builder.py`](../../../plepa_engine/prompt_builder.py)
 - [`plepa_engine/qa_validator.py`](../../../plepa_engine/qa_validator.py)
-- [`plepa_engine/censor.py`](../../../plepa_engine/censor.py) (`censor/` 분할 포함)
+- [`plepa_engine/censor/`](../../../plepa_engine/censor/__init__.py) 서브패키지 (`__init__` 파사드 · `_runtime` · `constants` · `policy` · `models` · `geometry` · `protection` · `detection` · `lineart` · `mask_refinement` · `segmentation` · `silhouette_prompts` · `silhouette_sam` · `silhouette` · `styles_basic` · `styles` · `hybrid_gates` · `hybrid` · `pipeline` — 전 모듈 `<=350L` · 함수 `<=120L`)
 - [`plepa_engine/workflow_templates.py`](../../../plepa_engine/workflow_templates.py), [`plepa_engine/comfy_client.py`](../../../plepa_engine/comfy_client.py)
 - `tests/test_prompt_*.py`, `tests/test_qa_validator.py`, `tests/test_smart_censor.py`, `tests/test_censor_*.py`
 
