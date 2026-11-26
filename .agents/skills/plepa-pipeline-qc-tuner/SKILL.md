@@ -11,12 +11,13 @@ description: >-
 이 스킬이 활성화되면 엔진 내부 로직만 다루며, 승인 없는 임계치 변경 및 하드코딩을 차단합니다.
 
 ## 1. 허용 파일 (Whitelist)
-- [`plepa_engine/prompt_pipeline.py`](../../../plepa_engine/prompt_pipeline.py) (`pipeline/` 분할 포함)
+- [`plepa_engine/prompt_pipeline.py`](../../../plepa_engine/prompt_pipeline.py) (78L 호환 파사드) & [`plepa_engine/pipeline/`](../../../plepa_engine/pipeline/__init__.py) 서브패키지 (11모듈: `__init__` · `constants` · `context` · `tags` · `pose_prep` · `assembly` · `negative_base` · `defense` · `mob_helpers` · `mob` · `sanitizer` — 전 모듈 `<=285L` · 함수 `<=89L`)
 - [`plepa_engine/prompt_builder.py`](../../../plepa_engine/prompt_builder.py)
-- [`plepa_engine/qa_validator.py`](../../../plepa_engine/qa_validator.py)
+- [`plepa_engine/qa_validator.py`](../../../plepa_engine/qa_validator.py) & [`plepa_engine/qa_checks.py`](../../../plepa_engine/qa_checks.py)
+- [`plepa_engine/precheck.py`](../../../plepa_engine/precheck.py) & [`plepa_engine/precheck_rules.py`](../../../plepa_engine/precheck_rules.py)
 - [`plepa_engine/censor/`](../../../plepa_engine/censor/__init__.py) 서브패키지 (`__init__` 파사드 · `_runtime` · `constants` · `policy` · `models` · `geometry` · `protection` · `detection` · `lineart` · `mask_refinement` · `segmentation` · `silhouette_prompts` · `silhouette_sam` · `silhouette` · `styles_basic` · `styles` · `hybrid_gates` · `hybrid` · `pipeline` — 전 모듈 `<=350L` · 함수 `<=120L`)
-- [`plepa_engine/workflow_templates.py`](../../../plepa_engine/workflow_templates.py), [`plepa_engine/comfy_client.py`](../../../plepa_engine/comfy_client.py)
-- `tests/test_prompt_*.py`, `tests/test_qa_validator.py`, `tests/test_smart_censor.py`, `tests/test_censor_*.py`
+- [`plepa_engine/workflow_templates.py`](../../../plepa_engine/workflow_templates.py), [`plepa_engine/comfy_client.py`](../../../plepa_engine/comfy_client.py), [`plepa_engine/comfy_transport.py`](../../../plepa_engine/comfy_transport.py)
+- `tests/test_prompt_*.py`, `tests/test_qa_validator.py`, `tests/test_smart_censor.py`, `tests/test_censor_*.py`, `tests/test_wave4b1_core_modules.py`
 
 ## 2. 절대 금지 (Blacklist)
 - **ADR-99 동결 준수**: 사용자 명시 승인 및 `benchmark_censor_metrics.py` 정량 대조 없이 `censor.py` 탐지/마스크 임계치를 임의로 변경하지 마십시오.

@@ -48,7 +48,7 @@ ComfyUI 로컬 API(`127.0.0.1:8188`)를 기반으로 캐릭터 챗봇용 고화�
 
 ## 🏗️ 3. 핵심 아키텍처 요약
 
-1. **7단계 프롬프트 Mutator 체인 (`plepa_engine/prompt_pipeline.py`)**:
+1. **7단계 프롬프트 Mutator 체인 ([`plepa_engine/pipeline/`](plepa_engine/pipeline/__init__.py) + [`prompt_pipeline.py`](plepa_engine/prompt_pipeline.py) 파사드)**:
    - `PoseTagPreparation` ➔ `PositiveAssembly` ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` (`mob_tier 0~3` · `partner_pos` · 상안부 그림자 음영) ➔ `CompositionAntiDrift` ➔ `Sanitizer` (가중치 상한: 긍정 `1.15`, 부정 `1.25`).
 2. **CLI · Engine · GUI 삼위일체 동기화 (`Trinity Sync`)**:
    - `GENERATION_OPTION_SPECS` ↔ `GenerationParams` ↔ `batch_generator.py` CLI ↔ `plepa_gui` Web UI 자동 렌더링 ↔ AST·파서 정밀 계약 테스트(`tests/test_cli_gui_sync.py`, `tests/test_contract_guards.py`).
@@ -73,10 +73,12 @@ plepa/
 │   ├── themes/                   # 공용 테마 의상 팩
 │   └── legacy/                   # [격리] 구 FLUX DB (열람/수정 금지)
 ├── plepa_engine/
-│   ├── prompt_pipeline.py        # 7단계 Mutator 체인 & 2인 모브 격리
+│   ├── pipeline/                 # 7단계 Mutator 체인 서브패키지 (11모듈, <=285L)
+│   ├── prompt_pipeline.py        # Mutator 체인 호환 파사드 (78L)
+│   ├── comfy_client.py           # ComfyUI REST/WS 클라이언트 (<=316L, comfy_transport.py 분리)
 │   ├── censor/                   # Phase P2.5 하이브리드 검열 서브패키지 (19모듈, <=322L)
-│   ├── qa_validator.py           # Auto-QC 품질/구도 자동 감지기
-│   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증
+│   ├── qa_validator.py           # Auto-QC 품질/구도 자동 감지기 (qa_checks.py 규칙 분리)
+│   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증 (precheck_rules.py 분리)
 │   └── services/                 # CLI·GUI 공용 서비스 & GENERATION_OPTION_SPECS
 ├── plepa_gui/                    # NiceGUI 8대 탭 & REST API (/api/assets/*)
 ├── scripts/                      # context_exporter, start_remote, audit, validate_genit_work, novelchat_* 등

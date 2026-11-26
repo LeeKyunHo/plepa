@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-111)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-112)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -17,14 +17,14 @@
 
 1. **SDXL 단일 파이프라인 일원화**: 플에파는 SDXL(Illustrious 계열, Danbooru 쉼표 태그, `BREAK` 청크, 7단계 Mutator 체인)로 영구 일원화되었습니다. 구 FLUX 경로(`plepa_engine/legacy/`, `data/legacy/`)는 참조·수정 금지입니다.
 2. **하이브리드 최적 해상도 (`get_optimal_resolution_for_pose`)**: `--width`/`--height` 미지정 시 `000~024`(감정·초반 단독)은 세로형 `832×1216`, `025+`(일상·로맨스·H-씬)는 가로형 `1216×832`로 자동 분기합니다. (`GenitExporter` 상용 패키징 시 `1024×1536` Lanczos 중앙 크롭 통일)
-3. **7단계 프롬프트 Mutator 체인 & 가중치 상한**: [`prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py)는 `PoseTagPreparation` ➔ `PositiveAssembly` ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `CompositionAntiDrift` ➔ `Sanitizer` 순으로 실행되며, `clamp_sdxl_weights`로 긍정 `<= 1.15`, 부정 `<= 1.25` 상한을 강제합니다.
+3. **7단계 프롬프트 Mutator 체인 & 가중치 상한**: [`plepa_engine/pipeline/`](../plepa_engine/pipeline/__init__.py) 11모듈(`<=285L`)과 [`prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py) 78L 파사드가 `PoseTagPreparation` ➔ `PositiveAssembly` ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `CompositionAntiDrift` ➔ `Sanitizer` 순으로 실행되며, `clamp_sdxl_weights`로 긍정 `<= 1.15`, 부정 `<= 1.25` 상한을 강제합니다.
 4. **V3 포즈 DB(`data/sdxl_pose_database.json`) & 단일 매핑 SSOT**: 코어 DB는 `175`개 키(활성 `151`종 + `status="deprecated"` 보존 `24`종)이며, 로스터 전용 `projects/{roster}/events.json` (`051~055`, `130~132`/`200~202`)이 세계관 슬롯을 오버라이드합니다. 포즈 추가·수정 시 루트 [`POSE_MAPPING.md`](../POSE_MAPPING.md) 단일 SSOT를 즉시 동기화합니다.
 5. **에셋 2대 서브폴더 & 원본 무손실 보존 불변식**: 모든 에셋은 `01_normal/`(`000~059`) · `02_h_scenes/`(`060~209+`)에 저장되며(`3-Track` 하위 호환 탐색), 무검열 원본은 `{char}_origin/`에 영구 보존됩니다. 이미 생성된 `projects/*/assets/` 파일은 절대 임의 읽기·수정·삭제하지 않습니다.
 6. **화풍(`legacy`), `signature_accessories`, H-씬 수분광·무드 라이팅**: `PromptContext.style_mode` 기본값은 `"legacy"`입니다. `signature_accessories`는 2차 청크 선두(CLIP 75토큰 이내)에 우선 배치되며, `is_steamy_h_scene`(`>= 060`, `038/039`)에서는 땀/수분광 부스터 + 중립 심야 조명(`clean ambient occlusion`, 황변 네거티브 방어 유지)이 가동됩니다.
 7. **2인 모브 4-Tier(`mob_tier 0~3`), `partner_pos` 및 상안부 그림자 음영**: 마네킹(`bald`/`faceless`) 및 앞머리 가림(`male hair over eyes`)을 영구 퇴출하고 `_MOB_SHADOW_EYES_POS`(뒤통수·상안부 그림자 음영) + 여성 한정 `(clear visible female eyes:1.15)`을 적용합니다. (`mob_tier 1/3` 등 미주입 포즈는 DB 엔트리에 직접 3종 세트 명기)
 8. **검열 엔진 `Phase P2.5` 동결(`ADR-99`) & 터치 협업**: [`plepa_engine/censor/`](../plepa_engine/censor/__init__.py) 서브패키지(19모듈 `<=322L`)는 `deepghs` + `models/censor_seg.pt` (`YOLO11s-seg`) + `sam2.1_s.pt` 하이브리드 및 `white_silhouette` 기본(총 11종, `enable_anchor_fallback=False`)으로 프로덕션 동결되었습니다. 미세 보정은 웹/모바일 `✏️ 터치 덧칠`(`retouch_editor.py`)로 처리합니다.
 9. **오토코노코(`oto`) 검열 & 톤 동기화**: `150~209` H-씬 전수 스캔 + 탈의 일상(`030,038,039,043~045,049`) `is_nude` 컨텍스트 전파를 강제하며, `oto` 배경·네거티브는 `campus` 중립 색감에 동기화됩니다.
-10. **Auto-QC 딥러닝 자동 검증 (`qa_validator.py`)**: 인원·얼굴·머리·손·눈·Color Burn·상반신 화각 드리프트(`_check_closeup_aspect_drift`)·Laplacian 흐림 검사를 수행하며 `strict_censor_qc`는 `mob_tier not in (0, 1, 2)`에서만 작동합니다.
+10. **Auto-QC 딥러닝 자동 검증 (`qa_validator.py` + `qa_checks.py`)**: 인원·얼굴·머리·손·눈·Color Burn·상반신 화각 드리프트(`_check_closeup_aspect_drift`)·Laplacian 흐림 검사를 수행하며 `strict_censor_qc`는 `mob_tier not in (0, 1, 2)`에서만 작동합니다.
 11. **CLI · Engine · GUI 삼위일체 동기화 (`Trinity Sync`)**: 생성 옵션 추가 시 [`generation_options.py`](../plepa_engine/services/generation_options.py) `GENERATION_OPTION_SPECS`(29종) ↔ `GenerationParams` ↔ `batch_generator.py` CLI ↔ `plepa_gui` (`option_controls.py`) ↔ `tests/test_cli_gui_sync.py` + `tests/test_contract_guards.py`를 1세트로 유지합니다.
 12. **비동기 FIFO 대기열 & 원격 토큰 보안**: 8080 스튜디오(`/generate`, `/gallery`, `/api`)는 `GlobalJobManager`(`enqueue_job`/`enqueue_censor_only`), 8085 벤치마크 서버는 `RerollQueueManager`가 단일 워커 FIFO로 GPU 경합을 차단하며, `start_remote.py` 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 검증이 활성화됩니다.
 13. **원자적 I/O & 안전 백업**: 모든 JSON·이미지 덮어쓰기는 임시 파일 생성 + `os.replace` 원자적 교체를 사용하며(선행 `unlink()` 금지), 수정·삭제 시 `.plepa_backup/`(20개 순환) 및 `_trash/`를 활용합니다.
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-111`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-112`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -59,3 +59,4 @@
 - **ADR-109 (2026-11-26)**: 노벨챗(NovelChat) 6탭 커스텀 모드 제작법([`노벨챗_캐릭터채팅_제작법.md`](%EB%85%B8%EB%B2%A8%EC%B1%97_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md))·멀티플랫폼 이식 구조(`docs/platforms/`)·34종 호출어 풀(`novelchat_pose_pools.json`)·500장 예산 패키저(`novelchat_exporter.py`)·6탭 원고 검증기(`novelchat_validator.py`) 구축.
 - **ADR-110 (2026-11-27)**: `#109` 정면 백헤드·양손 허벅지 파지 2인 구도(`partner_pos="between_thighs"`, `mob_tier=2`, `Auto-QC` 허용 연동) 및 `#179` 상반신~아랫배 줌아웃 단독 절정 컷(`mob_tier=0`, `cropped at lower belly`) 확정, `DefectDefenseMutator` 상체 크롭 하반신 태그 주입 제외 분기(`is_upper_torso_crop`) 신설.
 - **ADR-111 (2026-11-27, Wave 4-A)**: 단일 거대 모듈 `plepa_engine/censor.py`(3,787L)를 `plepa_engine/censor/` 19개 단일 책임 모듈(`<=322L`, 전 함수 `<=117L`)로 Phase P2.5 수치·공개 API·테스트 패치 호환성(`facade_get`/`facade_set`) 100% 무변경 분해 완료 및 `test_contract_guards.py` AST 래칫 Allowlist 제거.
+- **ADR-112 (2026-11-27, Wave 4-B1)**: 코어 4대 영역(`prompt_pipeline.py` 1,381L ➔ `pipeline/` 11모듈 + `78L` 파사드, `comfy_client`+`comfy_transport`, `qa_validator`+`qa_checks`, `precheck`+`precheck_rules`) 순수 구조 분해 완료 (전 모듈 `<=316L` · 전 함수 `<=105L`, Short-Circuit 및 패치 호환성 100% 유지, `test_contract_guards.py` Wave 4-B1 래칫 Allowlist 4모듈·4함수 제거).
