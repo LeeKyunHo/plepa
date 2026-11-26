@@ -1,122 +1,53 @@
 """
 plepa_engine.services.generation_service
-FLUX / SDXL 듀얼 엔진 배치 이미지 생성 핵심 서비스.
+SDXL 단일 파이프라인 배치 이미지 생성 핵심 서비스.
 CLI와 GUI가 공통으로 호출하며, 진행률 콜백 및 취소 인터럽트를 지원합니다.
 """
 
 from __future__ import annotations
 
-import copy
-import json
 import logging
-import os
-import random
-import re
-import shutil
 import time
-import uuid
-import zlib
 from contextlib import nullcontext
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional
 
 from plepa_engine.censor import censor_file, is_pose_censor_required, unload_censor_models
-from plepa_engine.checkpoint_service import CheckpointService
-from plepa_engine.comfy_client import ComfyClient, ComfyClientError
+from plepa_engine.comfy_client import ComfyClient
+from plepa_engine.config import DEFAULT_ENGINE, DEFAULT_ROSTER, PROJECTS_DIR
+from plepa_engine.models import CharacterConfig, GenerationResult
 from plepa_engine.qa_validator import validate_generated_image
-from plepa_engine.config import (
-    COMFY_HOST,
-    DEFAULT_ENGINE,
-    DEFAULT_REF_WEIGHT,
-    DEFAULT_ROSTER,
-    DEFAULT_SDXL_CFG,
-    DEFAULT_SDXL_CKPT,
-    DEFAULT_SDXL_HEIGHT,
-    DEFAULT_SDXL_SAMPLER,
-    DEFAULT_SDXL_SCHEDULER,
-    DEFAULT_SDXL_STEPS,
-    DEFAULT_SDXL_WIDTH,
-    PROJECTS_DIR,
-)
-from plepa_engine.models import (
-    CharacterConfig,
-    GenerationResult,
-    GenerationTarget,
-    PoseEntry,
-)
-from plepa_engine.prompt_builder import assemble_sdxl_prompt
-from plepa_engine.reporter import asset_filename, get_subfolder_for_code, get_legacy_subfolder_for_code, print_batch_summary, print_overall_batch_summary
+from plepa_engine.reporter import print_batch_summary, print_overall_batch_summary
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.background_service import default_background_service
 from plepa_engine.services.character_service import default_character_service
-from plepa_engine.services.config_service import default_config_service
+from plepa_engine.services.generation.manifest import load_manifest_state, save_batch_manifest_atomic
+from plepa_engine.services.generation.plan import (
+    compute_deterministic_pose_seed,
+    generate_mock_image,
+    get_optimal_resolution_for_pose,
+    is_portrait_emotion_pose,
+    prepare_batch_plan,
+    resolve_effective_sdxl_params,
+)
+from plepa_engine.services.generation.prepare import (
+    build_pose_work_item,
+    resolve_char_workspace_and_ref,
+)
+from plepa_engine.services.generation.runner import (
+    apply_censor_to_asset_atomic,
+    dispatch_pose_work_item,
+    resolve_origin_path_compat,
+)
+from plepa_engine.services.generation_options import (  # CLI·Engine·GUI 단일 진실 공급원(SSOT)
+    GENERATION_OPTION_SPECS,
+    resolve_workflow_loras,
+)
 from plepa_engine.services.pose_background_service import default_pose_bg_service
 from plepa_engine.services.pose_service import default_pose_service
-from plepa_engine.workflow_templates import build_sdxl_workflow
-
-
 
 logger = logging.getLogger(__name__)
-
-
-def is_portrait_emotion_pose(pose_obj: Any) -> bool:
-    """세로형 비율 포즈(000~024 또는 emotions/genit_emotions 섹션)인지 판별합니다."""
-    if pose_obj is None:
-        return True
-    code_s = str(getattr(pose_obj, "code", "") or "").strip()
-    if code_s.isdigit():
-        return 0 <= int(code_s) <= 24
-    section = str(getattr(pose_obj, "section", "") or "").strip().lower()
-    if section in ("emotions", "genit_emotions"):
-        return True
-    return False
-
-
-def get_optimal_resolution_for_pose(
-    pose_obj: Any,
-    default_w: int,
-    default_h: int,
-    engine: str = "sdxl",
-    user_specified: bool = False,
-) -> Tuple[int, int]:
-    """
-    포즈 대역별 하이브리드 최적 해상도(V3.2):
-    - 사용자가 --width / --height를 명시한 경우(user_specified=True): 사용자 지정값(default_w, default_h) 그대로 반환
-    - 000~024 (감정 표현 / emotions 및 초반 단독 포즈): 세로형 (short_side, long_side) 기본 832x1216
-    - 025+ (일상·이벤트·로맨스·성인 H-씬): 가로형 (long_side, short_side) 기본 1216x832
-    """
-    if user_specified:
-        return default_w, default_h
-    short_side = min(default_w, default_h)
-    long_side = max(default_w, default_h)
-    if is_portrait_emotion_pose(pose_obj):
-        return short_side, long_side
-    return long_side, short_side
-
-
-def generate_mock_image(output_path: Path) -> None:
-    """ComfyUI 연동 없이 0.001초 만에 더미 WebP 이미지를 생성하여 파이프라인 무결성을 검증합니다."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        from PIL import Image
-        img = Image.new("RGB", (64, 64), color=(60, 100, 180))
-        img.save(output_path, "WEBP", quality=80)
-    except Exception:
-        tiny_webp = (
-            b"RIFF\x1a\x00\x00\x00WEBPVP8L\x0e\x00\x00\x00/x\x00\x00\x00\x00\x00\x88\x88\xfe\x07\x00\x00"
-        )
-        with open(output_path, "wb") as f:
-            f.write(tiny_webp)
-
-
-def compute_deterministic_pose_seed(pose_code: str, char_prefix: str) -> int:
-    """포즈 코드 및 캐릭터 식별자 기반의 프로세스 독립적 결정론적 시드를 산출합니다."""
-    code_digits = re.sub(r"\D", "", str(pose_code or "").strip())
-    numeric_code = int(code_digits) if code_digits else (zlib.crc32(str(pose_code or "").encode("utf-8")) % 1000)
-    char_offset = zlib.crc32(str(char_prefix or "").encode("utf-8")) % 100000
-    return numeric_code * 1000 + char_offset
 
 
 @dataclass
@@ -169,58 +100,6 @@ class GenerationParams:
     out_dir: Optional[str] = None  # 별도 테스트 출력 루트 폴더 (지정 시 out_dir/{roster}/{char}/에 저장)
 
 
-# CLI·Engine·GUI 단일 진실 공급원(SSOT) 레지스트리 및 LoRA 해석기 하위 호환 재노출
-from plepa_engine.services.generation_options import (
-    GENERATION_OPTION_SPECS,
-    resolve_workflow_loras,
-)
-
-
-def resolve_effective_sdxl_params(
-    params: GenerationParams,
-    conf: Dict[str, Any],
-    profile: Any,
-) -> Tuple[int, int, int, float, str, str]:
-    """
-    실효 SDXL 생성 파라미터 산출 우선순위:
-    1) params.* (CLI/API 호출 시 명시적으로 지정된 값)
-    2) conf['sdxl_*'] (/settings 전역 설정 저장값 — 단, params.ckpt로 다른 체크포인트를 일회성 오버라이드한 경우에는 해당 체크포인트 profile 우선)
-    3) profile.* (체크포인트 프로필 기본값)
-    """
-    saved_ckpt = str(conf.get("sdxl_ckpt") or "").strip()
-    explicit_ckpt = str(params.ckpt or "").strip()
-    use_saved_conf = (not explicit_ckpt) or (explicit_ckpt == saved_ckpt)
-
-    def _pick_int(param_val: Optional[int], conf_key: str, prof_val: int) -> int:
-        if param_val is not None:
-            return int(param_val)
-        if use_saved_conf and conf.get(conf_key) is not None:
-            return int(conf[conf_key])
-        return int(prof_val)
-
-    def _pick_float(param_val: Optional[float], conf_key: str, prof_val: float) -> float:
-        if param_val is not None:
-            return float(param_val)
-        if use_saved_conf and conf.get(conf_key) is not None:
-            return float(conf[conf_key])
-        return float(prof_val)
-
-    def _pick_str(param_val: Optional[str], conf_key: str, prof_val: str) -> str:
-        if param_val is not None and str(param_val).strip():
-            return str(param_val).strip()
-        if use_saved_conf and conf.get(conf_key):
-            return str(conf[conf_key]).strip()
-        return str(prof_val)
-
-    width = _pick_int(params.width, "sdxl_width", profile.width)
-    height = _pick_int(params.height, "sdxl_height", profile.height)
-    steps = _pick_int(params.steps, "sdxl_steps", profile.steps)
-    cfg = _pick_float(params.cfg, "sdxl_cfg", profile.cfg)
-    sampler = _pick_str(params.sampler, "sdxl_sampler", profile.sampler)
-    scheduler = _pick_str(params.scheduler, "sdxl_scheduler", profile.scheduler)
-    return width, height, steps, cfg, sampler, scheduler
-
-
 class GenerationService:
     """배치 이미지 생성 파이프라인 서비스."""
 
@@ -246,14 +125,7 @@ class GenerationService:
         origin_dir: Path,
     ) -> Path:
         """2대/6대/플랫 구조 호환 원본(_origin) 백업 경로를 우선순위에 따라 탐색합니다."""
-        candidates = [sub_origin_dir / filename]
-        if legacy_sub_origin is not None:
-            candidates.append(legacy_sub_origin / filename)
-        candidates.append(origin_dir / filename)
-        for cand in candidates:
-            if cand.exists():
-                return cand
-        return sub_origin_dir / filename
+        return resolve_origin_path_compat(filename, sub_origin_dir, legacy_sub_origin, origin_dir)
 
     @staticmethod
     def _apply_censor_to_asset(
@@ -269,33 +141,19 @@ class GenerationService:
         is_otokonoko: Optional[bool] = None,
     ) -> bool:
         """단일 무검열 원본(_origin) 백업을 보장한 뒤 검열본을 원자적 임시파일로 생성하여 out_path를 안전 교체합니다."""
-        backup_source = src_for_backup or out_path
-        if (overwrite_origin or not origin_path.exists()) and backup_source.exists():
-            origin_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(backup_source, origin_path)
-
-        targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-        tmp_censored = out_path.parent / f".tmp_{uuid.uuid4().hex[:6]}_{out_path.name}"
-        try:
-            c_res = censor_file(
-                origin_path,
-                dst_path=tmp_censored,
-                style=params.censor_style,
-                targets=targets,
-                pose_code=pose_code,
-                enable_anchor_fallback=params.anchor_fallback,
-                backup_dir=None,
-                roster=roster,
-                is_nude=is_nude,
-                is_otokonoko=is_otokonoko,
-            )
-            if c_res and c_res.exists():
-                os.replace(tmp_censored, out_path)
-                return True
-            return False
-        finally:
-            if tmp_censored.exists():
-                tmp_censored.unlink(missing_ok=True)
+        del sub_origin_dir
+        return apply_censor_to_asset_atomic(
+            censor_file_fn=censor_file,
+            origin_path=origin_path,
+            out_path=out_path,
+            params=params,
+            pose_code=pose_code,
+            roster=roster,
+            src_for_backup=src_for_backup,
+            overwrite_origin=overwrite_origin,
+            is_nude=is_nude,
+            is_otokonoko=is_otokonoko,
+        )
 
     def run_batch(
         self,
@@ -304,646 +162,65 @@ class GenerationService:
         is_cancelled: Optional[Callable[[], bool]] = None,
         quiet: bool = False,
     ) -> List[GenerationResult]:
-        """
-        배치 생성 루프를 실행합니다.
-        진행 중 on_progress(현재_항목_인덱스, 전체_항목_수, 결과)를 호출합니다.
-        is_cancelled()가 True를 반환하면 생성을 즉시 중단합니다.
-        """
-        # 0. 단일 캐릭터인 경우 해당 캐릭터의 default_mode 확인 (SDXL 단일화 정책에 따라 flux 지정 시 sdxl로 정규화)
-        from plepa_engine.config import resolve_default_mode
-        target_chars_preliminary = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
-        if len(target_chars_preliminary) == 1:
-            char_obj, _ = target_chars_preliminary[0]
-            if hasattr(char_obj, 'default_mode') and char_obj.default_mode:
-                try:
-                    resolved_engine = resolve_default_mode(char_obj.default_mode)
-                    if resolved_engine != "sdxl":
-                        if not quiet:
-                            print(f"  [안내] 캐릭터 '{char_obj.prefix}'의 레거시 default_mode '{char_obj.default_mode}'는 SDXL 단일화 원칙에 따라 'sdxl'로 실행됩니다.")
-                        resolved_engine = "sdxl"
-                    params.engine = resolved_engine
-                except ValueError as ve:
-                    if not quiet:
-                        print(f"  [경고] 캐릭터 default_mode '{char_obj.default_mode}' 무효: {ve}")
-
-        if params.engine != "sdxl":
-            if not quiet:
-                print(f"  [안내] 레거시 엔진 '{params.engine}' 요청은 SDXL 단일 파이프라인으로 자동 정규화됩니다.")
-            params.engine = "sdxl"
-
-        # 1. 전역 설정(Config) 최신값 조회 및 해상도/샘플러 산출 (SDXL 단일 SSOT)
-        conf = default_config_service.get_config()
-        ckpt_name = params.ckpt or conf.get("sdxl_ckpt", DEFAULT_SDXL_CKPT)
-        checkpoint_svc = CheckpointService()
-        profile = checkpoint_svc.get_profile_for_checkpoint(ckpt_name)
-
-        # 우선순위: CLI/API 명시값(params) > 전역 저장 설정(conf, 다른 체크포인트 일회성 오버라이드가 아닐 때) > 체크포인트 프로필(profile)
-        width, height, steps, cfg, sampler, scheduler = resolve_effective_sdxl_params(params, conf, profile)
-
-        if not quiet and params.ckpt:
-            print(f"  체크포인트 프로필: '{profile.name}' 자동 적용")
-
-        # 2. 포즈 DB 및 대상 캐릭터/포즈 코드 해석
-        db = self.pose_svc.load_pose_db(engine="sdxl", roster=params.roster)
-        target_chars = self.char_svc.resolve_characters(params.character_expr, roster=params.roster)
-        codes = self.pose_svc.resolve_pose_codes(params.pose_expr, db, roster=params.roster)
-
-        # 2-1. 젠더별 포즈 필터링 + 로스터 전용 포즈 필터링 (PoseService SSOT 공용 위임)
-        def filter_codes_by_gender_and_roster(base_codes: List[str], char_obj, current_roster: str) -> List[str]:
-            """포즈 메타데이터(section, target_gender, allowed_rosters) 기반 데이터 주도형 필터링"""
-            return [
-                code for code in base_codes
-                if self.pose_svc.is_pose_allowed_for_character(
-                    db.get(code), char_obj, roster=current_roster, code=code
-                )
-            ]
-
-
-        if params.profile:
-            target_chars = [(c.with_profile(params.profile), r) for c, r in target_chars]
-
-        # 3. ComfyUI 연결 검사
-        comfy_host = conf.get("comfy_host", COMFY_HOST)
-        client = ComfyClient(host=comfy_host)
-        if not params.dry_run and not params.mock and not params.censor_only:
-            if not client.check_connection():
-                raise ConnectionError(
-                    f"ComfyUI 서버({comfy_host})에 연결할 수 없습니다. "
-                    "ComfyUI의 run_nvidia_gpu.bat를 가동해 주십시오."
-                )
-
-        # 3-1. 캐릭터별 포즈 세트 계산 (젠더 필터링 + 로스터 제약 적용)
-        char_pose_map = {}
-        for char, actual_roster in target_chars:
-            filtered_codes = filter_codes_by_gender_and_roster(codes, char, actual_roster)
-            char_pose_map[char.prefix] = filtered_codes
-        
-        total_items = sum(len(poses) for poses in char_pose_map.values())
+        """배치 생성 루프를 실행합니다 (on_progress 및 is_cancelled 인터럽트 지원)."""
+        plan = prepare_batch_plan(
+            params=params, char_svc=self.char_svc, pose_svc=self.pose_svc,
+            resolve_params_fn=resolve_effective_sdxl_params, comfy_client_cls=ComfyClient, quiet=quiet,
+        )
         current_item_index = 0
         all_results: List[GenerationResult] = []
-
-        if not quiet:
-            print("=" * 60)
-            print(f"  [플에파] SDXL 단일 파이프라인 가동 모드: {ckpt_name}")
-            print(f"  대상 캐릭터: 총 {len(target_chars)}명 ({', '.join(c.prefix for c, _ in target_chars)})")
-            print(f"  젠더별 포즈 필터링:")
-            for char, _ in target_chars:
-                pose_count = len(char_pose_map[char.prefix])
-                gender_label = "오토코노코(150~209)" if char.gender == "otokonoko" else f"{char.gender}(V3 표준)"
-                print(f"    - {char.name} ({char.prefix}): {pose_count}개 [{gender_label}]")
-            print(f"  총 생성 에셋: {total_items}개")
-            print(f"  해상도: {width}x{height} | 스텝: {steps} | CFG: {cfg} | 샘플러: {sampler} / {scheduler}")
-            if params.profile:
-                print(f"  프로필: '{params.profile}' 적용")
-            if params.bg:
-                print(f"  즉석 배경: '{params.bg}'")
-            if params.custom_neg:
-                print(f"  추가 네거티브: '{params.custom_neg}'")
-            if params.mock:
-                print("  시뮬레이션: --mock 모드 활성화 (초고속 더미 생성)")
-            print(f"  작업 모드: {'강제 덮어쓰기 (--overwrite / -f)' if params.overwrite else '빈칸 채우기 (기본: 기존 파일 보존)'}")
-            print(f"  파일명 형식: {params.naming}")
-            fd_active = True if params.face_detailer is None else params.face_detailer
-            print(f"  보정 옵션: Face Detailer={'활성' if fd_active else '비활성'}, Hand Detailer={'활성' if params.hand_detailer else '비활성'}, Upscale={'활성' if params.upscale else '비활성'}")
-            if params.censor:
-                print(f"  자동 검열: 활성 (스타일: {params.censor_style}, 대상: {params.censor_targets}, 앵커폴백: {params.anchor_fallback})")
-            print("=" * 60)
-
-        session_cm = client.session() if (not params.dry_run and not params.mock and not params.censor_only) else nullcontext()
+        session_cm = plan.client.session() if (not params.dry_run and not params.mock and not params.censor_only) else nullcontext()
         total_batch_start = time.time()
+
         with session_cm:
-            for char_idx, (char, actual_roster) in enumerate(target_chars, 1):
+            for char_idx, (char, actual_roster) in enumerate(plan.target_chars, 1):
                 if is_cancelled and is_cancelled():
                     if not quiet:
                         print("\n[알림] 사용자에 의해 배치가 취소되었습니다.")
                     break
-    
-                bg_prompt = params.bg.strip() if params.bg else self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine="sdxl")
-                # --out-dir / --ckpt-tag 지정 시 별도 출력 폴더 또는 체크포인트 비교용 서브폴더에 저장
-                base_asset_root = (Path(params.out_dir) / actual_roster) if params.out_dir else (PROJECTS_DIR / actual_roster / "assets")
-                if params.ckpt_tag:
-                    output_dir = base_asset_root / char.prefix / f"ckpt_{params.ckpt_tag}"
-                    origin_dir = base_asset_root / f"{char.prefix}_origin" / f"ckpt_{params.ckpt_tag}"
-                else:
-                    output_dir = base_asset_root / char.prefix
-                    origin_dir = base_asset_root / f"{char.prefix}_origin"
-                output_dir.mkdir(parents=True, exist_ok=True)
-    
-                if not quiet:
-                    print(f"\n▶ [{char_idx}/{len(target_chars)}] {char.name} ({char.prefix}) [로스터: {actual_roster}]")
-                    if params.out_dir:
-                        print(f"  별도 출력 폴더: {output_dir}")
-                    elif params.ckpt_tag:
-                        print(f"  저장 위치: assets/{char.prefix}/ckpt_{params.ckpt_tag}/")
-                    if params.bg:
-                        print(f"  즉석 배경: '{params.bg}' 적용")
-                    elif params.bg_preset and params.bg_preset not in ("default", "auto", ""):
-                        print(f"  배경 프리셋: '{params.bg_preset}' 고정 적용")
-                    else:
-                        print("  배경 프리셋: 포즈별 자동 매핑(Auto) 적용")
-    
-                # IP-Adapter 참조 이미지 탐색 및 업로드
-                ref_file_name = None
-                ref_weight = params.ref_weight if params.ref_weight is not None else getattr(char, "ref_weight", DEFAULT_REF_WEIGHT)
-                if not params.no_ref and ref_weight > 0.0:
-                    ref_path = self.asset_svc.find_reference_image(char.prefix, actual_roster, custom_path=params.ref_image)
-                    if ref_path:
-                        if not params.dry_run and not params.mock and not params.censor_only:
-                            try:
-                                ref_file_name = client.upload_image(ref_path)
-                            except Exception as ue:
-                                if not quiet:
-                                    print(f"  [경고] 레퍼런스 업로드 실패 ({ue}) - 순수 프롬프트로 진행")
-                                ref_file_name = None
-                        else:
-                            ref_file_name = ref_path.name
-                        if not quiet:
-                            print(f"  IP-Adapter: '{ref_path.name}' 적용 (가중치: {ref_weight:.2f})")
-                    elif not quiet:
-                        print("  IP-Adapter: 레퍼런스 이미지 없음 (순수 프롬프트 생성)")
-                elif not quiet:
-                    print("  IP-Adapter: 비활성화 (순수 고화질 프롬프트 생성)")
-    
-                char_results: List[GenerationResult] = []
-                total_start = time.time()
-                char_codes = char_pose_map[char.prefix]
 
-                existing_manifest_seeds = {}
-                existing_manifest_qc_failed = set()
-                manifest_file = output_dir / "_batch_manifest.json"
-                if manifest_file.exists():
-                    try:
-                        with open(manifest_file, "r", encoding="utf-8") as mf:
-                            m_data = json.load(mf)
-                            for itm in m_data.get("items", []):
-                                c_str = str(itm.get("code", "")).strip()
-                                if c_str:
-                                    if itm.get("seed") is not None:
-                                        existing_manifest_seeds[c_str] = itm["seed"]
-                                    if itm.get("qc_passed") is False:
-                                        existing_manifest_qc_failed.add(c_str)
-                    except Exception:
-                        pass
+                output_dir, origin_dir, ref_file_name, ref_weight = resolve_char_workspace_and_ref(
+                    char_idx=char_idx, total_chars=len(plan.target_chars), char=char, actual_roster=actual_roster,
+                    params=params, asset_svc=self.asset_svc, client=plan.client, quiet=quiet, projects_dir=PROJECTS_DIR,
+                )
+                char_results: List[GenerationResult] = []
+                char_start = time.time()
+                char_codes = plan.char_pose_map[char.prefix]
+                manifest_seeds, manifest_qc_failed = load_manifest_state(output_dir)
 
                 for idx, code in enumerate(char_codes, 1):
                     if is_cancelled and is_cancelled():
                         if not quiet:
                             print("\n[알림] 사용자에 의해 배치가 취소되었습니다.")
                         break
-    
                     current_item_index += 1
-                    pose = db[code]
-                    subfolder = get_subfolder_for_code(code)
-                    sub_out_dir = output_dir / subfolder
-                    sub_origin_dir = origin_dir / subfolder
-                    out_name = asset_filename(char.prefix, code, label=pose.label, naming=params.naming)
-                    legacy_name = asset_filename(char.prefix, code, naming="code")
-
-                    # 3-Track 탐색기: 신규 2대 서브폴더(01_normal, 02_h_scenes) 우선 -> 구버전 6대 서브폴더 폴백 -> 기존 플랫 디렉토리 폴백
-                    legacy_subfolder = get_legacy_subfolder_for_code(code)
-                    legacy_sub_out = output_dir / legacy_subfolder
-                    legacy_sub_origin = origin_dir / legacy_subfolder
-
-                    if (sub_out_dir / out_name).exists():
-                        out_path = sub_out_dir / out_name
-                    elif (legacy_sub_out / out_name).exists():
-                        out_path = legacy_sub_out / out_name
-                    elif (output_dir / out_name).exists():
-                        out_path = output_dir / out_name
-                    else:
-                        sub_out_dir.mkdir(parents=True, exist_ok=True)
-                        out_path = sub_out_dir / out_name
-
-                    if (sub_out_dir / legacy_name).exists():
-                        legacy_path = sub_out_dir / legacy_name
-                    elif (legacy_sub_out / legacy_name).exists():
-                        legacy_path = legacy_sub_out / legacy_name
-                    elif (output_dir / legacy_name).exists():
-                        legacy_path = output_dir / legacy_name
-                    else:
-                        legacy_path = sub_out_dir / legacy_name
-    
-                    # 포즈별 동적 배경 프롬프트 결정
-                    if params.bg:
-                        effective_bg_prompt = params.bg.strip()
-                    elif params.bg_preset and params.bg_preset not in ("default", "auto", ""):
-                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=params.bg_preset, engine="sdxl")
-                    else:
-                        pose_bg_key = self.pose_bg_svc.get_background_for_pose(actual_roster, code)
-                        effective_bg_prompt = self.bg_svc.get_preset(actual_roster, key=pose_bg_key, engine="sdxl")
-
-                    pos_prompt, neg_prompt, is_nude = assemble_sdxl_prompt(
-                        char, pose, bg_prompt=effective_bg_prompt, custom_pos=params.custom_pos, custom_neg=params.custom_neg,
-                        checkpoint_name=ckpt_name
+                    item = build_pose_work_item(
+                        idx=idx, total_char_codes=len(char_codes), code=code, pose=plan.db[code],
+                        char=char, actual_roster=actual_roster, output_dir=output_dir, origin_dir=origin_dir,
+                        ref_file_name=ref_file_name, ref_weight=ref_weight, existing_manifest_seeds=manifest_seeds,
+                        plan=plan, params=params, bg_svc=self.bg_svc, pose_bg_svc=self.pose_bg_svc,
+                        get_opt_res_fn=get_optimal_resolution_for_pose, compute_det_seed_fn=compute_deterministic_pose_seed,
+                        quiet=quiet,
                     )
-                    display_prompt = pos_prompt
-
-                    # IP-Adapter 2-Track 하이브리드 모드 판별:
-                    # - "full": 정적 1인 착의 씬 (emotions 000~019 등)
-                    # - "face_only": 역동적 포즈, 테마 의상 스왑, 탈의/H-씬, 2인 모브 등장 씬 전체
-                    two_person_tokens = (
-                        "1boy", "partner", "faceless male", "bald male", "kiss", "hug", "carry",
-                        "grab", "spooning", "blowjob", "missionary", "doggystyle", "cowgirl",
-                        "fellatio", "cunnilingus", "paizuri"
+                    res = dispatch_pose_work_item(
+                        item=item, char=char, origin_dir=origin_dir, actual_roster=actual_roster,
+                        plan=plan, existing_manifest_qc_failed=manifest_qc_failed, params=params,
+                        validate_fn=validate_generated_image, is_censor_req_fn=is_pose_censor_required,
+                        apply_censor_fn=self._apply_censor_to_asset, quiet=quiet,
                     )
-                    p_low = pose.prompt.lower()
-                    from plepa_engine.prompt_builder import resolve_pose_outfit_slot
-                    outfit_slot = resolve_pose_outfit_slot(pose)
-                    if is_nude or outfit_slot != "default" or pose.section not in ("emotions", "genit_emotions") or any(kw in p_low for kw in two_person_tokens):
-                        ref_mode = "face_only"
-                    else:
-                        ref_mode = "full"
-
-                    eff_w, eff_h = get_optimal_resolution_for_pose(
-                        pose, width, height, engine="sdxl",
-                        user_specified=(params.width is not None or params.height is not None)
-                    )
-                    code_key = str(code).strip()
-                    sdxl_seed = params.seed if params.seed is not None else -1
-                    if sdxl_seed < 0 and params.reuse_seed and code_key in existing_manifest_seeds:
-                        sdxl_seed = existing_manifest_seeds[code_key]
-                    elif sdxl_seed < 0 and params.deterministic_pose_seed:
-                        sdxl_seed = compute_deterministic_pose_seed(code, char.prefix)
-                    workflow = build_sdxl_workflow(
-                        positive_prompt=pos_prompt, negative_prompt=neg_prompt,
-                        output_prefix=f"{char.prefix}_{code}", seed=sdxl_seed,
-                        width=eff_w, height=eff_h, steps=steps, cfg=cfg,
-                        sampler=sampler, scheduler=scheduler, ckpt_name=ckpt_name,
-                        use_face_detailer=params.face_detailer, use_hand_detailer=params.hand_detailer,
-                        use_freeu=params.freeu, use_upscale=params.upscale,
-                        ref_image_name=ref_file_name, ref_weight=ref_weight, ref_mode=ref_mode,
-                        loras=resolve_workflow_loras(char, params),
-                    )
-    
-                    # 워크플로우 시드 추출 및 reuse_seed 처리
-                    current_seed = None
-                    for node_id, node_data in workflow.items():
-                        if isinstance(node_data, dict) and "inputs" in node_data:
-                            inp = node_data["inputs"]
-                            if "seed" in inp:
-                                current_seed = inp["seed"]
-                                break
-                            elif "noise_seed" in inp:
-                                current_seed = inp["noise_seed"]
-                                break
-
-                    code_key = str(code).strip()
-                    if params.seed is not None:
-                        for node_id, node_data in workflow.items():
-                            if isinstance(node_data, dict) and "inputs" in node_data:
-                                inp = node_data["inputs"]
-                                if "seed" in inp:
-                                    inp["seed"] = params.seed
-                                elif "noise_seed" in inp:
-                                    inp["noise_seed"] = params.seed
-                        current_seed = params.seed
-                    elif params.reuse_seed and code_key in existing_manifest_seeds:
-                        reused = existing_manifest_seeds[code_key]
-                        for node_id, node_data in workflow.items():
-                            if isinstance(node_data, dict) and "inputs" in node_data:
-                                inp = node_data["inputs"]
-                                if "seed" in inp:
-                                    inp["seed"] = reused
-                                elif "noise_seed" in inp:
-                                    inp["noise_seed"] = reused
-                        current_seed = reused
-
-                    target = GenerationTarget(
-                        code=code,
-                        section=pose.section,
-                        label=pose.label,
-                        assembled_prompt=display_prompt,
-                        is_nude=is_nude,
-                        output_filename=out_name,
-                        seed=current_seed,
-                        character_prefix=char.prefix,
-                        character_name=char.name,
-                    )
-    
-                    if not quiet:
-                        track_info = f" [IP-A: {ref_mode}]" if (params.engine == "sdxl" and ref_file_name) else ""
-                        print(f"  [{idx:02d}/{len(char_codes):02d}] #{code} {pose.label:<10} ({pose.section}){track_info} -> {out_name}", end="", flush=True)
-    
-                    is_char_otokonoko = (
-                        (str(getattr(char, "gender", "") or "").strip().lower() == "otokonoko")
-                        or ("otokonoko" in (getattr(char, "sdxl_positive", "") or "").lower())
-                    )
-                    should_censor = (not params.dry_run) and params.censor and is_pose_censor_required(
-                        pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster, is_otokonoko=is_char_otokonoko
-                    )
-
-                    # 0. CENSOR-ONLY (기존 이미지 소급 검열 모드: 검열본은 assets/{prefix}/에 교체 배치, 원본은 assets/{prefix}_origin/에 보존)
-                    if params.censor_only:
-                        origin_path = self._resolve_origin_path(
-                            out_name, sub_origin_dir, legacy_sub_origin, origin_dir
-                        )
-                        src_path = origin_path if (origin_path.exists() and origin_path.stat().st_size > 0) else out_path
-                        if src_path.exists() and src_path.stat().st_size > 0:
-                            if should_censor:
-                                applied = self._apply_censor_to_asset(
-                                    origin_path,
-                                    out_path,
-                                    sub_origin_dir,
-                                    params,
-                                    pose.code,
-                                    actual_roster,
-                                    src_for_backup=src_path,
-                                    is_nude=is_nude,
-                                    is_otokonoko=is_char_otokonoko,
-                                )
-                                if applied:
-                                    if not quiet:
-                                        print(f" [검열본 적용: assets/{char.prefix}/{out_name} (원본: {char.prefix}_origin/)]")
-                                else:
-                                    if not quiet:
-                                        print(" [검열 대상 미감지(원본 유지, _origin 백업 완비)]")
-                                res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
-                            else:
-                                if not quiet:
-                                    print(" [비-H씬(검열 대상 아님): 건너뜀]")
-                                res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
-                        else:
-                            if not quiet:
-                                print(" [원본 파일 없음: 건너뜀]")
-                            res = GenerationResult(target=target, success=False, duration_sec=0.0, error_message="원본 파일 없음")
-                        char_results.append(res)
-                        all_results.append(res)
-                        if on_progress:
-                            on_progress(current_item_index, total_items, res)
-                        continue
-
-                    # 1. 기존 파일 스킵 (단, 직전 _batch_manifest.json에 qc_passed=False 기록 시 자동 재시도)
-                    is_prev_qc_failed = params.retry_qc_failed and (code_key in existing_manifest_qc_failed)
-                    if not params.overwrite and not is_prev_qc_failed and out_path.exists() and out_path.stat().st_size > 0:
-                        if not quiet:
-                            print(" [기존 파일 보존: 건너뜀]", end="")
-                        if should_censor:
-                            origin_path = self._resolve_origin_path(
-                                out_path.name, sub_origin_dir, legacy_sub_origin, origin_dir
-                            )
-                            applied = self._apply_censor_to_asset(
-                                origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster,
-                                is_nude=is_nude, is_otokonoko=is_char_otokonoko,
-                            )
-                            if applied and not quiet:
-                                print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                        if not quiet:
-                            print()
-                        res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
-                        char_results.append(res)
-                        all_results.append(res)
-                        if on_progress:
-                            on_progress(current_item_index, total_items, res)
-                        continue
-
-                    if is_prev_qc_failed and not quiet and out_path.exists():
-                        print(" [이전 QC 불량 이력 감지 -> 자동 재생성]", end="")
-
-                    # 2. 스마트 사본 보존
-                    if not params.overwrite and not is_prev_qc_failed and not out_path.exists() and legacy_path.exists() and legacy_path.stat().st_size > 0:
-                        try:
-                            out_path.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copy2(legacy_path, out_path)
-                            if not quiet:
-                                print(" [기존 원본에서 하이브리드 사본 복제 완료]", end="")
-                            if should_censor:
-                                origin_path = self._resolve_origin_path(
-                                    out_path.name, sub_origin_dir, None, origin_dir
-                                )
-                                applied = self._apply_censor_to_asset(
-                                    origin_path, out_path, sub_origin_dir, params, pose.code, actual_roster,
-                                    is_nude=is_nude, is_otokonoko=is_char_otokonoko,
-                                )
-                                if applied and not quiet:
-                                    print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                            if not quiet:
-                                print()
-                            res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
-                            char_results.append(res)
-                            all_results.append(res)
-                            if on_progress:
-                                on_progress(current_item_index, total_items, res)
-                            continue
-                        except Exception as cpe:
-                            if not quiet:
-                                print(f" [사본 복제 실패({cpe}) -> 신규 생성 진행]", end="")
-    
-                    # 3. DRY-RUN
-                    if params.dry_run:
-                        if not quiet:
-                            print(" [DRY-RUN 완료]")
-                        res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=0.0)
-                        char_results.append(res)
-                        all_results.append(res)
-                        if on_progress:
-                            on_progress(current_item_index, total_items, res)
-                        continue
-    
-                    # 4. MOCK 생성
-                    if params.mock:
-                        item_start = time.time()
-                        generate_mock_image(out_path)
-                        duration = time.time() - item_start
-                        if not quiet:
-                            print(f" [MOCK 생성 완료: {duration:.3f}초]")
-                        res = GenerationResult(target=target, success=True, image_path=out_path, duration_sec=duration)
-                        char_results.append(res)
-                        all_results.append(res)
-                        if on_progress:
-                            on_progress(current_item_index, total_items, res)
-                        continue
-    
-                    # 5. 실제 ComfyUI 생성
-                    item_start = time.time()
-                    try:
-                        max_attempts = (params.max_retries + 1) if params.auto_qc else 1
-                        current_wf = workflow
-                        final_qc_fail = None
-
-                        for attempt in range(max_attempts):
-                            if attempt > 0:
-                                new_seed = random.randint(1, 2**63 - 1)
-                                target.seed = new_seed
-                                current_wf = copy.deepcopy(workflow)
-                                for node_id, node_data in current_wf.items():
-                                    if isinstance(node_data, dict) and "inputs" in node_data:
-                                        inp = node_data["inputs"]
-                                        if "seed" in inp:
-                                            inp["seed"] = new_seed
-                                        elif "noise_seed" in inp:
-                                            inp["noise_seed"] = new_seed
-
-                            client.generate_image(workflow=current_wf, output_path=out_path)
-
-                            # Auto-QC 품질 및 결함 검증
-                            if params.auto_qc:
-                                pose_mob_tier = getattr(pose, "mob_tier", None)
-                                if pose_mob_tier == 0:
-                                    qc_is_solo, qc_is_two_person, qc_is_offscreen = True, False, True
-                                elif pose_mob_tier in (1, 2, 3):
-                                    qc_is_solo, qc_is_two_person, qc_is_offscreen = False, True, True
-                                else:
-                                    qc_is_solo = pose.is_solo_scene
-                                    qc_is_two_person = pose.is_two_person
-                                    qc_is_offscreen = pose.is_offscreen_partner
-
-                                qc_prompt = (
-                                    pose.get_prompt(getattr(char, "gender", "female"))
-                                    if hasattr(pose, "get_prompt") and callable(pose.get_prompt)
-                                    else (pose.prompt or "")
-                                )
-                                pose_partner_pos = (getattr(pose, "partner_pos", None) or "").strip().lower()
-                                qc_allow_partner_head = (
-                                    pose_mob_tier == 2
-                                    or (
-                                        qc_is_two_person
-                                        and pose_partner_pos in ("behind", "above", "below", "side_kiss", "carry", "bury_chest", "between_thighs")
-                                    )
-                                )
-                                is_kiss = "kiss" in qc_prompt.lower() or str(target.code) in ("060", "061", "019")
-                                passed, fail_reason, _ = validate_generated_image(
-                                    image=out_path,
-                                    is_solo_scene=qc_is_solo,
-                                    is_two_person=qc_is_two_person,
-                                    is_offscreen_partner=qc_is_offscreen,
-                                    is_kiss_scene=is_kiss,
-                                    allow_partner_head=qc_allow_partner_head,
-                                    section=target.section,
-                                    prompt=qc_prompt,
-                                )
-                                if not passed:
-                                    final_qc_fail = fail_reason
-                                    # ── 프롬프트 결함 자가 진단 및 경고 시스템 ──
-                                    if attempt + 1 >= params.prompt_alert_threshold:
-                                        guide_msg = ""
-                                        if "인원" in fail_reason or "머리" in fail_reason or "얼굴" in fail_reason:
-                                            if qc_is_solo:
-                                                guide_msg = "단독 씬인데 제3자가 침범하고 있습니다. 프롬프트의 1girl/solo/partner 태그 충돌을 점검하세요."
-                                            else:
-                                                guide_msg = "2인 씬에서 허용된 인원·머리·얼굴 상한을 초과했습니다. mob_tier/partner_pos 및 모브 얼굴 차단 네거티브를 점검하세요."
-                                        elif "손 증식" in fail_reason or "손" in fail_reason:
-                                            guide_msg = "손이 비정상 증식하고 있습니다. 스킨십/손 태그 가중치를 낮추거나 Hand Detailer를 활성화하세요."
-                                        elif "화각 드리프트" in fail_reason:
-                                            guide_msg = "상반신 씬인데 전신 롱샷으로 이탈했습니다. 네거티브 (full body:1.4)를 점검하세요."
-                                        else:
-                                            guide_msg = f"프롬프트 키워드 간의 충돌 가능성을 점검하세요: {fail_reason}"
-                                        
-                                        if not quiet:
-                                            print(f"\n    🚨 [프롬프트 점검 경고] #{code} {pose.label} ({attempt+1}회 연속 결함!)\n       └─ 사유: {fail_reason}\n       └─ 진단 가이드: {guide_msg}", flush=True)
-
-                                    if attempt < params.max_retries:
-                                        if not quiet:
-                                            print(f" [Auto-QC 불량: {fail_reason} -> 재시도 {attempt+1}/{params.max_retries}]", end="", flush=True)
-                                        continue
-                                    else:
-                                        if not quiet:
-                                            print(f" [Auto-QC 불량(최대 재시도 초과): {fail_reason}]", end="", flush=True)
-                                        break
-                                else:
-                                    final_qc_fail = None
-                                    if not quiet and attempt > 0:
-                                        print(f" [Auto-QC 통과(재시도 {attempt}회)]", end="", flush=True)
-
-                                # Strict Censor QC: 성인 노출 필수 씬에서 성기 미탐지 시 리롤 (censor=False 외부 리롤 워커에서도 독립 작동)
-                                # 단, mob_tier 0~2(오프스크린/손 크롭/실루엣 밀착)는 의도적으로 성기 노출을 배제하므로 필수 검출 대상에서 제외
-                                if (
-                                    params.strict_censor_qc
-                                    and getattr(pose, "mob_tier", None) not in (0, 1, 2)
-                                    and (
-                                        should_censor
-                                        or is_pose_censor_required(
-                                            pose_code=code, pose=pose, is_nude=is_nude, file_path=out_path, roster=actual_roster, is_otokonoko=is_char_otokonoko
-                                        )
-                                    )
-                                ):
-                                    from plepa_engine.censor import POSE_SAFE_ANCHORS, detect_genitals, get_pose_category
-                                    code_norm = str(target.code).strip()
-                                    pose_cat = get_pose_category(code_norm, roster=actual_roster)
-                                    if pose_cat in POSE_SAFE_ANCHORS:
-                                        c_targets = [t.strip() for t in params.censor_targets.split(",") if t.strip()]
-                                        boxes = detect_genitals(
-                                            str(out_path),
-                                            targets=c_targets,
-                                            pose_code=code_norm,
-                                            roster=actual_roster,
-                                        )
-                                        if not boxes:
-                                            final_qc_fail = "필수 성인 씬 성기 미탐지(구도 불량)"
-                                            if attempt < params.max_retries:
-                                                if not quiet:
-                                                    print(f" [검열 QC 불량: 성기 미탐지 -> 재시도 {attempt+1}/{params.max_retries}]", end="", flush=True)
-                                                continue
-                                            else:
-                                                if not quiet:
-                                                    print(f" [검열 QC 불량(최대 재시도 초과): 성기 미탐지]", end="", flush=True)
-                                                break
-                                        else:
-                                            final_qc_fail = None
-                            break
-
-                        duration = time.time() - item_start
-                        if not quiet:
-                            print(f" [완료: {duration:.1f}초]", end="")
-                        if should_censor:
-                            origin_path = sub_origin_dir / out_path.name
-                            try:
-                                applied = self._apply_censor_to_asset(
-                                    origin_path,
-                                    out_path,
-                                    sub_origin_dir,
-                                    params,
-                                    pose.code,
-                                    actual_roster,
-                                    overwrite_origin=True,
-                                    is_nude=is_nude,
-                                    is_otokonoko=is_char_otokonoko,
-                                )
-                                if applied and not quiet:
-                                    print(f" [검열본 적용: assets/{char.prefix}/{out_path.name} (원본: {char.prefix}_origin/)]", end="")
-                            except Exception as ce:
-                                if not quiet:
-                                    print(f" [검열 실패: {ce}]", end="")
-                        if not quiet:
-                            print()
-                        res = GenerationResult(
-                            target=target,
-                            success=True,
-                            image_path=out_path,
-                            duration_sec=duration,
-                            qc_passed=(final_qc_fail is None),
-                            qc_reason=final_qc_fail,
-                            retries=attempt,
-                        )
-                    except ComfyClientError as ce:
-                        duration = time.time() - item_start
-                        if not quiet:
-                            print(f" [실패: {ce}]")
-                        res = GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ce))
-                    except Exception as ge:
-                        duration = time.time() - item_start
-                        if not quiet:
-                            print(f" [예외 발생: {ge}]")
-                        res = GenerationResult(target=target, success=False, duration_sec=duration, error_message=str(ge))
-    
                     char_results.append(res)
                     all_results.append(res)
                     if on_progress:
-                        on_progress(current_item_index, total_items, res)
-    
-                total_duration = time.time() - total_start
-                if not quiet:
-                    print_batch_summary(char.prefix, char_results, output_dir, total_duration, char_name=char.name)
+                        on_progress(current_item_index, plan.total_items, res)
 
-                # 배치 매니페스트 저널 원자적 기록 (_batch_manifest.json)
+                if not quiet:
+                    print_batch_summary(char.prefix, char_results, output_dir, time.time() - char_start, char_name=char.name)
                 self._save_batch_manifest(output_dir, char, actual_roster, params, char_results)
 
         if params.censor or params.censor_only or params.strict_censor_qc:
             unload_censor_models()
-
         if not quiet and all_results:
-            total_elapsed = time.time() - total_batch_start if "total_batch_start" in locals() else 0.0
-            print_overall_batch_summary(all_results, total_elapsed)
-
+            print_overall_batch_summary(all_results, time.time() - total_batch_start)
         return all_results
 
     def _save_batch_manifest(
@@ -954,80 +231,8 @@ class GenerationService:
         params: GenerationParams,
         results: List[GenerationResult],
     ) -> None:
-        """배치 실행 기록을 _batch_manifest.json에 원자적으로 저장합니다."""
-        if not results or getattr(params, "dry_run", False):
-            return
-
-        manifest_path = output_dir / "_batch_manifest.json"
-        temp_path = output_dir / f"_batch_manifest_{uuid.uuid4().hex[:6]}.tmp.json"
-
-        existing_items = {}
-        if manifest_path.exists():
-            try:
-                with open(manifest_path, "r", encoding="utf-8") as f:
-                    old_data = json.load(f)
-                    for item in old_data.get("items", []):
-                        if "code" in item:
-                            existing_items[str(item["code"]).strip()] = item
-            except Exception as exc:
-                logger.warning("기존 배치 매니페스트 로드 실패 (%s): %s", manifest_path, exc)
-
-        for r in results:
-            t = r.target
-            code_key = str(t.code).strip()
-            item_entry = {
-                "code": t.code,
-                "label": t.label,
-                "section": t.section,
-                "output_filename": getattr(t, "output_filename", ""),
-                "success": r.success,
-                "skipped": getattr(r, "skipped", False),
-                "duration_sec": round(r.duration_sec, 2),
-                "error_message": r.error_message,
-                "assembled_prompt": getattr(t, "assembled_prompt", ""),
-                "seed": getattr(t, "seed", None),
-                "qc_passed": getattr(r, "qc_passed", True),
-                "qc_reason": getattr(r, "qc_reason", None),
-                "retries": getattr(r, "retries", 0),
-            }
-            existing_items[code_key] = item_entry
-
-        def sort_key(k: str):
-            try:
-                return (0, int(k), "")
-            except ValueError:
-                return (1, 0, k)
-
-        sorted_codes = sorted(existing_items.keys(), key=sort_key)
-        items = [existing_items[c] for c in sorted_codes]
-
-        data = {
-            "prefix": char.prefix,
-            "character_name": char.name,
-            "roster": roster,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "engine": params.engine,
-            "checkpoint": getattr(params, "ckpt", None) or getattr(params, "sdxl_ckpt", None) or "default",
-            "total_count": len(items),
-            "success_count": sum(1 for item in items if item.get("success")),
-            "failed_count": sum(1 for item in items if not item.get("success")),
-            "qc_defect_count": sum(1 for item in items if not item.get("qc_passed", True)),
-            "items": items,
-        }
-
-        try:
-            output_dir.mkdir(parents=True, exist_ok=True)
-            with open(temp_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            temp_path.replace(manifest_path)
-        except Exception as e:
-            if temp_path.exists():
-                try:
-                    temp_path.unlink()
-                except Exception:
-                    pass
-            print(f"  [경고] 배치 매니페스트 저장 실패: {e}")
+        """배치 실행 기록을 `_batch_manifest.json`에 원자적으로 저장합니다."""
+        save_batch_manifest_atomic(output_dir, char, roster, params, results)
 
 
 default_generation_service = GenerationService()
-

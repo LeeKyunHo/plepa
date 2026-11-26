@@ -22,6 +22,11 @@ from plepa_engine.config import (
 
 
 from plepa_engine.graph_builder import WorkflowGraph
+from plepa_engine.workflow_nodes import (
+    add_ipadapter_nodes,
+    append_detailers_and_upscale,
+    append_sampler_and_decode,
+)
 
 
 def build_flux_workflow(*args: Any, **kwargs: Any) -> Dict[str, Any]:
@@ -122,200 +127,44 @@ def build_sdxl_workflow(
     lora_name: Optional[str] = None,
     lora_weight: float = 0.8,
 ) -> Dict[str, Any]:
-    """
-    ComfyUI 로컬 API 전송용 SDXL(Illustrious-XL / NTR MIX XIII 등) 단독 체크포인트 워크플로우 템플릿.
-    - WorkflowGraph 동적 노드 ID 할당 및 자동 배선을 사용하며, LoRA가 지정되면 LoraLoader를 체이닝합니다.
-    - ref_image_name 지정 시 IP-Adapter-Plus(SDXL) 노드 그래프를 동적으로 체이닝합니다.
-    - ref_mode:
-        - "full": 정적 1인 착의 씬(000~019 등), 1차 KSampler와 2차 FaceDetailer 모두 IP-Adapter 연결
-        - "face_only": 역동적 포즈/H씬/2인씬, 1차 KSampler는 순수 base_model(포즈/의상 파괴 차단), 2차 FaceDetailer에만 IP-Adapter 연결
-    - clip_skip=2 기본 적용 (Illustrious 공식 표준: CLIPSetLastLayer -2).
-    """
+    """ComfyUI SDXL 워크플로우 그래프 생성 (LoRA 미지정 시 바이패스, IP-Adapter 2-Track 지원)."""
     if seed < 0:
         seed = random.randint(1, 999999999999999)
 
     graph = WorkflowGraph()
-
-    # 1. Checkpoint 로더
     ckpt_id = graph.add_node("CheckpointLoaderSimple", ckpt_name=ckpt_name)
     base_model, clip_ref, vae_ref = graph.out(ckpt_id, 0), graph.out(ckpt_id, 1), graph.out(ckpt_id, 2)
 
-    # 1.1. (선택) LoRA 다중 체이닝 — 미지정 시 그래프 무변경 바이패스
     active_loras = _normalize_lora_specs(loras=loras, lora_name=lora_name, lora_weight=lora_weight)
     if active_loras:
         base_model, clip_ref = _apply_lora_chain(graph, base_model, clip_ref, active_loras)
-
-    # 2. Illustrious 공식 표준: CLIP Skip 노드 연결
     if clip_skip > 1:
         skip_id = graph.add_node("CLIPSetLastLayer", clip=clip_ref, stop_at_clip_layer=-clip_skip)
         clip_ref = graph.out(skip_id, 0)
-
-    # 2.1. FreeU 노드 (SDXL 선명도, 콘트라스트 및 피부 질감 부스팅, SDXL 표준 파라미터)
     if use_freeu:
         freeu_id = graph.add_node("FreeU", model=base_model, b1=1.02, b2=1.03, s1=0.95, s2=0.2)
         base_model = graph.out(freeu_id, 0)
 
-    # 3. IP-Adapter 결합 (PrepImageForClipVision + 2-Track 하이브리드)
-    ipa_model = None
-    if ref_image_name:
-        ipa_loader_id = graph.add_node("IPAdapterUnifiedLoader", model=base_model, preset="PLUS (high strength)")
-        load_img_id = graph.add_node("LoadImage", image=ref_image_name)
-        prep_img_id = graph.add_node(
-            "PrepImageForClipVision", image=graph.out(load_img_id, 0),
-            interpolation="LANCZOS", crop_position="top", sharpening=0.05,
-        )
-
-        if ref_mode == "face_only":
-            start_at = 0.0
-            end_at = 1.0
-            weight_type = "linear"
-        else:  # full
-            start_at = 0.25
-            end_at = 0.75
-            weight_type = "ease out"
-
-        ipa_adv_id = graph.add_node(
-            "IPAdapterAdvanced",
-            model=graph.out(ipa_loader_id, 0),
-            ipadapter=graph.out(ipa_loader_id, 1),
-            image=graph.out(prep_img_id, 0),
-            weight=ref_weight,
-            weight_type=weight_type,
-            combine_embeds="concat",
-            start_at=start_at,
-            end_at=end_at,
-            embeds_scaling="K+V w/ C penalty",
-        )
-        ipa_model = graph.out(ipa_adv_id, 0)
-
-    # 4. 프롬프트 인코딩
-    pos_id = graph.add_node("CLIPTextEncode", clip=clip_ref, text=positive_prompt)
-    neg_id = graph.add_node("CLIPTextEncode", clip=clip_ref, text=negative_prompt)
-
-    # 5. 빈 잠재 공간 생성
-    latent_id = graph.add_node("EmptyLatentImage", width=width, height=height, batch_size=1)
-
-    # 6. KSampler 모델 결정: full 모드는 IP-Adapter 적용, face_only 모드는 순수 base_model 적용
-    if ref_image_name and ref_mode == "full":
-        ksampler_model = ipa_model
-    else:
-        ksampler_model = base_model
-
-    ksampler_id = graph.add_node(
-        "KSampler",
-        model=ksampler_model,
-        positive=graph.out(pos_id, 0),
-        negative=graph.out(neg_id, 0),
-        latent_image=graph.out(latent_id, 0),
-        seed=seed,
-        steps=steps,
-        cfg=cfg,
-        sampler_name=sampler,
-        scheduler=scheduler,
-        denoise=1.0,
+    ipa_model = (
+        add_ipadapter_nodes(graph, base_model, ref_image_name, ref_weight, ref_mode)
+        if ref_image_name else None
     )
-
-    # 7. VAE 디코딩
-    decode_id = graph.add_node("VAEDecode", samples=graph.out(ksampler_id, 0), vae=vae_ref)
-    current_image_output = graph.out(decode_id, 0)
-
-    # 8. (기본 활성화: None이거나 True이면 Face Detailer 활성화, 명시적 False 시 비활성화)
-    def _add_detailer_pass(
-        image_ref: Any,
-        detector_model: str,
-        pass_seed: int,
-        denoise: float,
-        bbox_threshold: float,
-        bbox_crop_factor: float,
-        sam_threshold: float,
-        detailer_hook: Any = None,
-    ) -> Any:
-        detector_id = graph.add_node("UltralyticsDetectorProvider", model_name=detector_model)
-        detailer_model = ipa_model if ref_image_name else base_model
-        kwargs: Dict[str, Any] = dict(
-            image=image_ref,
-            model=detailer_model,
-            clip=clip_ref,
-            vae=vae_ref,
-            guide_size=512,
-            guide_size_for=True,
-            max_size=1024,
-            seed=pass_seed,
-            steps=steps,
-            cfg=min(cfg, 4.5),
-            sampler_name=sampler,
-            scheduler=scheduler,
-            positive=graph.out(pos_id, 0),
-            negative=graph.out(neg_id, 0),
-            denoise=denoise,
-            feather=5,
-            noise_mask=True,
-            force_inpaint=True,
-            bbox_threshold=bbox_threshold,
-            bbox_dilation=10,
-            bbox_crop_factor=bbox_crop_factor,
-            sam_detection_hint="center-1",
-            sam_dilation=0,
-            sam_threshold=sam_threshold,
-            sam_bbox_expansion=0,
-            sam_mask_hint_threshold=0.7,
-            sam_mask_hint_use_negative="False",
-            drop_size=10,
-            wildcard="",
-            cycle=1,
-            bbox_detector=graph.out(detector_id, 0),
-        )
-        if detailer_hook is not None:
-            kwargs["detailer_hook"] = detailer_hook
-        node_id = graph.add_node("FaceDetailer", **kwargs)
-        return graph.out(node_id, 0)
-
-    should_use_face_detailer = True if use_face_detailer is None else bool(use_face_detailer)
-    if should_use_face_detailer:
-        fd_denoise = 0.40 if (ref_image_name and ref_mode == "face_only") else 0.35
-        hook_id = graph.add_node(
-            "SEGSOrderedFilterDetailerHookProvider",
-            target="area(=w*h)",
-            order=True,
-            take_start=0,
-            take_count=1,
-        )
-        current_image_output = _add_detailer_pass(
-            image_ref=current_image_output,
-            detector_model="bbox/face_yolov8m.pt",
-            pass_seed=seed + 1,
-            denoise=fd_denoise,
-            bbox_threshold=0.68,
-            bbox_crop_factor=3.0,
-            sam_threshold=0.93,
-            detailer_hook=graph.out(hook_id, 0),
-        )
-
-    # 8.1. (선택) Hand Detailer 체이닝 (Face Detailer 직후 손 보정)
-    if use_hand_detailer:
-        current_image_output = _add_detailer_pass(
-            image_ref=current_image_output,
-            detector_model=hand_detector_model,
-            pass_seed=seed + 2,
-            denoise=0.35,
-            bbox_threshold=0.60,
-            bbox_crop_factor=2.0,
-            sam_threshold=0.90,
-        )
-
-    # 9. (선택) AI 업스케일 노드
-    if use_upscale:
-        upscale_loader_id = graph.add_node("UpscaleModelLoader", model_name=DEFAULT_UPSCALER)
-        upscale_id = graph.add_node(
-            "ImageUpscaleWithModel",
-            upscale_model=graph.out(upscale_loader_id, 0),
-            image=current_image_output,
-        )
-        current_image_output = graph.out(upscale_id, 0)
-
-    # 10. 최종 이미지 저장 노드
+    pos_id, neg_id, current_image_output = append_sampler_and_decode(
+        graph=graph, base_model=base_model, ipa_model=ipa_model, clip_ref=clip_ref, vae_ref=vae_ref,
+        positive_prompt=positive_prompt, negative_prompt=negative_prompt,
+        ref_image_name=ref_image_name, ref_mode=ref_mode, width=width, height=height,
+        seed=seed, steps=steps, cfg=cfg, sampler=sampler, scheduler=scheduler,
+    )
+    detailer_model = ipa_model if ref_image_name else base_model
+    current_image_output = append_detailers_and_upscale(
+        graph=graph, current_image_output=current_image_output, detailer_model=detailer_model,
+        clip_ref=clip_ref, vae_ref=vae_ref, pos_id=pos_id, neg_id=neg_id, seed=seed,
+        steps=steps, cfg=cfg, sampler=sampler, scheduler=scheduler,
+        use_face_detailer=use_face_detailer, use_hand_detailer=use_hand_detailer,
+        hand_detector_model=hand_detector_model, use_upscale=use_upscale,
+        default_upscaler=DEFAULT_UPSCALER, ref_image_name=ref_image_name, ref_mode=ref_mode,
+    )
     graph.add_node("SaveImage", filename_prefix=output_prefix, images=current_image_output)
-
     return graph.to_dict()
 
 

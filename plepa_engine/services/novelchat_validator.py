@@ -227,17 +227,8 @@ def _validate_memorybooks(tab5: str, registered_chars: Set[str], res: Validation
     return len(mem_blocks)
 
 
-def validate_novelchat_markdown(
-    content: str,
-    manifest_path: Optional[Path] = None,
-    strict: bool = False,
-) -> ValidationResult:
-    """노벨챗 6탭 표준 마크다운 원고를 파싱하고 전 규칙을 검증한다."""
-    res = ValidationResult()
-    _, body = parse_frontmatter(content)
-    manifest_pools = _load_manifest_pools(manifest_path)
-
-    # 1. 탭 1: 프로필
+def _validate_tab1_profile(body: str, res: ValidationResult) -> None:
+    """탭 1(프로필/해시태그) 글자 수 및 특수문자 규칙을 검증합니다."""
     tab1 = _extract_section(body, r"^## 1\.\s*\[탭 1:\s*프로필\]", 2)
     name = _extract_first_code_block(_extract_section(tab1, r"^### 1-1\.", 3))
     one_line = _extract_first_code_block(_extract_section(tab1, r"^### 1-2\.", 3))
@@ -258,7 +249,13 @@ def validate_novelchat_markdown(
             if len(t) > NOVELCHAT_LIMITS["HASHTAG_MAX_LEN"]:
                 res.errors.append(f"[해시태그] '{t}' 길이 초과 ({len(t)}/{NOVELCHAT_LIMITS['HASHTAG_MAX_LEN']}자)")
 
-    # 2. 탭 2: 배경 설정
+
+def _validate_tab2_background(
+    body: str,
+    manifest_pools: Optional[Dict[str, Set[str]]],
+    res: ValidationResult,
+) -> Tuple[Optional[str], Set[str]]:
+    """탭 2(배경/공통 프롬프트/캐릭터 블록·종속 변수) 정합성을 검증합니다."""
     tab2 = _extract_section(body, r"^## 2\.\s*\[탭 2:\s*배경 설정\]", 2)
     common_prompt = _extract_first_code_block(_extract_section(tab2, r"^### 2-1\.", 3))
     _check_len("공통 프롬프트", common_prompt, NOVELCHAT_LIMITS["COMMON_PROMPT_MAX"], res.errors, required=True)
@@ -288,15 +285,28 @@ def validate_novelchat_markdown(
     if common_prompt:
         _check_char_tokens("공통 프롬프트", common_prompt, registered_chars, True, res.errors)
         _check_image_calls("공통 프롬프트", common_prompt, manifest_pools, res.errors, res.warnings)
+    return common_prompt, registered_chars
 
-    # 3. 탭 3: 도입부 & 4. 탭 5: 메모리북
+
+def validate_novelchat_markdown(
+    content: str,
+    manifest_path: Optional[Path] = None,
+    strict: bool = False,
+) -> ValidationResult:
+    """노벨챗 6탭 표준 마크다운 원고를 파싱하고 전 규칙을 검증한다."""
+    res = ValidationResult()
+    _, body = parse_frontmatter(content)
+    manifest_pools = _load_manifest_pools(manifest_path)
+
+    _validate_tab1_profile(body, res)
+    common_prompt, registered_chars = _validate_tab2_background(body, manifest_pools, res)
+
     tab3 = _extract_section(body, r"^## 3\.\s*\[탭 3:\s*도입부\]", 2)
     intro_count = _validate_intros(tab3, registered_chars, manifest_pools, res)
 
     tab5 = _extract_section(body, r"^## 5\.\s*\[탭 5:\s*메모리북\]", 2)
     mem_count = _validate_memorybooks(tab5, registered_chars, res)
 
-    # 5. 탭 6: 기타 설정 & 젠잇 레거시 잔재 검사
     tab6 = _extract_section(body, r"^## 6\.\s*\[탭 6:\s*기타 설정\]", 2)
     age = _extract_first_code_block(_extract_section(tab6, r"^### 6-1\.", 3))
     comment = _extract_first_code_block(_extract_section(tab6, r"^### 6-2\.", 3))
