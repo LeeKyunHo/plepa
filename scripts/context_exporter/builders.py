@@ -191,7 +191,9 @@ def build_tier1(snap: Dict[str, Any]) -> str:
 
 def build_tier2(snap: Dict[str, Any], include_prompts: bool = False) -> str:
     """`20_TIER2_CORE_LOGIC.md`: 7대 Mutator, Trinity Sync 매트릭스, FastAPI/GUI 라우트, P2.5 검열 & QC, 포즈 요약."""
-    pp_path = PLEPA_ROOT / "plepa_engine" / "prompt_pipeline.py"
+    pp_dir = PLEPA_ROOT / "plepa_engine" / "pipeline"
+    pp_const_path = pp_dir / "constants.py"
+    pp_ctx_path = pp_dir / "context.py"
     gs_path = PLEPA_ROOT / "plepa_engine" / "services" / "generation_service.py"
     ce_dir = PLEPA_ROOT / "plepa_engine" / "censor"
     qa_path = PLEPA_ROOT / "plepa_engine" / "qa_validator.py"
@@ -201,17 +203,18 @@ def build_tier2(snap: Dict[str, Any], include_prompts: bool = False) -> str:
         "# ⚙️ TIER 2: 코어 파이프라인 · 삼위일체 동기화 · 검열/QC 로직",
         f"> **Snapshot ID**: `{snap.get('snapshot_id', 'LIVE')}` | **Generated**: `{snap.get('generated_at', '')}`",
         "",
-        "## 1. SDXL 7단계 Mutator 체인 (`plepa_engine/prompt_pipeline.py`)",
+        "## 1. SDXL 7단계 Mutator 체인 (`plepa_engine/pipeline/` + `prompt_pipeline.py` 파사드)",
         "- 실행 순서: `PoseTagPreparationMutator` ➔ `PositiveAssemblyMutator` ➔ `NegativeBaseMutator` ➔ `DefectDefenseMutator` ➔ `TwoPersonMobMutator` ➔ `CompositionAntiDriftMutator` ➔ `SanitizerMutator`",
     ]
-    if pp_path.is_file():
+    if pp_const_path.is_file():
         const_names = ["_MOB_TIER_SPECS", "_PARTNER_POS_SPECS", "_MOB_SHADOW_EYES_POS"]
         if include_prompts:
             const_names.extend(["_H_SCENE_WET_SKIN_TAGS", "_H_SCENE_MOOD_LIGHTING_TAGS"])
-        consts = format_constants_snippet(pp_path, const_names)
+        consts = format_constants_snippet(pp_const_path, const_names)
         if consts:
             out.append("```python\n" + consts + "\n```")
-        out.append("- `PromptContext` fields: " + ", ".join(f"`{f[0]}: {f[1]}`" for f in extract_dataclass_fields(pp_path, "PromptContext")[:18]))
+    if pp_ctx_path.is_file():
+        out.append("- `PromptContext` fields: " + ", ".join(f"`{f[0]}: {f[1]}`" for f in extract_dataclass_fields(pp_ctx_path, "PromptContext")[:18]))
 
     out.extend(["", "## 2. " + _collect_trinity_and_routes().lstrip("# ")])
     if gs_path.is_file():

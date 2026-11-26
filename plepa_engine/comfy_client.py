@@ -5,14 +5,11 @@ ComfyUI 로컬 REST & WebSocket API 비동기 통신 클라이언트.
 
 from __future__ import annotations
 
-import io
 import json
 import os
-import socket
 import threading
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 import uuid
 from contextlib import contextmanager
@@ -29,6 +26,14 @@ try:
 except ImportError:
     websocket = None
 
+from plepa_engine.comfy_transport import (
+    build_image_upload_request,
+    download_and_save_webp,
+    fetch_node_options,
+    open_client_websocket,
+    parse_prompt_http_error,
+    wait_for_generation_result,
+)
 from plepa_engine.config import (
     COMFY_HOST,
     COMFY_URL,
@@ -102,7 +107,6 @@ class ComfyClient:
                 pass
             self._shared_ws = None
 
-
     def check_connection(self) -> bool:
         """ComfyUI 서버 가동 여부를 확인합니다."""
         try:
@@ -126,24 +130,10 @@ class ComfyClient:
         if not self.check_connection():
             return result
 
-        def fetch_node_options(node_class: str, field_name: str) -> List[str]:
-            try:
-                url = f"{self.base_url}/object_info/{node_class}"
-                with urllib.request.urlopen(url, timeout=3.0) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    raw = data.get(node_class, {}).get("input", {}).get("required", {}).get(field_name, [[]])
-                    if isinstance(raw, list) and raw and isinstance(raw[0], list):
-                        return sorted(raw[0])
-                    elif isinstance(raw, list) and len(raw) > 1 and isinstance(raw[1], dict) and "options" in raw[1]:
-                        return sorted(raw[1]["options"])
-            except Exception:
-                pass
-            return []
-
-        result["checkpoints"] = fetch_node_options("CheckpointLoaderSimple", "ckpt_name")
-        result["unets"] = fetch_node_options("UnetLoaderGGUF", "unet_name")
-        result["vaes"] = fetch_node_options("VAELoader", "vae_name")
-        result["upscalers"] = fetch_node_options("UpscaleModelLoader", "model_name")
+        result["checkpoints"] = fetch_node_options(self.base_url, "CheckpointLoaderSimple", "ckpt_name")
+        result["unets"] = fetch_node_options(self.base_url, "UnetLoaderGGUF", "unet_name")
+        result["vaes"] = fetch_node_options(self.base_url, "VAELoader", "vae_name")
+        result["upscalers"] = fetch_node_options(self.base_url, "UpscaleModelLoader", "model_name")
         return result
 
     def get_registered_node_names(self) -> set[str]:
@@ -177,11 +167,11 @@ class ComfyClient:
         if not registered:
             return {}
 
-        missing: Dict[str, str] = {}
-        for node_name, pack_name in required_nodes.items():
-            if node_name not in registered:
-                missing[node_name] = pack_name
-        return missing
+        return {
+            node_name: pack_name
+            for node_name, pack_name in required_nodes.items()
+            if node_name not in registered
+        }
 
     def upload_image(self, file_path: Path, overwrite: bool = True) -> str:
         """
@@ -206,32 +196,7 @@ class ComfyClient:
                 if cached_mtime_ns == mtime_ns and cached_size == file_size:
                     return cached_name
 
-        boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
-        filename = file_path.name
-        content_type = "image/png" if file_path.suffix.lower() == ".png" else "image/webp"
-
-        body = bytearray()
-        # image 파트
-        body.extend(f"--{boundary}\r\n".encode("utf-8"))
-        body.extend(f'Content-Disposition: form-data; name="image"; filename="{filename}"\r\n'.encode("utf-8"))
-        body.extend(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
-        body.extend(file_path.read_bytes())
-        body.extend(b"\r\n")
-
-        # overwrite 파트
-        body.extend(f"--{boundary}\r\n".encode("utf-8"))
-        body.extend(b'Content-Disposition: form-data; name="overwrite"\r\n\r\n')
-        body.extend(b"true\r\n")
-
-        # 닫는 바운더리
-        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
-
-        req = urllib.request.Request(
-            f"{self.base_url}/upload/image",
-            data=bytes(body),
-            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
-            method="POST",
-        )
+        req, filename = build_image_upload_request(self.base_url, file_path)
         try:
             with urllib.request.urlopen(req, timeout=30.0) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
@@ -241,6 +206,33 @@ class ComfyClient:
                 return remote_name
         except Exception as e:
             raise ComfyClientError(f"ComfyUI 이미지 업로드 실패: {e}") from e
+
+    def _submit_workflow(self, workflow: Dict[str, Any], ws: Any, is_shared: bool) -> str:
+        payload = json.dumps({"prompt": workflow, "client_id": self.client_id}).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.base_url}/prompt",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10.0) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                prompt_id = result.get("prompt_id")
+        except urllib.error.HTTPError as he:
+            if not is_shared:
+                ws.close()
+            err_detail = parse_prompt_http_error(he)
+            raise ComfyClientError(f"작업 큐 등록 실패 (HTTP {he.code}: {he.reason}){err_detail}") from he
+        except Exception as e:
+            if not is_shared:
+                ws.close()
+            raise ComfyClientError(f"작업 큐 등록 실패: {e}") from e
+
+        if not prompt_id:
+            if not is_shared:
+                ws.close()
+            raise ComfyClientError("ComfyUI로부터 prompt_id를 수신하지 못했습니다.")
+        return prompt_id
 
     def generate_image(
         self,
@@ -262,182 +254,45 @@ class ComfyClient:
         is_shared = self._shared_ws is not None
         if is_shared:
             ws = self._shared_ws
+            try:
+                ws.settimeout(min(2.0, max(0.2, float(timeout_sec))))
+            except Exception:
+                pass
         else:
             if not self.check_connection():
                 raise ComfyClientError(
                     f"ComfyUI 서버({self.base_url})에 연결할 수 없습니다.\n"
                     f"'run_nvidia_gpu.bat'가 실행 중인지 확인해 주십시오."
                 )
-            ws = websocket.WebSocket()
-            ws.connect(f"{self.ws_url}?clientId={self.client_id}", timeout=10.0)
+            ws = open_client_websocket(self.ws_url, self.client_id, timeout_sec, websocket)
 
-        try:
-            ws.settimeout(min(2.0, max(0.2, float(timeout_sec))))
-        except Exception:
-            pass
-
-        # 1. 작업 전송
-        payload = json.dumps({"prompt": workflow, "client_id": self.client_id}).encode("utf-8")
-        req = urllib.request.Request(
-            f"{self.base_url}/prompt",
-            data=payload,
-            headers={"Content-Type": "application/json"}
+        prompt_id = self._submit_workflow(workflow, ws, is_shared)
+        output_image_info = wait_for_generation_result(
+            ws=ws,
+            base_url=self.base_url,
+            ws_url=self.ws_url,
+            client_id=self.client_id,
+            prompt_id=prompt_id,
+            timeout_sec=timeout_sec,
+            progress_cb=progress_cb,
+            is_shared=is_shared,
+            set_shared_ws=lambda new_ws: setattr(self, "_shared_ws", new_ws),
+            ws_mod=websocket,
+            error_cls=ComfyClientError,
         )
-        try:
-            with urllib.request.urlopen(req, timeout=10.0) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-                prompt_id = result.get("prompt_id")
-        except urllib.error.HTTPError as he:
-            if not is_shared:
-                ws.close()
-            err_detail = ""
-            try:
-                err_data = json.loads(he.read().decode("utf-8"))
-                node_errors = err_data.get("node_errors", {})
-                if node_errors:
-                    err_lines = []
-                    for nid, nval in node_errors.items():
-                        c_type = nval.get("class_type", nid)
-                        msgs = [err.get("message", "") + ": " + err.get("details", "") for err in nval.get("errors", [])]
-                        err_lines.append(f"[{c_type}#{nid}] {'; '.join(msgs)}")
-                    err_detail = " -> " + " | ".join(err_lines)
-                elif "error" in err_data:
-                    err_detail = f" -> {err_data['error'].get('message', '')}"
-            except Exception:
-                pass
-            raise ComfyClientError(f"작업 큐 등록 실패 (HTTP {he.code}: {he.reason}){err_detail}") from he
-        except Exception as e:
-            if not is_shared:
-                ws.close()
-            raise ComfyClientError(f"작업 큐 등록 실패: {e}") from e
-
-        if not prompt_id:
-            if not is_shared:
-                ws.close()
-            raise ComfyClientError("ComfyUI로부터 prompt_id를 수신하지 못했습니다.")
-
-
-        # 2. WebSocket 이벤트 루프 (타임아웃 및 재연결 복구 지원)
-        start_time = time.time()
-        output_image_info: Optional[Dict[str, Any]] = None
-        timeout_excs = (TimeoutError, socket.timeout)
-        ws_timeout_cls = getattr(websocket, "WebSocketTimeoutException", None)
-        if isinstance(ws_timeout_cls, type) and issubclass(ws_timeout_cls, BaseException):
-            timeout_excs = timeout_excs + (ws_timeout_cls,)
-
-        closed_excs: Tuple[type, ...] = (ConnectionError, EOFError, OSError)
-        ws_closed_cls = getattr(websocket, "WebSocketConnectionClosedException", None)
-        if isinstance(ws_closed_cls, type) and issubclass(ws_closed_cls, BaseException):
-            closed_excs = closed_excs + (ws_closed_cls,)
-
-        def _poll_history_image() -> Optional[Dict[str, Any]]:
-            try:
-                hist_url = f"{self.base_url}/history/{urllib.parse.quote(str(prompt_id))}"
-                with urllib.request.urlopen(hist_url, timeout=5.0) as hresp:
-                    hist = json.loads(hresp.read().decode("utf-8"))
-                entry = hist.get(prompt_id) if isinstance(hist, dict) else None
-                if isinstance(entry, dict):
-                    for node_out in (entry.get("outputs") or {}).values():
-                        imgs = node_out.get("images") if isinstance(node_out, dict) else None
-                        if imgs:
-                            return imgs[0]
-            except Exception:
-                pass
-            return None
-
-        reconnect_attempts = 0
-        try:
-            while True:
-                if time.time() - start_time > timeout_sec:
-                    raise ComfyClientError(f"생성 대기 시간 초과 ({timeout_sec}초)")
-
-                try:
-                    msg = ws.recv()
-                except timeout_excs:
-                    continue
-                except closed_excs as ce:
-                    hist_img = _poll_history_image()
-                    if hist_img is not None:
-                        output_image_info = hist_img
-                        break
-                    reconnect_attempts += 1
-                    if reconnect_attempts > 2 or time.time() - start_time > timeout_sec:
-                        raise ComfyClientError(f"ComfyUI WebSocket 연결이 끊어졌습니다: {ce}") from ce
-                    try:
-                        try:
-                            ws.close()
-                        except Exception:
-                            pass
-                        ws = websocket.WebSocket()
-                        ws.connect(f"{self.ws_url}?clientId={self.client_id}", timeout=10.0)
-                        ws.settimeout(min(2.0, max(0.2, float(timeout_sec))))
-                        if is_shared:
-                            self._shared_ws = ws
-                        continue
-                    except Exception as re_err:
-                        raise ComfyClientError(f"ComfyUI WebSocket 재연결 실패: {re_err}") from re_err
-
-                if isinstance(msg, str):
-                    event = json.loads(msg)
-                    msg_type = event.get("type")
-                    data = event.get("data", {})
-
-                    if msg_type == "progress" and progress_cb:
-                        val = data.get("value", 0)
-                        max_val = data.get("max", 0)
-                        node = data.get("node", "")
-                        progress_cb(val, max_val, node)
-
-                    elif msg_type == "executed":
-                        if data.get("prompt_id") == prompt_id:
-                            output_data = data.get("output", {})
-                            if "images" in output_data and output_data["images"]:
-                                output_image_info = output_data["images"][0]
-                                break
-
-                    elif msg_type == "execution_error":
-                        if data.get("prompt_id") == prompt_id:
-                            err_msg = data.get("exception_message", "알 수 없는 에러")
-                            raise ComfyClientError(f"ComfyUI 실행 에러: {err_msg}")
-        finally:
-            if not is_shared:
-                try:
-                    ws.close()
-                except Exception:
-                    pass
-
-
         if not output_image_info:
             raise ComfyClientError("생성된 이미지 정보를 수신하지 못했습니다.")
 
-        # 3. 이미지 바이너리 다운로드 및 WebP 저장
-        filename = output_image_info["filename"]
-        subfolder = output_image_info.get("subfolder", "")
-        img_type = output_image_info.get("type", "output")
-
-        query = urllib.parse.urlencode({"filename": filename, "subfolder": subfolder, "type": img_type})
-        view_url = f"{self.base_url}/view?{query}"
-
-        try:
-            with urllib.request.urlopen(view_url, timeout=60.0) as img_resp:
-                img_bytes = img_resp.read()
-
-            image = Image.open(io.BytesIO(img_bytes))
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # Windows 파일 락 및 충돌 방지를 위한 원자적 임시 저장 및 단일 os.replace 교체 (원본 선삭제 금지)
-            temp_path = output_path.with_name(f".{output_path.stem}_{uuid.uuid4().hex[:6]}.tmp.webp")
-            try:
-                image.save(temp_path, "WEBP", quality=WEBP_QUALITY, method=WEBP_METHOD)
-                _atomic_replace_with_retry(temp_path, output_path, retries=5)
-            finally:
-                if temp_path.exists():
-                    temp_path.unlink(missing_ok=True)
-
-        except Exception as se:
-            raise ComfyClientError(f"이미지 저장 실패 ({output_path.name}): {se}") from se
-
-        return output_path
+        return download_and_save_webp(
+            base_url=self.base_url,
+            output_image_info=output_image_info,
+            output_path=output_path,
+            pil_image_mod=Image,
+            webp_quality=WEBP_QUALITY,
+            webp_method=WEBP_METHOD,
+            atomic_replace_fn=_atomic_replace_with_retry,
+            error_cls=ComfyClientError,
+        )
 
 
 def verify_required_nodes(
@@ -459,4 +314,3 @@ def verify_required_nodes(
     if missing:
         return False, missing
     return True, {}
-
