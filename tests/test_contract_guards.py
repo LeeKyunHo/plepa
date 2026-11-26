@@ -27,7 +27,6 @@ _FUNCTION_LINE_LIMIT = 120
 
 # Wave 3~5 분해 전까지 현행 줄수 상한을 동결하는 래칫 Allowlist (줄수 감소 시 하향 조정, 신규 추가 금지)
 _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
-    "plepa_engine/censor.py": 3787,
     "plepa_engine/comfy_client.py": 462,
     "plepa_engine/precheck.py": 392,
     "plepa_engine/prompt_pipeline.py": 1381,
@@ -58,11 +57,6 @@ _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
 
 # (rel_posix_path, func_name) -> 현재 최대 줄수 상한 래칫
 _FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {
-    ("plepa_engine/censor.py", "_extract_hand_occlusion_mask"): 130,
-    ("plepa_engine/censor.py", "_extract_semantic_sam_prompts"): 130,
-    ("plepa_engine/censor.py", "apply_silhouette"): 534,
-    ("plepa_engine/censor.py", "_detect_target_candidates"): 141,
-    ("plepa_engine/censor.py", "_resolve_hybrid_targets_with_priors"): 373,
     ("plepa_engine/comfy_client.py", "generate_image"): 196,
     ("plepa_engine/precheck.py", "run_pregeneration_check"): 268,
     ("plepa_engine/prompt_pipeline.py", "mutate"): 242,
