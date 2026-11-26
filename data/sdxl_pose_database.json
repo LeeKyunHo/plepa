@@ -809,12 +809,15 @@
     },
     "109": {
       "label": "커닐링구스",
-      "description": "침대 베개에 머리를 기대고 누워 양손으로 베개 뒤를 잡은 채 풀린 눈·홍조·떨림으로 절정한 얼굴 초밀착 클로즈업",
-      "prompt": "pov, from above, intimate close-up, face focus, head and collarbone portrait, cropped at upper chest, (centered composition:1.15), 1girl, solo, solo focus, completely nude, bare shoulders, collarbone, lower body out of frame, ((lying flat on back on bed, head sinking into white pillow, arms bent up gripping behind white pillow:1.2)), ((torome, half-closed eyes, droopy heavy eyelids, eyes slightly rolled up, hazy intoxicated climax gaze, looking at viewer:1.2)), ((heavy facial blush lines across cheeks and nose, parted lips, thin saliva trail, hot steam breath, trembling in climax:1.2))",
-      "negative_add": "(male head, male face, visible male eyes, male hands, partner hands, disembodied hands, two heads, two faces, extra hands, tongue out, wide open mouth, reaching toward viewer, foreshortening, sitting, upright, kneeling, standing, cowboy shot, full body, lower body, torso, waist, navel, breasts, nipples, hips, thighs, legs, feet:1.25)",
+      "description": "좌석/침대에 기대앉아 다리를 넓게 벌린 채, 다리 사이에 무릎 꿇은 파트너가 양손으로 허벅지 안쪽을 벌려 잡고 뒤통수 사이로 정면 커닐링구스를 하며 몽롱한 절정 표정을 짓는 정면 백헤드 구도",
+      "required_outfit": "nude",
+      "prompt": "medium shot, symmetrical front view, (from front, slightly low angle:1.1), (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((sitting back leaning slightly against seat, wide spread legs, m legs, open thighs, knees bent apart:1.15)), ((cunnilingus, oral stimulation between spread thighs, licking pussy:1.15)), ((male hands gripping inner thighs, male hands pushing thighs wide apart, fingers pressing into inner thighs:1.15)), ((back of dark-haired male head facing viewer, short black hair, male head turned away from camera, shaded upper male face, shadow over male eyes, eyes obscured by shadow, no visible male eyes, obscured male face:1.15)), ((torome, heavy-lidded half-closed eyes, hazy intoxicated climax gaze, heavy facial blush across cheeks:1.15)), (clear visible female eyes:1.15), ((open mouth, drooling thin saliva trail, parted trembling lips, hot steam breath:1.15)), hands resting back on seat",
+      "prompt_female": "medium shot, symmetrical front view, (from front, slightly low angle:1.1), (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((sitting back leaning slightly against seat, wide spread legs, m legs, open thighs, knees bent apart:1.15)), ((cunnilingus, oral stimulation between spread thighs, licking pussy:1.15)), ((male hands gripping inner thighs, male hands pushing thighs wide apart, fingers pressing into inner thighs:1.15)), ((back of dark-haired male head facing viewer, short black hair, male head turned away from camera, shaded upper male face, shadow over male eyes, eyes obscured by shadow, no visible male eyes, obscured male face:1.15)), ((torome, heavy-lidded half-closed eyes, hazy intoxicated climax gaze, heavy facial blush across cheeks:1.15)), (clear visible female eyes:1.15), ((open mouth, drooling thin saliva trail, parted trembling lips, hot steam breath:1.15)), hands resting back on seat",
+      "negative_add": "(detailed male face, visible male eyes, detailed male eyes, visible male pupils, male eye, male side profile, male profile face, sideways male head, handsome male face, attractive male face, expressive male face, silver-haired male, blonde male:1.25), (facing each other, eye contact, two faces visible, partner face visible, extra hands, multiple hands, extra arms, standing male, cowboy shot, full body, lying flat on back, legs closed, knees together, 2girls, 2boys, multiple boys, duplicate male:1.25)",
       "section": "h_scenes",
-      "mob_tier": 0,
-      "partner_pos": null
+      "mob_tier": 2,
+      "partner_pos": "between_thighs",
+      "mob_shadow": true
     },
     "110": {
       "label": "보지애무약",
@@ -1246,10 +1249,15 @@
     },
     "179": {
       "label": "구강애무받기",
-      "description": "침대 베개에 머리를 기대고 누워 양손으로 베개 뒤를 잡은 채 풀린 눈·홍조·떨림으로 절정한 얼굴 초밀착 클로즈업",
-      "prompt": "pov, from above, intimate close-up, face focus, head and collarbone portrait, cropped at upper chest, (centered composition:1.15), 1boy, otokonoko, completely nude, bare shoulders, collarbone, lower body out of frame, ((lying flat on back on bed, head sinking into white pillow, arms bent up gripping behind white pillow:1.2)), ((torome, half-closed eyes, droopy heavy eyelids, eyes slightly rolled up, hazy intoxicated climax gaze, looking at viewer:1.2)), ((heavy facial blush lines across cheeks and nose, parted lips, thin saliva trail, hot steam breath, trembling in climax:1.2))",
-      "negative_add": "(2boys, partner, male partner, partner face, visible partner eyes, partner hands, disembodied hands, two heads, two faces, extra hands, tongue out, wide open mouth, reaching toward viewer, foreshortening, sitting, upright, kneeling, standing, cowboy shot, full body, lower body, torso, waist, navel, hips, thighs, legs, feet:1.25)",
-      "section": "scenes_otokonoko"
+      "description": "침대 베개에 기대 누운 채 얼굴 클로즈업보다 줌을 살짝 풀어 아랫배까지만 드러내며 몽롱한 절정 표정으로 몸을 떠는 안정형 오프스크린 구도",
+      "required_outfit": "nude",
+      "prompt": "from slightly above, angled upper body close-up, torso portrait, head to lower belly, cropped at lower belly, cropped below navel, (centered composition:1.15), 1boy, otokonoko, completely nude, full nudity, bare skin, ((lying back on bed against white pillow, arched slender torso, exposed slender chest and narrow waist, visible navel and lower belly, arms bent up gripping pillow beside head:1.15)), ((torome, heavy-lidded half-closed eyes, droopy eyelids, eyes slightly rolled up, hazy intoxicated climax gaze, looking at viewer:1.15)), ((heavy facial blush across cheeks and nose, parted trembling lips, open mouth, thin saliva trail, hot steam breath, trembling in climax:1.15))",
+      "prompt_otokonoko": "from slightly above, angled upper body close-up, torso portrait, head to lower belly, cropped at lower belly, cropped below navel, (centered composition:1.15), 1boy, otokonoko, completely nude, full nudity, bare skin, ((lying back on bed against white pillow, arched slender torso, exposed slender chest and narrow waist, visible navel and lower belly, arms bent up gripping pillow beside head:1.15)), ((torome, heavy-lidded half-closed eyes, droopy eyelids, eyes slightly rolled up, hazy intoxicated climax gaze, looking at viewer:1.15)), ((heavy facial blush across cheeks and nose, parted trembling lips, open mouth, thin saliva trail, hot steam breath, trembling in climax:1.15))",
+      "negative_add": "(2boys, partner, male partner, partner head, partner face, visible partner eyes, partner hands, disembodied hands, extra hands, multiple hands, two heads, two faces, 1girl, female, pussy, large breasts, cleavage, tongue out, close-up face only, cropped at chest, collarbone portrait, hips, pelvis, crotch, groin, penis, testicles, erection, thighs, spread legs, open legs, lower body, cowboy shot, full body, legs, knees, feet, standing, sitting:1.25)",
+      "section": "scenes_otokonoko",
+      "mob_tier": 0,
+      "partner_pos": null,
+      "mob_shadow": false
     },
     "180": {
       "label": "후방애무약",
