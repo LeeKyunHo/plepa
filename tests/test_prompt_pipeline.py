@@ -447,7 +447,7 @@ def test_adr101_campus_70_female_h_poses_complete_tier_and_partner_pos():
         checked += 1
         assert pose.mob_tier in (0, 1, 2, 3), f"#{code} mob_tier 누락: {pose.mob_tier}"
         if pose.mob_tier == 2:
-            assert pose.partner_pos in ("above", "below", "behind", "side_kiss", "offscreen"), (
+            assert pose.partner_pos in ("above", "below", "behind", "side_kiss", "offscreen", "between_thighs"), (
                 f"#{code} Tier 2 partner_pos 누락/무효: {pose.partner_pos}"
             )
     assert checked == 70, f"기대 여성 H-씬 70종 불일치: {checked}"
@@ -1134,3 +1134,59 @@ def test_selective_mob_shadow_h_scenes_vs_standard_h_scenes():
     assert pos_088.count("BREAK") == 1
     assert "tall dark-haired male mob" not in pos_088.lower()
     assert "heavy shadow" in neg_088.lower()
+
+
+def test_cunnilingus_and_sym_oral_between_thighs_backhead_composition():
+    """#109(커닐링구스) 정면 백헤드·허벅지 파지 구도 및 #179(구강애무받기) 상반신 줌아웃 단독 절정 구도·Auto-QC 검증."""
+    from plepa_engine.qa_validator import validate_generated_image
+
+    aya = _make_female_char()
+    oto_char = _make_otokonoko_char()
+    db_c = default_pose_service.load_pose_db(engine="sdxl", roster="campus")
+    db_o = default_pose_service.load_pose_db(engine="sdxl", roster="oto")
+
+    pose_109 = db_c["109"]
+    assert pose_109.mob_tier == 2
+    assert pose_109.partner_pos == "between_thighs"
+    assert pose_109.mob_shadow is True
+    pos_109, neg_109, is_nude_109 = assemble_sdxl_prompt(char=aya, pose=pose_109, bg_prompt="bedroom")
+    pos_109_low, neg_109_low = pos_109.lower(), neg_109.lower()
+    assert is_nude_109 is True
+    assert pos_109.count("BREAK") == 1
+    assert "partner head out of frame" not in pos_109_low
+    assert "full male head" not in neg_109_low
+    assert "back of dark-haired male head facing viewer" in pos_109_low
+    assert "male hands gripping inner thighs" in pos_109_low
+    assert "detailed male face" in neg_109_low and "visible male eyes" in neg_109_low
+
+    # #179: 기존 얼굴 클로즈업보다 줌을 살짝 풀어 아랫배까지 담고 골반/허벅지/고간은 배제한 단독 절정 구도
+    pose_179 = db_o["179"]
+    assert pose_179.mob_tier == 0
+    assert pose_179.partner_pos is None
+    assert pose_179.is_solo_scene is True
+    pos_179, neg_179, is_nude_179 = assemble_sdxl_prompt(char=oto_char, pose=pose_179, bg_prompt="bedroom")
+    pos_179_low, neg_179_low = pos_179.lower(), neg_179.lower()
+    assert is_nude_179 is True
+    assert "head to lower belly" in pos_179_low
+    assert "cropped at lower belly" in pos_179_low
+    assert "1girl" not in pos_179_low and "pussy" not in pos_179_low
+    assert "small erect penis" not in pos_179_low and "testicles" not in pos_179_low
+    assert "2boys" in neg_179_low and "partner" in neg_179_low
+    assert "thighs" in neg_179_low and "crotch" in neg_179_low and "penis" in neg_179_low
+
+    # Auto-QC: #109 뒤통수 2머리 + 주 캐릭터 얼굴 1개 통과 검증
+    img = Image.new("RGB", (384, 256), color=(180, 180, 180))
+    with patch("plepa_engine.qa_validator.detect_person", return_value=[((10, 10, 350, 240), "person", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_heads", return_value=[((120, 20, 240, 110), "head", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator.detect_faces", return_value=[((130, 30, 230, 105), "face", 0.9)]), \
+         patch("plepa_engine.qa_validator.detect_hands", return_value=[((80, 140, 120, 180), "hand", 0.9)] * 2), \
+         patch("plepa_engine.qa_validator._compute_color_burn_ratio", return_value=0.05):
+        ok, reason, _ = validate_generated_image(
+            img,
+            is_solo_scene=False,
+            is_two_person=True,
+            is_offscreen_partner=True,
+            allow_partner_head=True,
+            prompt=pose_109.prompt,
+        )
+        assert ok is True, reason
