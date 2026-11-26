@@ -74,7 +74,7 @@ plepa/
 │   └── legacy/                   # [격리] 구 FLUX DB (열람/수정 금지)
 ├── plepa_engine/
 │   ├── prompt_pipeline.py        # 7단계 Mutator 체인 & 2인 모브 격리
-│   ├── censor.py                 # Phase P2.5 하이브리드 검열 엔진 (동결 기준선)
+│   ├── censor/                   # Phase P2.5 하이브리드 검열 서브패키지 (19모듈, <=322L)
 │   ├── qa_validator.py           # Auto-QC 품질/구도 자동 감지기
 │   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증
 │   └── services/                 # CLI·GUI 공용 서비스 & GENERATION_OPTION_SPECS
