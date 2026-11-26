@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-107)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-110)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-107`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-110`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -57,3 +57,4 @@
 - **ADR-106 / ADR-107 (2026-11-17~20)**: `signature_accessories` 2차 청크 전단 고정 + `CompositionAntiDriftMutator` + `--deterministic-pose-seed` 삼위일체 도입, `#128`/`#198` 복합 봉사 포즈 공식 폐기 및 ControlNet 향후 로드맵 수립.
 - **ADR-108 (2026-11-26, Wave 3)**: `PoseEntry`/`PoseItemSchema` 양방향 통일, `GlobalJobManager` GUI 전체 FIFO 큐 일원화, `GENERATION_OPTION_SPECS` 29종 삼위일체(`generation_options.py`·`option_controls.py`·CLI), `LoraLoader` 조건부 직렬 체이닝(미지정 시 무변경 바이패스) 및 구형 5종 로스터 `status: legacy` 분리.
 - **ADR-109 (2026-11-26)**: 노벨챗(NovelChat) 6탭 커스텀 모드 제작법([`노벨챗_캐릭터채팅_제작법.md`](%EB%85%B8%EB%B2%A8%EC%B1%97_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md))·멀티플랫폼 이식 구조(`docs/platforms/`)·34종 호출어 풀(`novelchat_pose_pools.json`)·500장 예산 패키저(`novelchat_exporter.py`)·6탭 원고 검증기(`novelchat_validator.py`) 구축.
+- **ADR-110 (2026-11-27)**: `#109` 정면 백헤드·양손 허벅지 파지 2인 구도(`partner_pos="between_thighs"`, `mob_tier=2`, `Auto-QC` 허용 연동) 및 `#179` 상반신~아랫배 줌아웃 단독 절정 컷(`mob_tier=0`, `cropped at lower belly`) 확정, `DefectDefenseMutator` 상체 크롭 하반신 태그 주입 제외 분기(`is_upper_torso_crop`) 신설.
