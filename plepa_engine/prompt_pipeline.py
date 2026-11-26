@@ -165,6 +165,7 @@ _PARTNER_POS_SPECS: Dict[str, str] = {
     "offscreen": "partner head out of frame, cropped male hands at frame edge",
     "carry": "carried in dark-haired male partner's arms, male torso and shoulders supporting her",
     "bury_chest": "back of dark-haired male head buried in her chest, male face completely obscured, partner arms around waist",
+    "between_thighs": "kneeling male partner positioned low between spread thighs, male hands pushing inner thighs open in foreground, rear of male head centered at crotch level",
 }
 
 _MOB_TIER_SPECS: Dict[int, Dict[str, Any]] = {
@@ -205,7 +206,6 @@ _MOB_TIER_SPECS: Dict[int, Dict[str, Any]] = {
         "negative_tags": "(giant penis, hyper penis, huge penis:1.25), full male body, (detailed male face, male eyes, full male head:1.25), muscular chest",
     },
 }
-
 
 def _resolve_mob_tier(pose: PoseEntry, pose_tag: str) -> Optional[int]:
     """포즈 메타데이터(mob_tier) 또는 명시적 solo focus 마커로부터 0~3 노출 등급을 판별합니다."""
@@ -829,10 +829,10 @@ class DefectDefenseMutator(PromptMutator):
             )
         code_str_clean = str(getattr(ctx.pose, "code", "")).strip().zfill(3)
         is_non_exposure_romance = code_str_clean in ("060", "061", "062", "063")
-
         if ctx.is_otokonoko and ctx.nude and not is_non_exposure_romance:
             neg = f"{neg}, (pussy:1.35), (vagina:1.35), (female genitalia:1.35), (cameltoe:1.35), (cleavage:1.2), (large breasts:1.3), (breasts:1.2)"
-            if "penis" not in ctx.positive_prompt.lower():
+            is_upper_torso_crop = any(kw in p_low for kw in ("cropped at upper chest", "cropped at chest", "cropped at waist", "cropped at lower belly"))
+            if not is_upper_torso_crop and "penis" not in ctx.positive_prompt.lower():
                 ctx.positive_prompt = f"{ctx.positive_prompt}, (penis:1.2), (small erect penis:1.15), (testicles:1.15), male genitalia"
 
         # [패치 E] 착의 H-씬 탈의/가슴 노출 원천 차단 네거티브벽 및 상의 보존
@@ -970,7 +970,7 @@ class TwoPersonMobMutator(PromptMutator):
             ctx.is_interactive = bool(spec["is_interactive"]) and not ctx.is_aftermath
 
             if mob_tier == 0:
-                tier0_neg = "1boy, male body, disembodied limb" if ctx.is_otokonoko else spec["negative_tags"]
+                tier0_neg = "2boys, disembodied limb" if ctx.is_otokonoko else spec["negative_tags"]
                 neg = f"{neg}, {tier0_neg}"
             elif ctx.is_interactive:
                 pos = re.sub(r",\s*solo\b", "", pos, flags=re.IGNORECASE)
@@ -983,7 +983,7 @@ class TwoPersonMobMutator(PromptMutator):
                 )
                 is_poses_section = (getattr(ctx.pose, "section", "") or "").lower() == "poses"
                 is_mob_shadow = bool(getattr(ctx.pose, "mob_shadow", False))
-                if mob_tier == 2 and ctx.partner_pos == "carry":
+                if mob_tier == 2 and ctx.partner_pos in ("carry", "between_thighs"):
                     tier_neg = _strip_tags_preserving_parens(tier_neg, r"\bfull male head\b")
                 if mob_tier == 2 and (is_poses_section or is_kiss_scene or is_mob_shadow):
                     tier_neg = _strip_tags_preserving_parens(tier_neg, r"\b(?:heavy shadow|dark silhouette)\b")
@@ -992,7 +992,7 @@ class TwoPersonMobMutator(PromptMutator):
                     pos = _inject_partner_pos_inline(pos, ctx.partner_pos, pose_tag)
                     if ctx.partner_pos == "carry":
                         pos = re.sub(r",?\s*\bpartner head out of frame\b", "", pos, flags=re.IGNORECASE)
-                    if (is_poses_section or is_kiss_scene or is_mob_shadow) and ctx.partner_pos != "bury_chest":
+                    if (is_poses_section or is_kiss_scene or is_mob_shadow) and ctx.partner_pos not in ("bury_chest", "between_thighs"):
                         # 일상/스킨십 2인 포즈(027,028,031,036) 및 밀착 키스 씬(060,061)에서는 별도 BREAK 블록으로
                         # 상안부 그림자 모브 남캐를 격리하고, 주 캐릭터 눈은 여성 한정 clear visible female eyes로 보호해
                         # 남캐 눈 역노출과 앞머리 이염을 차단.

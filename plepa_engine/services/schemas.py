@@ -42,7 +42,9 @@ class PoseItemSchema(BaseModel):
         default=None,
         description="2인 파트너/모브 노출 등급 (0=솔로 POV, 1=손·팔 크롭, 2=실루엣 밀착, 3=콤팩트 봉사)",
     )
-    partner_pos: Optional[Literal["above", "below", "behind", "side_kiss", "offscreen", "carry", "bury_chest"]] = Field(
+    partner_pos: Optional[
+        Literal["above", "below", "behind", "side_kiss", "offscreen", "carry", "bury_chest", "between_thighs"]
+    ] = Field(
         default=None,
         description="2인 구도 시 파트너 상대 위치",
     )

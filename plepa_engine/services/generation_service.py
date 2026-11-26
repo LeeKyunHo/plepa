@@ -797,7 +797,7 @@ class GenerationService:
                                     pose_mob_tier == 2
                                     or (
                                         qc_is_two_person
-                                        and pose_partner_pos in ("behind", "above", "below", "side_kiss", "carry", "bury_chest")
+                                        and pose_partner_pos in ("behind", "above", "below", "side_kiss", "carry", "bury_chest", "between_thighs")
                                     )
                                 )
                                 is_kiss = "kiss" in qc_prompt.lower() or str(target.code) in ("060", "061", "019")
