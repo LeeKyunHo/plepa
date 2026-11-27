@@ -5,7 +5,7 @@ tests/test_v2_migration.py
 """
 
 import unittest
-from plepa_engine.services.pose_service import default_pose_service
+from plepa_engine.services.pose_service import default_pose_service, pose_display_sort_key
 from plepa_engine.prompt_builder import is_nude_pose, resolve_pose_outfit_slot
 
 
@@ -110,6 +110,27 @@ class TestV2MigrationIntegrity(unittest.TestCase):
             )
             self.assertIn(self.db[o_code_v3].section, ("special_otokonoko", "special_otokonoko_h"))
             self.assertEqual(f_entry.required_outfit, self.db[o_code_v3].required_outfit)
+
+    def test_sort_order_clustering_and_code_invariance(self):
+        """전 포즈 sort_order(10단위) 부여 및 코드 번호 불변 상태에서 유사 군집 표시 정렬 계약 검증."""
+        from plepa_engine.services.schemas import PoseItemSchema
+
+        self.assertGreaterEqual(len(self.db), 178)
+        self.assertEqual(self.db["056"].label, "앉아가슴희롱")
+        self.assertEqual(self.db["136"].label, "밀착키스")
+        self.assertEqual(self.db["206"].label, "밀착키스")
+
+        # PoseItemSchema 왕복 직렬화 시 sort_order 보존
+        schema_056 = PoseItemSchema.from_pose_entry(self.db["056"])
+        self.assertEqual(schema_056.sort_order, self.db["056"].sort_order)
+        self.assertEqual(schema_056.to_pose_entry("056", "poses").sort_order, self.db["056"].sort_order)
+
+        # 유사 군집 정렬 순서 검증 (056은 031~033 사이, 136은 060~061 사이)
+        ordered = sorted(self.db.keys(), key=lambda c: pose_display_sort_key(c, self.db.get(c)))
+        self.assertLess(ordered.index("031"), ordered.index("056"))
+        self.assertLess(ordered.index("056"), ordered.index("033"))
+        self.assertLess(ordered.index("060"), ordered.index("136"))
+        self.assertLess(ordered.index("136"), ordered.index("061"))
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ import urllib.parse
 from nicegui import ui
 from plepa_engine.config import DEFAULT_ROSTER, PROJECTS_DIR
 from plepa_engine.services.character_service import default_character_service
+from plepa_engine.services.pose_service import default_pose_service, pose_display_sort_key
 from plepa_gui.components.header import get_active_roster
 from plepa_gui.components.retouch_editor import (
     RETOUCH_EDITOR_CSS,
@@ -142,13 +143,16 @@ def get_mobile_gallery_data(roster: Optional[str] = None) -> Dict[str, Any]:
         )
         char_defs = [{"id": pfx, "name": pfx, "short_name": pfx, "count": 0} for pfx in discovered_dirs]
 
+    pose_db = default_pose_service.load_pose_db(engine="sdxl", roster=target_roster)
     char_name_map = {c["id"]: c["name"] for c in char_defs}
     now_ts = time.time()
     today_start, recent_start = now_ts - (24 * 3600), now_ts - (7 * 24 * 3600)
 
     items: List[Dict[str, Any]] = []
     for c_info in char_defs:
-        items.extend(_collect_char_items(c_info, assets_dir, char_name_map, today_start, recent_start))
+        c_items = _collect_char_items(c_info, assets_dir, char_name_map, today_start, recent_start)
+        c_items.sort(key=lambda it: pose_display_sort_key(str(it.get("code") or ""), pose_db.get(str(it.get("code") or ""))))
+        items.extend(c_items)
 
     from plepa_engine.services.asset_service import default_asset_service
     missing_map = default_asset_service.get_missing_poses_by_character(target_roster)

@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, Set
 
 from nicegui import ui
-from plepa_engine.services.pose_service import SECTION_METADATA, SECTION_NAMES, default_pose_service
+from plepa_engine.services.pose_service import SECTION_METADATA, SECTION_NAMES, default_pose_service, pose_display_sort_key
 from plepa_engine.services.schemas import PoseSetSchema
 from plepa_gui.components.header import get_active_roster, render_header
 
@@ -43,7 +43,10 @@ def _render_section_checkbox_grid(all_poses: Dict[str, Any], selected_codes: Set
     """4대 섹션별 포즈 체크리스트 카드를 렌더링합니다."""
     with ui.column().classes("w-full gap-4 max-h-[480px] overflow-y-auto pr-2"):
         for sec in SECTION_NAMES:
-            sec_items = [p for _, p in all_poses.items() if p.section == sec]
+            sec_items = sorted(
+                [p for _, p in all_poses.items() if p.section == sec],
+                key=lambda p: pose_display_sort_key(p.code, p),
+            )
             if not sec_items:
                 continue
             with ui.card().classes("w-full bg-slate-800/40 border border-slate-700/50 p-3 rounded-lg"):
@@ -156,7 +159,7 @@ def render_pose_sets_page() -> None:
 
     def select_all(val: bool) -> None:
         s = state["current_set"]
-        s.codes = sorted(all_poses.keys()) if val else []
+        s.codes = sorted(all_poses.keys(), key=lambda c: pose_display_sort_key(c, all_poses.get(c))) if val else []
         render_detail()
 
     def select_range(start: int, end: int) -> None:
@@ -166,7 +169,12 @@ def render_pose_sets_page() -> None:
 
     def save_set(old_s: PoseSetSchema, name: str, desc: str, codes: list) -> None:
         try:
-            new_s = PoseSetSchema(id=old_s.id, name=name.strip(), description=desc.strip(), codes=sorted(codes, key=lambda x: int(x)))
+            new_s = PoseSetSchema(
+                id=old_s.id,
+                name=name.strip(),
+                description=desc.strip(),
+                codes=sorted(codes, key=lambda c: pose_display_sort_key(c, all_poses.get(c))),
+            )
             default_pose_service.save_pose_set(new_s)
             ui.notify(f"포즈 세트 '{name}' 저장 완료!", type="positive")
             state["current_set"] = new_s

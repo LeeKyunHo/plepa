@@ -45,6 +45,8 @@ def render_single_char_view(
     sort_mode = state.get("single_sort", "mtime_desc")
     if sort_mode == "mtime_desc":
         assets = sorted(assets, key=lambda x: x.get("mtime", 0.0), reverse=True)
+    else:
+        assets = sorted(assets, key=lambda x: pose_sort_key(x["code"], all_poses))
 
     with content_container:
         if not assets:
@@ -199,7 +201,7 @@ def render_matrix_view(
         code_mtime_map[c] = best_m
 
     sort_mode = state.get("matrix_sort", "code_asc")
-    sorted_codes = sorted(codes, key=lambda c: (-code_mtime_map.get(c, 0.0), pose_sort_key(c))) if sort_mode == "mtime_desc" else sorted(codes, key=pose_sort_key)
+    sorted_codes = sorted(codes, key=lambda c: (-code_mtime_map.get(c, 0.0), pose_sort_key(c, all_poses))) if sort_mode == "mtime_desc" else sorted(codes, key=lambda c: pose_sort_key(c, all_poses))
     _render_matrix_table(
         content_container, state, all_poses, prefixes, sorted_codes, matrix,
         code_mtime_map, sort_mode, image_widgets_by_rel, retouched_versions, open_lightbox_cb,

@@ -13,7 +13,7 @@ from nicegui import ui
 from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.services.asset_service import default_asset_service
 from plepa_engine.services.character_service import default_character_service
-from plepa_engine.services.pose_service import default_pose_service
+from plepa_engine.services.pose_service import default_pose_service, pose_display_sort_key
 from plepa_gui.components.header import get_active_roster, get_available_rosters
 
 logger = logging.getLogger(__name__)
@@ -67,12 +67,10 @@ def detect_best_default_roster() -> str:
     return best_roster
 
 
-def pose_sort_key(code: str) -> tuple[int, int, str]:
-    """숫자 포즈 코드를 선행 정렬하고 영숫자 포즈 코드를 후행 사전순 정렬합니다."""
-    try:
-        return (0, int(code), "")
-    except ValueError:
-        return (1, 0, code)
+def pose_sort_key(code: str, all_poses: Optional[Dict[str, Any]] = None) -> tuple[int, int, str]:
+    """포즈 DB `sort_order` 우선 · 숫자/영숫자 폴백 기준으로 포즈 표시 순서를 정렬합니다."""
+    entry = all_poses.get(code) if isinstance(all_poses, dict) else None
+    return pose_display_sort_key(code, entry)
 
 
 def get_character_asset_counts(roster: str) -> Dict[str, int]:
@@ -104,7 +102,8 @@ def get_roster_gallery_pose_scope(roster: str) -> Dict[str, Any]:
             if code:
                 existing_codes_set.add(code)
 
-    existing_codes = sorted(existing_codes_set, key=pose_sort_key)
+    all_poses = default_pose_service.load_pose_db(engine="sdxl", roster=roster)
+    existing_codes = sorted(existing_codes_set, key=lambda c: pose_sort_key(c, all_poses))
     pose_sets = default_pose_service.load_pose_sets()
     has_otokonoko = "otokonoko" in char_genders
     otokonoko_only = char_genders == {"otokonoko"}
@@ -123,7 +122,7 @@ def get_roster_gallery_pose_scope(roster: str) -> Dict[str, Any]:
             continue
         if sid.startswith("spy_") and roster_l != "spy":
             continue
-        matched = [c for c in s.codes if c in existing_codes_set]
+        matched = sorted([c for c in s.codes if c in existing_codes_set], key=lambda c: pose_sort_key(c, all_poses))
         if not matched:
             continue
         set_options[s.id] = f"{s.name} ({len(matched)}종)"

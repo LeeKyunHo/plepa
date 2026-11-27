@@ -29,6 +29,7 @@ class PoseEntry:
     mob_tier: Optional[int] = None
     partner_pos: Optional[str] = None
     mob_shadow: bool = False
+    sort_order: Optional[int] = None
     flags: Optional[Dict[str, Any]] = None
 
     @classmethod
@@ -68,6 +69,7 @@ class PoseEntry:
             mob_tier=item.get("mob_tier"),
             partner_pos=item.get("partner_pos"),
             mob_shadow=bool(item.get("mob_shadow", False)),
+            sort_order=int(item["sort_order"]) if item.get("sort_order") is not None else None,
             flags=flags_dict,
         )
 

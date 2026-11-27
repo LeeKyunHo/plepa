@@ -49,6 +49,7 @@ class PoseItemSchema(BaseModel):
         description="2인 구도 시 파트너 상대 위치",
     )
     mob_shadow: bool = Field(default=False, description="상안부 그림자 음영 가드 활성화 여부")
+    sort_order: Optional[int] = Field(default=None, description="UI/카탈로그 표시 정렬 순서 (10단위)")
     flags: Optional[PoseFlags] = Field(default=None, description="포즈 메타데이터 플래그")
 
     @model_validator(mode="before")
@@ -100,6 +101,7 @@ class PoseItemSchema(BaseModel):
             "mob_tier": entry.mob_tier,
             "partner_pos": entry.partner_pos,
             "mob_shadow": entry.mob_shadow,
+            "sort_order": entry.sort_order,
             "flags": entry.flags,
         })
 

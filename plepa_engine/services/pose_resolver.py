@@ -133,6 +133,30 @@ def is_pose_allowed_for_character(
     return True
 
 
+def pose_display_sort_key(code: str, entry: Optional[PoseEntry] = None) -> Tuple[int, int, str]:
+    """포즈 DB의 `sort_order` 우선 · 섹션/코드 폴백 기반 표시 정렬 키를 반환합니다."""
+    c = str(code).strip()
+    sort_ord = getattr(entry, "sort_order", None) if entry is not None else None
+    if sort_ord is not None:
+        return (0, int(sort_ord), c)
+    if c.isdigit():
+        n = int(c)
+        if n <= 19:
+            fallback = 10 + n * 10
+        elif n <= 59:
+            fallback = 530 + max(0, n - 50) * 10
+        elif n <= 79:
+            fallback = 600 + (n - 60) * 10
+        elif n <= 139:
+            fallback = 810 + (n - 80) * 10
+        elif n <= 209:
+            fallback = 1500 + (n - 150) * 10
+        else:
+            fallback = 3000 + n
+        return (0, fallback, c)
+    return (1, 0, c)
+
+
 def _resolve_all_codes(db: Dict[str, PoseEntry], roster: Optional[str]) -> List[str]:
     allowed_themes = set(ROSTER_THEME_MAP.get(roster.lower(), [])) if roster else set()
 
@@ -145,22 +169,17 @@ def _resolve_all_codes(db: Dict[str, PoseEntry], roster: Optional[str]) -> List[
             return entry.section in allowed_themes
         return entry.code.isdigit()
 
-    def _sort_key(k: str) -> Tuple[int, int, str]:
-        try:
-            return (0, int(k), "")
-        except ValueError:
-            return (1, 0, k)
-
-    return sorted([c for c, e in db.items() if _allowed(e)], key=_sort_key)
+    return sorted([c for c, e in db.items() if _allowed(e)], key=lambda k: pose_display_sort_key(k, db.get(k)))
 
 
 def _resolve_section_alias(expr_lower: str, db: Dict[str, PoseEntry]) -> Optional[List[str]]:
     for aliases, sections, prefix in _SECTION_EXPR_RULES:
         if expr_lower in aliases:
-            return [
+            matched = [
                 c for c, e in db.items()
                 if e.is_active and (e.section in sections or (prefix is not None and c.startswith(prefix)))
             ]
+            return sorted(matched, key=lambda k: pose_display_sort_key(k, db.get(k)))
     return None
 
 

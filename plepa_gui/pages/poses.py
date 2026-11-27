@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, List
 from nicegui import ui
 from plepa_engine.models import CharacterConfig, PoseEntry
 from plepa_engine.services.character_service import default_character_service
-from plepa_engine.services.pose_service import SECTION_METADATA, default_pose_service
+from plepa_engine.services.pose_service import SECTION_METADATA, default_pose_service, pose_display_sort_key
 from plepa_gui.components.header import get_active_roster, render_header
 from plepa_gui.components.prompt_inspector import open_prompt_inspector_dialog
 
@@ -140,7 +140,10 @@ def _render_pose_items_column(
     """현재 선택된 섹션의 포즈 항목 스크롤 리스트를 렌더링합니다."""
     items_container.clear()
     sdxl_db = default_pose_service.load_pose_db(engine="sdxl", roster=get_active_roster())
-    sec_codes = sorted([c for c, e in sdxl_db.items() if e.section == state["current_section"]])
+    sec_codes = sorted(
+        [c for c, e in sdxl_db.items() if e.section == state["current_section"]],
+        key=lambda c: pose_display_sort_key(c, sdxl_db.get(c)),
+    )
 
     with items_container:
         for code in sec_codes:
@@ -190,7 +193,10 @@ def render_poses_page() -> None:
     def switch_section(sec_name: str) -> None:
         state["current_section"] = sec_name
         db = default_pose_service.load_pose_db(engine="sdxl", roster=get_active_roster())
-        sec_codes = [c for c, e in db.items() if e.section == sec_name]
+        sec_codes = sorted(
+            [c for c, e in db.items() if e.section == sec_name],
+            key=lambda c: pose_display_sort_key(c, db.get(c)),
+        )
         if sec_codes:
             state["selected_code"] = sec_codes[0]
         refresh_items_list()
@@ -233,7 +239,7 @@ def render_poses_page() -> None:
     init_db = default_pose_service.load_pose_db(engine="sdxl")
     init_codes = [c for c, e in init_db.items() if e.section == state["current_section"]]
     if init_codes:
-        state["selected_code"] = sorted(init_codes)[0]
+        state["selected_code"] = sorted(init_codes, key=lambda c: pose_display_sort_key(c, init_db.get(c)))[0]
 
     refresh_items_list()
     load_and_render_detail()

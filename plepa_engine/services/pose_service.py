@@ -29,6 +29,7 @@ from plepa_engine.services.pose_resolver import (
     THEME_ACTION_SECTIONS,
     is_pose_allowed_for_character as _is_pose_allowed_impl,
     normalize_pose_code,
+    pose_display_sort_key,
     resolve_pose_codes_expr,
 )
 from plepa_engine.services.pose_storage import (
