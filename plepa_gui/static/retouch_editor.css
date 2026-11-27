@@ -1,0 +1,147 @@
+.plepa-retouch-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(2, 6, 23, 0.96);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        flex-direction: column;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .plepa-retouch-modal.active {
+        display: flex;
+    }
+    .plepa-retouch-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        padding-top: max(10px, env(safe-area-inset-top));
+        background: #0f172a;
+        border-bottom: 1px solid #334155;
+        color: #f8fafc;
+        flex-shrink: 0;
+    }
+    .plepa-retouch-title-wrap {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .plepa-retouch-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #f8fafc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .plepa-retouch-sub {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+    .plepa-retouch-close {
+        background: #334155;
+        color: #f8fafc;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .plepa-retouch-stage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 12px;
+        position: relative;
+        touch-action: none;
+    }
+    #plepaEditorCanvas {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+        cursor: crosshair;
+        touch-action: none;
+        background: #0b1120;
+    }
+    .plepa-retouch-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 14px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        background: #0f172a;
+        border-top: 1px solid #334155;
+        flex-shrink: 0;
+    }
+    .plepa-retouch-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .plepa-tool-btn {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        padding: 7px 11px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.12s ease;
+        white-space: nowrap;
+    }
+    .plepa-tool-btn:hover:not(:disabled) {
+        background: #334155;
+    }
+    .plepa-tool-btn:disabled {
+        opacity: 0.42;
+        cursor: not-allowed;
+    }
+    .plepa-tool-btn.active {
+        background: #2563eb;
+        border-color: #60a5fa;
+        color: #ffffff;
+        box-shadow: 0 0 10px rgba(37, 99, 235, 0.55);
+    }
+    .plepa-tool-btn.warn {
+        background: rgba(217, 119, 6, 0.22);
+        border-color: rgba(251, 191, 36, 0.65);
+        color: #fde68a;
+    }
+    .plepa-tool-btn.warn:hover:not(:disabled) {
+        background: rgba(217, 119, 6, 0.38);
+    }
+    .plepa-save-btn {
+        background: #10b981;
+        color: #022c22;
+        border: 1px solid #34d399;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .plepa-save-btn:hover:not(:disabled) {
+        background: #34d399;
+    }
+    .plepa-save-btn:disabled {
+        opacity: 0.6;
+        cursor: wait;
+    }

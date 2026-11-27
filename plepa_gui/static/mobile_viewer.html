@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>📱 PLEPA Mobile Studio</title>
+    <style>
+__MOBILE_VIEWER_CSS__
+    </style>
+    __RETOUCH_EDITOR_CSS__
+</head>
+<body>
+    <!-- 토스트 배너 -->
+    <div id="toastBanner">
+        <span id="toastMsg">알림</span>
+        <button id="toastUndoBtn" type="button" class="btn-undo" style="display:none;" onclick="triggerUndo()">실행 취소</button>
+    </div>
+
+    <div id="mobileApp" class="viewer-container">
+        <!-- 상단 초슬림 헤더 + 필터 바 -->
+        <header id="topOverlay" class="top-bar">
+            <div class="header-row">
+                <div class="header-left">
+                    <a href="/gallery" class="hdr-icon-btn" title="PC 스튜디오">❮</a>
+                    <select id="rosterSelect" class="roster-select" onchange="switchRoster(this.value)" title="로스터 즉시 전환">
+__ROSTER_OPTIONS_HTML__
+                    </select>
+                </div>
+                <div class="header-right">
+                    <span id="jobQueueBadge" class="job-queue-badge" style="display:none; cursor:pointer;" onclick="toggleSettingsSheet()" title="백그라운드 리롤 대기열 상세 보기"></span>
+                    <button type="button" id="viewToggleBtn" class="hdr-pill-btn" onclick="toggleViewMode()" title="3열 그리드 모아보기 전환">⊞ 그리드</button>
+                    <div id="counterBadge" class="counter-badge">0 / 0</div>
+                    <button type="button" id="refreshBtn" class="hdr-icon-btn" onclick="manualRefreshGallery()" title="최신 에셋 새로고침">🔄</button>
+                    <button type="button" id="settingsBtn" class="hdr-icon-btn" onclick="toggleSettingsSheet()" title="검열/정렬/일괄 설정">⚙️</button>
+                </div>
+            </div>
+            <div class="filter-strip">
+                <button type="button" class="btn-chip __CHIP_ALL_ACTIVE__" id="chipAll" onclick="setMode('all')">📂 전체</button>
+                <button type="button" class="btn-chip __CHIP_RECENT_ACTIVE__" id="chipRecent" onclick="setMode('recent')">✨ 최근 (<span id="recentCountText">__RECENT_COUNT__</span>)</button>
+                <button type="button" class="btn-chip" id="chipNew" onclick="setMode('new')">🆕 오늘</button>
+                <button type="button" class="btn-chip chip-qc __CHIP_QC_WARN__" id="chipQc" onclick="setMode('qc')">⚠️ QC (<span id="qcCountText">__QC_COUNT__</span>)</button>
+                <div class="chip-divider"></div>
+                <div id="charChipsWrap" style="display:flex; align-items:center; gap:6px; flex:0 0 auto;">
+                    <button type="button" class="btn-chip" id="char_all" onclick="setCharFilter('all')">전체캐릭</button>
+__CHAR_BUTTONS_HTML__
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 스테이지 (슬라이드 & 3열 그리드 전환) -->
+        <main class="main-viewport">
+            <div class="stage" id="stage" onclick="onStageClick(event)">
+                <div class="nav-tap-zone nav-tap-left" onclick="prev(event)"></div>
+                <div class="nav-tap-zone nav-tap-right" onclick="next(event)"></div>
+                <div class="nav-indicator left">❮</div>
+                <div class="nav-indicator right">❯</div>
+                <div id="slideSpinner" class="slide-spinner">⏳ 불러오는 중...</div>
+                <img id="mainImg" class="slide-img" src="" alt="에셋" />
+            </div>
+
+            <div class="grid-view" id="gridView">
+                <div class="grid-container" id="gridContainer"></div>
+                <div class="grid-status" id="gridLoadStatus"></div>
+            </div>
+        </main>
+
+        <!-- 하단 2단 수직 스택 컨트롤 바 (슬라이드 모드 전용) -->
+        <footer id="bottomOverlay" class="bottom-bar">
+            <div class="meta-row">
+                <div class="meta-text">
+                    <div id="poseTitle" class="pose-title">포즈 정보</div>
+                    <div id="poseSubtitle" class="pose-subtitle">캐릭터</div>
+                </div>
+                <div class="nav-pair">
+                    <button type="button" class="btn-nav-mini" onclick="prev(event)" title="이전">❮</button>
+                    <button type="button" class="btn-nav-mini primary" onclick="next(event)" title="다음">❯</button>
+                </div>
+            </div>
+            <div class="action-grid">
+                <button type="button" class="btn-action btn-delete" onclick="triggerDelete(event)" title="에셋 삭제 및 휴지통 이동">
+                    <span class="act-ico">🗑️</span><span class="act-lbl">삭제</span>
+                </button>
+                <button type="button" class="btn-action btn-origin" onclick="triggerRestoreOrigin(event)" title="무검열 원본(_origin) 복원">
+                    <span class="act-ico">🔄</span><span class="act-lbl">원본</span>
+                </button>
+                <button type="button" class="btn-action btn-retouch" onclick="triggerRetouch(event)" title="브러시 직접 검열/덧칠">
+                    <span class="act-ico">✏️</span><span class="act-lbl">직접</span>
+                </button>
+                <button type="button" class="btn-action btn-recensor" onclick="triggerReapplyCensor(event)" title="0.2초 즉시 재검열">
+                    <span class="act-ico">⚡</span><span class="act-lbl">재검열</span>
+                </button>
+                <button type="button" class="btn-action btn-reroll" onclick="triggerReroll(event)" title="새 시드 즉시 리롤">
+                    <span class="act-ico">🎲</span><span class="act-lbl">리롤</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ⚙️ 설정 바텀시트 -->
+    <div id="settingsBackdrop" class="sheet-backdrop" onclick="closeSettingsSheet()"></div>
+    <div id="settingsSheet" class="settings-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-head">
+            <span class="sheet-title">⚙️ 검열 · 정렬 · 일괄 작업</span>
+            <button type="button" class="sheet-close" onclick="closeSettingsSheet()">✕</button>
+        </div>
+        <div class="sheet-row">
+            <span class="sheet-label">검열 스타일</span>
+            <select id="censorStyleSelect" class="censor-select-mini" title="즉시 재검열 및 리롤 스타일">
+                <option value="white_silhouette" selected>white_silhouette</option>
+                <option value="black_silhouette">black_silhouette</option>
+                <option value="manga_bar">manga_bar</option>
+                <option value="manga_glow">manga_glow</option>
+                <option value="mosaic">mosaic</option>
+                <option value="bar">bar</option>
+                <option value="slim_bar">slim_bar</option>
+                <option value="shadow">shadow</option>
+                <option value="debug_bbox">debug_bbox</option>
+            </select>
+        </div>
+        <div class="queue-section">
+            <div class="queue-section-title">
+                <span>🎲 대기열 · 진행 현황</span>
+                <span id="queueSummaryText" style="font-size:11px;color:#94a3b8;">확인 중...</span>
+            </div>
+            <div id="queueStatusPanel" class="queue-panel">
+                <div style="text-align:center;color:#64748b;font-size:11px;padding:12px 0;">대기열 상태를 불러오는 중...</div>
+            </div>
+        </div>
+        <div class="sheet-actions">
+            <button type="button" class="sheet-btn" id="chipSort" onclick="toggleSortOrder()">🕒 최신생성순</button>
+            <button type="button" class="sheet-btn btn-fill" id="fillMissingBtn" onclick="triggerFillMissing()">⚡ 누락 채우기 (<span id="missingCountBadge">0</span>)</button>
+            <a href="/gallery" class="sheet-btn" style="grid-column: span 2;">💻 PC 스튜디오 (/gallery) 열기</a>
+        </div>
+    </div>
+
+    <script>
+__MOBILE_VIEWER_JS__
+    </script>
+    __RETOUCH_EDITOR_HTML__
+    __RETOUCH_SCRIPT_HTML__
+</body>
+</html>
