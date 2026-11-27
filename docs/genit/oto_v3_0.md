@@ -719,8 +719,14 @@ function Status(props) {
     setFailedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
   };
 
-  // ★ 신규 캐릭터 추가 시 아래 CHAR_META에 1줄만 추가 (미등록 신규 캐릭터도 자동 표시·폴백)
+  // ★ 신규 캐릭터 추가 시 아래 CHAR_META에 1줄만 추가 (선택 필드 poses/avatar 미지정 시 레거시 ["000","001","004","010"] 자동 적용)
   const ASSET_BASE_URL = "https://d3lna1f15u7pcs.cloudfront.net/media/characters/3979681a-ba27-4843-aea2-94a338dba275/assets/";
+  const resolveAssetUrl = (prefix, entry) => {
+    if (!prefix || !entry) return "";
+    return /\.[a-z0-9]+$/i.test(entry)
+      ? `${ASSET_BASE_URL}${prefix}/${entry}`
+      : `${ASSET_BASE_URL}${prefix}/${prefix}_${entry}.webp`;
+  };
   const CHAR_META = {
     "루카": { prefix: "luc", tag: "명문가·츤데레", spot: "마을 어귀 저택", icon: "🎀", fav: "고급 홍차" },
     "노아": { prefix: "noa", tag: "전속 메이드", spot: "루카의 저택", icon: "🫖", fav: "고급 홍차" },
@@ -890,17 +896,21 @@ function Status(props) {
     approachDraft = `${primaryChar}의 가녀린 손목을 한 손으로 ${tone}하게 감싸 쥐며 말을 건넨다.`;
   }
 
-  let poseCode = "000";
-  if (tensionNum >= 70) poseCode = "004";
-  else if (affNum >= 75) poseCode = "010";
-  else if (affNum >= 40) poseCode = "004";
-  else if (affNum >= 20) poseCode = "001";
+  const poseList = (Array.isArray(activeMeta.poses) && activeMeta.poses.length === 4)
+    ? activeMeta.poses
+    : ["000", "001", "004", "010"];
+  let poseEntry = poseList[0];
+  if (tensionNum >= 70) poseEntry = poseList[2];
+  else if (affNum >= 75) poseEntry = poseList[3];
+  else if (affNum >= 40) poseEntry = poseList[2];
+  else if (affNum >= 20) poseEntry = poseList[1];
 
-  const primaryUrl = activeMeta.prefix ? `${ASSET_BASE_URL}${activeMeta.prefix}/${activeMeta.prefix}_${poseCode}.webp` : "";
-  const fallbackUrl = activeMeta.prefix ? `${ASSET_BASE_URL}${activeMeta.prefix}/${activeMeta.prefix}_000.webp` : "";
-  const portraitUrl = primaryUrl && !failedUrls[primaryUrl]
-    ? primaryUrl
-    : (fallbackUrl && !failedUrls[fallbackUrl] ? fallbackUrl : "");
+  const portraitUrl = [
+    resolveAssetUrl(activeMeta.prefix, poseEntry),
+    resolveAssetUrl(activeMeta.prefix, activeMeta.avatar),
+    resolveAssetUrl(activeMeta.prefix, poseList[0]),
+    resolveAssetUrl(activeMeta.prefix, "000")
+  ].filter(Boolean).find((u) => !failedUrls[u]) || "";
 
   let tensionBadge = { label: "🌿 평온", color: "#10b981" };
   if (tensionNum >= 70) tensionBadge = { label: "🔥 열기 최고조", color: "#ef4444" };
@@ -1071,8 +1081,12 @@ function Status(props) {
       {hasDm && (() => {
         const dmKey = Object.keys(CHAR_META).find((k) => dmFrom.includes(k)) || dmFrom;
         const dmMeta = CHAR_META[dmKey] || { prefix: "", icon: "✨" };
-        const dmAvatarUrl = dmMeta.prefix ? `${ASSET_BASE_URL}${dmMeta.prefix}/${dmMeta.prefix}_000.webp` : "";
-        const showDmAvatar = dmAvatarUrl && !failedUrls[dmAvatarUrl];
+        const dmAvatarUrl = [
+          resolveAssetUrl(dmMeta.prefix, dmMeta.avatar),
+          resolveAssetUrl(dmMeta.prefix, Array.isArray(dmMeta.poses) ? dmMeta.poses[0] : ""),
+          resolveAssetUrl(dmMeta.prefix, "000")
+        ].filter(Boolean).find((u) => !failedUrls[u]) || "";
+        const showDmAvatar = Boolean(dmAvatarUrl);
         return (
           <div style={{
             backgroundColor: "light-dark(#f0fdf4, rgba(16, 185, 129, 0.14))",
@@ -1461,8 +1475,14 @@ function Talk(props) {
     setFailedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
   };
 
-  // ★ 신규 캐릭터 추가 시 아래 CHAR_META에 1줄만 추가 (미등록 캐릭터도 이니셜 아바타 자동 표시)
+  // ★ 신규 캐릭터 추가 시 아래 CHAR_META에 1줄만 추가 (선택 avatar 지정 시 우선 적용, 미등록 캐릭터도 이니셜 자동 표시)
   const ASSET_BASE_URL = "https://d3lna1f15u7pcs.cloudfront.net/media/characters/3979681a-ba27-4843-aea2-94a338dba275/assets/";
+  const resolveAssetUrl = (prefix, entry) => {
+    if (!prefix || !entry) return "";
+    return /\.[a-z0-9]+$/i.test(entry)
+      ? `${ASSET_BASE_URL}${prefix}/${entry}`
+      : `${ASSET_BASE_URL}${prefix}/${prefix}_${entry}.webp`;
+  };
   const CHAR_META = {
     "루카": { prefix: "luc", accent: "#f59e0b" },
     "노아": { prefix: "noa", accent: "#fbbf24" },
@@ -1604,7 +1624,7 @@ function Talk(props) {
             );
           }
           const c = findChar(item.speaker);
-          const rawAvatar = c && c.prefix ? `${ASSET_BASE_URL}${c.prefix}/${c.prefix}_000.webp` : "";
+          const rawAvatar = c && c.prefix ? resolveAssetUrl(c.prefix, c.avatar || "000") : "";
           const avatarUrl = rawAvatar && !failedUrls[rawAvatar] ? rawAvatar : "";
           const accent = c ? c.accent : "#ec4899";
           const displayName = c ? c.key : item.speaker;
@@ -1988,15 +2008,19 @@ function Board(props) {
 
 ---
 
-# 📌 부록: 신규 캐릭터 추가 1분 체크리스트
+# 📌 부록: 신규 캐릭터 증설 6단계 SOP 체크리스트
 
-앞으로 새 주민을 카스미무라에 합류시킬 때는 아래 4군데만 추가하시면 모든 위젯과 시스템에 자동 연동됩니다.
+앞으로 새 주민(신규 `plepa` 생성 에셋 포함)을 카스미무라에 합류시킬 때는 기존 레거시 에셋·매핑을 건드리지 않고 아래 6단계만 수행합니다.
 
-1. **`[캐릭터]` 탭**: 신규 주민 1명 등록 (이름 · 별명 · 키워드 · 소개 · 프롬프트 · 선호 선물 · 에셋 경로).
-2. **`[프롬프트]` 탭**: 하단 `[캐릭터 식별자(Prefix) 매핑 테이블]`에 1줄 추가 + 신규 에셋 인덱스 표기.
-3. **`[에셋]` 탭**:
-   * `Status` JSX 맨 위 `CHAR_META`에 1줄 추가 (`"이름": { prefix: "xxx", tag: "...", spot: "...", icon: "✨", fav: "..." }`).
-   * `Talk` JSX 맨 위 `CHAR_META`에 1줄 추가 (`"이름": { prefix: "xxx", accent: "#ec4899" }`).
-   * `Board` JSX `ICON_MAP`에 1줄 추가 (생략 시 기본 `✨` 자동 표시).
-   * 전역 변수 `roster_stats` 초기값과 시작 설정 1~3 프롤로그의 `roster_stats` 끝에 `,이름:15/10` 추가.
-4. **`[작품 설명]` 탭**: `[NEW RESIDENTS]` 섹션에 기존 카드 `div` 1개를 복사해 `[이미지 업로드]`와 소개 문구만 교체.
+1. **Step 1 [`[이미지 업로드]`]**: 새 주민 폴더(`{prefix}/`) 에셋 업로드 + `[작품 설명]`용 대표 이미지 1장 별도 업로드.
+2. **Step 2 [`[캐릭터]` 탭]**: 이름·별명·비중복 키워드 5개(이름/거점/역할)·소개·프롬프트(외형/말투/약점/거점/상보적 선호 선물/폴더 포함 경로 예시 `{{url}}{prefix}/{file}`).
+3. **Step 3 [`[프롬프트]` 탭]**:
+   * `4. 주요 주민` 리스트에 1줄 추가 + `[캐릭터 접두사(prefix)]` 1줄 백업 테이블 추가.
+   * **기존 레거시 에셋 매핑은 1글자도 수정하지 않고**, 맨 아래에 **`[신규 주민 에셋 인덱스]` 블록을 별도로 덧붙인 뒤** `메인 + max(추가) <= 12,000자` 확인.
+4. **Step 4 [`[에셋]` 탭]**:
+   * `Status`·`Talk` `CHAR_META`에 1줄 추가 (`plepa` 신규 에셋은 필요 시 `poses: [기본, 20+, 40+/열기70+, 75+]` 및 `avatar` 선택 필드 지정).
+   * `Board` `ICON_MAP` 1줄 추가 + 전역 변수 `roster_stats` 초기값 끝에 `,이름:15/10` 추가.
+5. **Step 5 [`[시작 설정]` & `[설정집]`]**:
+   * 시작 설정 1·2·3 프롤로그 마지막 `Status` 줄 `roster_stats=` 끝에 `,이름:초기값` 추가 (`items=` 누락 점검, 프롤로그 본문 1인 집중 유지).
+   * `[설정집]` `주요 거점 매핑`·`개인톡 말투 가이드` 각 1줄 추가 + **발견성 확보(`Board` 일일 의뢰 1칸 · 1:1 첫인사 · 기존 주민 관계망 1줄)**.
+6. **Step 6 [`[작품 설명]` 탭]**: `[NEW RESIDENTS]` 섹션에 기존 카드 `<div>` 1개 복제 후 `[이미지 업로드]`와 소개 문구만 교체 (**0칸 정렬, `{{파일명}}` 위·아래 빈 줄 1줄, 고정 인원수 표기 금지**).

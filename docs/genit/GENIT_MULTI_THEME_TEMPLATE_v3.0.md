@@ -110,8 +110,16 @@ function Status(props) {
   const [failedUrls, setFailedUrls] = React.useState({});
 
   const ASSET_BASE_URL = "https://{CDN_HOST}/media/characters/{UUID}/assets/";
+  // ★ 혼용 에셋 규격: 기존 3자리 코드("000") 또는 확장자 포함 신규 파일명 모두 허용 (poses/avatar 미지정 시 레거시 ["000","001","004","010"] 적용)
   const CHAR_META = {
     "{{MAIN_CHAR}}": { prefix: "{{PREFIX}}", tag: "{{TAG}}", spot: "{{START_SPOT}}", icon: "✨", fav: "{{상보적선호품목}}" }
+    // , "{{NEW_CHAR}}": { prefix: "new", tag: "신규", spot: "새거점", icon: "🌟", fav: "고급 녹차", avatar: "new_000_평상.webp", poses: ["new_000_평상.webp", "new_001_미소.webp", "new_004_부끄.webp", "new_010_유혹.webp"] }
+  };
+  const resolveAssetUrl = (prefix, entry) => {
+    if (!prefix || !entry) return "";
+    return /\.[a-z0-9]+$/i.test(entry)
+      ? `${ASSET_BASE_URL}${prefix}/${entry}`
+      : `${ASSET_BASE_URL}${prefix}/${prefix}_${entry}.webp`;
   };
   const EVENT_POOL = [
     "갑작스러운 소나기(급히 비를 피할 처마나 실내를 찾아야 함)",
@@ -129,6 +137,19 @@ function Status(props) {
   const dmFrom = String(props.dm_from || "").trim();
   const hasDm = Boolean(dmFrom && dmFrom !== "없음" && dmFrom !== "none" && dmFrom !== "-");
   const dmPreview = String(props.dm_preview || "").trim();
+
+  const poseList = (Array.isArray(activeMeta.poses) && activeMeta.poses.length === 4) ? activeMeta.poses : ["000", "001", "004", "010"];
+  let poseEntry = poseList[0];
+  if (cleanInt(props.tension, 20) >= 70) poseEntry = poseList[2];
+  else if (affNum >= 75) poseEntry = poseList[3];
+  else if (affNum >= 40) poseEntry = poseList[2];
+  else if (affNum >= 20) poseEntry = poseList[1];
+  const portraitUrl = [
+    resolveAssetUrl(activeMeta.prefix, poseEntry),
+    resolveAssetUrl(activeMeta.prefix, activeMeta.avatar),
+    resolveAssetUrl(activeMeta.prefix, poseList[0]),
+    resolveAssetUrl(activeMeta.prefix, "000")
+  ].filter(Boolean).find((u) => !failedUrls[u]) || "";
 
   // ★ v3.0 인라인 DM: [💬 열기] 시 메시지 즉시 전송 금지 -> 인라인 입력창 토글 후 [전송] 시 동기 실행
   const handleToggleDm = () => setIsDmOpen((v) => !v);
@@ -155,7 +176,16 @@ function Talk(props) {
   const [draft, setDraft] = React.useState("");
   const [localReplies, setLocalReplies] = React.useState([]);
   const [isClosed, setIsClosed] = React.useState(false);
-  // ★ v3.0: 상단 헤더 우측에 슬림 [📴 덮기] 배치, 하단 답장 입력창+전송 버튼은 토글 없이 상시 오픈
+  const ASSET_BASE_URL = "https://{CDN_HOST}/media/characters/{UUID}/assets/";
+  const CHAR_META = {
+    "{{MAIN_CHAR}}": { prefix: "{{PREFIX}}", accent: "#ec4899" }
+    // , "{{NEW_CHAR}}": { prefix: "new", accent: "#3b82f6", avatar: "new_000_평상.webp" }
+  };
+  const resolveAssetUrl = (prefix, entry) => {
+    if (!prefix || !entry) return "";
+    return /\.[a-z0-9]+$/i.test(entry) ? `${ASSET_BASE_URL}${prefix}/${entry}` : `${ASSET_BASE_URL}${prefix}/${prefix}_${entry}.webp`;
+  };
+  // ★ v3.0: 상단 헤더 우측에 슬림 [📴 덮기] 배치, 하단 답장 입력창+전송 버튼은 토글 없이 상시 오픈 (아바타는 avatar ➔ _000.webp)
   const handleSendReply = (target) => {
     const text = draft.trim();
     if (!text) return;
@@ -171,9 +201,11 @@ function Talk(props) {
 
 ---
 
-## 6. 부록: 신규 캐릭터 추가 1분 체크리스트
+## 6. 부록: 기존 v3.0 작품 신규 캐릭터 증설 6단계 SOP 체크리스트
 
-1. **`[캐릭터]` 탭**: 신규 인물 등록 (이름 · 별명 · 비중복 키워드 5개 · 소개 · 프롬프트 · 상보적 선호 선물 · 경로 `{{url}}{prefix}/{prefix}_{code}.webp`).
-2. **`[프롬프트]` 탭**: `[캐릭터 접두사(prefix)]` 1줄 요약 & `[캐릭터 식별자(Prefix) 매핑 테이블]`에 1줄 추가.
-3. **`[에셋]` 탭**: `Status`·`Talk` `CHAR_META` 및 `Board` `ICON_MAP`에 1줄 추가 + 전역 변수 `roster_stats` 및 시작 설정 프롤로그 `roster_stats` 끝에 `,이름:초기값` 추가.
-4. **`[설명]` 탭**: `[NEW RESIDENTS]` 섹션에 카드 `<div>` 복사 후 `[이미지 업로드]`와 소개 문구만 교체 (0칸 정렬, 위·아래 빈 줄 1줄 유지).
+1. **Step 1 [`[이미지 업로드]`]**: `{prefix}/` 폴더 에셋 업로드 + `[설명]`용 대표 이미지 1장 별도 업로드.
+2. **Step 2 [`[캐릭터]` 탭]**: 이름·별명·비중복 키워드 5개·소개·프롬프트(외형/말투/약점/거점/상보적 선호 선물/폴더 포함 경로 예시).
+3. **Step 3 [`[프롬프트]` 탭]**: `4. 주요 주민` 1줄 + `[캐릭터 접두사(prefix)]` 1줄 추가. **기존 레거시 에셋 매핑은 무수정 보존**하고 맨 아래에 **`[신규 주민 에셋 인덱스]` 블록을 별도 덧붙임** 후 `메인 + max(추가) <= 12,000자` 예산 확인.
+4. **Step 4 [`[에셋]` 탭]**: `Status`·`Talk` `CHAR_META`(필요 시 `poses`/`avatar` 지정)·`Board` `ICON_MAP` 1줄 추가 + 전역 변수 `roster_stats` 끝에 `,이름:15/10` 추가.
+5. **Step 5 [`[시작 설정]` & `[설정집]`]**: 시작 설정 1·2·3 프롤로그 마지막 `Status` `roster_stats=` 끝에 초기 스탯 추가(`items=` 누락 점검, 본문 1인 집중 유지) + 설정집 `거점 매핑`·`개인톡 말투 가이드` 각 1줄 추가 + **발견성 확보(`Board` 일일 의뢰 1칸 · 1:1 첫인사 · 기존 관계망 1줄)**.
+6. **Step 6 [`[작품 설명]` 탭]**: `[NEW RESIDENTS]` 섹션에 카드 `<div>` 복사 후 `[이미지 업로드]`와 소개 문구만 교체 (**0칸 정렬, `{{파일명}}` 위·아래 빈 줄 1줄, 고정 인원수 금지**).

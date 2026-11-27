@@ -23,7 +23,7 @@
 | **3. 챗봇 제작**<br>*(Reference)* | **[`젠잇_캐릭터채팅_제작법.md`](젠잇_캐릭터채팅_제작법.md)** | Gen-IT v2.2 5탭 시스템·CommonMark·`Status`/`Line` JSX·8대 변수 제작 가이드 | Gen-IT 플랫폼 스펙·JSX 템플릿 변경 시 |
 | **3. 챗봇 제작**<br>*(Reference)* | **[`노벨챗_캐릭터채팅_제작법.md`](노벨챗_캐릭터채팅_제작법.md)** | 노벨챗 6탭·500장 상한·`_` 자동 파싱·변수/상태창 제작 가이드 | 노벨챗 스펙·호출어 풀·패키징 규칙 변경 시 |
 | **3. 챗봇 공통**<br>*(Architecture)* | **`docs/platforms/`** | 멀티플랫폼 공통 코어 스펙([`CORE_SPEC.md`](platforms/CORE_SPEC.md)) 및 플랫폼 어댑터 | 신규 플랫폼 이식 또는 공통 스키마 변경 시 |
-| **4. 결정·이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 현행 15대 골든 스테이트 불변식 + Active ADR(`ADR-80~119+`) 핵심 요약 | 핵심 아키텍처 변경, 새 ADR 번호 부여 시 |
+| **4. 결정·이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 현행 15대 골든 스테이트 불변식 + Active ADR(`ADR-80~120+`) 핵심 요약 | 핵심 아키텍처 변경, 새 ADR 번호 부여 시 |
 | **4. 결정·이력**<br>*(ADR & Log)* | **[`개발일지.md`](개발일지.md)** | 빈출 트러블슈팅 빠른 색인표 + 최근 10회차 증상 중심 플레이북 | **모든 작업 세션 마무리 및 푸시 직전 (필수)** |
 | **5. 상용 완성본**<br>*(Deliverable)* | **`docs/genit/`** | Gen-IT 상용 5탭 완성본 (`v2.2` 현역) & 다테마 표준 템플릿 (`validate_genit_work.py`) | 챗봇 대본/에셋/변수 수정 시 |
 | **5. 상용 완성본**<br>*(Deliverable)* | **`docs/novelchat/`** | 노벨챗 6탭 완성본 & 다테마 표준 템플릿 (`validate_novelchat_work.py`) | 노벨챗 대본/에셋/호출어 풀 수정 시 |
