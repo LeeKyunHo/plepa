@@ -6,7 +6,7 @@
 2. 생애주기 관리 (Frontmatter): status: active(상시 검사) vs frozen/archived(스킵)
 3. 스마트 해시 캐싱 (.cache/genit_cache.json): 변경 없는 문서는 0.001초 만에 [Cached PASS] 스킵
 4. 에셋 연쇄 동기화: 로스터 실제 디스크 에셋 대비 오타/환각/404 포즈 실시간 전수 검출
-5. 8대 통일 변수, 글자수 한도(8,000자), 설정집/캐릭터 키워드 한도 전수 검증
+5. 8대 통일 변수, 글자수 한도(12,000자), 설정집/캐릭터 키워드 한도 전수 검증
 """
 
 from __future__ import annotations

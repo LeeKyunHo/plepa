@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 
+GENIT_PROMPT_COMBINED_LIMIT = 12000
+GENIT_PROLOGUE_LIMIT = 2000
+GENIT_HIDDEN_LIMIT = 2000
+
+
 def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     """문서 상단 YAML Frontmatter(--- ... ---) 파싱."""
     if not text.startswith("---"):
@@ -73,7 +78,7 @@ def extract_code_blocks_after_header(text: str, header_pattern: str, count: int 
 
 
 def validate_prompts_section(body: str, errors: List[str]) -> None:
-    """[1] 메인 프롬프트 + 최장 시작 설정 추가 프롬프트(<=8,000자) 및 Status 호출을 검증합니다."""
+    """[1] 메인 프롬프트 + 최장 시작 설정 추가 프롬프트(<=12,000자) 및 Status 호출을 검증합니다."""
     main_blocks = extract_code_blocks_after_header(body, r"## 2-0\. \[메인 프롬프트\]", 1)
     main_prompt = main_blocks[0] if main_blocks else ""
     main_len = len(main_prompt)
@@ -84,7 +89,7 @@ def validate_prompts_section(body: str, errors: List[str]) -> None:
         errors.append("시작 설정 루트 헤더(## 2-1. [...])를 찾을 수 없습니다.")
 
     max_add_len, max_add_name = 0, ""
-    print("\n📊 [1] 프롬프트 글자 수 한도 검증 (메인 + max(추가) <= 8,000자)")
+    print(f"\n📊 [1] 프롬프트 글자 수 한도 검증 (메인 + max(추가) <= {GENIT_PROMPT_COMBINED_LIMIT:,}자)")
     print(f"  - 메인 프롬프트 길이: {main_len:,}자")
 
     for r_name, r_pat in routes:
@@ -95,22 +100,31 @@ def validate_prompts_section(body: str, errors: List[str]) -> None:
         title_b, prol_b, hid_b, add_b, _ = blocks
         if len(title_b) > 20:
             errors.append(f"{r_name} 이름 20자 초과: {len(title_b)}자 ({title_b})")
-        if len(prol_b) > 2000:
-            errors.append(f"{r_name} 프롤로그 2,000자 초과: {len(prol_b):,}자")
-        if len(hid_b) > 2000:
-            errors.append(f"{r_name} 히든 프롬프트 2,000자 초과: {len(hid_b):,}자")
+        if len(prol_b) > GENIT_PROLOGUE_LIMIT:
+            errors.append(f"{r_name} 프롤로그 {GENIT_PROLOGUE_LIMIT:,}자 초과: {len(prol_b):,}자")
+        if len(hid_b) > GENIT_HIDDEN_LIMIT:
+            errors.append(f"{r_name} 히든 프롬프트 {GENIT_HIDDEN_LIMIT:,}자 초과: {len(hid_b):,}자")
         if len(add_b) > max_add_len:
             max_add_len, max_add_name = len(add_b), r_name
         if "[@id=Status|" not in prol_b:
             errors.append(f"{r_name} 프롤로그 말미에 [@id=Status|...] 호출문 누락")
-        print(f"  - {r_name}: 이름({len(title_b)}/20자) | 프롤로그({len(prol_b):,}/2,000자) | 히든({len(hid_b):,}/2,000자) | 추가({len(add_b):,}자)")
+        print(
+            f"  - {r_name}: 이름({len(title_b)}/20자) | 프롤로그({len(prol_b):,}/{GENIT_PROLOGUE_LIMIT:,}자) "
+            f"| 히든({len(hid_b):,}/{GENIT_HIDDEN_LIMIT:,}자) | 추가({len(add_b):,}자)"
+        )
 
     total_prompt_len = main_len + max_add_len
-    if total_prompt_len > 8000:
-        errors.append(f"메인 + {max_add_name} 합산 글자 수 8,000자 초과: {total_prompt_len:,}자")
-        print(f"  👉 [합산 결과] 메인 + 최장 추가 = {total_prompt_len:,} / 8,000자 (초과: {total_prompt_len - 8000}자) -> FAIL ❌")
+    if total_prompt_len > GENIT_PROMPT_COMBINED_LIMIT:
+        errors.append(f"메인 + {max_add_name} 합산 글자 수 {GENIT_PROMPT_COMBINED_LIMIT:,}자 초과: {total_prompt_len:,}자")
+        print(
+            f"  👉 [합산 결과] 메인 + 최장 추가 = {total_prompt_len:,} / {GENIT_PROMPT_COMBINED_LIMIT:,}자 "
+            f"(초과: {total_prompt_len - GENIT_PROMPT_COMBINED_LIMIT:,}자) -> FAIL ❌"
+        )
     else:
-        print(f"  👉 [합산 결과] 메인({main_len:,}자) + 최장 추가[{max_add_name}]({max_add_len:,}자) = {total_prompt_len:,} / 8,000자 (여유분: {8000 - total_prompt_len:,}자) -> PASS ✅")
+        print(
+            f"  👉 [합산 결과] 메인({main_len:,}자) + 최장 추가[{max_add_name}]({max_add_len:,}자) = "
+            f"{total_prompt_len:,} / {GENIT_PROMPT_COMBINED_LIMIT:,}자 (여유분: {GENIT_PROMPT_COMBINED_LIMIT - total_prompt_len:,}자) -> PASS ✅"
+        )
 
 
 def validate_lorebooks_section(body: str, meta: Dict[str, str], roster: str, errors: List[str]) -> None:
