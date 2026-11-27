@@ -327,6 +327,18 @@
       "prompt": "cowboy shot, (centered composition:1.15), leaning on balcony railing, outdoor balcony terrace, city night view, glowing city lights, dark night sky, hair fluttering, gentle breeze, looking away softly, upper body, atmospheric night lighting",
       "required_outfit": "default",
       "section": "poses"
+    },
+    "056": {
+      "label": "소파나란히가슴애무",
+      "description": "소파 위 여캐 상반신 클로즈업 구도에서 측면 밀착 상태로 착의 가슴을 애무하는 일상 스킨십 포즈",
+      "prompt": "upper body, focus on girl, 1girl, 1boy, fully clothed, clothed male partner, male wearing dark casual shirt, sitting on sofa, male partner partially out of frame on side, male head out of frame, male arm behind her back, (male hand reaching from side to squeeze clothed breast:1.15), girl hands on skirt, head tilted down, looking away, embarrassed, heavy blush, shaded upper male face, shadow over male eyes",
+      "prompt_otokonoko": "upper body, focus on boy, 2boys, fully clothed, clothed male partner, male wearing dark casual shirt, sitting on sofa, male partner partially out of frame on side, male head out of frame, male arm behind his back, (male hand reaching from side to squeeze clothed chest:1.15), boy hands on own thighs, head tilted down, looking away, embarrassed, heavy blush, shaded upper male face, shadow over male eyes",
+      "negative_add": "arm over shoulder, detailed male face, male eyes, detailed male eyes, black silhouette, shadow person, dark silhouette body, featureless male, extra arms, extra hands, fused fingers, standing, street",
+      "required_outfit": "default",
+      "section": "poses",
+      "mob_tier": 2,
+      "partner_pos": "side_cuddle",
+      "mob_shadow": true
     }
   },
   "romance": {
@@ -1029,6 +1041,18 @@
       "prompt_female": "tight bust portrait, close-up, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), intense deep oral service under desk, deepthroat, head moving along shaft, tears of intense pleasure, intensely flushed face, saliva dripping, dim office lighting under desk, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest:1.20))",
       "mob_tier": 3,
       "partner_pos": null
+    },
+    "136": {
+      "label": "밀착측면키스가슴",
+      "description": "뒤와 옆에서 밀착 포옹한 상태로 고개를 돌려 깊은 키스를 나누며 착의 가슴을 애무하는 씬",
+      "prompt": "upper body, 1girl, 1boy, fully clothed, standing embrace, hug from behind, female head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed breast:1.15), breast squeeze, male arm reaching across chest to grope breast, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
+      "prompt_otokonoko": "upper body, 2boys, fully clothed, standing embrace, hug from behind, boy head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed chest:1.15), chest squeeze, male arm reaching across chest, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
+      "negative_add": "detailed male face, male eyes, extra arms, extra hands, fused fingers, clothing merge",
+      "required_outfit": "default",
+      "section": "h_scenes",
+      "mob_tier": 2,
+      "partner_pos": "side_kiss",
+      "mob_shadow": true
     }
   },
   "special_h": {
@@ -1389,6 +1413,18 @@
       "negative_add": " (otokonoko sitting on chair:1.4), (otokonoko on chair:1.4), (chair under desk:1.4), (stool:1.4), (otokonoko on stool:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (wide shot:1.25)",
       "status": "deprecated",
       "canonical_code": "069"
+    },
+    "206": {
+      "label": "밀착측면키스가슴",
+      "description": "뒤와 옆에서 밀착 포옹한 상태로 고개를 돌려 깊은 키스를 나누며 착의 상체를 애무하는 오토코노코 씬 (136 대칭)",
+      "prompt": "upper body, 2boys, otokonoko, fully clothed, standing embrace, hug from behind, boy head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed chest:1.15), chest squeeze, male arm reaching across chest, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
+      "prompt_otokonoko": "upper body, 2boys, otokonoko, fully clothed, standing embrace, hug from behind, boy head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed chest:1.15), chest squeeze, male arm reaching across chest, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
+      "negative_add": "detailed male face, male eyes, extra arms, extra hands, fused fingers, clothing merge",
+      "required_outfit": "default",
+      "section": "scenes_otokonoko",
+      "mob_tier": 2,
+      "partner_pos": "side_kiss",
+      "mob_shadow": true
     }
   },
   "special_otokonoko": {

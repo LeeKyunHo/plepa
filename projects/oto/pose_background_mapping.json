@@ -8,7 +8,9 @@
     "048": "studio",
     "049": "none",
     "050": "default",
+    "056": "default",
     "060-079": "night_room",
+    "136": "night_room",
     "150-199": "night_room",
     "200-209": "night_room"
   }
