@@ -138,7 +138,17 @@ def test_export_context_v2_fixed_five_files_cleanup_and_budget(tmp_path):
     assert "폐지 목록 (Deprecation Ledger)" in readme
     assert "plepa-pose-curator" in readme
     assert "Active SSOT 문서 맵" in readme
+    assert "docs/노벨챗_캐릭터채팅_제작법.md" in readme
+    assert "docs/platforms/CORE_SPEC.md" in readme
+    assert "8085/inspect" not in readme
+
+    tier3_md = (tmp_path / "30_TIER3_RUNTIME.md").read_text(encoding="utf-8")
+    assert "| 로스터 | 상태 | 캐릭터 수 |" in tier3_md
+    assert "노벨챗(NovelChat) 패키지 현황" in tier3_md
 
     plan_md = (tmp_path / "50_REFACTORING_PLAN.md").read_text(encoding="utf-8")
     assert "Live AST 래칫 텔레메트리" in plan_md
     assert "외부 Gemini 노트북" in plan_md
+    assert "Wave 5-B 완료" in plan_md
+    assert "Wave 3 - plepa_engine/censor/" not in plan_md
+    assert r".\.venv\Scripts\python.exe -m plepa_engine.precheck" in plan_md
