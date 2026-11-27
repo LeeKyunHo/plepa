@@ -11,6 +11,7 @@
 | 계층 | 문서 경로 | 핵심 역할 (Role) | 갱신 트리거 (언제 고치는가?) |
 | :---: | :--- | :--- | :--- |
 | **0. 최상위 헌법** | [`GEMINI.md`](../GEMINI.md) | 에이전트 언어·커밋·삼위일체·실증·승인·토큰·미니에이전트 규칙 | 개발 거버넌스·레일 규율 변경 시 |
+| **0. 문서 헌법** | **[`DOCUMENTATION_GUIDE.md`](DOCUMENTATION_GUIDE.md)** | Active SSOT 인벤토리·작업별 매핑·Push 5단계 게이트·자동화 점검 루틴 | Active 문서 추가·이관·게이트 절차 변경 시 |
 | **1. 실행·운영**<br>*(How-To)* | **[`README.md`](../README.md)** | 프로젝트 개요, SDXL 스택 사양, 핵심 4대 엔진 아키텍처, 폴더 트리 | 진입점/스택/테스트 대규모 변경 시 |
 | **1. 실행·운영**<br>*(How-To)* | **[`사용법.txt`](../사용법.txt)** | 사용자 1순위 CLI 치트시트, 포즈 표현식, 원격/검열/감사 명령 모음 | CLI 옵션·포즈 세트·실행 커맨드 변경 시 |
 | **1. 실행·운영**<br>*(How-To)* | **[`RUNBOOK.md`](RUNBOOK.md)** | 환경 구축, ComfyUI 커스텀 노드·모델 설치, 일일 운용/장애 대응 절차 | 실행 환경·모델·포트·API·장애 대처 변경 시 |
@@ -22,7 +23,7 @@
 | **3. 챗봇 제작**<br>*(Reference)* | **[`젠잇_캐릭터채팅_제작법.md`](젠잇_캐릭터채팅_제작법.md)** | Gen-IT v2.2 5탭 시스템·CommonMark·`Status`/`Line` JSX·8대 변수 제작 가이드 | Gen-IT 플랫폼 스펙·JSX 템플릿 변경 시 |
 | **3. 챗봇 제작**<br>*(Reference)* | **[`노벨챗_캐릭터채팅_제작법.md`](노벨챗_캐릭터채팅_제작법.md)** | 노벨챗 6탭·500장 상한·`_` 자동 파싱·변수/상태창 제작 가이드 | 노벨챗 스펙·호출어 풀·패키징 규칙 변경 시 |
 | **3. 챗봇 공통**<br>*(Architecture)* | **`docs/platforms/`** | 멀티플랫폼 공통 코어 스펙([`CORE_SPEC.md`](platforms/CORE_SPEC.md)) 및 플랫폼 어댑터 | 신규 플랫폼 이식 또는 공통 스키마 변경 시 |
-| **4. 결정·이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 현행 15대 골든 스테이트 불변식 + Active ADR(`ADR-80~115+`) 핵심 요약 | 핵심 아키텍처 변경, 새 ADR 번호 부여 시 |
+| **4. 결정·이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 현행 15대 골든 스테이트 불변식 + Active ADR(`ADR-80~116+`) 핵심 요약 | 핵심 아키텍처 변경, 새 ADR 번호 부여 시 |
 | **4. 결정·이력**<br>*(ADR & Log)* | **[`개발일지.md`](개발일지.md)** | 빈출 트러블슈팅 빠른 색인표 + 최근 10회차 증상 중심 플레이북 | **모든 작업 세션 마무리 및 푸시 직전 (필수)** |
 | **5. 상용 완성본**<br>*(Deliverable)* | **`docs/genit/`** | Gen-IT 상용 5탭 완성본 (`v2.2` 현역) & 다테마 표준 템플릿 (`validate_genit_work.py`) | 챗봇 대본/에셋/변수 수정 시 |
 | **5. 상용 완성본**<br>*(Deliverable)* | **`docs/novelchat/`** | 노벨챗 6탭 완성본 & 다테마 표준 템플릿 (`validate_novelchat_work.py`) | 노벨챗 대본/에셋/호출어 풀 수정 시 |
@@ -65,12 +66,22 @@ flowchart TD
 
 1. **[1단계] 매핑 가이드 확인**: 본 문서의 표를 기준으로 영향받는 Active 문서를 전부 식별합니다.
 2. **[2단계] 서류 및 일지 갱신**: 해당 Active SSOT 문서 + `docs/개발일지.md` 최상단(및 `Quick Symptom Index`)을 갱신합니다.
-3. **[3단계] 노트북 스냅샷 & 검증**:
+3. **[3단계] 드리프트 검사 · 노트북 스냅샷 & 검증**:
    ```powershell
+   .\.venv\Scripts\python.exe scripts/check_doc_sync.py --diff
    .\.venv\Scripts\python.exe scripts/export_context.py
    .\.venv\Scripts\python.exe -m pytest -q
    .\.venv\Scripts\python.exe -m plepa_engine.precheck -r campus
    ```
 4. **[4단계] Git 상태 점검 & 논리적 분할 커밋**:
    - `git status -s`로 바이너리·생성 에셋(`output/`, `projects/*/assets/`) 미포함을 확인한 뒤 성격별(`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`) 분할 커밋을 수행합니다.
+   - `.\.venv\Scripts\python.exe scripts/install_git_hooks.py --install` 활성화 시 커밋 직후 `post-commit` 훅이 `context_snapshot/` 5종을 자동 최신화합니다.
 5. **[5단계] 푸시 및 클린 확인**: `git push origin main` 후 `git status`의 `working tree clean` 상태를 확인합니다.
+
+---
+
+## 5. Antigravity Automation 주기 점검 프롬프트 (선택/권장)
+
+주간 또는 작업 집중 기간에는 Antigravity Automation(`/schedule` 또는 `/automation`)에 아래 복붙 프롬프트를 등록해 서류 드리프트를 자동 감시할 수 있습니다:
+
+> `.\.venv\Scripts\python.exe scripts/check_doc_sync.py --diff origin/main` 및 `.\.venv\Scripts\python.exe scripts/check_doc_sync.py`를 실행해 서류 드리프트가 발견되면 `docs/DOCUMENTATION_GUIDE.md` 매핑에 따라 수정 PR/패치 초안을 보고해 줘. (에셋·`legacy/`·`docs/archive/` 열람 금지, `check_doc_sync.py`가 0건이면 짧은 정상 보고만 출력)

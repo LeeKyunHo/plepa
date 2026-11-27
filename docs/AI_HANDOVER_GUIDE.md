@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-115)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-116)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -26,14 +26,14 @@
 9. **오토코노코(`oto`) 검열 & 톤 동기화**: `150~209` H-씬 전수 스캔 + 탈의 일상(`030,038,039,043~045,049`) `is_nude` 컨텍스트 전파를 강제하며, `oto` 배경·네거티브는 `campus` 중립 색감에 동기화됩니다.
 10. **Auto-QC 딥러닝 자동 검증 (`qa_validator.py` + `qa_checks.py`)**: 인원·얼굴·머리·손·눈·Color Burn·상반신 화각 드리프트(`_check_closeup_aspect_drift`)·Laplacian 흐림 검사를 수행하며 `strict_censor_qc`는 `mob_tier not in (0, 1, 2)`에서만 작동합니다.
 11. **CLI · Engine · GUI 삼위일체 동기화 (`Trinity Sync`)**: 생성 옵션 추가 시 [`generation_options.py`](../plepa_engine/services/generation_options.py) `GENERATION_OPTION_SPECS`(29종) ↔ `GenerationParams` ↔ `batch_generator.py` CLI ↔ `plepa_gui` (`option_controls.py`) ↔ `tests/test_cli_gui_sync.py` + `tests/test_contract_guards.py`를 1세트로 유지합니다.
-12. **비동기 FIFO 대기열 & 원격 토큰 보안**: 8080 스튜디오(`/generate`, `/gallery`, `/api`)는 `GlobalJobManager`(`enqueue_job`/`enqueue_censor_only`), 8085 벤치마크 서버는 `RerollQueueManager`가 단일 워커 FIFO로 GPU 경합을 차단하며, `start_remote.py` 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 검증이 활성화됩니다.
+12. **비동기 FIFO 대기열 & 원격 토큰 보안**: `:8080` 스튜디오(`/generate`, `/gallery`, `/mobile`, `/api`)는 `GlobalJobManager`(`enqueue_job`/`enqueue_censor_only`) 단일 워커 FIFO로 GPU 경합을 차단하며, `start_remote.py` 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 검증이 활성화됩니다.
 13. **원자적 I/O & 안전 백업**: 모든 JSON·이미지 덮어쓰기는 임시 파일 생성 + `os.replace` 원자적 교체를 사용하며(선행 `unlink()` 금지), 수정·삭제 시 `.plepa_backup/`(20개 순환) 및 `_trash/`를 활용합니다.
 14. **Antigravity 레일형 거버넌스 & AST 래칫**: `.agents/hooks.json`(`plepa_guard.py`)이 에셋 직접 접근·레거시·`sync_to_kiro`·`scripts/{archive,benchmarks}/` 열람·민감 커밋을 물리 차단하고, `.agents/skills/` 6종이 작업 레일을 안내합니다. 전체 활성 코드베이스(`plepa_engine/`, `plepa_gui/`, 활성 `scripts/`, `batch_generator.py`)가 **`<= 350줄` / `<= 120줄` 및 AST·역방향 레이어·GUI 큐 Allowlist 0건**을 달성했습니다.
 15. **레거시 `kiro` 브릿지 차단 & 문서 규율**: `scripts/sync_to_kiro.py`는 `--force-unsafe` 없이 차단(`exit 2`)됩니다. 통계 과장 금지(Rule 8), 질문 후 승인 게이트(Rule 9), 비민감 한국어 커밋(Rule 2)을 상시 준수합니다.
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-115`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-116`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -63,3 +63,4 @@
 - **ADR-113 (2026-11-27, Wave 4-B2 / Wave 4 완결)**: 서비스 레이어 4대 모듈(`generation_service` ➔ `generation/` 6모듈 + `238L` 파사드, `health_service` ➔ `health_checks_core/ops`, `pose_service` ➔ `pose_resolver/storage`, `asset_service` ➔ `asset_helpers`) 및 `workflow_templates`(`workflow_nodes.py`)·`novelchat_validator` 분해를 완료하고 `health_service` 정적 GUI 역방향 import를 `importlib` 동적 검증으로 전환해 **`plepa_engine/` 전 74모듈 `<=350L` · 전 함수 `<=120L` · AST/역방향 레이어 Allowlist 0건** 달성 (`pytest 276 passed`).
 - **ADR-114 (2026-11-27, Wave 5-A)**: `plepa_gui/` 내 인라인 CSS/HTML/JS를 [`plepa_gui/static/`](../plepa_gui/static/mobile_viewer.html) 6파일(`retouch_editor.{css,html,js}`, `mobile_viewer.{css,html,js}`)로 분리하고, [`api_routes.py`](../plepa_gui/api_routes.py)(`api_schemas`/`api_security`/`api_file_ops`), [`gallery.py`](../plepa_gui/pages/gallery.py)(`gallery_parts/` 7모듈), [`generate.py`](../plepa_gui/pages/generate.py)(`generate_sections.py`), [`characters.py`](../plepa_gui/pages/characters.py)(`characters_form.py`) 및 4대 설정/포즈 페이지를 분해해 **`plepa_gui/` 전 28개 파이썬 모듈 `<=350L` · 전 함수 `<=120L` · Allowlist 0건 · `run_batch` 우회 0건** 달성 (`pytest 279 passed`).
 - **ADR-115 (2026-11-27, Wave 5-B / Wave 0~5 마스터 완결)**: 현역 운영 CLI 3종([`audit_asset_alignment.py`](../scripts/audit_asset_alignment.py)+`audit_alignment_helpers.py`, [`validate_genit_work.py`](../scripts/validate_genit_work.py)+`validate_genit_rules.py`, [`audit_sector_assets.py`](../scripts/audit_sector_assets.py))을 `<=350L`/`<=120L`로 슬림화하고, 비활성/ML/실험/구 `:8085` 스크립트 16종을 `scripts/{ml,benchmarks,archive}/` 3단 폴더로 격리(`scripts/README.md` 신설, `parents[2]` 보정, `plepa_guard.py` 및 `context_exporter` 텔레메트리 동기화)해 **전체 활성 코드베이스 AST·역방향 레이어·GUI 큐 Allowlist `0건`** 완결 (`pytest 283 passed`).
+- **ADR-116 (2026-11-27)**: 결정론적 서류 드리프트 감지기([`scripts/check_doc_sync.py`](../scripts/check_doc_sync.py)+`doc_sync_rules.py`), `pytest` 상시 게이트([`tests/test_doc_sync_guard.py`](../tests/test_doc_sync_guard.py)) 및 옵트인 `.git/hooks/post-commit` 자동 스냅샷 갱신기([`scripts/install_git_hooks.py`](../scripts/install_git_hooks.py))를 구축하여 경로 실존·금지 키워드·SSOT 인벤토리·ADR 범위·가드 정합성을 CI/로컬 훅으로 강제함.

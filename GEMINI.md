@@ -38,7 +38,8 @@
 - 사용자가 **"일지 적어줘", "서류/문서 정리해줘", "푸시해줘"** 등을 명령하거나 작업 세션을 마무리할 때:
   - **가장 먼저 [`docs/DOCUMENTATION_GUIDE.md`](docs/DOCUMENTATION_GUIDE.md)를 열람**합니다.
   - 변경된 작업 유형(ADR/아키텍처, CLI 옵션, 포즈/프롬프트 DB, 일반 생성 등)에 따라 해당하는 문서들([`docs/AI_HANDOVER_GUIDE.md`](docs/AI_HANDOVER_GUIDE.md), [`docs/RUNBOOK.md`](docs/RUNBOOK.md), [`사용법.txt`](사용법.txt), [`docs/개발일지.md`](docs/개발일지.md) 등)을 누락 없이 순서대로 업데이트합니다.
-  - `docs/DOCUMENTATION_GUIDE.md`의 5단계 프로토콜(가이드 확인 ➔ 서류 갱신 ➔ git status 점검 및 민감어 배제 ➔ 분할 커밋 ➔ git push)을 철저히 준수합니다.
+  - 커밋 전 `.\.venv\Scripts\python.exe scripts/check_doc_sync.py --diff`로 영향 문서를 점검하고 드리프트를 `0`건으로 해소한 뒤 `.\.venv\Scripts\python.exe -m pytest -q`를 통과시킵니다. (`scripts/install_git_hooks.py --install` 활성 시 커밋 후 `context_snapshot/` 5종이 자동 갱신됩니다.)
+  - `docs/DOCUMENTATION_GUIDE.md`의 5단계 프로토콜(가이드 확인 ➔ 서류·드리프트 점검 ➔ 스냅샷/테스트 검증 ➔ 분할 커밋 ➔ git push)을 철저히 준수합니다.
 
 ## 6. 유연한 확장과 지속적 콘텐츠 유입 원칙 (Extensibility & Content Evolution)
 - **콘텐츠 진화 기본 전제**: 플에파는 고정된 정적 소프트웨어가 아니라, **새로운 캐릭터, 포즈, 로스터(세계관), 챗봇 시나리오, 최신 AI 생성 기술이 지속적으로 추가·수정·유입되는 '살아있는 콘텐츠 파이프라인'**임을 항상 기본 전제로 삼고 개발을 진행합니다.
