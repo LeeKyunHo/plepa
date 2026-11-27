@@ -4,6 +4,8 @@
 | 스크립트 | 역할 |
 | :--- | :--- |
 | `export_context.py` + `context_exporter/` | Gemini 노트북·인계용 `context_snapshot/` 5종 번들 추출기 |
+| `check_doc_sync.py` + `doc_sync_rules.py` | Active SSOT 서류 경로·키워드·ADR·가드 정합성 드리프트 감지기 (`--diff` / `--fix`) |
+| `install_git_hooks.py` | 로컬 `.git/hooks/post-commit` 자동 스냅샷 갱신 훅 설치/제거 CLI (옵트인) |
 | `start_remote.py` | 8080 NiceGUI 웹 스튜디오 + Cloudflared 보안 원격 터널 기동 |
 | `validate_genit_work.py` + `validate_genit_rules.py` | Gen-IT v2.2 5탭 완성본 스마트 해시·에셋 정합성 검증기 |
 | `validate_novelchat_work.py` + `novelchat_asset_mapper.py` | 노벨챗 6탭 원고·500장 에셋 매핑 검증/매핑 CLI |
