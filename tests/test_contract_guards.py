@@ -25,14 +25,8 @@ from plepa_engine.services.schemas import CharacterSchema, PoseItemSchema, PoseS
 _MODULE_LINE_LIMIT = 350
 _FUNCTION_LINE_LIMIT = 120
 
-# Wave 3~5 분해 전까지 현행 줄수 상한을 동결하는 래칫 Allowlist (줄수 감소 시 하향 조정, 신규 추가 금지)
+# Wave 5-B 분해 전까지 scripts/ 현행 줄수 상한을 동결하는 래칫 Allowlist (plepa_engine/·plepa_gui/ 0건)
 _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
-    "plepa_gui/api_routes.py": 456,
-    "plepa_gui/components/retouch_editor.py": 563,
-    "plepa_gui/pages/characters.py": 387,
-    "plepa_gui/pages/gallery.py": 1641,
-    "plepa_gui/pages/generate.py": 544,
-    "plepa_gui/pages/mobile_viewer.py": 1640,
     "scripts/audit_asset_alignment.py": 506,
     "scripts/benchmark_censor_metrics.py": 372,
     "scripts/benchmark_spy_batch.py": 674,
@@ -49,21 +43,6 @@ _MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
 
 # (rel_posix_path, func_name) -> 현재 최대 줄수 상한 래칫
 _FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {
-    ("plepa_gui/components/retouch_editor.py", "build_retouch_editor_script"): 356,
-    ("plepa_gui/pages/backgrounds.py", "render_backgrounds_page"): 171,
-    ("plepa_gui/pages/characters.py", "render_characters_page"): 328,
-    ("plepa_gui/pages/characters.py", "render_form"): 137,
-    ("plepa_gui/pages/gallery.py", "render_gallery_page"): 1487,
-    ("plepa_gui/pages/gallery.py", "sync_queue_panel"): 162,
-    ("plepa_gui/pages/gallery.py", "open_genit_export_dialog"): 134,
-    ("plepa_gui/pages/gallery.py", "update_control_bars"): 162,
-    ("plepa_gui/pages/gallery.py", "open_lightbox"): 399,
-    ("plepa_gui/pages/gallery.py", "refresh_header"): 264,
-    ("plepa_gui/pages/generate.py", "render_generate_page"): 504,
-    ("plepa_gui/pages/mobile_viewer.py", "generate_mobile_viewer_html"): 1457,
-    ("plepa_gui/pages/pose_sets.py", "render_pose_sets_page"): 188,
-    ("plepa_gui/pages/poses.py", "render_poses_page"): 235,
-    ("plepa_gui/pages/settings.py", "render_settings_page"): 152,
     ("scripts/audit_asset_alignment.py", "load_full_pose_catalog"): 131,
     ("scripts/audit_asset_alignment.py", "audit_character_alignment"): 187,
     ("scripts/audit_sector_assets.py", "audit_character"): 173,
