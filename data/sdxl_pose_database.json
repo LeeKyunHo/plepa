@@ -16,179 +16,212 @@
     "000": {
       "label": "평상",
       "description": "자연스러운 체중 이동(컨트라포스토)으로 서서 은은하고 매혹적인 미소로 정면을 응시하는 허벅지 위 반전신(cowboy shot) 대표 스탠딩 포즈.",
-      "prompt": "standing, looking at viewer, natural standing pose, slight weight shift, arms at sides, relaxed hands, alluring gentle smile, captivating gaze, light blush, clean background, soft lighting, cowboy shot"
+      "prompt": "standing, looking at viewer, natural standing pose, slight weight shift, arms at sides, relaxed hands, alluring gentle smile, captivating gaze, light blush, clean background, soft lighting, cowboy shot",
+      "sort_order": 10
     },
     "001": {
       "label": "미소",
       "description": "입꼬리를 부드럽게 올려 짓는 다정하고 온화한 미소. 친근하고 호감 어린 분위기 연출.",
-      "prompt": "standing, looking at viewer, smile, happy, relaxed, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, smile, happy, relaxed, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 20
     },
     "002": {
       "label": "활짝웃음",
       "description": "눈을 감고 입을 활짝 열어 소리 내어 웃는 밝고 명랑한 표정. 즐겁고 행복한 감정 극대화.",
-      "prompt": "standing, looking at viewer, laughing, open mouth, closed eyes, ^_^, happy, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, laughing, open mouth, closed eyes, ^_^, happy, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 30
     },
     "003": {
       "label": "수줍은홍조",
       "description": "양 볼을 붉게 물들이며 수줍게 시선을 보내는 부끄러운 표정. 설렘과 순수한 부끄러움 연출.",
-      "prompt": "standing, looking at viewer, shy glance, heavy blush, intensely flushed cheeks, sweet embarrassed smile, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, shy glance, heavy blush, intensely flushed cheeks, sweet embarrassed smile, bust shot, upper body portrait",
+      "sort_order": 40
     },
     "004": {
       "label": "토라짐",
       "description": "볼을 빵빵하게 부풀리고 입술을 삐죽 내민 뾰로통한 토라진 표정. 귀엽게 삐치거나 투정 부리는 연출.",
-      "prompt": "standing, looking at viewer, pout, puffed cheeks, crossed arms, annoyed, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, pout, puffed cheeks, crossed arms, annoyed, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 50
     },
     "005": {
       "label": "분노",
       "description": "미간을 찌푸리고 이를 악물며 날카롭게 쏘아보는 화난 표정. 강한 불쾌감이나 적대감 연출.",
-      "prompt": "standing, looking at viewer, angry, furrowed brow, clenched teeth, sharp eyes, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, angry, furrowed brow, clenched teeth, sharp eyes, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 60
     },
     "006": {
       "label": "경멸",
       "description": "반쯤 감긴 차가운 눈빛으로 상대를 내려다보는 냉담하고 경멸 어린 시선. 무시와 멸시 연출.",
-      "prompt": "standing, looking down at viewer, scornful gaze, half-closed eyes, cold expression, disgust, arrogant, looking at viewer, bust shot, upper body portrait"
+      "prompt": "standing, looking down at viewer, scornful gaze, half-closed eyes, cold expression, disgust, arrogant, looking at viewer, bust shot, upper body portrait",
+      "sort_order": 70
     },
     "007": {
       "label": "울먹임",
       "description": "눈가에 눈물이 글썽이며 입술을 파르르 떠는 애처로운 슬픈 표정. 비련과 보호본능을 자극하는 연출.",
-      "prompt": "standing, looking at viewer, teary eyes, sad gaze, quivering lips, heartbroken expression, tears rolling down cheeks, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, teary eyes, sad gaze, quivering lips, heartbroken expression, tears rolling down cheeks, bust shot, upper body portrait",
+      "sort_order": 80
     },
     "008": {
       "label": "곁눈질",
       "description": "고개를 살짝 반대편으로 돌린 채 붉어진 볼로 훔쳐보듯 곁눈질하는 표정. 부끄러움과 은밀한 호기심 연출.",
-      "prompt": "standing, (turning head slightly away:1.2), (sidelong glance:1.25), (looking at viewer from side:1.2), (shy peeking:1.15), (intensely flushed cheeks:1.2), heavy blush, bashful hesitation, biting lower lip, flustered nervousness, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, (turning head slightly away:1.2), (sidelong glance:1.25), (looking at viewer from side:1.2), (shy peeking:1.15), (intensely flushed cheeks:1.2), heavy blush, bashful hesitation, biting lower lip, flustered nervousness, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 90
     },
     "009": {
       "label": "깜짝놀람",
       "description": "눈을 동그랗게 뜨고 입을 벌린 채 깜짝 놀란 표정. 예상치 못한 상황에 당황한 순간 포착.",
-      "prompt": "standing, looking at viewer, surprised, wide eyes, open mouth, shocked, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, surprised, wide eyes, open mouth, shocked, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 100
     },
     "010": {
       "label": "자신만만",
       "description": "손을 허리에 얹고 당당하고 여유 넘치는 미소를 짓는 자신감 있는 표정. 당찬 매력 연출.",
-      "prompt": "standing, looking at viewer, confident, smug, hand on hip, grin, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, confident, smug, hand on hip, grin, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 110
     },
     "011": {
       "label": "의문",
       "description": "고개를 갸웃하며 턱에 손을 대고 호기심 어린 눈빛으로 생각에 잠긴 의문의 표정.",
-      "prompt": "standing, looking at viewer, thinking, head tilt, curious, question mark, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, thinking, head tilt, curious, question mark, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 120
     },
     "012": {
       "label": "메롱장난",
       "description": "한쪽 눈을 윙크하며 혓바닥을 살짝 내민 장난기 가득한 메롱 표정. 짓궂고 유쾌한 매력.",
-      "prompt": "standing, looking at viewer, playful, tongue out, one eye closed, wink, peace sign, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, playful, tongue out, one eye closed, wink, peace sign, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 130
     },
     "013": {
       "label": "하트눈",
       "description": "동공이 사랑스러운 하트 모양으로 변하며 황홀한 도취감에 빠져 응시하는 애정 폭발 표정.",
-      "prompt": "standing, looking at viewer, heart-shaped pupils, blush, happy, excited, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, heart-shaped pupils, blush, happy, excited, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 140
     },
     "014": {
       "label": "유혹",
       "description": "양손으로 가슴을 모아 올리고 살짝 주무르며 유혹하는 도발적이고 치명적인 포즈. 터틀넥 등 어떤 의상에도 작동.",
-      "prompt": "standing, looking at viewer, (hands on own breasts:1.25), (cupping own breasts:1.2), (breast squeeze:1.15), seductive bedroom eyes, sultry smile, heavy blush, intensely flushed cheeks, parted lips, teasing expression, clean background, soft lighting, bust shot, close-up upper body portrait"
+      "prompt": "standing, looking at viewer, (hands on own breasts:1.25), (cupping own breasts:1.2), (breast squeeze:1.15), seductive bedroom eyes, sultry smile, heavy blush, intensely flushed cheeks, parted lips, teasing expression, clean background, soft lighting, bust shot, close-up upper body portrait",
+      "sort_order": 150
     },
     "015": {
       "label": "나른함",
       "description": "턱을 괸 채 게슴츠레한 눈으로 멍하니 바라보는 나른하고 무기력하며 편안한 휴식 표정.",
-      "prompt": "sitting, looking at viewer, bored, half-closed eyes, chin rest, tired, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "sitting, looking at viewer, bored, half-closed eyes, chin rest, tired, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 160
     },
     "016": {
       "label": "진지함",
       "description": "흐트러짐 없는 곧은 자세와 흔들림 없는 날카로운 눈빛의 엄숙하고 결연한 진지한 표정.",
-      "prompt": "standing, looking at viewer, serious, expressionless, straight posture, focused, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, looking at viewer, serious, expressionless, straight posture, focused, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 170
     },
     "017": {
       "label": "겁먹음",
       "description": "고개를 푹 숙이고 시선을 내리깐 채 두려움에 파르르 떠는 소심하고 겁먹은 표정.",
-      "prompt": "standing, (head tilted down:1.25), (looking down:1.2), (downcast eyes:1.2), (trembling slightly:1.2), (shivering:1.15), (flushed blushing cheeks:1.2), (scared:1.15), nervous sweet expression, shrinking back adorably, clean background, soft lighting, bust shot, upper body portrait"
+      "prompt": "standing, (head tilted down:1.25), (looking down:1.2), (downcast eyes:1.2), (trembling slightly:1.2), (shivering:1.15), (flushed blushing cheeks:1.2), (scared:1.15), nervous sweet expression, shrinking back adorably, clean background, soft lighting, bust shot, upper body portrait",
+      "sort_order": 180
     },
     "018": {
       "label": "집착",
       "description": "상대에게 바짝 다가와 홍조 띤 얼굴로 다정하면서도 소유욕 서린 미소를 짓는 밀착 집착 포즈.",
-      "prompt": "solo focus, (leaning close towards viewer:1.2), (possessive sweet smile:1.2), (deep heavy blush:1.25), intensely flushed cheeks, (loving intense gaze:1.15), wide affectionate eyes, (hands reaching towards viewer affectionately:1.15), sweet clingy expression, parted lips, romantic lighting, clean background, bust shot, close-up upper body portrait"
+      "prompt": "solo focus, (leaning close towards viewer:1.2), (possessive sweet smile:1.2), (deep heavy blush:1.25), intensely flushed cheeks, (loving intense gaze:1.15), wide affectionate eyes, (hands reaching towards viewer affectionately:1.15), sweet clingy expression, parted lips, romantic lighting, clean background, bust shot, close-up upper body portrait",
+      "sort_order": 190
     },
     "019": {
       "label": "뽀뽀조름",
       "description": "상체를 앞으로 쑥 내밀며 눈을 살포시 감고, 볼을 붉힌 채 입술을 동그랗게 오므려 키스를 기다리는 사랑스러운 뽀뽀 구도.",
       "prompt": "standing, solo, ((leaning forward towards viewer:1.25)), (leaning close to viewer:1.2), (from slightly above:1.15), (closed eyes:1.2), (heavy blush:1.25), (intensely flushed cheeks:1.2), (puckered lips:1.2), (small rounded mouth:1.1), (hands resting in front:1.15), sweet romantic mood, bust shot, close-up upper body portrait",
-      "negative_add": "(camera frame:1.3), (viewfinder:1.3), (HUD:1.3)"
+      "negative_add": "(camera frame:1.3), (viewfinder:1.3), (HUD:1.3)",
+      "sort_order": 200
     }
   },
   "poses": {
     "020": {
       "label": "윙크브이",
       "description": "한쪽 눈을 깜빡이며 손으로 브이(V) 포즈를 그리는 발랄하고 사랑스러운 아이돌풍 제스처.",
-      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, wink, one eye closed, peace sign, playful cute smile, light blush"
+      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, wink, one eye closed, peace sign, playful cute smile, light blush",
+      "sort_order": 210
     },
     "021": {
       "label": "손하트",
       "description": "양손 손가락을 모아 하트 모양을 만들어 가슴 앞에 내미는 다정하고 사랑스러운 팬서비스 포즈.",
-      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, heart hands, happy smile, blushing cheeks, affectionate expression"
+      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, heart hands, happy smile, blushing cheeks, affectionate expression",
+      "sort_order": 220
     },
     "022": {
       "label": "손흔들기",
       "description": "한 손을 어깨 위로 들어 반갑게 손을 흔들며 다정한 미소를 건네는 환영 및 작별 제스처.",
-      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, waving, raised hand, sweet seductive smile, shy blush, affectionate gaze, parted lips"
+      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, waving, raised hand, sweet seductive smile, shy blush, affectionate gaze, parted lips",
+      "sort_order": 230
     },
     "023": {
       "label": "의심",
       "description": "가슴 아래로 단단히 팔짱을 껴서 의심스러운 표정으로 도도하게 서 있는 포즈.",
-      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, crossed arms under breasts, suspicious expression, skeptical look, raised eyebrow, doubtful gaze, heavy blush, teasing gaze"
+      "prompt": "cowboy shot, (centered composition:1.15), standing, looking at viewer, crossed arms under breasts, suspicious expression, skeptical look, raised eyebrow, doubtful gaze, heavy blush, teasing gaze",
+      "sort_order": 240
     },
     "024": {
       "label": "뒤태",
       "description": "등을 돌린 채 고개만 살짝 뒤로 돌려 시선을 마주치는 고혹적인 뒷모습 실루엣 연출.",
-      "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, (from behind:1.15), (turned back:1.15), back view, (looking back over shoulder:1.15), looking at viewer, seductive glance over shoulder, standing, arched back, heavy blush, bedroom eyes, parted lips, sultry look"
+      "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, (from behind:1.15), (turned back:1.15), back view, (looking back over shoulder:1.15), looking at viewer, seductive glance over shoulder, standing, arched back, heavy blush, bedroom eyes, parted lips, sultry look",
+      "sort_order": 250
     },
     "025": {
       "label": "소파유혹",
       "description": "소파나 의자에 깊숙이 기대앉아 다리를 살짝 벌리며 매혹적인 시선으로 유혹하는 자세.",
-      "prompt": "cowboy shot, (centered composition:1.15), sitting on sofa, leaning back, parted legs, parting thighs, provocative pose, hands resting on sofa, looking at viewer, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, sultry look"
+      "prompt": "cowboy shot, (centered composition:1.15), sitting on sofa, leaning back, parted legs, parting thighs, provocative pose, hands resting on sofa, looking at viewer, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, sultry look",
+      "sort_order": 270
     },
     "026": {
       "label": "양손결박",
       "description": "침대에 누워 양 손목이 머리 위로 묶인 채 무력하게 누워 있는 구속 및 체벌 연출 포즈.",
-      "prompt": "cowboy shot, (centered vertical composition:1.15), lying on bed, lying on back, arms above head, bound wrists, hands tied, arched back, looking at viewer, heavily flushed face, blushing, teary eyes, biting lip, breathless panting, helpless expression"
+      "prompt": "cowboy shot, (centered vertical composition:1.15), lying on bed, lying on back, arms above head, bound wrists, hands tied, arched back, looking at viewer, heavily flushed face, blushing, teary eyes, biting lip, breathless panting, helpless expression",
+      "sort_order": 290
     },
     "027": {
       "label": "백허그",
       "description": "뒤에서 다가온 파트너가 등 뒤에서 부드럽게 감싸 안아주는 로맨틱하고 다정한 백허그 씬.",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, back hug, hug from behind, partner behind, cropped male partner, partner head out of frame, shirtless male, male arms wrapped around waist from behind, leaning back against partner, (head tilted down:1.25), (looking down:1.25), (downcast eyes:1.2), (bashful flustered expression:1.2), (heavily blushing:1.2), (shy blush:1.15), shy sweet smile, parted lips, sweet romantic atmosphere",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 340
     },
     "028": {
       "label": "엉덩이애무",
       "description": "파트너와 마주 안겨 밀착한 상태에서 상대의 손이 엉덩이를 감싸 쥐는 농밀한 스킨십 포즈.",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, (hugging partner:1.15), intimate embrace, (from behind:1.15), (turned back:1.15), back view, (ass grab:1.15), (butt grab:1.15), (fondling buttocks:1.15), groping, hands on buttocks, partner hands on ass, (looking back over shoulder:1.15), looking at viewer, arched back, cropped male partner, partner head out of frame, light blush, rosy cheeks, bedroom eyes, parted lips, breathless moaning, trembling with pleasure, seductive look",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 350
     },
     "029": {
       "label": "엎드려유혹",
       "description": "침대 위에 엎드려 엉덩이를 치켜들고 뒤를 돌아보며 도발적인 시선을 던지는 후방 유혹 포즈.",
-      "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, on bed, (from behind:1.15), (turned back:1.15), back view, (on all fours:1.15), (ass up:1.15), arched back, kneeling, presenting hindquarters, buttocks focus, (looking back over shoulder:1.15), looking back, seductive glance back, seductive bedroom eyes, teasing smile, heavy blush, flushed cheeks, parted lips, provocative alluring pose"
+      "prompt": "cowboy shot, from side profile view, (facing left:1.15), fully clothed, on bed, (from behind:1.15), (turned back:1.15), back view, (on all fours:1.15), (ass up:1.15), arched back, kneeling, presenting hindquarters, buttocks focus, (looking back over shoulder:1.15), looking back, seductive glance back, seductive bedroom eyes, teasing smile, heavy blush, flushed cheeks, parted lips, provocative alluring pose",
+      "sort_order": 280
     },
     "030": {
       "label": "전라스탠딩",
       "description": "실오라기 하나 걸치지 않은 완전한 나체 상태에서 수줍은 듯 정면을 응시하는 스탠딩 누드 씬.",
       "prompt": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, standing, looking at viewer, (shy bashful gaze:1.15), (heavy body blush:1.15), (intensely flushed face and chest:1.1), teary eyes, trembling slightly, arms at sides, (embarrassed expression:1.1), biting lip, soft lighting",
-      "required_outfit": "nude"
+      "required_outfit": "nude",
+      "sort_order": 430
     },
     "031": {
       "label": "가슴애무",
       "description": "파트너가 뒤에서 덮쳐 양손으로 가슴을 감싸 쥐며 애무하는 등 뒤 스킨십 제스처.",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), groping, breast grab, grabbing from behind, partner behind, hands on breasts, arms around waist, cropped male partner, partner head out of frame, looking back over shoulder, looking at viewer, soft pink blush, flushed cheeks, embarrassed, teary eyes, protesting, parted lips, arched back",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 360
     },
     "032": {
       "label": "벽치기",
       "description": "벽에 몰린 채 파트너가 양손으로 벽을 짚어 가두는 긴장감 넘치는 1인칭 카베동 구도.",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), pov, (trapped against wall:1.25), (cornered against wall:1.25), back against wall, (partner off-screen:1.25), (only partner hands on wall:1.25), (partner arms flanking character on wall:1.25), (hands clutched against own chest:1.2), (hands held in front:1.15), looking at viewer, upturned gaze, rapid breathing, soft pink blush, flushed cheeks, wide moist eyes, breathless panting, trembling lips, flustered and aroused, tight bust shot, close-up upper body portrait",
       "mob_tier": 1,
-      "partner_pos": "offscreen"
+      "partner_pos": "offscreen",
+      "sort_order": 400
     },
     "033": {
       "label": "착의애무",
@@ -197,7 +230,8 @@
       "prompt_otokonoko": "cowboy shot, (centered composition:1.15), 2boys, fully clothed, ((seated closely side by side:1.15)), ((male partner sitting next on left or right:1.25)), ((male partner's hand secretly reaching under skirt between thighs:1.25)), ((male fondling under clothes, hidden stimulation:1.25)), ((trying to stay composed, suppressing reaction:1.25)), ((biting lip hard, holding back moan:1.25)), heavy blush, flustered sweating expression, teary eyes, trembling slightly, hands clenched tightly on lap, looking nervous and aroused, ((public setting, other people nearby in background:1.25)), ((cropped male partner beside, partner head out of frame:1.15)), tense atmosphere, ((male active, partner passive, male pleasuring:1.25))",
       "mob_tier": 1,
       "partner_pos": "offscreen",
-      "negative_add": "school desk, classroom, chalkboard, school chair, school lockers, student desk, extra hands"
+      "negative_add": "school desk, classroom, chalkboard, school chair, school lockers, student desk, extra hands",
+      "sort_order": 380
     },
     "034": {
       "label": "가슴에얼굴묻기",
@@ -206,40 +240,46 @@
       "prompt_otokonoko": "upper body portrait, chest focus, (centered composition:1.15), 2boys, (front view, slightly angled from above:1.1), (open clothes, top pulled open, unbuttoned shirt, clothes pulled apart at chest, bare chest:1.15), (both arms wrapped tenderly around partner's head, holding back of male head with both hands, pressing male head deep against chest:1.15), (partner burying face deep against chest, face completely buried in chest:1.15), (back of dark-haired male head facing viewer, short black hair, male head turned away from camera, shaded upper male face, shadow over male eyes, eyes obscured by shadow, no visible male eyes, obscured male face:1.15), (tender gentle smile, happy warm smile:1.15), (soft blush:1.15), looking down affectionately at partner, tender intimate embrace, soft natural indoor window lighting, bright clean atmosphere, neutral color balance, romantic atmosphere, (single male partner:1.15)",
       "negative_add": "(crown, tiara, laurel, wreath, flower crown, hair wreath, halo, hair ornament, headwear:1.25), (covered chest, covered breasts, closed shirt, buttoned shirt, closed cardigan, closed turtleneck, concealed breasts, dress covering chest, undershirt, bra:1.25), (facing each other, eye contact, two faces visible, side view, side profile, looking up at ceiling, pov from below, partner hands on female head, male gripping female head:1.25), (detailed male face, visible male eyes, detailed male eyes, visible male pupils, male eye, male side profile, male profile face, sideways male head, handsome male face, attractive male face, expressive male face, silver-haired male, blonde male:1.25), (male face visible, male eyes, male nose, male mouth, male profile, extra hands, multiple hands, extra arms, standing male, tall male, standing beside, 3boys, multiple boys, duplicate male:1.25)",
       "mob_tier": 2,
-      "partner_pos": "bury_chest"
+      "partner_pos": "bury_chest",
+      "sort_order": 390
     },
     "035": {
       "label": "덮치기",
       "description": "침대에 등을 대고 눕혀진 채 위에서 파트너가 손목을 결박해 내려다보는 1인칭 밀착 제압 구도.",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), pov, (from above:1.25), (looking down at character on bed:1.25), (lying on back on bed:1.25), pushed down on mattress, (partner off-screen:1.25), (only partner hands visible:1.25), (wrists pinned above head:1.25), (hands held above head:1.25), (hands pinned to bed:1.25), looking up at viewer, upturned pleading gaze, heavy blush, deeply flushed cheeks, breathless panting, parted trembling lips, teary moist eyes, heart eyes, helpless and aroused, arched back against pillow, close-up upper body, bust shot",
       "mob_tier": 1,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 320
     },
     "036": {
       "label": "공주님안기",
       "description": "파트너의 양팔에 들려 안긴 채 부끄러움에 눈을 감고 고개를 살포시 숙이며 목을 꼭 감싸 안는 공주님 안기 포즈.",
       "prompt": "cowboy shot, (centered composition:1.15), (single view:1.25), (single shot:1.25), (princess carry:1.25), (carried by male partner:1.25), cropped male partner, partner head out of frame, (closed eyes:1.2), (head tilted down:1.2), (bashful embarrassed expression:1.25), (sweet blush:1.2), soft rosy cheeks, shy sweet smile, parted lips, (arms wrapped around partner neck:1.25), clinging tightly to partner, intimate romantic embrace, soft romantic lighting, detailed anime shading, full body",
       "mob_tier": 2,
-      "partner_pos": "carry"
+      "partner_pos": "carry",
+      "sort_order": 410
     },
     "037": {
       "label": "붓카케",
       "description": "체액 범벅인 피사체가 의자에 기대어 허공을 응시하며 깊은 여운에 빠진 사후 씬 (키로 050)",
       "prompt": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, solo, (sitting on chair:1.15), leaning back, looking at viewer, (excessive cum:1.15), cum on body, cum puddle, cum on thighs and chest, messy hair, (warm flushed skin:1.1), (rosy cheeks:1.1), (satisfied smile:1.15), (blissful afterglow expression:1.15), soft loving eyes, (gentle smile:1.1), content and fulfilled, relaxed and happy",
-      "required_outfit": "nude"
+      "required_outfit": "nude",
+      "sort_order": 440
     },
     "038": {
       "label": "샤워뒤태",
       "description": "샤워기 물줄기를 맞으며 젖은 머릿결과 함께 드러나는 매끄러운 뒷태 나체 실루엣.",
       "prompt": "solo, cowboy shot, from side profile view, (facing left:1.15), completely nude, full nudity, bare skin, back focus, from behind, standing in shower, clear glass shower stall, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), water droplets on skin, dripping water, (steam:1.1), steamy, (looking back over shoulder at viewer:1.15), looking at viewer, arched back, buttocks focus, seductive glance, parted lips, clean background",
       "required_outfit": "nude",
-      "mob_tier": 0
+      "mob_tier": 0,
+      "sort_order": 450
     },
     "039": {
       "label": "샤워창밀착",
       "description": "샤워실 투명 유리벽에 맨가슴과 맨몸을 밀착시키며 밖을 도발적으로 바라보는 섹슈얼 씬.",
       "prompt": "(centered composition:1.15), completely nude, full nudity, bare skin, breasts pressed against glass, hands pressed on glass, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), dripping water, water running down body, (steam:1.1), steamy, looking at viewer through glass, seductive gaze, heavy blush, breathless expression, biting lip, condensation on glass, clear glass shower stall, intimate close-up, upper body focus",
-      "required_outfit": "nude"
+      "required_outfit": "nude",
+      "sort_order": 460
     },
     "040": {
       "label": "덮쳐짐",
@@ -251,21 +291,24 @@
       "mob_tier": 0,
       "partner_pos": null,
       "prompt_female": "pov, from below, low angle, looking down at viewer, (girl on top, straddling, straddling viewer:1.15), (leaning forward, looming over viewer:1.15), hands on bed, upper body, foreshortening, soft blush, parted lips, confident teasing smile, hair falling forward, white bedsheets, bed",
-      "prompt_otokonoko": "pov, from below, low angle, looking down at viewer, (on top, straddling, straddling viewer:1.15), (leaning forward, looming over viewer:1.15), hands on bed, upper body, foreshortening, soft blush, parted lips, confident teasing smile, hair falling forward, white bedsheets, bed"
+      "prompt_otokonoko": "pov, from below, low angle, looking down at viewer, (on top, straddling, straddling viewer:1.15), (leaning forward, looming over viewer:1.15), hands on bed, upper body, foreshortening, soft blush, parted lips, confident teasing smile, hair falling forward, white bedsheets, bed",
+      "sort_order": 330
     },
     "041": {
       "label": "이끌기",
       "description": "신나서 유저의 손을 잡고 앞장서서 이끄는 씬 (원래 042, 능동적)",
       "required_outfit": "default",
       "prompt": "cowboy shot, (centered composition:1.15), ((pov holding viewer's hand:1.25)), ((looking back over shoulder with bright cheerful smile:1.25)), follow me angle, walking",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 300
     },
     "042": {
       "label": "끌려감",
       "description": "유저에게 손을 잡힌 채 이끌려가는 씬 (원래 041, 수동적)",
       "required_outfit": "default",
       "prompt": "cowboy shot, (centered composition:1.15), ((pov holding viewer's hand:1.25)), looking back flustered, being pulled forward, dynamic walking angle, light blush",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 310
     },
     "043": {
       "label": "침대숙면",
@@ -273,14 +316,16 @@
       "required_outfit": "nude",
       "prompt": "cowboy shot, (centered composition:1.15), ((sleeping peacefully in bed, fast asleep:1.25)), ((closed eyes:1.25)), ((nude under white duvet blanket:1.25)), ((bare shoulders, soft sheets covering body:1.2)), head resting sideways on white pillow, calm gentle expression, asleep, soft morning light",
       "section": "poses",
-      "negative_add": "(open eyes:1.25), (looking at viewer:1.25), (awake:1.25), (eyeball:1.25), (staring:1.25)"
+      "negative_add": "(open eyes:1.25), (looking at viewer:1.25), (awake:1.25), (eyeball:1.25), (staring:1.25)",
+      "sort_order": 490
     },
     "044": {
       "label": "목욕중",
       "description": "넓은 욕조 안 따뜻한 물에 몸을 담그고 뒤쪽 턱에 여유롭게 기대어 휴식하는 씬 (B16)",
       "required_outfit": "nude",
       "prompt": "cowboy shot, (centered composition:1.15), solo, completely nude, full nudity, bare skin, ((relaxing in wide spacious luxury sunken bath pool:1.25)), ((leaning back against wide horizontal bath ledge behind shoulders, both arms spread wide resting on horizontal ledge:1.25)), clear warm water up to chest, gentle water ripples, rising steam, peaceful contented smile, wet hair, indoor luxury bath",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 470
     },
     "045": {
       "label": "목욕들켜부끄러움",
@@ -289,28 +334,32 @@
       "prompt": "cowboy shot, (centered composition:1.15), solo, completely nude, full nudity, bare skin, ((hugging knees in wide spacious sunken bath pool:1.25)), ((splashing clear water, screaming blush:1.25)), startled wide eyes, wet hair, rising steam, caught in bath",
       "section": "poses",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 480
     },
     "046": {
       "label": "결혼식",
       "description": "고급스럽고 세련된 순백의 웨딩드레스를 입고 부케를 든 행복한 결혼식 (B20)",
       "required_outfit": "wedding",
       "prompt": "solo, cowboy shot, ((wearing luxurious haute couture pure white bridal wedding dress, elegant high-neck sheer floral lace illusion neckline, intricate pearl and lace embroidered satin bodice, modest covered chest, sheer floral lace long sleeves, flowing A-line layered tulle bridal gown:1.25)), ((holding bridal bouquet of white roses with both hands in front of waist:1.25)), sheer white bridal veil, delicate pearl tiara, radiant joyful smile, happy loving eyes, warm blush, sunlit cathedral stained glass background, soft romantic lighting, wedding day",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 520
     },
     "047": {
       "label": "쓰다듬기",
       "description": "머리를 쓰다듬받으며 기분 좋아하는 1인칭 씬 (B21)",
       "required_outfit": "default",
       "prompt": "cowboy shot, (centered composition:1.15), ((pov hand patting head:1.25)), ((leaning into hand, blissful smiling face:1.25)), closed eyes in contentment",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 260
     },
     "048": {
       "label": "테이블휴식",
       "description": "범용 일상: 테이블에 앉아 음료 잔이나 머그를 들고 편안하게 휴식하는 포즈 (로스터 background.json과 자동 결합)",
       "prompt": "cowboy shot, (centered composition:1.15), sitting at table, holding mug, relaxed posture, looking at viewer, gentle smile, upper body",
       "required_outfit": "default",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 500
     },
     "049": {
       "label": "전라",
@@ -319,17 +368,19 @@
       "prompt": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, modern luxury bathroom, marble tile walls, vanity mirror in background, warm indirect lighting, soft ambient light",
       "prompt_female": "cowboy shot, (centered composition:1.15), completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, beautiful feminine curves, modern luxury bathroom, marble tile walls, vanity mirror in background, warm indirect lighting, soft ambient light",
       "prompt_otokonoko": "cowboy shot, (centered composition:1.15), crossdressing, otokonoko, completely nude, full nudity, bare skin, looking back over shoulder at viewer, alluring glance, standing, full body, modern luxury bathroom, marble tile walls, vanity mirror in background, warm indirect lighting, soft ambient light",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 420
     },
     "050": {
       "label": "야경테라스",
       "description": "범용 일상: 발코니 난간에 기대어 반짝이는 도시 야경과 부드러운 밤바람을 맞는 감성 야경 포즈",
       "prompt": "cowboy shot, (centered composition:1.15), leaning on balcony railing, outdoor balcony terrace, city night view, glowing city lights, dark night sky, hair fluttering, gentle breeze, looking away softly, upper body, atmospheric night lighting",
       "required_outfit": "default",
-      "section": "poses"
+      "section": "poses",
+      "sort_order": 510
     },
     "056": {
-      "label": "소파나란히가슴애무",
+      "label": "앉아가슴희롱",
       "description": "소파 위 여캐 상반신 클로즈업 구도에서 측면 밀착 상태로 착의 가슴을 애무하는 일상 스킨십 포즈",
       "prompt": "upper body, focus on girl, 1girl, 1boy, fully clothed, clothed male partner, male wearing dark casual shirt, sitting on sofa, male partner partially out of frame on side, male head out of frame, male arm behind her back, (male hand reaching from side to squeeze clothed breast:1.15), girl hands on skirt, head tilted down, looking away, embarrassed, heavy blush, shaded upper male face, shadow over male eyes",
       "prompt_otokonoko": "upper body, focus on boy, 2boys, fully clothed, clothed male partner, male wearing dark casual shirt, sitting on sofa, male partner partially out of frame on side, male head out of frame, male arm behind his back, (male hand reaching from side to squeeze clothed chest:1.15), boy hands on own thighs, head tilted down, looking away, embarrassed, heavy blush, shaded upper male face, shadow over male eyes",
@@ -338,7 +389,8 @@
       "section": "poses",
       "mob_tier": 2,
       "partner_pos": "side_cuddle",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 370
     }
   },
   "romance": {
@@ -352,7 +404,8 @@
       "required_outfit": "default",
       "section": "romance",
       "mob_tier": 2,
-      "partner_pos": "side_kiss"
+      "partner_pos": "side_kiss",
+      "sort_order": 600
     },
     "061": {
       "label": "알몸키스",
@@ -364,7 +417,8 @@
       "required_outfit": "nude",
       "section": "romance",
       "mob_tier": 2,
-      "partner_pos": "side_kiss"
+      "partner_pos": "side_kiss",
+      "sort_order": 620
     },
     "062": {
       "label": "함께씻기",
@@ -375,7 +429,8 @@
       "required_outfit": "nude",
       "section": "romance",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 630
     },
     "063": {
       "label": "스푸닝애무",
@@ -386,7 +441,8 @@
       "required_outfit": "nude",
       "section": "romance",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 640
     },
     "064": {
       "label": "남근핥기",
@@ -398,7 +454,8 @@
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((, prominent thick shaft:1.25)), mouth open, ((licking tip of large penis with pink tongue:1.25)), tongue extended, flushed bedroom eyes, heavy blush, glistening pre-cum, intimate bedroom lighting",
       "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (solo:1.3), (empty mouth:1.2)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 650
     },
     "065": {
       "label": "탈의펠라약",
@@ -410,7 +467,8 @@
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), fellatio, blowjob, taking shaft into mouth, cheeks flushed, loving moist eyes, saliva trail, intimate bedroom close-up",
       "negative_add": "(clothes, clothing, shirt, blouse, pants, trousers, jeans, slacks:1.4), (wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (solo:1.3), (empty mouth:1.3)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 660
     },
     "066": {
       "label": "탈의펠라강",
@@ -422,7 +480,8 @@
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((kneeling facing male partner:1.25)), ((between standing partner legs:1.25)), ((looking up at male partner in front:1.25)), ((deep fellatio, oral sex:1.25)), ((mouth wide open taking shaft:1.25)), throat bulging, saliva dripping down chin, heavy body blush, intensely flushed face, teary bedroom eyes looking up, intimate lighting",
       "negative_add": "(clothes, clothing, shirt, blouse, pants, trousers, jeans, slacks:1.4), (wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (partner behind:1.25), (male behind:1.25), (doggystyle:1.25), (solo:1.3), (empty mouth:1.3)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 670
     },
     "067": {
       "label": "딥스로트",
@@ -434,7 +493,8 @@
       "prompt_otokonoko": "tight bust portrait, profile from right, (facing left:1.15), (looking left:1.15), (partner on left side:1.15), (head tilted back, chin raised high, exposed slender neck:1.15), (mouth stretched wide open, deep oral intimacy, deepthroat, fellatio:1.15), 2boys, crossdressing, otokonoko, ((streaming tears running down flushed cheeks, emotional teary eyes looking up left:1.15)), heavily flushed face and neck, saliva trail glistening down chin, breathless panting, ((unbuttoned disheveled shirt slipping off shoulders, bare collarbone:1.15)), warm rim lighting",
       "negative_add": "(facing right:1.25), (looking right:1.25), (profile from left:1.25), (partner on right:1.25), (standing male legs:1.25), (pants:1.35), (wearing pants over crotch:1.35), (ball gag, gag, muzzle:1.25)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 680
     },
     "068": {
       "label": "착의펠라약",
@@ -446,7 +506,8 @@
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled clothing, unbuttoned top slipping off shoulder, exposed collarbone:1.25)), clothed fellatio, blowjob, looking up devotedly, mouth around shaft, flushed cheeks, saliva trail, intimate bedroom angle",
       "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (male lower body:1.25), (solo:1.3), (empty mouth:1.2)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 690
     },
     "069": {
       "label": "착의펠라강",
@@ -458,7 +519,8 @@
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, ((kneeling between partner legs:1.25)), ((upper body, looking up at partner:1.25)), ((disheveled unbuttoned shirt, bare shoulders, exposed collarbone:1.25)), intense clothed blowjob, head moving back and forth along shaft, saliva dripping, deeply flushed face, ecstatic teary eyes, intimate upper body",
       "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (male lower body:1.25), (solo:1.3), (empty mouth:1.3), (licking air:1.3)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 700
     },
     "070": {
       "label": "펠라후 청소",
@@ -470,7 +532,8 @@
       "prompt_otokonoko": "pov, tight bust portrait, chest focus, (centered composition:1.15), 1boy, crossdressing, otokonoko, ((kneeling facing partner:1.25)), ((between partner legs:1.25)), ((upper body, bust portrait:1.25)), ((cleaning up after fellatio:1.25)), ((licking partner penis tip clean:1.25)), ((tongue extended licking remaining cum:1.25)), ((cum on lips, cum on chin, cum on chest, cum on collarbone:1.25)), looking up at partner with adoring sweet smile, heavily flushed cheeks, breathless dazed expression, ((disheveled top, messy clothing:1.25)), intimate bedroom lighting",
       "negative_add": "(wearing pants over crotch:1.35), (pants:1.35), (standing male legs:1.25), (male lower body:1.25), (solo:1.3), (partner behind:1.25)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 720
     },
     "071": {
       "label": "대딸",
@@ -482,7 +545,8 @@
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, pov, (view from between partner legs:1.25), ((bottomless male partner:1.25)), ((partner pants pulled down:1.25)), ((handjob:1.3)), ((visibly gripping and stroking shaft:1.3)), ((hands on penis:1.25)), girl kneeling beside partner, leaning forward, ((disheveled top, open collar, exposed collarbone:1.2)), heavy cleavage, breasts focus, looking down at viewer, loving affectionate smile, bedroom eyes, soft pink blush, parted lips, pre-cum glistening, natural skin tone, intimate bedroom lighting",
       "negative_add": "(standing male legs:1.35), (male lower body:1.25), (standing partner:1.35), (standing male:1.35), (wearing pants over crotch:1.35), (pants:1.35), (empty hands:1.3), (hands away from crotch:1.3)",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 730
     },
     "072": {
       "label": "파이즈리약",
@@ -494,7 +558,8 @@
       "prompt_female": "pov, close-up, tight bust portrait, face and cleavage focus, (symmetrical front view, centered vertical composition:1.15), 1girl, completely nude, full nudity, bare skin, (both hands pressing breasts together symmetrically:1.15), paizuri, looking up at viewer, teasing smile, soft blush, parted lips, tongue out, saliva, bedroom eyes, partially visible glans between breasts, soft bedroom lighting",
       "prompt_otokonoko": "tight bust portrait, chest focus, (symmetrical front view, centered vertical composition:1.15), (looking directly at viewer:1.15), (both hands squeezing breasts together symmetrically:1.15), (paizuri, breast cleavage intimacy:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, looking up at partner with teasing smile, soft blush, parted lips, bedroom eyes, tender expression",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 760
     },
     "073": {
       "label": "파이즈리펠라",
@@ -506,7 +571,8 @@
       "prompt_female": "partially unbuttoned shirt, bra or skirt visible, shy teasing mood, pov, female focus, 1girl, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, soft pink blush, parted lips, saliva trail, upper body, close-up, delicate anime coloring, natural pale skin, soft bedroom lighting",
       "prompt_otokonoko": "pov, otokonoko, ((upper body, chest focus, tight bust portrait:1.25)), 1boy, completely nude, full nudity, bare skin, ((paizuri titfuck:1.25)), ((fellatio, blowjob:1.25)), ((cleavage, tongue extended licking tip:1.25)), looking up at partner, seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, saliva trail, upper body, close-up, intimate bedroom lighting",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 770
     },
     "074": {
       "label": "가슴사정",
@@ -518,7 +584,8 @@
       "prompt_female": "solo focus, partially unbuttoned shirt, bra or skirt visible, shy teasing mood, female focus, tight bust portrait, chest focus, (centered composition:1.15), 1girl, pov, from above, looking up at viewer, paizuri titfuck climax, intimate close-up, (cum on breasts and cleavage:1.2), (cum dripping down chest:1.15), loving gaze upward, tender affectionate smile, gentle smile, soft loving dark gray eyes, sweet fond expression, blushing softly, parted lips, pleased and devoted, delicate anime coloring, natural pale skin, soft romantic lighting",
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, pov, from above, looking up at viewer, paizuri titfuck climax, intimate close-up, (excessive cum:1.15), (huge cumshot:1.15), cum on breasts and cleavage, cum dripping down chest, loving gaze upward, tender affectionate smile, gentle smile, soft loving eyes, sweet fond expression, blushing softly, flushed cheeks, parted lips, pleased and devoted, upper body close-up",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 780
     },
     "075": {
       "label": "누드대딸",
@@ -530,7 +597,8 @@
       "prompt_female": "female focus, tight bust portrait, chest focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), (partner head out of frame:1.15), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), girl kneeling beside partner, leaning forward, heavy cleavage, breasts focus, looking down at viewer, (clear visible female eyes:1.15), seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, delicate anime coloring, natural pale skin",
       "prompt_otokonoko": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, pov, (view from between partner legs:1.25), (partner head out of frame:1.15), ((handjob:1.25)), ((one hand visibly gripping and stroking shaft:1.25)), kneeling beside partner, leaning forward, flat chest, looking down at viewer, seductive teasing smile, bedroom eyes, affectionate gaze, soft pink blush, parted lips, natural skin tone, intimate bedroom lighting",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 740
     },
     "076": {
       "label": "수유대딸",
@@ -542,7 +610,8 @@
       "prompt_female": "angled medium shot, horizontal bed composition, (centered composition:1.15), 1girl, 1boy, ((upper body, leaning forward over lying male partner on bed:1.2)), ((exposed bare breasts, exposed chest, nipples, open clothes, top pulled open, dress pulled down off chest:1.25)), ((naked male partner lying on back on bed below her:1.2)), ((nursing handjob, breastfeeding and handjob simultaneously:1.2)), ((partner head resting against her chest, partner mouth sucking nipple, partner face completely buried in breast:1.2)), ((back of dark-haired male head facing viewer, short black hair, male head turned away from camera, shaded upper male face, shadow over male eyes, eyes obscured by shadow, no visible male eyes, obscured male face:1.2)), ((her one hand cradling back of partner head, her other hand stroking partner penis beside him:1.2)), looking down at partner with sweet affectionate smile, (clear visible female eyes:1.15), gentle loving blush, delicate anime coloring, bed, warm lamp light",
       "prompt_otokonoko": "angled medium shot, horizontal bed composition, (centered composition:1.15), otokonoko, 2boys, ((upper body, leaning forward over lying male partner on bed:1.2)), completely nude, full nudity, bare skin, ((naked male partner lying on back on bed below:1.2)), ((nursing handjob, breastfeeding and handjob simultaneously:1.2)), ((partner head resting against chest, partner mouth on chest, partner face completely buried in chest:1.2)), ((back of dark-haired male head facing viewer, short black hair, male head turned away from camera, shaded upper male face, shadow over male eyes, eyes obscured by shadow, no visible male eyes, obscured male face:1.2)), ((one hand cradling back of partner head, other hand stroking partner penis beside him:1.2)), looking down at partner with sweet affectionate smile, gentle loving blush, bed, warm lamp light",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 750
     },
     "077": {
       "label": "풋잡",
@@ -554,7 +623,8 @@
       "prompt_female": "angled medium shot, head to hips, upper three-quarter view, partially unbuttoned shirt, bra or skirt visible, shy teasing mood, (centered composition:1.15), 1girl, 1boy, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner, delicate anime coloring, natural pale skin, soft lighting",
       "prompt_otokonoko": "cowboy shot, (centered composition:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 790
     },
     "078": {
       "label": "웨딩펠라",
@@ -566,7 +636,8 @@
       "prompt_female": "tight bust portrait, face focus, (centered composition:1.15), 1girl, 1boy, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, (gentle soft blush:1.1), tender affectionate smile, ((wearing ornate pure white wedding dress, delicate sheer bridal veil, sheer white lace stockings:1.25)), bride, delicate anime coloring, natural pale skin, soft romantic lighting",
       "prompt_otokonoko": "tight bust portrait, face focus, (centered composition:1.15), 2boys, crossdressing, otokonoko, ((kneeling on knees on bridal carpet:1.25)), ((fellatio, oral sex, mouth on partner shaft:1.25)), ((holding partner with delicate gloved hands:1.25)), looking up at partner with loving devoted expression, bridal blush, flushed cheeks, ((wearing ornate white wedding dress, delicate bridal veil, sheer white lace stockings:1.25)), bride, pure and passionate, romantic soft wedding suite lighting, intimate atmosphere",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 710
     },
     "079": {
       "label": "뒷스마타",
@@ -578,7 +649,8 @@
       "prompt_otokonoko": "cowboy shot, from side profile view, (facing left:1.15), 2boys, crossdressing, otokonoko, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between her thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed",
       "negative_add": "(pants:1.35), (wearing pants:1.35), (wearing pants over crotch:1.35), (standing male legs:1.25)",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 800
     }
   },
   "h_scenes": {
@@ -591,7 +663,8 @@
       "prompt_otokonoko": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, completely nude, full nudity, bare skin, on bed, reclining on bed, leaning back against pillows, ((begging for penetration, seductive invitation:1.25)), ((spreading own legs inviting partner:1.25)), (holding own thighs:1.25), (legs spread wide:1.25), m-shaped legs, knees up, crotch focus, looking up at partner, seductive bedroom eyes, longing aroused gaze, sultry parted lips, deep heavy blush, intensely flushed cheeks, breathless with desire, partner POV, soft bedroom lighting",
       "mob_tier": 0,
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25), (full body:1.25)",
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 810
     },
     "081": {
       "label": "대면좌위",
@@ -600,7 +673,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "below",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 850
     },
     "082": {
       "label": "대면좌위절정",
@@ -610,7 +684,8 @@
       "mob_tier": 2,
       "partner_pos": "below",
       "mob_shadow": true,
-      "negative_add": "reverse lotus, sitting with back to partner, leaning back against male chest, facing away from partner"
+      "negative_add": "reverse lotus, sitting with back to partner, leaning back against male chest, facing away from partner",
+      "sort_order": 860
     },
     "083": {
       "label": "누워절정여운",
@@ -618,7 +693,8 @@
       "prompt": "pov, cowboy shot, (centered composition:1.15), 1girl, solo, completely nude, full nudity, bare skin, aftersex aftermath, lying on bed, messy white sheets, looking at viewer, (excessive cum:1.15), cum pool on bedsheets, cum dripping on inner thighs, messy hair, (warm flushed skin:1.1), (rosy cheeks:1.1), (satisfied smile:1.15), (blissful afterglow expression:1.15), soft loving eyes, tender happy gaze, (gentle smile:1.1), content and fulfilled expression, warm glowing skin, basking in afterglow, completely melted by pleasure, relaxed and happy",
       "section": "h_scenes",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 1130
     },
     "084": {
       "label": "엎드려절정여운",
@@ -626,7 +702,8 @@
       "prompt": "pov, cowboy shot, from side profile view, (facing left:1.15), 1girl, solo, completely nude, full nudity, bare skin, (from behind:1.15), (back view:1.15), (lying prone on bed:1.15), buttocks focus, (looking back over shoulder at viewer:1.15), looking at viewer, ass slightly raised, exhausted aftersex aftermath, legs spread, (excessive cum:1.15), (thick cum dripping between thighs:1.15), cum pool on bedsheets, cum dripping down inner thighs, trembling legs, heavily flushed back, heavy-lidded dazed expression, parted lips moaning, completely broken and melted by pleasure",
       "section": "h_scenes",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 1140
     },
     "085": {
       "label": "정상위약",
@@ -635,7 +712,8 @@
       "section": "h_scenes",
       "partner_pos": "above",
       "mob_tier": 2,
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 870
     },
     "086": {
       "label": "정상위강",
@@ -645,7 +723,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "above",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 880
     },
     "087": {
       "label": "정상위절정",
@@ -653,7 +732,8 @@
       "prompt": "angled medium shot, upper three-quarter view, (centered vertical composition:1.15), 1girl, completely nude, full nudity, bare skin, (lying on bed:1.2), (missionary position:1.25), (vaginal penetration:1.2), legs spread wide, (climax:1.2), (excessive cum:1.15), (thick cum covering body:1.15), cum puddle on sheets, cum stain on bedsheets, cum on stomach, cum dripping between thighs, (intense ahegao:1.15), eyes rolled back, tongue out, drooling, tears of ecstasy, (arched back:1.15), trembling body, heavy full body blush, lost in overwhelming orgasm, (male torso and chest pressed close against her:1.25), (male hands gripping her waist and hips tightly:1.2), crotch out of frame",
       "section": "h_scenes",
       "partner_pos": "above",
-      "mob_tier": 2
+      "mob_tier": 2,
+      "sort_order": 890
     },
     "088": {
       "label": "후배위약",
@@ -662,7 +742,8 @@
       "section": "h_scenes",
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25), (facing right:1.25), (facing partner:1.25), (facing each other:1.25), (chest to chest:1.25), (paizuri:1.25), (fellatio:1.25), (oral:1.25), (partner in front:1.25), (male in front:1.25), (kissing chest:1.25)",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 940
     },
     "089": {
       "label": "후배위강",
@@ -670,7 +751,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, on bed, ((deep doggystyle position, intensely arched back:1.25)), ((on all fours, looking back over shoulder:1.25)), trembling body, open mouth gasping, ecstasy expression, tears of intense pleasure, disheveled bedsheets, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
       "section": "h_scenes",
       "partner_pos": "behind",
-      "mob_tier": 2
+      "mob_tier": 2,
+      "sort_order": 950
     },
     "090": {
       "label": "후배위절정",
@@ -678,7 +760,8 @@
       "prompt": "angled medium shot, upper three-quarter view, from side profile view, (facing left:1.15), 1girl, completely nude, full nudity, bare skin, on bed, ((on all fours, deeply arched back:1.25)), (excessive cum:1.15), (thick cum dripping from buttocks:1.15), cum on back and thighs, cum pool, looking back, (intense ahegao:1.15), rolling eyes, tongue out, drooling, heavy body blush, trembling arms and legs, screams of ecstasy, lost in pleasure, (deep doggystyle, lower body occluded by partner:1.2)",
       "section": "h_scenes",
       "partner_pos": "behind",
-      "mob_tier": 2
+      "mob_tier": 2,
+      "sort_order": 960
     },
     "091": {
       "label": "기승위약",
@@ -687,7 +770,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25)",
-      "partner_pos": "below"
+      "partner_pos": "below",
+      "sort_order": 990
     },
     "092": {
       "label": "기승위강",
@@ -696,7 +780,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25)",
-      "partner_pos": "below"
+      "partner_pos": "below",
+      "sort_order": 1000
     },
     "093": {
       "label": "기승위절정",
@@ -704,7 +789,8 @@
       "prompt": "angled medium shot, upper three-quarter view, (centered composition:1.15), 1girl, completely nude, full nudity, bare skin, on bed, straddling, deep cowgirl sex climax, (excessive cum covering lower body:1.15), (thick cum covering genitals:1.15), cum on stomach and inner thighs, cum dripping between thighs, cum pool on bedsheets, head thrown back in ecstasy, deeply arched back, (intense ahegao:1.15), eyes rolled back, parted lips moaning, breathless panting, tears of pleasure, heavy body blush, intensely flushed face, trembling thighs, overwhelming orgasm, (straddling partner, hips pressed close, lower body hidden:1.2)",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "below"
+      "partner_pos": "below",
+      "sort_order": 1010
     },
     "094": {
       "label": "알몸섹스절정",
@@ -712,7 +798,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, lying on bed, (climax:1.2), (excessive cum:1.15), (thick cum covering body:1.15), cum puddle on sheets, cum stain on bedsheets, cum on stomach, cum dripping between thighs, (intense ahegao:1.15), eyes rolled back, tongue out, drooling, tears of ecstasy, (arched back:1.15), trembling body, lost in overwhelming orgasm",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 900
     },
     "095": {
       "label": "웨딩섹스",
@@ -726,7 +813,8 @@
       ],
       "prompt_female": "angled medium shot, head to hips, upper three-quarter view, chest focus, (looking directly up at camera:1.2), 1girl, 1boy, ((missionary position, passionate intimacy:1.25)), ((lying on back across luxurious bridal bed:1.25)), ((wedding dress unfastened, white bridal corset pushed down, exposed breasts:1.25)), ((white bridal veil, tiara:1.15)), ((white bridal gloves, lace garters, white stockings:1.15)), ((bottomless male partner:1.25)), ((erect penis entering pussy:1.25)), ((vaginal penetration:1.25)), hands gripping bridal bedsheet, heavy bridal blush, loving moist bedroom eyes, sweet parted lips, ((intimate warm bedroom lighting:1.2)), ((soft shaded warm skin:1.15))",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 910
     },
     "099": {
       "label": "펠라치오_시작",
@@ -737,7 +825,8 @@
       "status": "deprecated",
       "canonical_code": "065",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9040
     },
     "100": {
       "label": "펠라치오_절정",
@@ -748,7 +837,8 @@
       "status": "deprecated",
       "canonical_code": "066",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9050
     },
     "101": {
       "label": "펠라치오_사후",
@@ -759,7 +849,8 @@
       "status": "deprecated",
       "canonical_code": "070",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9060
     },
     "103": {
       "label": "입위앞",
@@ -770,7 +861,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((standing sex:1.25)), ((against wall, one leg up:1.2)), embrace, partner holding leg gently, looking at partner, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, trembling with sweet sensation, sweet moaning:1.25))",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 1050
     },
     "104": {
       "label": "입위뒤",
@@ -782,7 +874,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "negative_add": "(cowboy shot:1.25), (wide shot:1.25)",
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 1060
     },
     "105": {
       "label": "샤워섹스약",
@@ -791,7 +884,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "behind",
-      "negative_add": "(bodysuit, zentai, leotard, wetsuit, latex, dark silhouette, shadow person, dark skin male, grey skin, blue skin, black clothes, male clothes, shirt, pants, visible male eyes, detailed male face:1.3)"
+      "negative_add": "(bodysuit, zentai, leotard, wetsuit, latex, dark silhouette, shadow person, dark skin male, grey skin, blue skin, black clothes, male clothes, shirt, pants, visible male eyes, detailed male face:1.3)",
+      "sort_order": 1070
     },
     "106": {
       "label": "샤워섹스강",
@@ -799,7 +893,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, shower sex, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), dripping water, water running down body, (steam:1.1), steamy, standing against clear glass wall, pinned against glass, one leg wrapped around partner waist, vaginal penetration, partner behind, cropped male partner, partner head out of frame, male hands on waist, clear glass shower stall, heavy body blush, intensely flushed face, parted lips gasping, head tilted back against glass, heavy-lidded pleasure eyes, trembling with intense arousal, sensual moaning expression, teary eyes, clean background, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "side_kiss"
+      "partner_pos": "side_kiss",
+      "sort_order": 1080
     },
     "107": {
       "label": "측위약",
@@ -808,7 +903,8 @@
       "section": "h_scenes",
       "partner_pos": "side_kiss",
       "mob_tier": 2,
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 1030
     },
     "108": {
       "label": "측위강",
@@ -817,7 +913,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "side_kiss",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 1040
     },
     "109": {
       "label": "커닐링구스",
@@ -829,7 +926,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "between_thighs",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 820
     },
     "110": {
       "label": "보지애무약",
@@ -837,7 +935,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((fingering, gentle petting:1.25)), lying on bed, partner hand on lower body, soft arched back, trembling knees, ((vivid sensual expression:1.25)), ((intensely flushed face, breathless parted lips gasping softly:1.25)), ((moist emotional eyes, sweet moaning:1.2)), heavy blush, trembling with sweet sensation, tender pleasure building, bed",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "behind"
+      "partner_pos": "behind",
+      "sort_order": 830
     },
     "111": {
       "label": "보지애무강",
@@ -845,7 +944,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, face focus, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((intense fingering:1.25)), lying on bed, partner hand vigorously stimulating, deeply arched hips, gasping desperately, open mouth moaning, ecstasy expression, heavy blush, trembling body, bed, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 840
     },
     "112": {
       "label": "착의섹스_시작",
@@ -855,7 +955,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "behind",
-      "negative_add": "(solo, missing male partner, bodysuit, zentai, dark silhouette, full body, wide shot, visible male eyes, detailed male face, full male head, double pants, skirt over shorts:1.25)"
+      "negative_add": "(solo, missing male partner, bodysuit, zentai, dark silhouette, full body, wide shot, visible male eyes, detailed male face, full male head, double pants, skirt over shorts:1.25)",
+      "sort_order": 1090
     },
     "113": {
       "label": "착의섹스_절정",
@@ -864,7 +965,8 @@
       "required_outfit": "default",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 1100
     },
     "114": {
       "label": "착의섹스_사후",
@@ -873,7 +975,8 @@
       "required_outfit": "default",
       "section": "h_scenes",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 1110
     },
     "115": {
       "label": "필로우토크",
@@ -885,7 +988,8 @@
       "mob_tier": 2,
       "partner_pos": "side_kiss",
       "mob_shadow": true,
-      "negative_add": "straddling, lying on top of chest, muscular abs close-up, sex, vaginal penetration, pov crotch, standing, sitting"
+      "negative_add": "straddling, lying on top of chest, muscular abs close-up, sex, vaginal penetration, pov crotch, standing, sitting",
+      "sort_order": 1120
     },
     "116": {
       "label": "파일드라이버",
@@ -895,7 +999,8 @@
       "negative_add": "(side view:1.25), (profile view:1.25), (doggystyle:1.25), (standing male:1.25), (feet on ground:1.25)",
       "mob_tier": 2,
       "partner_pos": "above",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 920
     },
     "118": {
       "label": "교배프레스",
@@ -905,7 +1010,8 @@
       "mob_tier": 2,
       "partner_pos": "below",
       "negative_add": "(solo, missing male partner, bodysuit, zentai, dark silhouette, extra legs, fused legs, deformed legs, brown blanket over body, visible male eyes, detailed male face:1.25)",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 930
     },
     "119": {
       "label": "들박",
@@ -915,7 +1021,8 @@
       "mob_tier": 2,
       "partner_pos": "below",
       "mob_shadow": true,
-      "negative_add": "lying on bed, bed, mattress, on all fours, doggystyle, kneeling on bed, sitting, reverse"
+      "negative_add": "lying on bed, bed, mattress, on all fours, doggystyle, kneeling on bed, sitting, reverse",
+      "sort_order": 1020
     },
     "122": {
       "label": "스팽킹",
@@ -923,7 +1030,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, spanking, red marks on rear, bent over bed, biting lip, teary eyes, submission, blushing",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 980
     },
     "123": {
       "label": "배복종자세",
@@ -931,7 +1039,8 @@
       "prompt": "pov, cowboy shot, (centered vertical composition:1.15), 1girl, completely nude, full nudity, bare skin, solo, belly exposure, lying on back, submissive pose, hands up, showing stomach, adoring smile",
       "section": "h_scenes",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 1150
     },
     "124": {
       "label": "애널섹스",
@@ -939,7 +1048,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, from side profile view, (facing left:1.15), 1girl, 1boy, completely nude, full nudity, bare skin, ((doggystyle anal, on hands and knees on bed:1.25)), ((partner gripping hips firmly from behind:1.25)), looking back over shoulder, teary gasping face, heavy blush, bed",
       "section": "h_scenes",
       "mob_tier": 2,
-      "partner_pos": "below"
+      "partner_pos": "below",
+      "sort_order": 970
     },
     "096": {
       "label": "남근핥기",
@@ -950,7 +1060,8 @@
       "status": "deprecated",
       "canonical_code": "064",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9010
     },
     "097": {
       "label": "가슴사정",
@@ -961,7 +1072,8 @@
       "status": "deprecated",
       "canonical_code": "065",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9020
     },
     "098": {
       "label": "파이즈리펠라",
@@ -972,7 +1084,8 @@
       "status": "deprecated",
       "canonical_code": "066",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9030
     },
     "102": {
       "label": "딥스로트",
@@ -983,7 +1096,8 @@
       "status": "deprecated",
       "canonical_code": "067",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9070
     },
     "117": {
       "label": "누드대딸",
@@ -993,7 +1107,8 @@
       "status": "deprecated",
       "canonical_code": "071",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9080
     },
     "120": {
       "label": "수유대딸",
@@ -1004,7 +1119,8 @@
       "status": "deprecated",
       "canonical_code": "071",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9090
     },
     "125": {
       "label": "풋잡",
@@ -1014,7 +1130,8 @@
       "status": "deprecated",
       "canonical_code": "071",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9100
     },
     "126": {
       "label": "책상밑펠라_약",
@@ -1027,7 +1144,8 @@
       "canonical_code": "068",
       "prompt_female": "tight bust portrait, close-up, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up submissively from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), oral service under desk, mouth around shaft, saliva trail, looking up devotedly, heavy facial blush, moist emotional eyes, dim office lighting under desk",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9110
     },
     "127": {
       "label": "책상밑펠라_강",
@@ -1040,10 +1158,11 @@
       "canonical_code": "069",
       "prompt_female": "tight bust portrait, close-up, (centered composition:1.15), 1girl, 1boy, ((crouching low on wooden floor under desk:1.35)), ((female completely under wooden desk:1.35)), ((kneeling on wooden floor between male thighs:1.35)), ((underside of wooden desk directly above female head:1.30)), ((cramped narrow space under desk:1.25)), ((looking up from under desk:1.25)), ((clothed top, wearing clothes, top on, skirt:1.20)), intense deep oral service under desk, deepthroat, head moving along shaft, tears of intense pleasure, intensely flushed face, saliva dripping, dim office lighting under desk, ((excessive cum, massive cumshot, overflowing thick cum from mouth and dripping down chin and chest:1.20))",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 9120
     },
     "136": {
-      "label": "밀착측면키스가슴",
+      "label": "밀착키스",
       "description": "뒤와 옆에서 밀착 포옹한 상태로 고개를 돌려 깊은 키스를 나누며 착의 가슴을 애무하는 씬",
       "prompt": "upper body, 1girl, 1boy, fully clothed, standing embrace, hug from behind, female head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed breast:1.15), breast squeeze, male arm reaching across chest to grope breast, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
       "prompt_otokonoko": "upper body, 2boys, fully clothed, standing embrace, hug from behind, boy head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed chest:1.15), chest squeeze, male arm reaching across chest, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
@@ -1052,7 +1171,8 @@
       "section": "h_scenes",
       "mob_tier": 2,
       "partner_pos": "side_kiss",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 610
     }
   },
   "special_h": {
@@ -1063,7 +1183,8 @@
       "prompt": "solo focus, pov, cowboy shot, from side profile view, (facing left:1.15), 1girl, ((hidden in stair landing between staircase flights:1.25)), ((narrow space between stairs:1.25)), ((leaning forward with hands pressed flat against concrete wall:1.25)), ((doggystyle from behind:1.25)), ((clothing mostly stripped, dress pulled down off shoulders and waist, nearly naked, exposed bare skin:1.25)), looking back over shoulder with intense ecstasy face, breathlessness, flushed cheeks, ((glistening messy bodily fluids:1.25)), thrilling secret intimacy in shadows, high contrast stairwell lighting",
       "section": "special_h",
       "mob_tier": 0,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 1300
     },
     "131": {
       "label": "차안 백시트",
@@ -1072,7 +1193,8 @@
       "prompt": "angled medium shot, head to hips, upper three-quarter view, face focus, (centered composition:1.15), 1girl, 1boy, ((inside car interior, vehicle backseat:1.25)), ((lying on back across car rear seat:1.25)), ((missionary position on car backseat:1.25)), leather car seats, tinted car windows with night streetlights blurred outside, ((clothing mostly stripped, dress pulled down and pushed aside, nearly naked, exposed bare skin:1.25)), arched back in intense ecstasy, ecstatic flushed face, open mouth moaning, tears of pleasure, ((splattered bodily fluids, glistening skin:1.25)), intimate narrow space, ((single male partner:1.25))",
       "section": "special_h",
       "mob_tier": 2,
-      "partner_pos": "above"
+      "partner_pos": "above",
+      "sort_order": 1310
     },
     "132": {
       "label": "화장실펠라",
@@ -1082,7 +1204,8 @@
       "section": "special_h",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
       "mob_tier": 3,
-      "partner_pos": null
+      "partner_pos": null,
+      "sort_order": 1320
     }
   },
   "scenes_otokonoko": {
@@ -1090,117 +1213,136 @@
       "label": "M자개각",
       "description": "침대에 기대어 스스로 양손으로 다리를 넓게 벌려 관람자를 향해 유혹하는 관능적인 1인 M자 개각 포즈.",
       "prompt": "pov, cowboy shot, (centered composition:1.15), 1boy, otokonoko, completely nude, full nudity, bare skin, on bed, reclining on bed, leaning back against pillows, (spreading own legs:1.25), (holding own thighs:1.25), (legs spread wide:1.25), m-shaped legs, knees up, subtle bulge, looking at viewer, seductive bedroom eyes, confident alluring gaze, sultry smile, deep heavy blush, intensely flushed cheeks, parted lips, breathless with desire, longing expression",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1500
     },
     "151": {
       "label": "대면좌위",
       "description": "파트너의 무릎 위에 마주 앉아 팔로 목을 감싸고 카메라를 향해 표정을 드러내는 좌위 체위.",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), 2boys, completely nude, full nudity, bare skin, sitting on lap, straddling, (from behind partner:1.2), (partner back view:1.2), partner torso out of frame, arms around partner neck, (otokonoko facing viewer:1.2), face visible, looking at viewer over partner shoulder, heavy body blush, flushed cheeks and chest, parted lips moaning, heavy-lidded intoxicated gaze, streaming tears of pleasure, deeply aroused expression, breathless panting",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1630
     },
     "152": {
       "label": "밀착절정",
       "description": "다리를 가슴 쪽으로 접어 파트너의 체중으로 강하게 밀착 압박당하며 도달하는 극한의 절정.",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying on bed, knees folded to chest, deep anal mating press climax, (excessive cum:1.15), (thick cum covering body:1.15), cum pool on bedsheets, cum dripping between thighs, looking up, (intense ahegao:1.15), eyes rolled back, open mouth, tongue out, streaming tears of ecstasy, trembling uncontrollably, flushed body, completely broken by pleasure",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1640
     },
     "153": {
       "label": "침대사후",
       "description": "격렬한 정사 후 땀과 체액에 젖은 채 침대에 나른하게 누워 숨을 헐떡이는 나태한 사후 여운.",
       "prompt": "pov, tight bust portrait, face focus, (centered composition:1.15), 1boy, otokonoko, completely nude, full nudity, bare skin, aftersex aftermath, lying on bed, messy white sheets, looking at viewer, (excessive cum:1.15), cum pool on bedsheets, cum dripping on inner thighs, messy hair, heavy-lidded intoxicated eyes, parted lips, drool at mouth corner, flushed skin, trembling afterglow, dazed pleasure smile, completely melted by orgasm, relaxed",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1870
     },
     "154": {
       "label": "후방사후",
       "description": "행위 후 침대에 완전히 엎드린 채 허벅지를 타고 흐르는 체액과 함께 뒤돌아보는 사후 여운.",
       "prompt": "pov, cowboy shot, from side profile view, (facing left:1.15), 1boy, otokonoko, completely nude, full nudity, bare skin, (from behind:1.15), (back view:1.15), (lying prone on bed:1.15), buttocks focus, (looking back over shoulder at viewer:1.15), looking at viewer, ass slightly raised, exhausted aftersex aftermath, legs spread, (excessive cum:1.15), (thick cum dripping between thighs:1.15), cum pool on bedsheets, cum dripping down inner thighs, trembling legs, heavily flushed back, heavy-lidded dazed expression, parted lips moaning, completely broken and melted by pleasure",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1880
     },
     "155": {
       "label": "정상위약",
       "description": "침대에 등을 대고 누워 파트너와 눈을 맞추며 부드럽게 시작하는 정상위 (약)",
       "prompt": "cowboy shot, (centered vertical composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying on bed, ((anal missionary position:1.25)), ((lying on back on bed, legs spread wide:1.25)), ((from side view angle:1.2)), looking up at partner with soft loving gaze, heavy body blush, flushed cheeks, soft parted lips, breathless gentle expression, disheveled sheets, soft ambient bedroom light",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1650
     },
     "156": {
       "label": "정상위강",
       "description": "침대에 등을 대고 누워 진행되는 격렬한 정상위 (강)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, completely nude, full nudity, bare skin, lying on bed, ((anal missionary position:1.25)), ((lying on back on bed, otokonoko on bottom:1.25)), ((single male partner on top between thighs:1.25)), ((from front-center view angle:1.2)), legs spread wide, intense pleasure, arched back, open mouth, looking up intensely at partner, heavy blush, bed, disheveled sheets, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1660
     },
     "157": {
       "label": "정상위절정",
       "description": "대면 결합 상태에서 파트너의 손을 쥐고 등을 젖히며 맞이하는 황홀한 정면 아날 클라이맥스.",
       "prompt": "cowboy shot, (centered vertical composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying on bed, anal missionary, climax, (excessive cum:1.15), (thick cum covering body:1.15), cum pool on bedsheets, cum on stomach, cum dripping between thighs, (intense ahegao:1.15), eyes rolled back, tongue out, drooling, tears of ecstasy, trembling body, heavy full body blush, lost in overwhelming orgasm",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1670
     },
     "158": {
       "label": "후배위약",
       "description": "침대에 엎드려 뒤에서 부드럽게 진입하는 후배위 (약)",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), (on all fours:1.15), (partner behind him on right:1.15), (anal doggystyle, sex from behind, anal penetration from behind:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, (arched back, hips raised high toward partner behind on right:1.1), (partner kneeling behind his hips on right, gripping his waist from behind:1.1), head turned looking back over right shoulder at partner, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking back, trembling with sweet sensation, sweet moaning:1.15)), soft bedding",
       "section": "scenes_otokonoko",
-      "negative_add": "(facing right:1.25), (facing partner:1.25), (facing each other:1.25), (chest to chest:1.25), (paizuri:1.25), (fellatio:1.25), (oral:1.25), (partner in front:1.25), (male in front:1.25), (kissing chest:1.25)"
+      "negative_add": "(facing right:1.25), (facing partner:1.25), (facing each other:1.25), (chest to chest:1.25), (paizuri:1.25), (fellatio:1.25), (oral:1.25), (partner in front:1.25), (male in front:1.25), (kissing chest:1.25)",
+      "sort_order": 1720
     },
     "159": {
       "label": "후배위강",
       "description": "침대에 엎드려 깊은 결합과 전율을 느끼는 격렬한 후배위 (강)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, ((deep anal doggystyle position, intensely arched back:1.25)), ((on all fours, looking back over shoulder:1.25)), trembling body, open mouth gasping, ecstasy expression, tears of intense pleasure, disheveled bedsheets, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1730
     },
     "160": {
       "label": "후배위절정",
       "description": "후배위 상태에서 허리를 활처럼 휘며 시트를 쥐어뜯고 절정에 도달하는 후방 결합 클라이맥스.",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, on all fours, deeply arched back, deep anal doggystyle climax, (excessive cum:1.15), (thick cum dripping from buttocks:1.15), cum on back and thighs, cum pool, looking back, (intense ahegao:1.15), rolling eyes, tongue out, drooling, heavy body blush, trembling arms and legs, screams of ecstasy, lost in pleasure",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1740
     },
     "161": {
       "label": "기승위약",
       "description": "파트너 위에 올라타 위에서 부드럽게 리드하는 기승위 (약)",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, ((anal cowgirl position, straddling partner:1.25)), ((hands resting on partner's chest:1.25)), upright posture, looking down at partner with seductive smile, heavy blush, disheveled sheets, warm soft lighting",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1760
     },
     "162": {
       "label": "기승위강",
       "description": "파트너 위에서 자발적으로 격렬하게 움직이는 기승위 (강)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, ((intense anal cowgirl position:1.25)), ((leaning back, head thrown back, throat exposed:1.25)), hands resting on own thighs, arched back, open mouth breathless moan, overwhelming ecstasy, bed, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1770
     },
     "163": {
       "label": "기승위절정",
       "description": "기승위 결합 중 극도의 자극에 가슴을 젖히고 목을 뒤로 젖히며 맞이하는 상위 아날 절정.",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, straddling, deep anal cowgirl climax, (excessive cum covering lower body:1.15), (thick cum covering genitals:1.15), cum on stomach and inner thighs, cum dripping between thighs, cum pool on bedsheets, head thrown back in ecstasy, deeply arched back, (intense ahegao:1.15), eyes rolled back, parted lips moaning, breathless panting, tears of pleasure, heavy body blush, intensely flushed face, trembling thighs, overwhelming orgasm",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1780
     },
     "164": {
       "label": "알몸섹스절정",
       "description": "정상위/후배위/기승위 등 결합 상태에서 맞이하는 범용 절정 마무리 (체액 표현 포함)",
       "prompt": "cowboy shot, (centered vertical composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying on bed, anal missionary, (climax:1.2), (excessive cum:1.15), (thick cum covering body:1.15), cum puddle on sheets, cum stain on bedsheets, cum on stomach, cum dripping between thighs, (intense ahegao:1.15), eyes rolled back, tongue out, drooling, tears of ecstasy, (arched back:1.15), trembling body, heavy full body blush, lost in overwhelming orgasm",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1680
     },
     "165": {
       "label": "웨딩섹스",
       "required_outfit": "wedding",
       "prompt": "cowboy shot, (centered vertical composition:1.15), 2boys, otokonoko, ((anal missionary position, passionate intimacy:1.25)), ((lying on back across luxurious bridal bed, otokonoko on bottom:1.25)), ((wearing pure white wedding dress, bridal dress lifted up to waist:1.25)), ((bridal veil, white lace garter belt, white sheer lace stockings:1.25)), bride, legs spread, single male partner on top, size difference, flushed blushing face, intense breathless blissful expression, parted lips, ((looking directly at viewer, making loving eye contact:1.25)), soft romantic bedroom lighting",
-      "description": "순백의 웨딩드레스를 입은 채 침대 위에서 나누는 첫날밤 웨딩 본방 씬"
+      "description": "순백의 웨딩드레스를 입은 채 침대 위에서 나누는 첫날밤 웨딩 본방 씬",
+      "sort_order": 1690
     },
     "166": {
       "label": "핸드잡강",
       "description": "침대에 기대어 파트너의 격렬하고 빠른 손길에 온몸을 떨며 신음하는 핸드잡 (강)",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, otokonoko, ((upper body close-up, bust shot, face focus:1.25)), completely nude, full nudity, bare skin, leaning back on hands, hands gripping bedsheets, (intense handjob receiving, rapid rhythm:1.25), legs spread wide, cropped male partner, partner head out of frame stroking shaft, looking down at partner hand, heavy body blush, intensely flushed face, breathless panting, open mouth gasping, heavy-lidded intoxicated gaze, biting lip, tears at corner of eyes, trembling with intense pleasure, ((excessive cum, massive cumshot, overflowing thick cum spurting across stomach and chest, covered in abundant cum:1.25))",
       "section": "scenes_otokonoko",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
+      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "sort_order": 1600
     },
     "167": {
       "label": "동시사정",
       "description": "서로의 손놀림에 절정에 다다르며 복부와 침대 위로 동시에 사정하고 떨며 느끼는 상호 절정.",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying back on bed, deeply arched back, head thrown back, hands gripping bedsheets tightly, hands clutching mattress, ((intense handjob and anal climax simultaneously:1.25)), (excessive cum:1.2), (huge cumshot:1.2), cum spurting on stomach and inner thighs, cum pool on bedsheets, (intense ahegao:1.15), eyes rolled back, tongue out, drooling, tears of ecstasy, trembling violently, heavy full body blush, overwhelming orgasm",
       "section": "scenes_otokonoko",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
+      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "sort_order": 1620
     },
     "168": {
       "label": "투핸드펠라",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, ((upper body)), completely nude, full nudity, bare skin, solo focus, ((two-handed handjob and fellatio simultaneously:1.25)), ((both hands gripping shaft, tongue extended licking tip:1.25)), looking up at partner with seductive bedroom eyes, heavy blush, flushed cheeks, parted lips, saliva trail glistening, upper body close-up, intimate bedroom lighting",
-      "description": "양손으로 감싸 쥐고 혀끝으로 귀두를 핥으며 올려다보는 밀착 구강 봉사"
+      "description": "양손으로 감싸 쥐고 혀끝으로 귀두를 핥으며 올려다보는 밀착 구강 봉사",
+      "sort_order": 1610
     },
     "169": {
       "label": "펠라치오_시작",
@@ -1209,7 +1351,8 @@
       "section": "scenes_otokonoko",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
       "status": "deprecated",
-      "canonical_code": "065"
+      "canonical_code": "065",
+      "sort_order": 9130
     },
     "170": {
       "label": "펠라치오_절정",
@@ -1218,7 +1361,8 @@
       "section": "scenes_otokonoko",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
       "status": "deprecated",
-      "canonical_code": "066"
+      "canonical_code": "066",
+      "sort_order": 9140
     },
     "171": {
       "label": "펠라치오_사후",
@@ -1227,7 +1371,8 @@
       "section": "scenes_otokonoko",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
       "status": "deprecated",
-      "canonical_code": "070"
+      "canonical_code": "070",
+      "sort_order": 9150
     },
     "173": {
       "label": "입위앞",
@@ -1236,7 +1381,8 @@
       ],
       "description": "벽에 기댄 채 마주 보며 한쪽 다리를 들어올려 진행하는 정면 스탠딩 결합 (키로 056 기반)",
       "prompt": "tight bust portrait, face focus, (close-up intimacy:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((standing anal sex:1.25)), ((against wall, one leg up:1.2)), embrace, partner holding leg gently, looking at partner, soft blush, kissing, tender intimate moment",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1830
     },
     "174": {
       "label": "입위뒤",
@@ -1245,31 +1391,36 @@
       ],
       "description": "벽에 상체를 밀착한 채 뒤에서 진행하는 격렬한 후방 입위 (키로 056 기반)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((standing anal sex from behind:1.25)), ((standing pressed against wall, from behind, arched back, hips pushed back:1.25)), hands pressed against wall, clinging desperately, intense breathless gasps, open mouth moaning, ecstasy expression, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1840
     },
     "175": {
       "label": "샤워실섹스약",
       "description": "샤워실 젖은 타일 벽에 기대어 부드럽게 시작하는 수중 결합 씬 (약, 키로 057 기반)",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, shower anal sex, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), dripping water, water running down body, (steam:1.1), steamy, standing against clear glass wall, gentle rhythm, one leg wrapped around partner waist, anal penetration, partner behind, partner head out of frame, male hands on waist, clear glass shower stall, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, trembling with sweet sensation, sweet moaning:1.25)), clean background",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1850
     },
     "176": {
       "label": "샤워실섹스강",
       "description": "샤워실 쏟아지는 물줄기 아래 벽을 짚고 서서 젖은 몸으로 나누는 농밀한 수중 아날 결합 씬.",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, shower anal sex, (wet skin:1.2), (wet hair:1.2), (water droplets:1.2), dripping water, water running down body, (steam:1.1), steamy, standing against clear glass wall, pinned against glass, one leg wrapped around partner waist, anal penetration, partner behind, partner head out of frame, male hands on waist, clear glass shower stall, heavy body blush, intensely flushed face, parted lips gasping, head tilted back against glass, heavy-lidded pleasure eyes, trembling with intense arousal, sensual moaning expression, teary eyes, clean background, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1860
     },
     "177": {
       "label": "측위약",
       "description": "옆으로 나란히 누워 마주보며 천천히 결합하는 측위 (약)",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying on side on bed, ((side by side anal sex:1.25)), leg over partner hip, gentle slow rhythm, looking at partner with loving gaze, intimate embrace, ((vivid sensual expression, intensely flushed face, breathless parted lips gasping softly, moist emotional eyes looking at partner, trembling with sweet sensation, sweet moaning:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1810
     },
     "178": {
       "label": "측위강",
       "description": "허리를 꽉 쥐고 옆에서 강하게 몰아붙이는 측위 (강)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, lying on side on bed, ((intense side by side anal sex:1.25)), partner gripping waist firmly, head pressed into pillow, gasping breathlessly, open mouth moaning, heavy blush, trembling body, disheveled sheets, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1820
     },
     "179": {
       "label": "구강애무받기",
@@ -1281,85 +1432,99 @@
       "section": "scenes_otokonoko",
       "mob_tier": 0,
       "partner_pos": null,
-      "mob_shadow": false
+      "mob_shadow": false,
+      "sort_order": 1580
     },
     "180": {
       "label": "후방애무약",
       "description": "침대에 누워 파트너의 손가락으로 부드럽게 후방 애무를 받으며 수줍게 몸을 떠는 씬 (약)",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((anal fingering, gentle petting:1.25)), lying on bed, legs raised slightly, partner hand on lower body, soft arched back, trembling knees, ((vivid sensual expression:1.25)), ((intensely flushed face, breathless parted lips gasping softly:1.25)), ((moist emotional eyes, sweet moaning:1.2)), heavy blush, trembling with sweet sensation, tender pleasure building, bed",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1560
     },
     "181": {
       "label": "후방애무강",
       "description": "파트너의 격렬한 후방 손가락 애무에 허리를 깊게 들썩이며 절정에 달하는 씬 (강)",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((intense anal fingering, prostate stimulation:1.25)), lying on bed, partner hand vigorously stimulating, deeply arched hips, gasping desperately, open mouth moaning, ecstasy expression, heavy blush, trembling body, bed, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs and stomach, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1570
     },
     "182": {
       "label": "착의섹스_시작",
       "required_outfit": "default",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, ((passionate foreplay before clothed anal sex:1.25)), ((intensely leaning close, face-to-face:1.25)), ((fully clothed top, wearing shirt, skirt or shorts lifted, underwear aside:1.25)), ((steamy heavy breathing, whispering into ear, parted lips gasping softly:1.25)), (hands gripping clothes, pinned against wall or desk, size difference:1.25), ((intensely flushed face, wet glossy parted lips, half-closed lustful eyes, breathless longing gaze, anticipation expression:1.25)), trembling with sweet tension, disheveled clothing, thrilling secret encounter, heated intimate atmosphere, dramatic warm rim lighting",
-      "description": "의상을 입은 채 벽이나 책상에 밀착해 거친 숨을 몰아쉬는 삽입 직전의 긴장감"
+      "description": "의상을 입은 채 벽이나 책상에 밀착해 거친 숨을 몰아쉬는 삽입 직전의 긴장감",
+      "sort_order": 1520
     },
     "183": {
       "label": "착의섹스_절정",
       "required_outfit": "default",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, ((intense clothed anal sex:1.25)), ((fully clothed except bottom, wearing clothes, top on:1.25)), bottoms pulled aside or skirt hiked up, bent over desk or against wall, single male partner behind, size difference, rapid panting, disheveled clothing, heavy blush, desperate moaning, overwhelming arousal, ((excessive cum, massive cumshot, overflowing thick cum, cum splashing and dripping down thighs, covered in abundant cum:1.25)), ((intense pleasure expression, deeply intoxicated ecstasy face, half-rolled misty eyes, streaming tears of pleasure, open mouth moaning, drooling saliva, heavy full-body blush, completely lost in pleasure:1.25))",
-      "description": "상의를 입은 채 하의만 젖히고 격렬하게 결합하는 착의 본방 씬"
+      "description": "상의를 입은 채 하의만 젖히고 격렬하게 결합하는 착의 본방 씬",
+      "sort_order": 1530
     },
     "184": {
       "label": "착의섹스_사후",
       "required_outfit": "default",
       "prompt": "pov, cowboy shot, (centered composition:1.15), 1boy, otokonoko, ((clothed sex aftermath:1.25)), ((lifting hem of clothes to reveal inner:1.25)), ((pulling front waistband of underwear down slightly:1.25)), ((showing underwear inside filled with excessive thick white fluid, cum pool in panties:1.25)), ((white liquid dripping and running down inner thighs:1.25)), ((fully clothed top, disheveled shirt, unbuttoned collar:1.25)), standing or leaning back, looking down and gazing at viewer, breathless dazed expression, (heavy body blush:1.2), (intensely flushed face:1.25), parted lips, seductive exhausted smirk, messy hair, trembling inner thighs, aftersex glow, warm intimate lighting",
-      "description": "착의 정사 직후 흐트러진 옷차림으로 속옷 안과 허벅지를 타고 흐르는 여운을 보여주는 씬"
+      "description": "착의 정사 직후 흐트러진 옷차림으로 속옷 안과 허벅지를 타고 흐르는 여운을 보여주는 씬",
+      "sort_order": 1540
     },
     "185": {
       "label": "필로우토크",
       "prompt": "((upper body:1.2)), (centered composition:1.15), 2boys, otokonoko, (single otokonoko:1.3), completely nude, full nudity, bare skin, ((lying on partner muscular chest:1.35)), ((head resting on partner chest:1.3)), ((embraced by partner muscular arms:1.25)), ((male partner head out of frame:1.35)), ((unseen male partner face, cropped male partner, partner head out of frame:1.3)), ((partner muscular torso, defined male abs and chest:1.25)), (otokonoko looking at viewer with blissful tender smile:1.25), (soft loving eyes:1.2), ((warm flushed skin:1.25)), ((deeply flushed face:1.2)), (light sweat glistening on skin:1.2), messy disheveled hair, (rosy cheeks:1.2), (blissful afterglow expression:1.25), content and fulfilled, white rumpled bedsheets, warm intimate bedroom lighting",
       "description": "정사 후 침대에 나란히 누워 파트너의 품에 안겨 다정하게 미소 짓는 필로우토크",
       "prompt_otokonoko": "((upper body:1.2)), (centered composition:1.15), 2boys, otokonoko, (single otokonoko:1.3), completely nude, full nudity, bare skin, ((lying on partner muscular chest:1.35)), ((head resting on partner chest:1.3)), ((embraced by partner muscular arms:1.25)), ((male partner head out of frame:1.35)), ((unseen male partner face, cropped male partner, partner head out of frame:1.3)), ((partner muscular torso, defined male abs and chest:1.25)), (otokonoko looking at viewer with blissful tender smile:1.25), (soft loving eyes:1.2), ((warm flushed skin:1.25)), ((deeply flushed face:1.2)), (light sweat glistening on skin:1.2), messy disheveled hair, (rosy cheeks:1.2), (blissful afterglow expression:1.25), content and fulfilled, white rumpled bedsheets, warm intimate bedroom lighting",
-      "negative": "((2girls:1.5)), ((multiple girls:1.5)), ((two women:1.5)), ((two females:1.5)), ((duplicate female:1.5)), ((twin:1.4)), ((clone:1.4)), ((yuri, lesbian:1.4)), ((detailed male face, handsome male, male eyes, attractive male face, bishi, male portrait, male facial features, male mouth:1.5))"
+      "negative": "((2girls:1.5)), ((multiple girls:1.5)), ((two women:1.5)), ((two females:1.5)), ((duplicate female:1.5)), ((twin:1.4)), ((clone:1.4)), ((yuri, lesbian:1.4)), ((detailed male face, handsome male, male eyes, attractive male face, bishi, male portrait, male facial features, male mouth:1.5))",
+      "sort_order": 1550
     },
     "186": {
       "label": "파일드라이버",
       "description": "어깨만 바닥에 닿고 허리와 엉덩이를 수직으로 치켜올려 무릎을 얼굴 옆에 접은 채 위에서 내리꽂듯 결합하는 역전 파일드라이버 자세 (N30)",
       "prompt": "cowboy shot, top-down angle, upside-down, (symmetrical inverted composition:1.15), (piledriver position, vertical anal piledriver:1.15), (hips raised vertically at upper center:1.15), (head at bottom center, back on bed:1.15), (knees folded to sides:1.1), (legs spread in air:1.1), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, partner standing above thrusting downward gripping hips, ((intense ecstasy expression, eyes rolled back, open mouth moaning, tears of pleasure:1.15)), flushed face, bed",
       "section": "scenes_otokonoko",
-      "negative_add": "(side view:1.25), (profile view:1.25), (doggystyle:1.25), (standing male:1.25), (feet on ground:1.25)"
+      "negative_add": "(side view:1.25), (profile view:1.25), (doggystyle:1.25), (standing male:1.25), (feet on ground:1.25)",
+      "sort_order": 1700
     },
     "188": {
       "label": "교배프레스",
       "description": "다리를 가슴까지 접어 올리고 깊숙이 누르는 교배프레스 (N24)",
       "prompt": "(centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((anal mating press position:1.25)), ((legs folded up to chest, pressed down firmly:1.25)), deep intimate union, hands clutching bedsheets, flushed breathless face, open mouth moaning, tears of ecstasy, disheveled mattress, angled medium shot, head to hips, upper three-quarter view",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1710
     },
     "189": {
       "label": "들박",
       "description": "공중에 완전히 안아 들어올린 채 진행되는 들박 (N25)",
       "prompt": "angled medium shot, head to hips, upper three-quarter view, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((suspended anal sex, carried off floor:1.25)), ((legs wrapped tightly around partner's waist:1.25)), ((partner gripping thighs firmly:1.2)), intense breathless gasps, open mouth, heavy blush, tears of pleasure, from front angle showing intimate union, disheveled",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1800
     },
     "190": {
       "label": "백허그대딸",
       "prompt": "tight bust portrait, chest focus, (centered composition:1.15), 2boys, otokonoko, ((upper body, completely nude, full nudity, bare skin, ((from behind embrace, male partner hugging otokonoko from behind:1.25)), ((partner kissing neck and ear from behind, partner hands reaching around to stroke otokonoko shaft:1.25)), size difference, leaning back against partner chest, head tilted back on partner shoulder, gasping with sweet pleasure, heavy facial blush, teary intoxicated eyes, trembling thighs, pre-cum glistening, tender and sensual bedroom intimacy",
-      "description": "뒤에서 파트너에게 껴안긴 채 목덜미에 입맞춤을 받으며 하복부를 애무받는 밀착 구도"
+      "description": "뒤에서 파트너에게 껴안긴 채 목덜미에 입맞춤을 받으며 하복부를 애무받는 밀착 구도",
+      "sort_order": 1590
     },
     "192": {
       "label": "스팽킹",
       "description": "엉덩이를 찰싹 때려 붉은 손자국을 남기는 스팽킹 (N36)",
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, spanking, red marks on rear, bent over bed, biting lip, teary eyes, submission, blushing",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1750
     },
     "193": {
       "label": "배복종자세",
       "description": "배를 보이고 드러누워 복종을 맹세하는 배복종 자세 (N37)",
       "prompt": "cowboy shot, (centered vertical composition:1.15), otokonoko, completely nude, full nudity, bare skin, solo, belly exposure, lying on back, submissive pose, hands up, showing stomach, adoring smile, subtle bulge",
-      "section": "scenes_otokonoko"
+      "section": "scenes_otokonoko",
+      "sort_order": 1890
     },
     "194": {
       "label": "역기승위",
       "prompt": "cowboy shot, (centered vertical composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, on bed, ((reverse cowgirl position, anal reverse cowgirl:1.25)), ((straddling partner facing away, otokonoko facing viewer:1.25)), ((legs spread wide on top of partner, hands resting on partner knees:1.25)), partner lying on back underneath, partner head out of frame, arched back, leaning slightly back, looking at viewer with intoxicated blushing expression, parted lips moaning, tears of pleasure at corners of eyes, trembling thighs, bed, disheveled sheets",
-      "description": "파트너에게 등을 돌리고 정면(시청자)을 바라보며 올라타 허리를 움직이는 역기승위 구도"
+      "description": "파트너에게 등을 돌리고 정면(시청자)을 바라보며 올라타 허리를 움직이는 역기승위 구도",
+      "sort_order": 1790
     },
     "172": {
       "label": "딥스로트",
@@ -1368,7 +1533,8 @@
       "section": "scenes_otokonoko",
       "negative_add": "(full body:1.25), (cowboy shot:1.25), (wide shot:1.25), (standing male legs:1.25), (kneeling wide view:1.25), (ball gag, gag, muzzle:1.25)",
       "status": "deprecated",
-      "canonical_code": "067"
+      "canonical_code": "067",
+      "sort_order": 9160
     },
     "187": {
       "label": "누드대딸",
@@ -1376,7 +1542,8 @@
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((handjob, stroking delicately:1.25)), ((hands gripping partner firmly:1.25)), looking up with sweet bashful smile, rhythmic motion, heavy blush, bedroom, from front angle, teary blushing eyes",
       "section": "scenes_otokonoko",
       "status": "deprecated",
-      "canonical_code": "071"
+      "canonical_code": "071",
+      "sort_order": 9170
     },
     "191": {
       "label": "뒷스마타",
@@ -1384,7 +1551,8 @@
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((rear sumata, back thigh sex:1.25)), ((lying on stomach, hips raised slightly, legs squeezed tight:1.25)), ((partner rubbing between thighs from behind:1.25)), thigh friction without insertion, looking back over shoulder, flushed cheeks, heavy blush, bed",
       "section": "scenes_otokonoko",
       "status": "deprecated",
-      "canonical_code": "071"
+      "canonical_code": "071",
+      "sort_order": 9180
     },
     "195": {
       "label": "풋잡",
@@ -1392,7 +1560,8 @@
       "prompt": "cowboy shot, (centered composition:1.15), 2boys, otokonoko, cropped male partner, completely nude, full nudity, bare skin, ((footjob, single pair of legs, sole of foot on penis:1.25)), sitting on couch, leaning back, bare feet, toes, teasing smile, couch, POV, looking at partner",
       "section": "scenes_otokonoko",
       "status": "deprecated",
-      "canonical_code": "071"
+      "canonical_code": "071",
+      "sort_order": 9190
     },
     "196": {
       "label": "책상밑펠라_약",
@@ -1402,7 +1571,8 @@
       "section": "scenes_otokonoko",
       "negative_add": " (otokonoko sitting on chair:1.4), (otokonoko on chair:1.4), (chair under desk:1.4), (stool:1.4), (otokonoko on stool:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (wide shot:1.25)",
       "status": "deprecated",
-      "canonical_code": "068"
+      "canonical_code": "068",
+      "sort_order": 9200
     },
     "197": {
       "label": "책상밑펠라_강",
@@ -1412,10 +1582,11 @@
       "section": "scenes_otokonoko",
       "negative_add": " (otokonoko sitting on chair:1.4), (otokonoko on chair:1.4), (chair under desk:1.4), (stool:1.4), (otokonoko on stool:1.4), (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (wide shot:1.25)",
       "status": "deprecated",
-      "canonical_code": "069"
+      "canonical_code": "069",
+      "sort_order": 9210
     },
     "206": {
-      "label": "밀착측면키스가슴",
+      "label": "밀착키스",
       "description": "뒤와 옆에서 밀착 포옹한 상태로 고개를 돌려 깊은 키스를 나누며 착의 상체를 애무하는 오토코노코 씬 (136 대칭)",
       "prompt": "upper body, 2boys, otokonoko, fully clothed, standing embrace, hug from behind, boy head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed chest:1.15), chest squeeze, male arm reaching across chest, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
       "prompt_otokonoko": "upper body, 2boys, otokonoko, fully clothed, standing embrace, hug from behind, boy head turned aside kissing male partner, deep kiss, closed eyes, (male hand grabbing clothed chest:1.15), chest squeeze, male arm reaching across chest, heavy blush, parted lips, breathless, sweaty skin, shaded upper male face, shadow over male eyes",
@@ -1424,7 +1595,8 @@
       "section": "scenes_otokonoko",
       "mob_tier": 2,
       "partner_pos": "side_kiss",
-      "mob_shadow": true
+      "mob_shadow": true,
+      "sort_order": 1510
     }
   },
   "special_otokonoko": {
@@ -1433,14 +1605,16 @@
       "description": "층계참 벽을 양손으로 짚고 상체를 숙인 오토코노코 후방 밀착 자세, 대부분 탈의된 의상과 절정 연출",
       "required_outfit": "default",
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), ((2boys, otokonoko:1.25)), ((hidden in stair landing between staircase flights:1.25)), ((narrow space between stairs:1.25)), ((leaning forward with hands pressed flat against concrete wall:1.25)), ((anal doggystyle from behind:1.25)), ((clothing mostly stripped, outfit pulled down off body, nearly naked, exposed bare skin:1.25)), looking back over shoulder with intense ecstasy face, breathlessness, flushed cheeks, ((glistening messy bodily fluids:1.25)), thrilling secret intimacy in shadows, high contrast stairwell lighting, ((single male partner behind:1.25))",
-      "section": "special_otokonoko"
+      "section": "special_otokonoko",
+      "sort_order": 1900
     },
     "134": {
       "label": "차안 백시트",
       "description": "틴팅된 차량 뒷좌석에 누워 진행되는 오토코노코 백시트 결합 자세, 대부분 탈의된 의상과 절정 연출",
       "required_outfit": "default",
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), ((2boys, otokonoko:1.25)), ((inside car interior, vehicle backseat:1.25)), ((lying on back across car rear seat:1.25)), ((anal missionary position on car backseat:1.25)), leather car seats, tinted windows, night bokeh outside, ((clothing mostly stripped, outfit pushed aside, nearly naked, exposed bare skin:1.25)), arched back in intense ecstasy, ecstatic flushed face, open mouth moaning, ((splattered bodily fluids, glistening skin:1.25)), breathless pleasure, ((single male partner:1.25))",
-      "section": "special_otokonoko"
+      "section": "special_otokonoko",
+      "sort_order": 1910
     },
     "135": {
       "label": "화장실펠라",
@@ -1448,7 +1622,8 @@
       "required_outfit": "default",
       "prompt": "((upper body close-up, bust shot, face focus:1.25)), ((2boys, otokonoko:1.25)) fellatio inside bathroom stall, looking up with flushed cheeks, parted lips, narrow stall, soft lighting, ((single male partner:1.25))",
       "section": "special_otokonoko",
-      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)"
+      "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
+      "sort_order": 1920
     },
     "200": {
       "label": "층계참 밀착",
@@ -1457,7 +1632,8 @@
       "prompt": "cowboy shot, from side profile view, (facing left:1.15), ((2boys, otokonoko:1.25)), ((hidden in stair landing between staircase flights:1.25)), ((narrow space between stairs:1.25)), ((leaning forward with hands pressed flat against concrete wall:1.25)), ((anal doggystyle from behind:1.25)), ((clothing mostly stripped, outfit pulled down off body, nearly naked, exposed bare skin:1.25)), looking back over shoulder with intense ecstasy face, breathlessness, flushed cheeks, ((glistening messy bodily fluids:1.25)), thrilling secret intimacy in shadows, high contrast stairwell lighting, ((single male partner behind:1.25))",
       "section": "special_otokonoko",
       "status": "deprecated",
-      "canonical_code": "133"
+      "canonical_code": "133",
+      "sort_order": 9220
     },
     "201": {
       "label": "차안 백시트",
@@ -1466,7 +1642,8 @@
       "prompt": "tight bust portrait, face focus, (centered composition:1.15), ((2boys, otokonoko:1.25)), ((inside car interior, vehicle backseat:1.25)), ((lying on back across car rear seat:1.25)), ((anal missionary position on car backseat:1.25)), leather car seats, tinted windows, night bokeh outside, ((clothing mostly stripped, outfit pushed aside, nearly naked, exposed bare skin:1.25)), arched back in intense ecstasy, ecstatic flushed face, open mouth moaning, ((splattered bodily fluids, glistening skin:1.25)), breathless pleasure, ((single male partner:1.25))",
       "section": "special_otokonoko",
       "status": "deprecated",
-      "canonical_code": "134"
+      "canonical_code": "134",
+      "sort_order": 9230
     },
     "202": {
       "label": "화장실펠라",
@@ -1476,7 +1653,8 @@
       "section": "special_otokonoko",
       "negative_add": " (standing male legs:1.25), (male lower body:1.25), (pants:1.25), (full body:1.25), (cowboy shot:1.25), (wide shot:1.25)",
       "status": "deprecated",
-      "canonical_code": "135"
+      "canonical_code": "135",
+      "sort_order": 9240
     }
   }
 }
