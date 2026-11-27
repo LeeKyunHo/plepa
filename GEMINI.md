@@ -99,7 +99,7 @@
     3. `Git Status & Diff Summary`: Git 변경 상태 및 핵심 diff 요약
 
 ## 11. 미니 에이전트 라우팅 & 물리 가드레일 (.agents/)
-- **물리 가드 ([`.agents/hooks.json`](.agents/hooks.json))**: `projects/*/assets/`·`*_origin/` 직접 읽기/변조, `legacy/` 열람, `sync_to_kiro.py` 실행, 민감어 커밋은 `PreToolUse` Hook으로 자동 차단됩니다.
+- **물리 가드 ([`.agents/hooks.json`](.agents/hooks.json))**: `projects/*/assets/`·`*_origin/` 직접 읽기/변조, `legacy/`·`scripts/archive/`·`scripts/benchmarks/` 열람, `sync_to_kiro.py` 실행, 민감어 커밋은 `PreToolUse` Hook으로 자동 차단됩니다.
 - **작업 유형별 레일 스킬 (`.agents/skills/<name>/SKILL.md`)**: 아래 도메인 작업 시 해당 스킬을 활성화하여 허용 파일·고정 절차·종료 게이트를 그대로 따릅니다:
   - 포즈 DB · 테마 · `events.json` · `POSE_MAPPING.md`: `plepa-pose-curator`
   - 캐릭터 JSON · 배경 매핑 · `docs/genit/` 완성본: `plepa-roster-character`

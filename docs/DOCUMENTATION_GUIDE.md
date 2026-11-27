@@ -15,15 +15,18 @@
 | **1. 실행·운영**<br>*(How-To)* | **[`사용법.txt`](../사용법.txt)** | 사용자 1순위 CLI 치트시트, 포즈 표현식, 원격/검열/감사 명령 모음 | CLI 옵션·포즈 세트·실행 커맨드 변경 시 |
 | **1. 실행·운영**<br>*(How-To)* | **[`RUNBOOK.md`](RUNBOOK.md)** | 환경 구축, ComfyUI 커스텀 노드·모델 설치, 일일 운용/장애 대응 절차 | 실행 환경·모델·포트·API·장애 대처 변경 시 |
 | **1. 실행·운영**<br>*(How-To)* | **[`GUI_GUIDE.md`](GUI_GUIDE.md)** | NiceGUI 웹 스튜디오 **8대 탭**(`/characters`~`/settings`)·REST API 조작 매뉴얼 | 웹 GUI 페이지/버튼/액션 추가·수정 시 |
-| **1. 실행·운영**<br>*(How-To)* | **[`REMOTE_INSPECTION_GUIDE.md`](REMOTE_INSPECTION_GUIDE.md)** | `8080/mobile` & `8085/inspect` 2원화 원격 터널·덧칠·원본복원·대기열 런북 | 모바일 뷰어·터널 인증·검수 API 변경 시 |
+| **1. 실행·운영**<br>*(How-To)* | **[`REMOTE_INSPECTION_GUIDE.md`](REMOTE_INSPECTION_GUIDE.md)** | `:8080/mobile` 단일 원격 터널·수동 덧칠·원본복원·FIFO 대기열 런북 | 모바일 뷰어·터널 인증·검수 API 변경 시 |
 | **2. 포즈 SSOT**<br>*(Reference)* | **[`POSE_MAPPING.md`](../POSE_MAPPING.md)** | 전체 포즈(`000~202`)·라벨·모브·배경·deprecated 통합 **단일 포즈 매핑표** | **포즈 라벨·코드·프롬프트 추가/수정 시 (필수)** |
 | **3. 개발 규격**<br>*(Reference)* | **[`플에파_기능명세.md`](플에파_기능명세.md)** | V3 데이터 흐름도, 7단계 Mutator 체인, P2.5 검열, 코어 모듈 인터페이스 | 파이프라인·엔진·스키마·검열 API 변경 시 |
 | **3. 개발 규격**<br>*(Reference)* | **[`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md)** | 캐릭터 JSON·포즈 DB·로스터 이벤트 작성 불변식 & 7단계 `precheck` 규격 | 프롬프트 규칙·금지어·남캐 음영·로스터 슬롯 변경 시 |
 | **3. 챗봇 제작**<br>*(Reference)* | **[`젠잇_캐릭터채팅_제작법.md`](젠잇_캐릭터채팅_제작법.md)** | Gen-IT v2.2 5탭 시스템·CommonMark·`Status`/`Line` JSX·8대 변수 제작 가이드 | Gen-IT 플랫폼 스펙·JSX 템플릿 변경 시 |
-| **4. 결정·이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 현행 15대 골든 스테이트 불변식 + Active ADR(`ADR-80~107`) 핵심 요약 | 핵심 아키텍처 변경, 새 ADR 번호 부여 시 |
+| **3. 챗봇 제작**<br>*(Reference)* | **[`노벨챗_캐릭터채팅_제작법.md`](노벨챗_캐릭터채팅_제작법.md)** | 노벨챗 6탭·500장 상한·`_` 자동 파싱·변수/상태창 제작 가이드 | 노벨챗 스펙·호출어 풀·패키징 규칙 변경 시 |
+| **3. 챗봇 공통**<br>*(Architecture)* | **`docs/platforms/`** | 멀티플랫폼 공통 코어 스펙([`CORE_SPEC.md`](platforms/CORE_SPEC.md)) 및 플랫폼 어댑터 | 신규 플랫폼 이식 또는 공통 스키마 변경 시 |
+| **4. 결정·이력**<br>*(ADR & Log)* | **[`AI_HANDOVER_GUIDE.md`](AI_HANDOVER_GUIDE.md)** | 현행 15대 골든 스테이트 불변식 + Active ADR(`ADR-80~115+`) 핵심 요약 | 핵심 아키텍처 변경, 새 ADR 번호 부여 시 |
 | **4. 결정·이력**<br>*(ADR & Log)* | **[`개발일지.md`](개발일지.md)** | 빈출 트러블슈팅 빠른 색인표 + 최근 10회차 증상 중심 플레이북 | **모든 작업 세션 마무리 및 푸시 직전 (필수)** |
 | **5. 상용 완성본**<br>*(Deliverable)* | **`docs/genit/`** | Gen-IT 상용 5탭 완성본 (`v2.2` 현역) & 다테마 표준 템플릿 (`validate_genit_work.py`) | 챗봇 대본/에셋/변수 수정 시 |
-| **보관소**<br>*(Archive)* | **`docs/archive/`** · **`scripts/archive/`** | 초기~중기 이력(`ADR_HISTORY_FULL.md`, `개발일지_2026_10_11_중기_아카이브.md`), 구 V2 포즈(`POSE_MAPPING_V2.md`, `POSE_CATALOG.md`), 구 리포트 등 | **열람/수정 불필요 (역사 보존용)** |
+| **5. 상용 완성본**<br>*(Deliverable)* | **`docs/novelchat/`** | 노벨챗 6탭 완성본 & 다테마 표준 템플릿 (`validate_novelchat_work.py`) | 노벨챗 대본/에셋/호출어 풀 수정 시 |
+| **보관소/격리**<br>*(Archive)* | **`docs/archive/`** · **`scripts/{archive,benchmarks,ml}/`** | 초기~중기 이력(`ADR_HISTORY_FULL.md`, `개발일지` 중·초기 아카이브, 완료된 `plepa_refactoring_analysis.md`), 구 V2 포즈·리포트, 은퇴 `:8085` 뷰어·실험/ML 스크립트 | **열람/수정 불필요 (역사 보존·실험 격리용)** |
 
 ---
 

@@ -1,3 +1,5 @@
+> **status: completed** (`Wave 0~5 100% 완결` — 현행 대시보드는 `context_snapshot/50_REFACTORING_PLAN.md` 참조)
+
 # 🏗️ PLEPA 저사양 모델 대비 완성형 리팩토링 & 노트북 싱크로 마스터 플랜
 
 > **작성일**: 2026-11-25  

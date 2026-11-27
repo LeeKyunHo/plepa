@@ -1,20 +1,23 @@
 # 📱 플에파 원격 검수 & 수동 덧칠 시스템 종합 가이드 (Remote Inspection Runbook)
 
-> **문서 버전**: v2.0.0 (2원화 원격 구조 반영)  
-> **핵심 목적**: 로컬 Wi-Fi 및 Cloudflare Quick Tunnel을 통해 스마트폰 터치만으로 에셋 열람, 수동 검열 덧칠(ADR-86), 무검열 원본 즉시 복원, 실시간 재검열 및 리롤을 수행하는 원격 검수 파이프라인 가이드입니다.
+> **문서 버전**: v3.0.0 (`:8080` 웹 스튜디오·모바일 단일 원격 구조 반영, Wave 5-B 이후 구 `:8085` 아카이브 이관)  
+> **핵심 목적**: 로컬 Wi-Fi 및 Cloudflare Quick Tunnel을 통해 스마트폰 터치만으로 에셋 열람, 수동 검열 덧칠(ADR-86), 무검열 원본 즉시 복원, 실시간 재검열 및 리롤을 수행하는 단일 원격 검수 파이프라인 가이드입니다.
 
 ---
 
-## 1. 2원화 원격 검수 아키텍처 (`8080 스튜디오` vs 은퇴 `:8085` 아카이브)
+## 1. `:8080` 단일 원격 검수 아키텍처
 
-| 구분 | **주력 상용 스튜디오 (`:8080`)** | **은퇴 벤치마크 뷰어 (`:8085`, `scripts/archive/`)** |
-| :--- | :--- | :--- |
-| **기동 스크립트** | `.\.venv\Scripts\python.exe scripts/start_remote.py` | `.\.venv\Scripts\python.exe scripts/archive/serve_benchmark_mobile.py` |
-| **모바일 뷰어 경로** | `/mobile` (또는 `/m`) · PC 갤러리 `/gallery` | `/inspect` (사전 빌드 HTML: `scripts/archive/generate_inspection_viewer.py`) |
-| **보안 인증** | `PLEPA_MOBILE_TOKEN` 자동 발급 (`?token=` ➔ `HttpOnly` 쿠키 + `Origin` 검증) | `ACCESS_TOKEN` 인증 + `_resolve_safe_subpath` + `Origin` 검증 |
-| **수동 덧칠 API** | `POST /api/assets/retouch` (`retouch_editor.py` 공용, 본체 WebP 교체) | `POST /api/retouch_censor` (웹 뷰어 + `output/benchmarks/ground_truth/` 미러링) |
-| **재검열 · 원본 복원** | `POST /api/assets/reapply-censor` / `restore-origin` | `POST /api/reapply_censor` / `restore_origin` |
-| **비동기 FIFO 리롤** | `GlobalJobManager` (`POST /api/assets/reroll` · `fill-missing`) | `RerollQueueManager` (`POST /api/reroll_queue`, `GET /api/reroll_queue_status`) |
+| 항목 | 현역 상용 스튜디오 (`:8080`, 단일 진실 공급원) |
+| :--- | :--- |
+| **기동 스크립트** | `.\.venv\Scripts\python.exe scripts/start_remote.py` (`plepa_gui/app.py` 내장 기동) |
+| **모바일 · PC 경로** | `/mobile` (단축 `/m`) · `/otoko` (`/o`) · `/compare` (`/c`) · PC 갤러리 `/gallery` |
+| **UI 구현 위치** | `plepa_gui/pages/mobile_viewer.py` + `plepa_gui/static/mobile_viewer.{css,html,js}` |
+| **보안 인증** | `PLEPA_MOBILE_TOKEN` 자동 발급 (`?token=` ➔ `HttpOnly` 쿠키 + `Host`/`Origin`/`Referer` 검증, `api_security.py`) |
+| **수동 덧칠 API** | `POST /api/assets/retouch` (`retouch_editor.py` 공용, 본체 WebP 원자적 교체) |
+| **재검열 · 원본 복원** | `POST /api/assets/reapply-censor` / `POST /api/assets/restore-origin` (`api_file_ops.py`) |
+| **비동기 FIFO 리롤** | `GlobalJobManager` (`POST /api/assets/reroll` · `POST /api/assets/fill-missing` · `GET /api/assets/job-status`) |
+
+> **참고**: 구형 `:8085` 단독 뷰어/서버 3종(`generate_inspection_viewer.py`, `serve_benchmark_mobile.py`, `mobile_gallery.py`)은 Wave 5-B에서 [`scripts/archive/`](../scripts/README.md)로 은퇴·격리되었습니다.
 
 ---
 
@@ -36,7 +39,7 @@
 
 ## 3. 검수 갤러리 UX · 검열 툴바 · 저장소 계약
 
-* **공용 수동 검열 캔버스 에디터 (`plepa_gui/components/retouch_editor.py`)**:
+* **공용 수동 검열 캔버스 에디터 (`plepa_gui/components/retouch_editor.py` + `plepa_gui/static/retouch_editor.{css,html,js}`)**:
   - `🧹 검열 제거(원본 로드)`: `{char}_origin/` 무검열 원본을 캔버스에 불러와 새로 마스킹.
   - `🖌️ 화이트 덧칠` / `🩹 지우개(원본 복원)` + 브러시 크기(`6~80px`) + `↩️ 실행 취소` + `💾 저장`.
   - 무검열 원본(`_origin`) 경로 직접 덮어쓰기는 백엔드에서 **HTTP 403으로 영구 차단**됩니다.
@@ -51,9 +54,9 @@
 ## 4. 트러블슈팅 빠른 조치
 
 ```powershell
-# 8080 / 8085 포트 점유 프로세스 강제 종료
+# 8080 포트 점유 프로세스 강제 종료
 Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 
-# 터널 로그 확인: $env:TEMP\plepa_tunnel.log (8080) / $env:TEMP\plepa_bench_tunnel.log (8085)
+# 터널 로그 확인: $env:TEMP\plepa_tunnel.log
 ```
 * **한글 콘솔 인코딩**: 모든 스크립트 상단 `plepa_engine.config.configure_stdio()`(UTF-8 reconfigure) 유지.
