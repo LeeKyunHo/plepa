@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-120)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-121)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -18,7 +18,7 @@
 1. **SDXL 단일 파이프라인 일원화**: 플에파는 SDXL(Illustrious 계열, Danbooru 쉼표 태그, `BREAK` 청크, 7단계 Mutator 체인)로 영구 일원화되었습니다. 구 FLUX 경로(`plepa_engine/legacy/`, `data/legacy/`)는 참조·수정 금지입니다.
 2. **하이브리드 최적 해상도 (`get_optimal_resolution_for_pose`)**: `--width`/`--height` 미지정 시 `000~024`(감정·초반 단독)은 세로형 `832×1216`, `025+`(일상·로맨스·H-씬)는 가로형 `1216×832`로 자동 분기합니다. (`GenitExporter` 상용 패키징 시 `1024×1536` Lanczos 중앙 크롭 통일)
 3. **7단계 프롬프트 Mutator 체인 & 가중치 상한**: [`plepa_engine/pipeline/`](../plepa_engine/pipeline/__init__.py) 11모듈(`<=285L`)과 [`prompt_pipeline.py`](../plepa_engine/prompt_pipeline.py) 78L 파사드가 `PoseTagPreparation` ➔ `PositiveAssembly` ➔ `NegativeBase` ➔ `DefectDefense` ➔ `TwoPersonMob` ➔ `CompositionAntiDrift` ➔ `Sanitizer` 순으로 실행되며, `clamp_sdxl_weights`로 긍정 `<= 1.15`, 부정 `<= 1.25` 상한을 강제합니다.
-4. **V3 포즈 DB(`data/sdxl_pose_database.json`) & 단일 매핑 SSOT**: 코어 DB는 `175`개 키(활성 `151`종 + `status="deprecated"` 보존 `24`종)이며, 로스터 전용 `projects/{roster}/events.json` (`051~055`, `130~132`/`200~202`)이 세계관 슬롯을 오버라이드합니다. 포즈 추가·수정 시 루트 [`POSE_MAPPING.md`](../POSE_MAPPING.md) 단일 SSOT를 즉시 동기화합니다.
+4. **V3 포즈 DB(`data/sdxl_pose_database.json`) & 단일 매핑 SSOT**: 코어 DB는 `178`개 키(활성 `154`종 + `status="deprecated"` 보존 `24`종)이며, 로스터 전용 `projects/{roster}/events.json` (`051~055`, `130~132`/`200~202`)이 세계관 슬롯을 오버라이드합니다. 포즈 추가·수정 시 루트 [`POSE_MAPPING.md`](../POSE_MAPPING.md) 단일 SSOT를 즉시 동기화합니다.
 5. **에셋 2대 서브폴더 & 원본 무손실 보존 불변식**: 모든 에셋은 `01_normal/`(`000~059`) · `02_h_scenes/`(`060~209+`)에 저장되며(`3-Track` 하위 호환 탐색), 무검열 원본은 `{char}_origin/`에 영구 보존됩니다. 이미 생성된 `projects/*/assets/` 파일은 절대 임의 읽기·수정·삭제하지 않습니다.
 6. **화풍(`legacy`), `signature_accessories`, H-씬 수분광·무드 라이팅**: `PromptContext.style_mode` 기본값은 `"legacy"`입니다. `signature_accessories`는 2차 청크 선두(CLIP 75토큰 이내)에 우선 배치되며, `is_steamy_h_scene`(`>= 060`, `038/039`)에서는 땀/수분광 부스터 + 중립 심야 조명(`clean ambient occlusion`, 황변 네거티브 방어 유지)이 가동됩니다.
 7. **2인 모브 4-Tier(`mob_tier 0~3`), `partner_pos` 및 상안부 그림자 음영**: 마네킹(`bald`/`faceless`) 및 앞머리 가림(`male hair over eyes`)을 영구 퇴출하고 `_MOB_SHADOW_EYES_POS`(뒤통수·상안부 그림자 음영) + 여성 한정 `(clear visible female eyes:1.15)`을 적용합니다. (`mob_tier 1/3` 등 미주입 포즈는 DB 엔트리에 직접 3종 세트 명기)
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-120`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-121`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -68,3 +68,4 @@
 - **ADR-118 (2026-11-27)**: 신규 로스터 Gen-IT 마스터 패키지 표준을 승격하여 고정 인원수 배제(`CHAR_META` 동적 확장·모노그램 폴백), 공식 JSX 규격(`React.` 접두·리터럴 `setReturnValue` 200자·클릭 전용 변경·`fillInput`/`sendMessage(..., false)` 분리), 3종 모듈 위젯(`Status`·`Talk`·`Board`)과 8~12변수, 탈 얀데레 1:1 DM(`ambient` 바·3~4턴 쿨타임), 자연/일상 16종 D20 Fail-Forward 엔진을 제작법·템플릿·어댑터·스킬에 일원화함.
 - **ADR-119 (2026-11-28)**: Gen-IT 제작법 v3.0(`GENIT_MULTI_THEME_TEMPLATE_v3.0.md` 신설, `oto_v3_0.md` `frozen` 승격)을 확정하여 ① `Status` 인라인 DM 답장창(`isDmOpen`) + `Talk` 상시 입력창 UX, ② 1:1 톡 비밀 격리 3불변식(텔레파시·원격발화·`나:` 대필 금지 및 답장 시 `dm_from=없음` 초기화), ③ `[계속하기]` 대응 유연 호흡(`800~1,200자`)·주 화자 `70%` 스포트라이트·고호감도 1인 집중 프롤로그, ④ 상보적 선물 정합성, ⑤ `[마을 민원판 확인]` `Board` 강제 출력 & 1줄 Prefix 백업 테이블을 표준화함.
 - **ADR-120 (2026-11-28)**: Gen-IT v3.0 제작법·템플릿·`oto_v3_0.md`·로스터 스킬에 ① 레거시 3자리(`_000.webp`)와 `plepa` 신규 에셋(`.webp` 포함 파일명·커스텀 슬롯)을 단일 공존시키는 `CHAR_META` 선택 필드 `poses`/`avatar` + `resolveAssetUrl` 폴백 체인(`avatar` ➔ `poses[0]` ➔ `_000.webp` ➔ 모노그램), ② 기존 v3.0 작품 무손실 증설을 위한 6단계 SOP(레거시 매핑 무변경 보존 + 맨 아래 `[신규 주민 에셋 인덱스]` 별도 덧붙이기 + `Board`/1:1 DM/관계망 발견성)를 표준화함.
+- **ADR-121 (2026-11-28)**: 다회차 실증 배치 검증을 거쳐 2인 측면 밀착 포즈 `056`(`poses`, `partner_pos="side_cuddle"`, `mob_tier=2`, `mob_shadow=True`)과 `136`/`206`(`h_scenes`/`scenes_otokonoko` 대칭, `partner_pos="side_kiss"`, `mob_tier=2`, `mob_shadow=True`)을 정식 DB·로스터 배경 매핑·`POSE_MAPPING.md`에 편입함. 아울러 `qc_runner.py`➔`qa_validator.py`➔`qa_checks.py`에 `mob_shadow=True` & `partner_pos=="side_cuddle"` 전용 무회귀 `allow_partner_shadow_face` 분기(`faces <= 2`)와 `constants.py`/`schemas.py` 스펙을 추가하고, 기존 `allow_partner_head=True` 전역 판정은 그대로 보존함.
