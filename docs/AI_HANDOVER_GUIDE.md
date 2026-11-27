@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-121)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-122)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-121`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-122`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -69,3 +69,4 @@
 - **ADR-119 (2026-11-28)**: Gen-IT 제작법 v3.0(`GENIT_MULTI_THEME_TEMPLATE_v3.0.md` 신설, `oto_v3_0.md` `frozen` 승격)을 확정하여 ① `Status` 인라인 DM 답장창(`isDmOpen`) + `Talk` 상시 입력창 UX, ② 1:1 톡 비밀 격리 3불변식(텔레파시·원격발화·`나:` 대필 금지 및 답장 시 `dm_from=없음` 초기화), ③ `[계속하기]` 대응 유연 호흡(`800~1,200자`)·주 화자 `70%` 스포트라이트·고호감도 1인 집중 프롤로그, ④ 상보적 선물 정합성, ⑤ `[마을 민원판 확인]` `Board` 강제 출력 & 1줄 Prefix 백업 테이블을 표준화함.
 - **ADR-120 (2026-11-28)**: Gen-IT v3.0 제작법·템플릿·`oto_v3_0.md`·로스터 스킬에 ① 레거시 3자리(`_000.webp`)와 `plepa` 신규 에셋(`.webp` 포함 파일명·커스텀 슬롯)을 단일 공존시키는 `CHAR_META` 선택 필드 `poses`/`avatar` + `resolveAssetUrl` 폴백 체인(`avatar` ➔ `poses[0]` ➔ `_000.webp` ➔ 모노그램), ② 기존 v3.0 작품 무손실 증설을 위한 6단계 SOP(레거시 매핑 무변경 보존 + 맨 아래 `[신규 주민 에셋 인덱스]` 별도 덧붙이기 + `Board`/1:1 DM/관계망 발견성)를 표준화함.
 - **ADR-121 (2026-11-28)**: 다회차 실증 배치 검증을 거쳐 2인 측면 밀착 포즈 `056`(`poses`, `partner_pos="side_cuddle"`, `mob_tier=2`, `mob_shadow=True`)과 `136`/`206`(`h_scenes`/`scenes_otokonoko` 대칭, `partner_pos="side_kiss"`, `mob_tier=2`, `mob_shadow=True`)을 정식 DB·로스터 배경 매핑·`POSE_MAPPING.md`에 편입함. 아울러 `qc_runner.py`➔`qa_validator.py`➔`qa_checks.py`에 `mob_shadow=True` & `partner_pos=="side_cuddle"` 전용 무회귀 `allow_partner_shadow_face` 분기(`faces <= 2`)와 `constants.py`/`schemas.py` 스펙을 추가하고, 기존 `allow_partner_head=True` 전역 판정은 그대로 보존함.
+- **ADR-122 (2026-11-28)**: 신규 포즈 공식 라벨(`056`=`앉아가슴희롱`, `136`/`206`=`밀착키스`)을 확정하고, 기존 코드 번호(`000~206`)·에셋 파일명·매핑·검열 정책은 100% 불변으로 보존한 채 `sdxl_pose_database.json` 전 178키에 10단위 간격의 `sort_order`를 부여하여 유사 군집순(`056`➔`031~034` 옆, `136`➔`060~061` 사이 등) 표시 정렬(`pose_display_sort_key` 및 웹/모바일 갤러리·포즈·포즈세트 UI 연동)을 구현함.
