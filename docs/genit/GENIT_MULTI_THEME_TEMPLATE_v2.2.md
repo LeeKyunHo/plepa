@@ -6,8 +6,11 @@ purpose: Gen-IT 다테마 신규 로스터 마스터 패키지 표준 청사진 
 
 # 🧩 Gen-IT 다테마 캐릭터 채팅 마스터 패키지 템플릿 (v2.2 Master Blueprint)
 
+> [!NOTE]
+> **v3.0 마스터 템플릿 승격 안내**: 신규 로스터 제작 시에는 인라인 DM 답장창(`Status`), 상시 입력 바(`Talk`), 1:1 비밀 격리 3대 불변식, `[계속하기]` 800~1,200자·주 화자 70% 스포트라이트, 선물 정합성 및 Prefix 백업 테이블이 완비된 **[`GENIT_MULTI_THEME_TEMPLATE_v3.0.md`](GENIT_MULTI_THEME_TEMPLATE_v3.0.md)** 를 사용하세요. (본 문서는 기존 v2.2 참조 경로 하위 호환용으로 유지됩니다.)
+
 > **문서 목적**: 신규 로스터(캠퍼스, 오피스, 스파이, 오토코노코 마을 등)의 Gen-IT 5탭 작품을 제작할 때 **복제 즉시 프로덕션 규격을 충족하도록 표준화한 마스터 청사진**입니다.
-> * **공식 SSOT**: [`docs/젠잇_캐릭터채팅_제작법.md`](../%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md) | **참고 구현본**: [`캠퍼스_완성본`](%EC%BA%A0%ED%8D%BC%EC%8A%A4_%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0_%EC%B1%84%ED%8C%85_v2.2_%EC%99%84%EC%84%B1%EB%B3%B8.md) · [`오토코노코_마스터(frozen)`](oto_v2_2.md)
+> * **공식 SSOT**: [`docs/젠잇_캐릭터채팅_제작법.md`](../%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md) | **참고 구현본**: [`캠퍼스_완성본`](%EC%BA%A0%ED%8D%BC%EC%8A%A4_%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0_%EC%B1%84%ED%8C%85_v2.2_%EC%99%84%EC%84%B1%EB%B3%B8.md) · [`오토코노코_마스터(frozen)`](oto_v3_0.md)
 
 ---
 
@@ -153,7 +156,7 @@ function Status(props) {
   return null;
 }
 ```
-*(참고: `Talk(props)`는 `setReturnValue('dm_reply', ...)` + `sendMessage(..., false)`, `Board(props)`는 `ICON_MAP` 미등록 시 `✨` 폴백 + `setReturnValue('quest', ...)` + `sendMessage(..., false)` 패턴을 동일 적용하며 상세 풀 코드는 `docs/genit/oto_v2_2.md`를 참조합니다.)*
+*(참고: `Talk(props)`는 `setReturnValue('dm_reply', ...)` + `sendMessage(..., false)`, `Board(props)`는 `ICON_MAP` 미등록 시 `✨` 폴백 + `setReturnValue('quest', ...)` + `sendMessage(..., false)` 패턴을 동일 적용하며 상세 풀 코드는 `docs/genit/oto_v3_0.md`를 참조합니다.)*
 
 ---
 

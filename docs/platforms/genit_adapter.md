@@ -1,7 +1,7 @@
 # 🟢 젠잇(Gen-IT) 플랫폼 어댑터 (`genit_adapter`)
 
 > **역할**: [`CORE_SPEC.md`](CORE_SPEC.md)의 공통 코어를 **젠잇(genit.ai) 2026 규격**에 매핑하는 기준 레퍼런스 어댑터입니다.  
-> **상세 기술 SSOT**: [`docs/젠잇_캐릭터채팅_제작법.md`](../%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md) · [`docs/genit/GENIT_MULTI_THEME_TEMPLATE_v2.2.md`](../genit/GENIT_MULTI_THEME_TEMPLATE_v2.2.md)
+> **상세 기술 SSOT**: [`docs/젠잇_캐릭터채팅_제작법.md`](../%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md) *(v3.0)* · [`GENIT_MULTI_THEME_TEMPLATE_v3.0.md`](../genit/GENIT_MULTI_THEME_TEMPLATE_v3.0.md) · [`oto_v3_0.md`](../genit/oto_v3_0.md) *(구 템플릿: `GENIT_MULTI_THEME_TEMPLATE_v2.2.md`)*
 
 ---
 
@@ -37,9 +37,11 @@
 
 ---
 
-## 3. 상태창 · 탈 얀데레 1:1 DM · 알림판 & 공식 JSX 규격
+## 3. 상태창 · v3.0 인라인 1:1 DM · 알림판 & 공식 JSX 규격
 
 - **공식 JSX 샌드박스 불변식**: `React.` 접두(`React.useState`), 리터럴 키 직접 `setReturnValue`(`tone`, `event`, `gift`, `dm_reply`, `quest` 총 200자 이하), `onClick` 전용 변경, 시스템 액션 `sendMessage(..., false)` vs 롤플레이 `fillInput(..., false)` 분리, `light-dark(...)` 테마 대응 및 **`CHAR_META` 1줄 동적 확장 + `failedUrls` 모노그램 폴백**.
+- **v3.0 인라인 1:1 DM & 상시 `Talk` UX**: `Status` 배너 `[💬 열기]`는 턴을 쓰지 않고 인라인 답장창(`isDmOpen`)을 펼친 뒤 `[전송]` 시 `dm_reply` + `sendMessage(..., false)` 실행(해당 턴 `dm_from=없음` 초기화). `Talk`는 하단 입력창 상시 오픈 + 헤더 우측 `[📴 덮기]` 슬림 배치.
+- **1:1 비밀 격리 & 서사 호흡**: 텔레파시 금지(현장 타인/`reaction` 언급 차단), 본문 중복 발화·원격 유령 등장 금지, 미답장 `나:...` 대필 금지. 유연 장면 호흡 `800~1,200자` + `[계속하기]` 능동 전환 + 주 화자 `70%` 스포트라이트 + `[마을 민원판 확인]` 턴 `[@id=Board]` 강제 출력.
 - **상시 상태창 (`Status`, 4탭 HUD + `%` 생략 0~100 정수 + D20 돌발 이벤트)**:
   ```text
   [@id=Status|turn=[정수]|day=[N일차(요일)]|time=[아침/낮/저녁/밤]|weather=[날씨]|location=[한글장소명]|char_name=[주화자]|affection=[정수]|submissiveness=[정수]|tension=[정수]|trust=[정수]|roster_stats=[이름:호감/보조,...]|items=[품목:수량,...]|ambient=[고요한풍경1줄]|dm_from=[발신자또는없음]|dm_preview=[미리보기]|attire=[복장]|reaction=[속마음]]

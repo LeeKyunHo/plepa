@@ -25,10 +25,10 @@ description: >-
 ## 3. 고정 실행 절차 (Step-by-Step)
 1. 캐릭터 JSON 편집 시 `sdxl_positive`·`sdxl_nude_positive` 양쪽에 `BREAK` 구분자 및 필수 외형/소품(`signature_accessories`)이 보존되었는지 확인합니다.
 2. 배경 추가 시 색조 오염(`yellow tint`, `amber lighting` 등) 차단 네거티브가 캐릭터 JSON에 유지되는지 점검합니다.
-3. Gen-IT 완성본(`docs/genit/*.md`) 작성·수정 시 아래 마스터 패키지 7대 표준과 실존 에셋 서픽스(`validate_genit_work.py`) 일치를 확인합니다:
-   - 메인+추가 `<= 12,000자` · 히든 `<= 2,000자`(독립 버퍼, 메인 분량 지침 충돌 금지) · 경로 `{{url}}{prefix}/{prefix}_{code}.webp` · `%` 제외 정수.
-   - 고정 인원수 하드코딩 금지(`CHAR_META` 1줄 확장·미등록 자동 인식·`failedUrls` 모노그램 폴백), HTML 0칸 정렬 & `<details>`/`[NEW RESIDENTS]`.
-   - 공식 JSX(`React.` 접두·리터럴 `setReturnValue` 200자·클릭 전용 변경·`fillInput`/`sendMessage(..., false)` 분리·`light-dark()`) 3종(`Status`/`Talk`/`Board`), 탈 얀데레 1:1 DM 3~4턴 쿨타임(`ambient` 70~80%), 자연·일상 중심 D20 `EVENT_POOL`.
+3. 신규 로스터 Gen-IT v3.0 완성본(`docs/genit/*.md`) 작성·수정 시 [`GENIT_MULTI_THEME_TEMPLATE_v3.0.md`](../../../docs/genit/GENIT_MULTI_THEME_TEMPLATE_v3.0.md) · [`docs/젠잇_캐릭터채팅_제작법.md`](../../../docs/%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md)와 `validate_genit_work.py` 일치를 확인합니다:
+   - 메인+추가 `<= 12,000자` · 히든 `<= 2,000자`(독립 버퍼, 메인 분량 충돌 금지) · 경로 `{{url}}{prefix}/{prefix}_{code}.webp` + 1줄 Prefix 백업 · `%` 제외 정수 · `items=` 누락 점검.
+   - 고정 인원수 금지(`CHAR_META` 확장·모노그램 폴백), 상보적 선호 선물(직업/종교/자체 상품 충돌 금지), 0칸 HTML `<details>`/`[NEW RESIDENTS]`.
+   - v3.0 JSX 3종(`Status` 인라인 DM `isDmOpen` + D20 · `Talk` 상시 입력창 · `Board` 호출 시 강제 출력), 1:1 톡 비밀 격리 3불변식(텔레파시·원격발화·`나:`대필 금지 & 답장 턴 `dm_from=없음` 초기화), 유연 호흡 `800~1,200자`·`[계속하기]` 능동 전환·주 화자 `70%` 스포트라이트·고호감도 프롤로그 1인 집중.
 4. 변경 완료 후 해당 로스터의 `precheck`와 계약 테스트를 반드시 실행합니다.
 
 ## 4. 필수 종료 검증 커맨드 (Gate)

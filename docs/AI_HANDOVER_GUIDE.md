@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-118)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-119)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-118`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-119`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -66,3 +66,4 @@
 - **ADR-116 (2026-11-27)**: 결정론적 서류 드리프트 감지기([`scripts/check_doc_sync.py`](../scripts/check_doc_sync.py)+`doc_sync_rules.py`), `pytest` 상시 게이트([`tests/test_doc_sync_guard.py`](../tests/test_doc_sync_guard.py)) 및 옵트인 `.git/hooks/post-commit` 자동 스냅샷 갱신기([`scripts/install_git_hooks.py`](../scripts/install_git_hooks.py))를 구축하여 경로 실존·금지 키워드·SSOT 인벤토리·ADR 범위·가드 정합성을 CI/로컬 훅으로 강제함.
 - **ADR-117 (2026-11-27)**: Gen-IT v2.2 프롬프트 합산 한도(`메인 + max(추가)`)를 `8,000자 ➔ 12,000자`(권장 메인 `9,000~9,800자` + 추가 `1,800~2,500자`, 히든 `2,000자` 독립 버퍼 유지)로 상향하고 [`validate_genit_rules.py`](../scripts/validate_genit_rules.py)·경계값 테스트·Active SSOT 서류를 일괄 동기화함.
 - **ADR-118 (2026-11-27)**: 신규 로스터 Gen-IT 마스터 패키지 표준을 승격하여 고정 인원수 배제(`CHAR_META` 동적 확장·모노그램 폴백), 공식 JSX 규격(`React.` 접두·리터럴 `setReturnValue` 200자·클릭 전용 변경·`fillInput`/`sendMessage(..., false)` 분리), 3종 모듈 위젯(`Status`·`Talk`·`Board`)과 8~12변수, 탈 얀데레 1:1 DM(`ambient` 바·3~4턴 쿨타임), 자연/일상 16종 D20 Fail-Forward 엔진을 제작법·템플릿·어댑터·스킬에 일원화함.
+- **ADR-119 (2026-11-28)**: Gen-IT 제작법 v3.0(`GENIT_MULTI_THEME_TEMPLATE_v3.0.md` 신설, `oto_v3_0.md` `frozen` 승격)을 확정하여 ① `Status` 인라인 DM 답장창(`isDmOpen`) + `Talk` 상시 입력창 UX, ② 1:1 톡 비밀 격리 3불변식(텔레파시·원격발화·`나:` 대필 금지 및 답장 시 `dm_from=없음` 초기화), ③ `[계속하기]` 대응 유연 호흡(`800~1,200자`)·주 화자 `70%` 스포트라이트·고호감도 1인 집중 프롤로그, ④ 상보적 선물 정합성, ⑤ `[마을 민원판 확인]` `Board` 강제 출력 & 1줄 Prefix 백업 테이블을 표준화함.
