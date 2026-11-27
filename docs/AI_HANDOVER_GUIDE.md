@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-116)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-117)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-116`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-117`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -64,3 +64,4 @@
 - **ADR-114 (2026-11-27, Wave 5-A)**: `plepa_gui/` 내 인라인 CSS/HTML/JS를 [`plepa_gui/static/`](../plepa_gui/static/mobile_viewer.html) 6파일(`retouch_editor.{css,html,js}`, `mobile_viewer.{css,html,js}`)로 분리하고, [`api_routes.py`](../plepa_gui/api_routes.py)(`api_schemas`/`api_security`/`api_file_ops`), [`gallery.py`](../plepa_gui/pages/gallery.py)(`gallery_parts/` 7모듈), [`generate.py`](../plepa_gui/pages/generate.py)(`generate_sections.py`), [`characters.py`](../plepa_gui/pages/characters.py)(`characters_form.py`) 및 4대 설정/포즈 페이지를 분해해 **`plepa_gui/` 전 28개 파이썬 모듈 `<=350L` · 전 함수 `<=120L` · Allowlist 0건 · `run_batch` 우회 0건** 달성 (`pytest 279 passed`).
 - **ADR-115 (2026-11-27, Wave 5-B / Wave 0~5 마스터 완결)**: 현역 운영 CLI 3종([`audit_asset_alignment.py`](../scripts/audit_asset_alignment.py)+`audit_alignment_helpers.py`, [`validate_genit_work.py`](../scripts/validate_genit_work.py)+`validate_genit_rules.py`, [`audit_sector_assets.py`](../scripts/audit_sector_assets.py))을 `<=350L`/`<=120L`로 슬림화하고, 비활성/ML/실험/구 `:8085` 스크립트 16종을 `scripts/{ml,benchmarks,archive}/` 3단 폴더로 격리(`scripts/README.md` 신설, `parents[2]` 보정, `plepa_guard.py` 및 `context_exporter` 텔레메트리 동기화)해 **전체 활성 코드베이스 AST·역방향 레이어·GUI 큐 Allowlist `0건`** 완결 (`pytest 283 passed`).
 - **ADR-116 (2026-11-27)**: 결정론적 서류 드리프트 감지기([`scripts/check_doc_sync.py`](../scripts/check_doc_sync.py)+`doc_sync_rules.py`), `pytest` 상시 게이트([`tests/test_doc_sync_guard.py`](../tests/test_doc_sync_guard.py)) 및 옵트인 `.git/hooks/post-commit` 자동 스냅샷 갱신기([`scripts/install_git_hooks.py`](../scripts/install_git_hooks.py))를 구축하여 경로 실존·금지 키워드·SSOT 인벤토리·ADR 범위·가드 정합성을 CI/로컬 훅으로 강제함.
+- **ADR-117 (2026-11-27)**: Gen-IT v2.2 프롬프트 합산 한도(`메인 + max(추가)`)를 `8,000자 ➔ 12,000자`(권장 메인 `9,000~9,800자` + 추가 `1,800~2,500자`, 히든 `2,000자` 독립 버퍼 유지)로 상향하고 [`validate_genit_rules.py`](../scripts/validate_genit_rules.py)·경계값 테스트·Active SSOT 서류를 일괄 동기화함.

@@ -25,7 +25,7 @@ description: >-
 ## 3. 고정 실행 절차 (Step-by-Step)
 1. 캐릭터 JSON 편집 시 `sdxl_positive`·`sdxl_nude_positive` 양쪽에 `BREAK` 구분자 및 필수 외형/소품(`signature_accessories`)이 보존되었는지 확인합니다.
 2. 배경 추가 시 색조 오염(`yellow tint`, `amber lighting` 등) 차단 네거티브가 캐릭터 JSON에 유지되는지 점검합니다.
-3. Gen-IT 완성본(`docs/genit/*.md`) 수정 시 메인+추가 프롬프트 합산 8,000자 이하, 설정집/캐릭터 한도 및 실존 에셋 서픽스(`validate_genit_work.py`) 일치를 확인합니다.
+3. Gen-IT 완성본(`docs/genit/*.md`) 수정 시 메인+추가 프롬프트 합산 12,000자 이하(권장 메인 9,000~9,800자 + 추가 1,800~2,500자), 히든 2,000자(독립 버퍼), 설정집/캐릭터 한도 및 실존 에셋 서픽스(`validate_genit_work.py`) 일치를 확인합니다.
 4. 변경 완료 후 해당 로스터의 `precheck`와 계약 테스트를 반드시 실행합니다.
 
 ## 4. 필수 종료 검증 커맨드 (Gate)
