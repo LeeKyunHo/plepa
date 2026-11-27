@@ -20,7 +20,7 @@ description: >-
 - `tests/test_prompt_*.py`, `tests/test_qa_validator.py`, `tests/test_smart_censor.py`, `tests/test_censor_*.py`, `tests/test_wave4b1_core_modules.py`, `tests/test_wave4b2_service_modules.py`
 
 ## 2. 절대 금지 (Blacklist)
-- **ADR-99 동결 준수**: 사용자 명시 승인 및 `benchmark_censor_metrics.py` 정량 대조 없이 `censor.py` 탐지/마스크 임계치를 임의로 변경하지 마십시오.
+- **ADR-99 동결 준수**: 사용자 명시 승인 및 `scripts/ml/benchmark_censor_metrics.py` 정량 대조 없이 `censor.py` 탐지/마스크 임계치를 임의로 변경하지 마십시오.
 - 엔진 코드에 특정 포즈 번호(`"034"`, `"105"` 등), 캐릭터명, 로스터명 하드코딩 추가 금지 (데이터 JSON 메타데이터 활용).
 - `plepa_engine/`에서 `plepa_gui`나 `scripts`를 역방향 import 금지 (`test_ast_size_and_layer_guard` 위반).
 - ComfyUI 워크플로우 `.json` 원문 열람 및 `plepa_engine/legacy/` 수정 금지.

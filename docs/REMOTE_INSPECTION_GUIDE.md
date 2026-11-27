@@ -5,12 +5,12 @@
 
 ---
 
-## 1. 2원화 원격 검수 아키텍처 (`8080 스튜디오` vs `8085 벤치마크`)
+## 1. 2원화 원격 검수 아키텍처 (`8080 스튜디오` vs 은퇴 `:8085` 아카이브)
 
-| 구분 | **주력 상용 스튜디오 (`:8080`)** | **벤치마크 · 대기열 뷰어 (`:8085`)** |
+| 구분 | **주력 상용 스튜디오 (`:8080`)** | **은퇴 벤치마크 뷰어 (`:8085`, `scripts/archive/`)** |
 | :--- | :--- | :--- |
-| **기동 스크립트** | `.\.venv\Scripts\python.exe scripts/start_remote.py` | `.\.venv\Scripts\python.exe scripts/serve_benchmark_mobile.py` |
-| **모바일 뷰어 경로** | `/mobile` (또는 `/m`) · PC 갤러리 `/gallery` | `/inspect` (사전 빌드 HTML: `generate_inspection_viewer.py`) |
+| **기동 스크립트** | `.\.venv\Scripts\python.exe scripts/start_remote.py` | `.\.venv\Scripts\python.exe scripts/archive/serve_benchmark_mobile.py` |
+| **모바일 뷰어 경로** | `/mobile` (또는 `/m`) · PC 갤러리 `/gallery` | `/inspect` (사전 빌드 HTML: `scripts/archive/generate_inspection_viewer.py`) |
 | **보안 인증** | `PLEPA_MOBILE_TOKEN` 자동 발급 (`?token=` ➔ `HttpOnly` 쿠키 + `Origin` 검증) | `ACCESS_TOKEN` 인증 + `_resolve_safe_subpath` + `Origin` 검증 |
 | **수동 덧칠 API** | `POST /api/assets/retouch` (`retouch_editor.py` 공용, 본체 WebP 교체) | `POST /api/retouch_censor` (웹 뷰어 + `output/benchmarks/ground_truth/` 미러링) |
 | **재검열 · 원본 복원** | `POST /api/assets/reapply-censor` / `restore-origin` | `POST /api/reapply_censor` / `restore_origin` |

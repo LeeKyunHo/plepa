@@ -67,9 +67,9 @@ cd C:\Users\rbsgh\plepa
 # B. 원격 스마트폰 접속 (8080 기동 + PLEPA_MOBILE_TOKEN 발급 + Cloudflare Tunnel URL 출력)
 .\.venv\Scripts\python.exe scripts/start_remote.py
 
-# C. (특수 벤치마크·HTML 뷰어 전용 :8085 서버, FIFO 리롤 대기열 & Ground Truth 수집)
-.\.venv\Scripts\python.exe scripts/generate_inspection_viewer.py
-.\.venv\Scripts\python.exe scripts/serve_benchmark_mobile.py
+# C. (은퇴 · 아카이브) 구형 `:8085` 뷰어 — 정식 대체 경로는 위 B(`start_remote.py` + `/mobile`)를 사용하세요.
+.\.venv\Scripts\python.exe scripts/archive/generate_inspection_viewer.py
+.\.venv\Scripts\python.exe scripts/archive/serve_benchmark_mobile.py
 ```
 
 ### 2.4 Gemini 노트북 상시 싱크 (`scripts/export_context.py`)

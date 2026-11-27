@@ -12,10 +12,11 @@ description: >-
 
 ## 1. 허용 파일 (Whitelist)
 - Active SSOT 서류: [`GEMINI.md`](../../../GEMINI.md), [`POSE_MAPPING.md`](../../../POSE_MAPPING.md), [`사용법.txt`](../../../사용법.txt), [`README.md`](../../../README.md), [`docs/DOCUMENTATION_GUIDE.md`](../../../docs/DOCUMENTATION_GUIDE.md), [`docs/AI_HANDOVER_GUIDE.md`](../../../docs/AI_HANDOVER_GUIDE.md), [`docs/RUNBOOK.md`](../../../docs/RUNBOOK.md), [`docs/GUI_GUIDE.md`](../../../docs/GUI_GUIDE.md), [`docs/플에파_기능명세.md`](../../../docs/플에파_기능명세.md), [`docs/캐릭터_포즈_제작_규칙.md`](../../../docs/캐릭터_포즈_제작_규칙.md), [`docs/개발일지.md`](../../../docs/개발일지.md)
-- 스냅샷 도구: [`scripts/export_context.py`](../../../scripts/export_context.py), `scripts/context_exporter/*.py`, `context_snapshot/*` (`.gitignore` 대상)
+- 스냅샷 도구: [`scripts/export_context.py`](../../../scripts/export_context.py), `scripts/context_exporter/*.py` (`scripts/archive/`, `scripts/benchmarks/`, `scripts/ml/` 격리 집계 지원), `context_snapshot/*` (`.gitignore` 대상)
+- 운영 스크립트 인덱스: [`scripts/README.md`](../../../scripts/README.md)
 
 ## 2. 절대 금지 (Blacklist)
-- `docs/archive/` 구버전 문서 열람·수정 금지 (`GEMINI.md` 10조).
+- `docs/archive/` · `scripts/archive/` · `scripts/benchmarks/` 구버전/실험 파일 임의 열람·수정 금지 (`GEMINI.md` 10조).
 - Git 커밋 메시지에 성인물·신체 부위·성적 행동 등 민감 어휘 포함 금지 (`GEMINI.md` 2조).
 - `pytest` 또는 `precheck` 미통과 상태에서 `git push` 실행 금지.
 - `output/`, `benchmarks/`, `projects/*/assets/` 대용량 바이너리 커밋 금지.

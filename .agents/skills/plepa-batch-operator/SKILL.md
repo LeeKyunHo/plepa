@@ -12,8 +12,8 @@ description: >-
 
 ## 1. 허용 대상 (Whitelist)
 - CLI 실행: `.\.venv\Scripts\python.exe batch_generator.py ...`
-- 사전 점검/감사 실행: `plepa_engine.precheck`, `scripts/audit_asset_alignment.py` (조회 전용), `scripts/validate_genit_work.py`
-- 원격 검수 서버 실행: [`scripts/start_remote.py`](../../../scripts/start_remote.py) (포트 `8080`, `PLEPA_MOBILE_TOKEN` 발급)
+- 사전 점검/감사 실행: `plepa_engine.precheck`, `scripts/audit_asset_alignment.py` (`audit_alignment_helpers.py` 포함, 조회 전용), `scripts/audit_sector_assets.py`, `scripts/validate_genit_work.py` (`validate_genit_rules.py` 포함)
+- 원격 검수 서버 실행: [`scripts/start_remote.py`](../../../scripts/start_remote.py) (포트 `8080`, `PLEPA_MOBILE_TOKEN` 발급 — 구 `:8085` 뷰어는 `scripts/archive/` 격리 완료)
 
 ## 2. 절대 금지 (Blacklist)
 - 사용자 명시적 승인 없이 `--overwrite` / `-f`로 기존 완성 에셋 덮어쓰기 실행 금지 (`GEMINI.md` 6·9조).

@@ -81,8 +81,8 @@ plepa/
 │   ├── qa_validator.py           # Auto-QC 품질/구도 자동 감지기 (qa_checks.py 규칙 분리)
 │   ├── precheck.py               # 이미지 생산 전 7단계 무결성 검증 (precheck_rules.py 분리)
 │   └── services/                 # CLI·GUI 공용 서비스 (generation/ 6모듈 · asset_helpers · pose_resolver/storage · health_checks_core/ops · GENERATION_OPTION_SPECS 29종)
-├── plepa_gui/                    # NiceGUI 8대 탭 & REST API (/api/assets/*)
-├── scripts/                      # context_exporter, start_remote, audit, validate_genit_work, novelchat_* 등
+├── plepa_gui/                    # NiceGUI 8대 탭 + static/ 정적 리소스 + gallery_parts/ + REST API (28모듈 <=350L, Allowlist 0건)
+├── scripts/                      # 운영 CLI (export_context, start_remote, audit_*, validate_*) + ml/ · benchmarks/ · archive/ 계층 격리
 ├── docs/                         # Active SSOT(젠잇·노벨챗 제작법, platforms/) & docs/archive/ (이력 보관소)
 └── projects/{roster}/            # 12개 로스터별 캐릭터, 배경, events.json, 에셋(_origin 포함)
 ```
