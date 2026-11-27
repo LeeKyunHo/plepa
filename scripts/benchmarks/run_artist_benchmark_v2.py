@@ -24,7 +24,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from plepa_engine.config import PROJECTS_DIR
 from plepa_engine.services.generation_service import GenerationParams, GenerationService

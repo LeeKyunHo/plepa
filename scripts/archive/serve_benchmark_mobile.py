@@ -1,3 +1,5 @@
+# [DEPRECATED] `:8085` 구형 단독 뷰어는 Wave 5-B에서 아카이브 격리되었습니다.
+# 정식 현역 대체 경로: `plepa_gui/pages/mobile_viewer.py` (`/mobile`) + `scripts/start_remote.py`
 from __future__ import annotations
 
 import sys
@@ -47,7 +49,7 @@ from pydantic import BaseModel
 from PIL import Image
 import uvicorn
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 

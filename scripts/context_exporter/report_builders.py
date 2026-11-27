@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 from plepa_engine.config import ROOT_DIR as PLEPA_ROOT
 
-from .ast_extract import ast_telemetry
+from .ast_extract import ast_telemetry, count_quarantined_scripts
 from .builders import get_live_modules
 from .runtime_and_telemetry import (
     COLLECTED_FILE_BUDGETS,
@@ -79,23 +79,34 @@ def build_refactoring_plan(snap: Dict[str, Any]) -> str:
         detail = (w.get("detail") or f"완료 {w['done']} / 잔여 {w['todo']}")[:140]
         out.append(f"| **{w['wave']}** | {status} | {detail} |")
 
-    out.extend([
-        "",
-        f"## 2. Live AST 래칫 텔레메트리 (전체 `{tel['total_modules']}`모듈 / `{tel['total_lines']:,}`줄)",
-        f"- **350줄 초과 비대 모듈 (`{len(tel['oversized_modules'])}`개)** — 분해 대상 목록:",
-        "| 모듈 경로 | 현재 줄 수 | 초과 함수 (`>120L`) |",
-        "| :--- | :---: | :--- |",
-    ])
-    for m in tel["oversized_modules"]:
-        fns = ", ".join(m.oversized_functions[:4]) or "-"
-        out.append(f"| `{m.rel_path}` | **{m.line_count}L** | {fns} |")
+    q_counts = count_quarantined_scripts()
+    q_total = sum(q_counts.values())
+    over_mod_cnt = len(tel["oversized_modules"])
+    over_fn_cnt = len(tel["oversized_functions"])
 
     out.extend([
         "",
-        f"- **120줄 초과 비대 함수 (총 `{len(tel['oversized_functions'])}`개)** 중 상위 15개:",
+        f"## 2. Live AST 래칫 텔레메트리 (활성 `{tel['total_modules']}`모듈 / `{tel['total_lines']:,}`줄)",
+        f"- **격리/아카이브 스크립트 (`scripts/{{archive,benchmarks,ml}}`)**: 총 `{q_total}`개 (`archive` {q_counts.get('archive', 0)} · `benchmarks` {q_counts.get('benchmarks', 0)} · `ml` {q_counts.get('ml', 0)} — 활성 AST 부채 제외)",
     ])
-    for item in tel["oversized_functions"][:15]:
-        out.append(f"  - `{item['module']}` :: `{item['func']}`")
+    if over_mod_cnt == 0 and over_fn_cnt == 0:
+        out.append("- ✅ **활성 코드베이스 `>350L` 0건 · `>120L` 0건 · Allowlist 0건 (Wave 0~5 완결)**")
+    else:
+        out.extend([
+            f"- **350줄 초과 비대 모듈 (`{over_mod_cnt}`개)** — 분해 대상 목록:",
+            "| 모듈 경로 | 현재 줄 수 | 초과 함수 (`>120L`) |",
+            "| :--- | :---: | :--- |",
+        ])
+        for m in tel["oversized_modules"]:
+            fns = ", ".join(m.oversized_functions[:4]) or "-"
+            out.append(f"| `{m.rel_path}` | **{m.line_count}L** | {fns} |")
+
+        out.extend([
+            "",
+            f"- **120줄 초과 비대 함수 (총 `{over_fn_cnt}`개)** 중 상위 15개:",
+        ])
+        for item in tel["oversized_functions"][:15]:
+            out.append(f"  - `{item['module']}` :: `{item['func']}`")
 
     out.extend([
         "",

@@ -21,12 +21,12 @@ import cv2
 import numpy as np
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import plepa_engine.censor as censor
-from scripts.extract_censor_seg_dataset import (
+from scripts.ml.extract_censor_seg_dataset import (
     _find_matching_origin,
     _index_origin_files,
     collect_spy_white_pairs,

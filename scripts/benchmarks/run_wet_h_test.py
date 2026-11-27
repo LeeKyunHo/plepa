@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 PYTHON = sys.executable
 SEED = "20261116"
 OUT_DIR = ROOT / "output" / "style_ab_test" / "mode_wet_h"
@@ -43,7 +43,7 @@ def main() -> int:
             print(f"[ERROR] Failed: char={char} exit={proc.returncode}", flush=True)
             return proc.returncode
 
-    from scripts.build_style_ab_gallery import build_gallery
+    from scripts.benchmarks.build_style_ab_gallery import build_gallery
     gallery_path = build_gallery()
     print(f"\n=== [Wet-H Booster] Gallery updated: {gallery_path} ===", flush=True)
     return 0

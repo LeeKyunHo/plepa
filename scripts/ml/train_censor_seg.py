@@ -17,11 +17,11 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from scripts.extract_censor_seg_dataset import build_yolo_seg_dataset
+from scripts.ml.extract_censor_seg_dataset import build_yolo_seg_dataset
 
 
 def _resolve_trained_weights(

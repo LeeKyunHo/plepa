@@ -16,7 +16,7 @@ from plepa_engine.qa_validator import (
 )
 from plepa_engine.services.pose_service import default_pose_service
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 OUT_ROOT = ROOT / "output" / "overnight_full_audit"
 
 

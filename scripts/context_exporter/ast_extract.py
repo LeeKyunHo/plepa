@@ -213,7 +213,7 @@ def collect_active_modules() -> List[ModuleSummary]:
         if not base.is_dir():
             continue
         for p in sorted(base.rglob("*.py")):
-            if any(skip in p.parts for skip in ("legacy", "archive", "__pycache__")):
+            if any(skip in p.parts for skip in ("legacy", "archive", "benchmarks", "ml", "__pycache__")):
                 continue
             candidates.append(p)
 
@@ -223,6 +223,22 @@ def collect_active_modules() -> List[ModuleSummary]:
         if s is not None:
             summaries.append(s)
     return summaries
+
+
+def count_quarantined_scripts() -> Dict[str, int]:
+    """`scripts/{archive,benchmarks,ml}`에 격리·분류된 스크립트 수를 집계합니다."""
+    counts: Dict[str, int] = {}
+    scripts_dir = PLEPA_ROOT / "scripts"
+    for bucket in ("archive", "benchmarks", "ml"):
+        sub = scripts_dir / bucket
+        if sub.is_dir():
+            counts[bucket] = sum(
+                1 for p in sub.rglob("*.py")
+                if p.name != "__init__.py" and "__pycache__" not in p.parts
+            )
+        else:
+            counts[bucket] = 0
+    return counts
 
 
 def ast_telemetry(summaries: Optional[List[ModuleSummary]] = None) -> Dict[str, Any]:

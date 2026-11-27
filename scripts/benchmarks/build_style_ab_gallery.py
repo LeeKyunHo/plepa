@@ -9,7 +9,7 @@ import html
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 STYLE_AB_DIR = ROOT / "output" / "style_ab_test"
 OVERNIGHT_DIR = ROOT / "output" / "overnight_full_audit"
 PROJECTS_DIR = ROOT / "projects"

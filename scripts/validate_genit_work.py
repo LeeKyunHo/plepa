@@ -12,80 +12,36 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
-import re
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+from scripts.validate_genit_rules import (
+    compute_sha256,
+    extract_code_blocks_after_header,
+    get_asset_info,
+    parse_frontmatter,
+    validate_characters_section,
+    validate_lorebooks_section,
+    validate_prompts_section,
+    validate_vars_and_assets,
+)
+
 GENIT_DIR = ROOT_DIR / "docs" / "genit"
 PROJECTS_DIR = ROOT_DIR / "projects"
 CACHE_DIR = ROOT_DIR / ".cache"
 CACHE_FILE = CACHE_DIR / "genit_cache.json"
-
-
-def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
-    """문서 상단 YAML Frontmatter(--- ... ---) 파싱."""
-    if not text.startswith("---"):
-        return {}, text
-
-    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n", text, re.DOTALL)
-    if not m:
-        return {}, text
-
-    fm_text = m.group(1)
-    body = text[m.end():]
-    meta: Dict[str, str] = {}
-    for line in fm_text.splitlines():
-        line = line.strip()
-        if line and ":" in line and not line.startswith("#"):
-            k, v = line.split(":", 1)
-            meta[k.strip().lower()] = v.strip().strip("\"'")
-    return meta, body
-
-
-def compute_sha256(path: Path) -> str:
-    """파일 SHA-256 해시 계산."""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        while chunk := f.read(65536):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def get_asset_info(roster: str) -> Tuple[int, float, Set[str]]:
-    """로스터의 실제 에셋 수량, 최신 mtime, 유효한 포즈 서픽스 집합 추출."""
-    assets_dir = PROJECTS_DIR / roster / "assets"
-    if not assets_dir.exists():
-        return 0, 0.0, set()
-
-    count = 0
-    max_mtime = 0.0
-    suffixes: Set[str] = set()
-
-    for p in assets_dir.rglob("*.webp"):
-        if any(skip in p.parts for skip in ("_origin", "_trash", "legacy_backups")):
-            continue
-        count += 1
-        m = p.stat().st_mtime
-        if m > max_mtime:
-            max_mtime = m
-
-        fname = p.name
-        if "_" in fname:
-            parts = fname[:-5].split("_", 1)
-            if len(parts) == 2:
-                suffixes.add(parts[1])
-
-    return count, max_mtime, suffixes
 
 
 def load_cache() -> Dict[str, Any]:
@@ -110,20 +66,11 @@ def save_cache(cache: Dict[str, Any]) -> None:
             f.flush()
             os.fsync(f.fileno())
         os.replace(temp_file, CACHE_FILE)
-    except Exception as e:
-        print(f"[WARN] 캐시 저장 실패: {e}")
+    except Exception as exc:
+        print(f"[WARN] 캐시 저장 실패: {exc}")
     finally:
         if temp_file and temp_file.exists():
             temp_file.unlink(missing_ok=True)
-
-
-def extract_code_blocks_after_header(text: str, header_pattern: str, count: int = 1) -> List[str]:
-    m = re.search(header_pattern, text)
-    if not m:
-        return []
-    sub = text[m.end():]
-    blocks = re.findall(r"```(?:text|markdown|jsx)?\n(.*?)```", sub, re.DOTALL)
-    return [b.strip() for b in blocks[:count]]
 
 
 def validate_document(
@@ -131,21 +78,15 @@ def validate_document(
     use_cache: bool = True,
     force_all: bool = False,
 ) -> Tuple[bool, List[str], bool]:
-    """
-    단일 완성본 마크다운 검증 실행.
-    Returns:
-        (is_passed, errors, is_cached)
-    """
+    """단일 완성본 마크다운 검증 실행. 반환값: (is_passed, errors, is_cached)."""
     if not file_path.exists():
         return False, [f"파일을 찾을 수 없습니다: {file_path}"], False
 
     content = file_path.read_text(encoding="utf-8")
     meta, body = parse_frontmatter(content)
-
     roster = meta.get("roster", "campus")
     status = meta.get("status", "active").lower()
 
-    # template 문서는 청사진 가이드이므로 항상 스킵, frozen/archived는 force_all이 아니면 스킵
     if status == "template":
         print(f"⏩ [SKIP] 다테마 청사진 템플릿 스킵: {file_path.name} (status: template)")
         return True, [], True
@@ -153,187 +94,37 @@ def validate_document(
         print(f"⏩ [SKIP] 봉인된 완성본 검사 스킵: {file_path.name} (status: {status})")
         return True, [], True
 
-    # 스마트 캐시 검사
     file_hash = compute_sha256(file_path)
-    asset_count, asset_mtime, valid_suffixes = get_asset_info(roster)
+    asset_count, asset_mtime, valid_suffixes = get_asset_info(PROJECTS_DIR, roster)
 
     cache = load_cache()
     cache_key = str(file_path.resolve())
     cached_entry = cache.get(cache_key)
-
-    if use_cache and cached_entry:
-        if (
-            cached_entry.get("file_hash") == file_hash
-            and cached_entry.get("asset_count") == asset_count
-            and cached_entry.get("asset_mtime") == asset_mtime
-            and cached_entry.get("passed") is True
-        ):
-            print(f"⚡ [Cached PASS] 내용 및 에셋 변경 없음: {file_path.name} (0.001s)")
-            return True, [], True
+    if (
+        use_cache
+        and cached_entry
+        and cached_entry.get("file_hash") == file_hash
+        and cached_entry.get("asset_count") == asset_count
+        and cached_entry.get("asset_mtime") == asset_mtime
+        and cached_entry.get("passed") is True
+    ):
+        print(f"⚡ [Cached PASS] 내용 및 에셋 변경 없음: {file_path.name} (0.001s)")
+        return True, [], True
 
     errors: List[str] = []
     print("=" * 76)
     print(f"🔍 [Gen-IT 5탭 정합성 검증] 대상: {file_path.name} (로스터: {roster})")
     print("=" * 76)
 
-    # 1. 메인 프롬프트 및 시작 설정 루트 동적 탐색
-    main_blocks = extract_code_blocks_after_header(body, r"## 2-0\. \[메인 프롬프트\]", 1)
-    main_prompt = main_blocks[0] if main_blocks else ""
-    main_len = len(main_prompt)
-
-    route_headers = re.findall(r"^(## 2-([1-9]\d*)\.\s*\[([^\]]+)\])", body, re.MULTILINE)
-    routes = [(label.strip(), re.escape(header_line.strip())) for header_line, _, label in route_headers]
-    if not routes:
-        errors.append("시작 설정 루트 헤더(## 2-1. [...])를 찾을 수 없습니다.")
-
-    max_add_len = 0
-    max_add_name = ""
-
-    print("\n📊 [1] 프롬프트 글자 수 한도 검증 (메인 + max(추가) <= 8,000자)")
-    print(f"  - 메인 프롬프트 길이: {main_len:,}자")
-
-    for r_name, r_pat in routes:
-        blocks = extract_code_blocks_after_header(body, r_pat, 5)
-        if len(blocks) < 5:
-            errors.append(f"{r_name}: 코드블록 5개 중 일부 누락 ({len(blocks)}개 발견)")
-            continue
-        title_b, prol_b, hid_b, add_b, rec_b = blocks
-        if len(title_b) > 20:
-            errors.append(f"{r_name} 이름 20자 초과: {len(title_b)}자 ({title_b})")
-        if len(prol_b) > 2000:
-            errors.append(f"{r_name} 프롤로그 2,000자 초과: {len(prol_b):,}자")
-        if len(hid_b) > 2000:
-            errors.append(f"{r_name} 히든 프롬프트 2,000자 초과: {len(hid_b):,}자")
-        if len(add_b) > max_add_len:
-            max_add_len = len(add_b)
-            max_add_name = r_name
-
-        if "[@id=Status|" not in prol_b:
-            errors.append(f"{r_name} 프롤로그 말미에 [@id=Status|...] 호출문 누락")
-
-        print(
-            f"  - {r_name}: 이름({len(title_b)}/20자) | 프롤로그({len(prol_b):,}/2,000자) | "
-            f"히든({len(hid_b):,}/2,000자) | 추가({len(add_b):,}자)"
-        )
-
-    total_prompt_len = main_len + max_add_len
-    if total_prompt_len > 8000:
-        errors.append(f"메인 + {max_add_name} 합산 글자 수 8,000자 초과: {total_prompt_len:,}자")
-        print(f"  👉 [합산 결과] 메인 + 최장 추가 = {total_prompt_len:,} / 8,000자 (초과: {total_prompt_len - 8000}자) -> FAIL ❌")
-    else:
-        print(f"  👉 [합산 결과] 메인({main_len:,}자) + 최장 추가[{max_add_name}]({max_add_len:,}자) = {total_prompt_len:,} / 8,000자 (여유분: {8000 - total_prompt_len:,}자) -> PASS ✅")
-
-    # 2. 설정집 글자 수 검증
-    lorebook_matches = re.findall(
-        r"### \d+\. 설정집 \d+: (.*?)\n.*?\* \*\*키워드 \([^)]*\)\*\*: `(.*?)`\n.*?\* \*\*프롬프트 \(500자 이내\)\*\*:\n```text\n(.*?)```",
-        body,
-        re.DOTALL
-    )
-
-    min_lorebooks = int(meta.get("min_lorebooks", 0) or (6 if roster == "campus" else 1))
-    print("\n📚 [2] 설정집(Lorebook) 글자 수 및 키워드 한도 검증 (프롬프트 <= 500자, 키워드 각 15자 이내 · 최대 5개)")
-    if len(lorebook_matches) < min_lorebooks:
-        errors.append(f"설정집 최소 기준({min_lorebooks}개) 미달 (발견: {len(lorebook_matches)}개)")
-
-    for l_title, kw_b, prompt_b in lorebook_matches:
-        l_title = l_title.strip()
-        kw_b = kw_b.strip()
-        prompt_b = prompt_b.strip()
-        kw_tags = [k.strip() for k in kw_b.split(",") if k.strip()]
-        if len(kw_tags) > 5:
-            errors.append(f"설정집 '{l_title}' 키워드 5개 초과: {len(kw_tags)}개 (`{kw_b}`)")
-        for kt in kw_tags:
-            if len(kt) > 15:
-                errors.append(f"설정집 '{l_title}' 개별 키워드 15자 초과: `{kt}` ({len(kt)}자)")
-        if len(prompt_b) > 500:
-            errors.append(f"설정집 '{l_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
-        print(f"  - {l_title}: 키워드 `{kw_b}` ({len(kw_tags)}/5개) | 본문 ({len(prompt_b)}/500자)")
-
-    # 3. 캐릭터 한도 검증 (로스터 실제 캐릭터 수 기반 동적 검증)
-    char_match = re.search(r"# 👥 \[탭 4: 캐릭터\].*?(?=# 🧩 \[탭 5: 에셋\]|$)", body, re.DOTALL)
-    char_text = char_match.group(0) if char_match else body
-
-    char_matches = re.findall(
-        r"### \d+\. (.*?) \([`a-zA-Z가-힣\s]+\)\n.*?\* \*\*이름 \(20자 이내\)\*\*: `(.*?)`\n(?:\* \*\*별명 \([^)]*\)\*\*: `.*?`\n)?.*?\* \*\*키워드 \([^)]*\)\*\*: `(.*?)`\n.*?\* \*\*소개 \(.*?300자 이내\)\*\*:\n```text\n(.*?)```\n.*?\* \*\*프롬프트 \(.*?500자 이내\)\*\*:\n```text\n(.*?)```",
-        char_text,
-        re.DOTALL
-    )
-
-    roster_chars_dir = PROJECTS_DIR / roster / "characters"
-    expected_char_count = (
-        len([p for p in roster_chars_dir.glob("*.json") if not p.name.startswith("_")])
-        if roster_chars_dir.is_dir()
-        else 1
-    )
-    min_chars = int(meta.get("min_characters", 0) or max(1, expected_char_count))
-    print(f"\n👥 [3] 캐릭터 ({len(char_matches)}/{min_chars}명) 한도 및 키워드 중복 검증 (프롬프트 <= 500자, 소개 <= 300자, 키워드 각 15자 이내 · 최대 5개)")
-    if len(char_matches) < min_chars:
-        errors.append(f"캐릭터 최소 기준({min_chars}명) 중 일부 파싱 실패 (발견: {len(char_matches)}명)")
-
-    all_char_kws: List[str] = []
-    for c_title, name_b, kw_b, intro_b, prompt_b in char_matches:
-        c_title = c_title.strip()
-        kw_b = kw_b.strip()
-        intro_b = intro_b.strip()
-        prompt_b = prompt_b.strip()
-
-        kws = [k.strip() for k in kw_b.split(",") if k.strip()]
-        if len(kws) > 5:
-            errors.append(f"캐릭터 '{c_title}' 키워드 5개 초과: {len(kws)}개 (`{kw_b}`)")
-        for kw in kws:
-            if len(kw) > 15:
-                errors.append(f"캐릭터 '{c_title}' 개별 키워드 15자 초과: `{kw}` ({len(kw)}자)")
-            if kw in all_char_kws:
-                errors.append(f"캐릭터 키워드 중복 발견: `{kw}` (타 히로인 호출 간섭 유발)")
-            all_char_kws.append(kw)
-        if len(intro_b) > 300:
-            errors.append(f"캐릭터 '{c_title}' 소개 300자 초과: {len(intro_b)}자")
-        if len(prompt_b) > 500:
-            errors.append(f"캐릭터 '{c_title}' 프롬프트 500자 초과: {len(prompt_b)}자")
-
-        print(f"  - {c_title}: 키워드 `{kw_b}` ({len(kws)}/5개) | 소개 ({len(intro_b)}/300자) | 프롬프트 ({len(prompt_b)}/500자)")
-
-    # 4. 8대 통일 변수 및 장소명 키워드 검증
-    print("\n⚙️ [4] 8대 통일 변수, 키워드형 장소명 및 실제 에셋 정합성 검증")
-    all_code_blocks = "\n".join(re.findall(r"```(?:text|markdown|jsx)?\n(.*?)```", body, re.DOTALL))
-
-    legacy_vars = ["team_prog", "cha_affinity", "cha_stress", "heroine_affinity", "heroine_stress"]
-    for lv in legacy_vars:
-        if re.search(r"\b" + re.escape(lv) + r"\b", all_code_blocks):
-            errors.append(f"구버전 레거시 변수 감지: `{lv}` (8대 통일 변수로 교체 필요)")
-
-    banned_loc_prefixes = ["공학관", "인문관", "304호", "402호", "101호", "3층", "2층", "1층", "중앙도서관", "학생회관"]
-    for blp in banned_loc_prefixes:
-        if blp in all_code_blocks:
-            errors.append(f"장소명에 복잡한 층/호실/관 수식어 감지: `{blp}` (직관적 키워드형 장소명 필요)")
-
-    # 5. 실제 에셋 파일명 대조 검증
-    referenced_poses: Set[str] = set()
-
-    for token in re.findall(r"(?<![a-zA-Z0-9_])(\d{3}_[가-힣a-zA-Z0-9_\(\)]+)", all_code_blocks):
-        referenced_poses.add(token.strip())
-
-    for url_match in re.findall(r"\{\{url\}\}(?:[a-z]{3}/)?[a-z]{3}_(\d{3}_[^\s\.\n\r\t\"\'\`]+)\.webp", body):
-        referenced_poses.add(url_match.strip())
-
-    invalid_poses = []
-    if valid_suffixes:
-        for rp in sorted(referenced_poses):
-            if rp not in valid_suffixes:
-                invalid_poses.append(rp)
-
-    if invalid_poses:
-        for ip in invalid_poses:
-            errors.append(f"존재하지 않는 포즈 파일명 참조(404 위험): `{ip}`")
-
-    print(f"  - 실제 에셋 서픽스 수집 수량: {len(valid_suffixes)}종")
-    print(f"  - 완성본에서 검증된 고유 포즈 수량: {len(referenced_poses)}종 (불일치: {len(invalid_poses)}건)")
+    validate_prompts_section(body, errors)
+    validate_lorebooks_section(body, meta, roster, errors)
+    validate_characters_section(body, meta, roster, PROJECTS_DIR, errors)
+    validate_vars_and_assets(body, valid_suffixes, errors)
 
     is_passed = len(errors) == 0
     print("\n" + "=" * 76)
     if is_passed:
         print(f"✅ [PASS] {file_path.name} 무결성 100% 통과!")
-        # 캐시 갱신
         cache[cache_key] = {
             "file_hash": file_hash,
             "asset_count": asset_count,
@@ -358,7 +149,6 @@ def run_all_validations(
 ) -> bool:
     """전체 활성 완성본 문서 일괄 순회 검증."""
     files_to_check: List[Path] = []
-
     if specific_file:
         p = Path(specific_file)
         if not p.is_absolute():
@@ -368,12 +158,9 @@ def run_all_validations(
         if not GENIT_DIR.exists():
             print(f"[WARN] 젠잇 완성본 디렉토리가 존재하지 않습니다: {GENIT_DIR}")
             return True
-
         for p in sorted(GENIT_DIR.glob("*.md")):
-            # 아카이브 폴더는 glob에서 자연스럽게 제외됨
             if target_roster:
-                content = p.read_text(encoding="utf-8")
-                meta, _ = parse_frontmatter(content)
+                meta, _ = parse_frontmatter(p.read_text(encoding="utf-8"))
                 if meta.get("roster") != target_roster:
                     continue
             files_to_check.append(p)
@@ -385,13 +172,8 @@ def run_all_validations(
     all_passed = True
     total_checked = 0
     cached_count = 0
-
     for fpath in files_to_check:
-        passed, errors, is_cached = validate_document(
-            fpath,
-            use_cache=(not no_cache),
-            force_all=force_all,
-        )
+        passed, _, is_cached = validate_document(fpath, use_cache=(not no_cache), force_all=force_all)
         total_checked += 1
         if is_cached:
             cached_count += 1

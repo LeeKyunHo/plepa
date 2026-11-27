@@ -43,7 +43,16 @@ _SENSITIVE_TERMS = tuple(base64.b64decode(item).decode("utf-8") for item in _SEN
 
 _MEDIA_EXTS = {".webp", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".mp4", ".avi"}
 _LEGACY_PATH_PREFIXES = ("data/legacy/", "plepa_engine/legacy/", "flux_batch_generator.py")
-_BLOCKED_READ_SUBTREES = ("output/", "temp/", "models/", "benchmarks/", "docs/archive/assets/", "docs/archive/benchmarks/")
+_BLOCKED_READ_SUBTREES = (
+    "output/",
+    "temp/",
+    "models/",
+    "benchmarks/",
+    "docs/archive/assets/",
+    "docs/archive/benchmarks/",
+    "scripts/archive/",
+    "scripts/benchmarks/",
+)
 _FILE_READ_TOOLS = {"read_file", "view_file"}
 _FILE_WRITE_TOOLS = {"write_file", "edit_file", "write_to_file", "replace_file_content", "multi_replace_file_content"}
 
@@ -54,7 +63,7 @@ _DESTRUCTIVE_SHELL_RE = re.compile(
 )
 _SAFE_READONLY_TOOL_RE = re.compile(
     r"(?i)(?:\bpytest\b|-m\s+pytest\b|-m\s+plepa_engine\.precheck\b"
-    r"|scripts[/\\](?:export_context|validate_genit_work|audit_asset_alignment|audit_sector_assets|benchmark_censor_metrics)\.py"
+    r"|scripts[/\\](?:export_context|validate_genit_work|audit_asset_alignment|audit_sector_assets|ml[/\\]benchmark_censor_metrics|benchmark_censor_metrics)\.py"
     r"|^\s*git\s+(?:status|diff|log|show|branch)\b)"
 )
 _ASSETS_OR_ORIGIN_RE = re.compile(r"(?i)(?:projects[/\\][^/\\;\s\"']+[/\\]assets\b|[^/\\;\s\"']*_origin\b)")

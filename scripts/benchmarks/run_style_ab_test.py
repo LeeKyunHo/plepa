@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 PYTHON = sys.executable
 SEED = "20261116"
 
@@ -48,7 +48,7 @@ def main() -> int:
                 print(f"[ERROR] Failed: mode={mode_name} char={char} exit={proc.returncode}", flush=True)
                 return proc.returncode
 
-    from scripts.build_style_ab_gallery import build_gallery
+    from scripts.benchmarks.build_style_ab_gallery import build_gallery
     gallery_path = build_gallery()
     print(f"\n=== [Style A/B] Gallery built: {gallery_path} ===", flush=True)
     return 0
