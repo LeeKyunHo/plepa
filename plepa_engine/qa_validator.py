@@ -110,6 +110,7 @@ def validate_generated_image(
     is_offscreen_partner: bool = False,
     is_kiss_scene: bool = False,
     allow_partner_head: bool = False,
+    allow_partner_shadow_face: bool = False,
     section: Optional[str] = None,
     conf_threshold: float = 0.55,
     prompt: Optional[str] = None,
@@ -185,7 +186,8 @@ def validate_generated_image(
         face_err, valid_faces = check_face_count(
             detect_faces_fn=detect_faces, img=img, is_solo=is_solo, is_two_person=is_two_person,
             is_offscreen_partner=is_offscreen_partner, is_kiss=is_kiss, is_nursing=is_nursing,
-            is_close_up_focus=is_close_up_focus, eff_require_subject=eff_require_subject,
+            is_close_up_focus=is_close_up_focus, allow_partner_shadow_face=allow_partner_shadow_face,
+            eff_require_subject=eff_require_subject,
             headless_allowed=headless_allowed, p_text=p_text, metrics=metrics,
         )
         if face_err:

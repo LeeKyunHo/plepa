@@ -208,6 +208,38 @@ class TestQAValidator(unittest.TestCase):
                 )
                 self.assertTrue(passed, f"{raw_prompt}: {reason}")
 
+    def test_side_cuddle_allow_partner_shadow_face_regression(self):
+        """side_cuddle+mob_shadow 조건(allow_partner_shadow_face=True)만 faces<=2 허용하고 일반 씬은 차단을 유지합니다."""
+        from unittest.mock import patch
+
+        img = Image.new("RGB", (256, 256), color=(200, 200, 200))
+        with patch("plepa_engine.qa_validator.detect_person", return_value=[((0, 0, 100, 200), "person", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_heads", return_value=[((20, 20, 80, 80), "head", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_faces", return_value=[((25, 25, 75, 75), "face", 0.9)] * 2), \
+             patch("plepa_engine.qa_validator.detect_hands", return_value=[]):
+            passed_ok, reason_ok, _ = validate_generated_image(
+                img,
+                is_solo_scene=False,
+                is_two_person=True,
+                is_offscreen_partner=True,
+                allow_partner_head=True,
+                allow_partner_shadow_face=True,
+                prompt="upper body, 1girl, 1boy, sitting on sofa",
+            )
+            self.assertTrue(passed_ok, reason_ok)
+
+            passed_ng, reason_ng, _ = validate_generated_image(
+                img,
+                is_solo_scene=False,
+                is_two_person=True,
+                is_offscreen_partner=True,
+                allow_partner_head=True,
+                allow_partner_shadow_face=False,
+                prompt="upper body, 1girl, 1boy, sitting on sofa",
+            )
+            self.assertFalse(passed_ng)
+            self.assertIn("얼굴 노출", reason_ng)
+
     def test_faceless_male_and_is_kiss_scene_preservation(self):
         """2인 중거리 샷 faceless 위반 차단 및 호출자 is_kiss_scene 인자 보존 검증."""
         from unittest.mock import patch

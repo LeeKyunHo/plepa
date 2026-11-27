@@ -54,11 +54,13 @@ def _run_qc_checks_for_attempt(
 
     qc_prompt = pose.get_prompt(getattr(char, "gender", "female")) if callable(getattr(pose, "get_prompt", None)) else (pose.prompt or "")
     pose_partner_pos = (getattr(pose, "partner_pos", None) or "").strip().lower()
+    pose_mob_shadow = bool(getattr(pose, "mob_shadow", False))
     qc_allow_partner_head = (
         pose_mob_tier == 2
-        or (qc_is_two_person and pose_partner_pos in ("behind", "above", "below", "side_kiss", "carry", "bury_chest", "between_thighs"))
+        or (qc_is_two_person and pose_partner_pos in ("behind", "above", "below", "side_kiss", "side_cuddle", "carry", "bury_chest", "between_thighs"))
     )
     is_kiss = "kiss" in qc_prompt.lower() or str(item.target.code) in ("060", "061", "019")
+    qc_allow_partner_shadow_face = pose_mob_shadow and pose_partner_pos == "side_cuddle"
 
     passed, fail_reason, _ = validate_fn(
         image=item.out_path,
@@ -67,6 +69,7 @@ def _run_qc_checks_for_attempt(
         is_offscreen_partner=qc_is_offscreen,
         is_kiss_scene=is_kiss,
         allow_partner_head=qc_allow_partner_head,
+        allow_partner_shadow_face=qc_allow_partner_shadow_face,
         section=item.target.section,
         prompt=qc_prompt,
     )

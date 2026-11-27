@@ -84,6 +84,7 @@ _PARTNER_POS_SPECS: Dict[str, str] = {
     "below": "male hands gripping her waist and hips from below, intimate close embrace, partner head out of frame",
     "behind": "male torso tightly embracing from behind, male hands gripping her hips and waist firmly, lower body occluded, partner head out of frame",
     "side_kiss": "cropped male torso and shoulder at edge, partner head out of frame, partner arms around waist",
+    "side_cuddle": "male partner sitting beside her at frame edge, cropped male shoulder at side edge, male upper face in shadow",
     "offscreen": "partner head out of frame, cropped male hands at frame edge",
     "carry": "carried in dark-haired male partner's arms, male torso and shoulders supporting her",
     "bury_chest": "back of dark-haired male head buried in her chest, male face completely obscured, partner arms around waist",

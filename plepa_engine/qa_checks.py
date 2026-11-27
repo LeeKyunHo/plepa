@@ -245,6 +245,7 @@ def check_face_count(
     headless_allowed: bool,
     p_text: str,
     metrics: Dict[str, Any],
+    allow_partner_shadow_face: bool = False,
 ) -> Tuple[Optional[str], list]:
     """3단계: 얼굴 검출 수 및 faceless·모브 얼굴 노출 위반 여부를 판정합니다."""
     raw_faces = detect_faces_fn(img)
@@ -258,7 +259,7 @@ def check_face_count(
         if metrics["faces"] > 1:
             return f"1인 씬 얼굴 초과 감지 (얼굴: {metrics['faces']}개)", valid_faces
     elif is_two_person and is_offscreen_partner:
-        max_offscreen_faces = 2 if (is_kiss or is_nursing) else 1
+        max_offscreen_faces = 2 if (is_kiss or is_nursing or allow_partner_shadow_face) else 1
         if metrics["faces"] > max_offscreen_faces:
             return (
                 f"오프스크린 파트너 씬 모브 얼굴 노출 감지 (얼굴: {metrics['faces']}개, 단독 {max_offscreen_faces}인 얼굴만 허용)",
