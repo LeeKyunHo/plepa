@@ -128,14 +128,16 @@ def collect_active_ssot_docs() -> List[Dict[str, Any]]:
         ("POSE_MAPPING.md", "V3 전체 포즈·모브·배경·deprecated 단일 SSOT"),
         ("사용법.txt", "CLI 플래그·포즈 표현식 치트시트"),
         ("README.md", "프로젝트 개요·SDXL 스택·디렉토리 요약"),
-        ("docs/AI_HANDOVER_GUIDE.md", "현행 15대 불변식 + Active ADR 요약"),
+        ("docs/AI_HANDOVER_GUIDE.md", "현행 15대 불변식 + Active ADR-80~115+ 요약"),
         ("docs/RUNBOOK.md", "모델 설치·운영 게이트·트러블슈팅"),
         ("docs/GUI_GUIDE.md", "NiceGUI 8대 탭 + 수동 검열 에디터 안내"),
         ("docs/DOCUMENTATION_GUIDE.md", "Diataxis 문서 계층 & Push 전 5단계 게이트"),
         ("docs/플에파_기능명세.md", "엔진 아키텍처·7대 Mutator·REST API 명세"),
         ("docs/캐릭터_포즈_제작_규칙.md", "JSON·프롬프트 불변식·남캐 음영·7단계 precheck"),
         ("docs/젠잇_캐릭터채팅_제작법.md", "Gen-IT v2.2 5탭 시스템·Status/Line JSX 명세"),
-        ("docs/REMOTE_INSPECTION_GUIDE.md", "8080/mobile & 8085/inspect 원격 검수 가이드"),
+        ("docs/노벨챗_캐릭터채팅_제작법.md", "노벨챗 6탭·500장·`_` 자동 파싱·변수 제작 가이드"),
+        ("docs/platforms/CORE_SPEC.md", "멀티플랫폼 공통 챗봇 핵심 스펙"),
+        ("docs/REMOTE_INSPECTION_GUIDE.md", ":8080/mobile 단일 원격 터널·수동 덧칠·보안 런북"),
         ("docs/개발일지.md", "Quick Symptom Index + 최근 10회차 플레이북"),
     ]
     rows: List[Dict[str, Any]] = []
@@ -147,13 +149,13 @@ def collect_active_ssot_docs() -> List[Dict[str, Any]]:
     return rows
 
 
-def collect_genit_status() -> List[Dict[str, Any]]:
-    """`docs/genit/*.md` 현행 상용 챗봇 문서 및 템플릿 상태를 수집합니다."""
-    genit_dir = PLEPA_ROOT / "docs" / "genit"
+def collect_chatbot_docs_status(subdir: str) -> List[Dict[str, Any]]:
+    """`docs/{subdir}/*.md` 상용 챗봇 문서 및 템플릿의 줄수·status·version 메타를 수집합니다."""
+    target_dir = PLEPA_ROOT / "docs" / subdir
     rows: List[Dict[str, Any]] = []
-    if not genit_dir.is_dir():
+    if not target_dir.is_dir():
         return rows
-    for p in sorted(genit_dir.glob("*.md")):
+    for p in sorted(target_dir.glob("*.md")):
         lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
         head = "\n".join(lines[:15])
         m_st = re.search(r"(?m)^status:\s*(.+)$", head)
@@ -167,11 +169,33 @@ def collect_genit_status() -> List[Dict[str, Any]]:
     return rows
 
 
+def collect_genit_status() -> List[Dict[str, Any]]:
+    """`docs/genit/*.md` 현행 상용 챗봇 문서 및 템플릿 상태를 수집합니다."""
+    return collect_chatbot_docs_status("genit")
+
+
+def collect_novelchat_status() -> List[Dict[str, Any]]:
+    """`docs/novelchat/*.md` 노벨챗 6탭 문서 및 템플릿 상태를 수집합니다."""
+    return collect_chatbot_docs_status("novelchat")
+
+
+def _read_roster_status(rdir: Path) -> str:
+    """`roster.json`에서 로스터 생애주기 상태('active' | 'legacy')를 조회합니다."""
+    meta_p = rdir / "roster.json"
+    if not meta_p.is_file():
+        return "active"
+    try:
+        data = json.loads(meta_p.read_text(encoding="utf-8"))
+        return str(data.get("status") or "active").strip().lower()
+    except Exception:
+        return "active"
+
+
 def build_asset_matrix() -> Tuple[str, List[List[Any]]]:
-    """12개 로스터별 캐릭터 수, 설정 완비 상태 및 에셋 파일 수를 집계합니다 (이미지 내용 미열람)."""
+    """12개 로스터별 상태(active/legacy), 캐릭터 수, 설정 완비 상태 및 에셋 파일 수를 집계합니다."""
     rows: List[List[Any]] = []
     if not PROJECTS_DIR.is_dir():
-        return "| 로스터 | 캐릭터 | events | bg_map | 정규 에셋 | _origin |\n| :--- | :---: | :---: | :---: | :---: | :---: |", rows
+        return "| 로스터 | 상태 | 캐릭터 | events | bg_map | 정규 에셋 | _origin |\n| :--- | :---: | :---: | :---: | :---: | :---: | :---: |", rows
 
     for rdir in sorted(PROJECTS_DIR.iterdir()):
         if not rdir.is_dir() or rdir.name.startswith("."):
@@ -191,6 +215,7 @@ def build_asset_matrix() -> Tuple[str, List[List[Any]]]:
                     norm_cnt += 1
         rows.append([
             rdir.name,
+            _read_roster_status(rdir),
             len(chars),
             "O" if (rdir / "events.json").is_file() else "-",
             "O" if (rdir / "pose_background_mapping.json").is_file() else "-",
@@ -199,11 +224,11 @@ def build_asset_matrix() -> Tuple[str, List[List[Any]]]:
         ])
 
     lines = [
-        "| 로스터 | 캐릭터 수 | `events.json` | `bg_map` | 정규 WebP | `_origin` WebP |",
-        "| :--- | :---: | :---: | :---: | :---: | :---: |",
+        "| 로스터 | 상태 | 캐릭터 수 | `events.json` | `bg_map` | 정규 WebP | `_origin` WebP |",
+        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |",
     ]
     for r in rows:
-        lines.append(f"| `{r[0]}` | {r[1]}명 | {r[2]} | {r[3]} | {r[4]}장 | {r[5]}장 |")
+        lines.append(f"| `{r[0]}` | `{r[1]}` | {r[2]}명 | {r[3]} | {r[4]} | {r[5]}장 | {r[6]}장 |")
     return "\n".join(lines), rows
 
 
@@ -217,8 +242,10 @@ def build_drift(kiro_root: Path) -> str:
 
 
 def parse_refactoring_progress(plan_path: Optional[Path] = None) -> List[Dict[str, Any]]:
-    """`plepa_refactoring_analysis.md`의 Wave 0~5 체크박스를 파싱하여 진행 현황을 요약합니다."""
-    target = plan_path or (PLEPA_ROOT / "plepa_refactoring_analysis.md")
+    """Wave 0~5 마스터 계획서의 체크박스를 파싱하여 진행 현황을 요약합니다."""
+    target = plan_path or (PLEPA_ROOT / "docs" / "archive" / "plepa_refactoring_analysis.md")
+    if not target.is_file() and plan_path is None:
+        target = PLEPA_ROOT / "plepa_refactoring_analysis.md"
     if not target.is_file():
         return []
     out: List[Dict[str, Any]] = []

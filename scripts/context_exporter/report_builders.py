@@ -18,14 +18,28 @@ from .runtime_and_telemetry import (
     build_asset_matrix,
     build_drift,
     collect_genit_status,
+    collect_novelchat_status,
     parse_refactoring_progress,
 )
 
 
+def _format_chatbot_doc_table(heading: str, rows: List[Dict[str, Any]]) -> List[str]:
+    """`docs/{genit|novelchat}/` 마크다운 상태 테이블을 생성합니다."""
+    lines: List[str] = [
+        heading,
+        "| 파일명 | 줄 수 | 상태 | 버전 |",
+        "| :--- | :---: | :---: | :---: |",
+    ]
+    for row in rows:
+        lines.append(f"| `{row['name']}` | {row['lines']}L | `{row['status']}` | `{row['version']}` |")
+    return lines
+
+
 def build_tier3(snap: Dict[str, Any], kiro_root: Path, run_tests: bool, delta: List[str]) -> str:
-    """`30_TIER3_RUNTIME.md`: 12개 로스터 자산 매트릭스, Gen-IT 현황, 최근 일지/감사 요약, 드리프트."""
+    """`30_TIER3_RUNTIME.md`: 12개 로스터 자산 매트릭스, Gen-IT/노벨챗 현황, 최근 일지/감사 요약, 드리프트."""
     matrix_md, _ = build_asset_matrix()
     genit_rows = collect_genit_status()
+    novelchat_rows = collect_novelchat_status()
     journal_p = PLEPA_ROOT / "docs" / "개발일지.md"
     recent_journal: List[str] = []
     if journal_p.is_file():
@@ -46,12 +60,10 @@ def build_tier3(snap: Dict[str, Any], kiro_root: Path, run_tests: bool, delta: L
         "## 1. 12개 로스터 메타 & 에셋 매트릭스",
         matrix_md,
         "",
-        "## 2. Gen-IT 상용 패키지 현황 (`docs/genit/`)",
-        "| 파일명 | 줄 수 | 상태 | 버전 |",
-        "| :--- | :---: | :---: | :---: |",
+        *_format_chatbot_doc_table("## 2. Gen-IT 상용 패키지 현황 (`docs/genit/`)", genit_rows),
+        "",
+        *_format_chatbot_doc_table("## 2-1. 노벨챗(NovelChat) 패키지 현황 (`docs/novelchat/`)", novelchat_rows),
     ]
-    for g in genit_rows:
-        out.append(f"| `{g['name']}` | {g['lines']}L | `{g['status']}` | `{g['version']}` |")
 
     out.extend(["", "## 3. 최근 개발일지 요약 (`docs/개발일지.md`)"])
     out.extend(recent_journal or ["- 기록 없음"])
@@ -70,7 +82,7 @@ def build_refactoring_plan(snap: Dict[str, Any]) -> str:
     out: List[str] = [
         "# 🧭 Wave 0~5 리팩토링 현황 & Live AST 텔레메트리 (`50_REFACTORING_PLAN.md`)",
         "",
-        "## 1. Wave 0~5 마스터 진척도 (`plepa_refactoring_analysis.md` 기반)",
+        "## 1. Wave 0~5 마스터 진척도 (`docs/archive/plepa_refactoring_analysis.md` 기반)",
         "| Wave 단계 | 상태 | 핵심 내역 요약 |",
         "| :--- | :---: | :--- |",
     ]
@@ -113,10 +125,10 @@ def build_refactoring_plan(snap: Dict[str, Any]) -> str:
         "## 3. 외부 Gemini 노트북 ➔ 로컬 Antigravity 표준 지시서 템플릿",
         "```text",
         "[PLEPA 작업 지시서]",
-        "1. 대상 Wave/모듈: (예: Wave 3 - plepa_engine/censor/ 서브패키지 분해)",
+        "1. 대상 작업: (예: 신규 포즈 추가·라벨 동기화 / GENERATION_OPTION_SPECS CLI·GUI 옵션 확장)",
         "2. 활성화할 스킬: .agents/skills/<skill-name>/SKILL.md 준수",
-        "3. 제약 조건: 신규 모듈 <=350줄 / 신규 함수 <=120줄, projects/*/assets/ 무접촉, FLUX legacy 열람 금지",
-        "4. 완료 검증 게이트: .\\.venv\\Scripts\\python.exe -m pytest -q && python -m plepa_engine.precheck -r campus && python scripts/export_context.py",
+        "3. 제약 조건: 활성 모듈 <=350줄 / 함수 <=120줄, projects/*/assets/ 무접촉, legacy·archive 열람 금지",
+        "4. 완료 검증 게이트: .\\.venv\\Scripts\\python.exe -m pytest -q && .\\.venv\\Scripts\\python.exe -m plepa_engine.precheck -r campus && .\\.venv\\Scripts\\python.exe scripts/validate_genit_work.py --force && .\\.venv\\Scripts\\python.exe scripts/export_context.py",
         "```",
     ])
     return "\n".join(out) + "\n"
