@@ -1,6 +1,6 @@
 # 🧠 플에파(PLEPA) 시스템 아키텍처 & 에이전트 인계 핵심 가이드 (Active SSOT)
 
-> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-113)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
+> **역할**: 신규 에이전트·저사양 모델·외부 Gemini 노트북이 프로젝트의 **현재 골든 스테이트(15대 불변식)**와 **최근 주요 의사결정(ADR-80 ~ ADR-114)**을 200줄 이내로 즉시 숙지하는 최우선 인계 문서입니다.  
 > **포즈 단일 매핑표**: [`POSE_MAPPING.md`](../POSE_MAPPING.md) · **제작 규칙**: [`캐릭터_포즈_제작_규칙.md`](캐릭터_포즈_제작_규칙.md) · **운영 런북**: [`RUNBOOK.md`](RUNBOOK.md)  
 > **과거 전체 아카이브 (`ADR-01 ~ ADR-107` 상세 원문 & FLUX/V1~V2 초기 이력)**: [`docs/archive/ADR_HISTORY_FULL.md`](archive/ADR_HISTORY_FULL.md)
 
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-113`, 상세 원문은 Archive 참조)
+## 📋 3. Active ADR 핵심 요약 (`ADR-80 ~ ADR-114`, 상세 원문은 Archive 참조)
 
 ### ADR-80 ~ ADR-89: 2섹터 통합 · 공통 봉사 대역 · 콤팩트 언더마스킹 & FIFO 큐
 - **ADR-80 (2026-10-28)**: 80인 작가 화풍 벤치마크(`art_*`, `.gitignore` 격리) & 웹 갤러리 마운트.
@@ -61,3 +61,4 @@
 - **ADR-111 (2026-11-27, Wave 4-A)**: 단일 거대 모듈 `plepa_engine/censor.py`(3,787L)를 `plepa_engine/censor/` 19개 단일 책임 모듈(`<=322L`, 전 함수 `<=117L`)로 Phase P2.5 수치·공개 API·테스트 패치 호환성(`facade_get`/`facade_set`) 100% 무변경 분해 완료 및 `test_contract_guards.py` AST 래칫 Allowlist 제거.
 - **ADR-112 (2026-11-27, Wave 4-B1)**: 코어 4대 영역(`prompt_pipeline.py` 1,381L ➔ `pipeline/` 11모듈 + `78L` 파사드, `comfy_client`+`comfy_transport`, `qa_validator`+`qa_checks`, `precheck`+`precheck_rules`) 순수 구조 분해 완료 (전 모듈 `<=316L` · 전 함수 `<=105L`, Short-Circuit 및 패치 호환성 100% 유지, `test_contract_guards.py` Wave 4-B1 래칫 Allowlist 4모듈·4함수 제거).
 - **ADR-113 (2026-11-27, Wave 4-B2 / Wave 4 완결)**: 서비스 레이어 4대 모듈(`generation_service` ➔ `generation/` 6모듈 + `238L` 파사드, `health_service` ➔ `health_checks_core/ops`, `pose_service` ➔ `pose_resolver/storage`, `asset_service` ➔ `asset_helpers`) 및 `workflow_templates`(`workflow_nodes.py`)·`novelchat_validator` 분해를 완료하고 `health_service` 정적 GUI 역방향 import를 `importlib` 동적 검증으로 전환해 **`plepa_engine/` 전 74모듈 `<=350L` · 전 함수 `<=120L` · AST/역방향 레이어 Allowlist 0건** 달성 (`pytest 276 passed`).
+- **ADR-114 (2026-11-27, Wave 5-A)**: `plepa_gui/` 내 인라인 CSS/HTML/JS를 [`plepa_gui/static/`](../plepa_gui/static/mobile_viewer.html) 6파일(`retouch_editor.{css,html,js}`, `mobile_viewer.{css,html,js}`)로 분리하고, [`api_routes.py`](../plepa_gui/api_routes.py)(`api_schemas`/`api_security`/`api_file_ops`), [`gallery.py`](../plepa_gui/pages/gallery.py)(`gallery_parts/` 7모듈), [`generate.py`](../plepa_gui/pages/generate.py)(`generate_sections.py`), [`characters.py`](../plepa_gui/pages/characters.py)(`characters_form.py`) 및 4대 설정/포즈 페이지를 분해해 **`plepa_gui/` 전 28개 파이썬 모듈 `<=350L` · 전 함수 `<=120L` · Allowlist 0건 · `run_batch` 우회 0건** 달성 (`pytest 279 passed`).

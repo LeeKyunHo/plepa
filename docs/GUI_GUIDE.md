@@ -46,13 +46,14 @@
 * **FIFO 대기열 일원화**: `/generate` 및 `/gallery`의 누락 채우기·리롤 요청은 모두 `GlobalJobManager.enqueue_job()` FIFO 대기열을 통해 ComfyUI 경합 없이 순차 실행됩니다.
 
 ### ⑥ 에셋 갤러리 & 통합 작업실 (`/gallery`)
+* **모듈 아키텍처 (`gallery.py` + `gallery_parts/`)**: `data_helpers`, `dialogs`, `queue_panel`, `controls`, `views`, `lightbox`, `lightbox_actions`로 책임 분리되어 모든 모듈 `<=350L` · 함수 `<=120L` 규격을 준수합니다.
 * **최신 생성순/포즈순 정렬 & 서브필터**: `NEW` 뱃지, 성별·섹션·미생성 필터, 라이트박스 확대 및 `📦 Genit 내보내기` (`GenitExporter.export_roster()` — 로컬 원본 100% 보존 + 패키지용 `1024×1536` Lanczos 중앙 크롭 통일).
 * **인라인 3대 액션**:
-  - `✏️ 터치 덧칠` (`plepa_gui/components/retouch_editor.py`): 현재 이미지 또는 `🧹 검열 제거(원본 로드)` 후 `🖌️ 화이트 덧칠` / `🩹 지우개(원본 복원)` 편집 ➔ `POST /api/assets/retouch`로 본체 WebP 원자적 교체(`_origin` 보호).
+  - `✏️ 터치 덧칠` (`plepa_gui/components/retouch_editor.py` + `plepa_gui/static/retouch_editor.{css,html,js}`): 현재 이미지 또는 `🧹 검열 제거(원본 로드)` 후 `🖌️ 화이트 덧칠` / `🩹 지우개(원본 복원)` 편집 ➔ `POST /api/assets/retouch`로 본체 WebP 원자적 교체(`_origin` 보호).
   - `⚡ 재검열` (`POST /api/assets/reapply-censor`) · `🔄 원본 복원` (`POST /api/assets/restore-origin`) · `🎲 리롤` (`POST /api/assets/reroll`) · `휴지통` (`POST /api/assets/delete` / `undo`).
 
 ### ⑦ 모바일 전용 고속 뷰어 (`/mobile` · `/m`)
-* Vue/Quasar 오버헤드 없는 경량 HTML5 스와이프 뷰어 + `retouch_editor.py` 수동 터치 캔버스 + 상단 `검열 스타일`/`검열 대상`/`앵커 폴백` 툴바 + 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 인증 자동 적용.
+* Vue/Quasar 오버헤드 없는 경량 HTML5 스와이프 뷰어(`pages/mobile_viewer.py` 파사드 + `static/mobile_viewer.{css,html,js}`) + `retouch_editor.py` 수동 터치 캔버스 + 상단 `검열 스타일`/`검열 대상`/`앵커 폴백` 툴바 + 원격 구동 시 `PLEPA_MOBILE_TOKEN` 쿠키·Origin 인증(`api_security.py`, `api_file_ops.py`) 자동 적용.
 * 보조 벤치마크 경로: `/otoko` (`/o`), `/compare` (`/c`), `/view_image`.
 
 ### ⑧ 환경 설정 (`/settings`)
