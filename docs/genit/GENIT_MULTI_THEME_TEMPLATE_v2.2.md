@@ -1,74 +1,165 @@
 ---
 status: template
-version: template-v2.2
-purpose: Gen-IT 다테마 캐릭터 채팅 제작 표준 청사진 (v2.2 기반)
+version: template-v2.2-master
+purpose: Gen-IT 다테마 신규 로스터 마스터 패키지 표준 청사진 (공식 JSX 3종 · 동적 CHAR_META · 12변수 · D20 · 탈 얀데레 1:1 DM)
 ---
 
-# 🧩 Gen-IT 다테마 캐릭터 채팅 표준 마스터 템플릿 (v2.2 Blueprint)
+# 🧩 Gen-IT 다테마 캐릭터 채팅 마스터 패키지 템플릿 (v2.2 Master Blueprint)
 
-> **문서 목적**: [`캠퍼스_젠잇_캐릭터_채팅_v2.2_완성본.md`](%EC%BA%A0%ED%8D%BC%EC%8A%A4_%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0_%EC%B1%84%ED%8C%85_v2.2_%EC%99%84%EC%84%B1%EB%B3%B8.md)에서 실전 검증 완료된 **5개 탭 패키지 구조 + 양방향 `Status`/`Line` JSX 위젯 + CommonMark 안전 인트로 HTML + 1024×1536 일괄 내보내기 규격**을 표준화하여, 향후 어떤 테마(`oto`, `spy`, 판타지, 오피스, 무협 등)의 신규 작품에도 치환만으로 즉시 복제·적용하기 위한 마스터 청사진입니다.
-
----
-
-## 🗺️ 1. 신규 작품 제작 5단계 표준 워크플로우
-
-1. **에셋 규격 통일 내보내기 (`plepa_gui` / `GenitExporter`)**
-   - 로컬 생성(`832×1216`) 완료 후 갤러리 상단 **`📦 Genit 내보내기`** ➔ **`로스터 전체 일괄 내보내기`** + **`폴더/원본파일명 유지`** + **`1024×1536 통일`** 실행 (`dist/genit/{roster}/{prefix}/`).
-2. **문서 복제 및 변수 치환**
-   - 아래 **치환 변수 테이블**에 맞춰 신규 마크다운 파일(`docs/genit/{테마}_젠잇_캐릭터_채팅_v1.md`) 생성 (`frontmatter`에 `roster: {로스터명}`, `status: active` 명기).
-3. **5개 탭 순서대로 Gen-IT 입력 및 CDN URL 확보**
-   - `1탭 [기본]` 인트로 HTML 작성 및 대표 이미지 업로드(`{{파일명.webp}}`).
-   - `2탭 [프롬프트]`~`4탭 [캐릭터]` 입력 후 **`scripts/validate_genit_work.py --force`**로 한도·포즈 정합성 검증.
-4. **CloudFront Base URL 바인딩 (필수)**
-   - 채팅 본문에 정상 출력된 이미지에서 **`이미지 주소 복사`** ➔ `https://{CDN_HOST}/media/characters/{CHAR_UUID}/assets/` 추출.
-   - `5탭 [에셋]`의 `Status` 및 `Line` JSX 내 `ASSET_BASE_URL` 상수에 붙여넣기 *(JSX 내부에서는 `{{url}}` 매크로가 치환되지 않으므로 필수)*.
-5. **실전 프리뷰 체크리스트 확인**
-   - 인트로 HTML 이미지 정상 렌더링 여부, `Status` 초상화 전환, `💬 톡 보내기` ➔ `Line` 채팅방 누적·답장·끄기 동작 확인.
+> **문서 목적**: 신규 로스터(캠퍼스, 오피스, 스파이, 오토코노코 마을 등)의 Gen-IT 5탭 작품을 제작할 때 **복제 즉시 프로덕션 규격을 충족하도록 표준화한 마스터 청사진**입니다.
+> * **공식 SSOT**: [`docs/젠잇_캐릭터채팅_제작법.md`](../%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0%EC%B1%84%ED%8C%85_%EC%A0%9C%EC%9E%91%EB%B2%95.md) | **참고 구현본**: [`캠퍼스_완성본`](%EC%BA%A0%ED%8D%BC%EC%8A%A4_%EC%A0%A0%EC%9E%87_%EC%BA%90%EB%A6%AD%ED%84%B0_%EC%B1%84%ED%8C%85_v2.2_%EC%99%84%EC%84%B1%EB%B3%B8.md) · [`오토코노코_마스터(frozen)`](oto_v2_2.md)
 
 ---
 
-## 🔧 2. 테마별 치환 변수 가이드 (Find & Replace Blueprint)
+## 1. 신규 작품 제작 5단계 표준 워크플로우
 
-| 치환 키 | 캠퍼스 v2.2 예시 | 타 테마 치환 예시 (예: 오피스 / 판타지 / 오토코노코) |
-| :--- | :--- | :--- |
-| `{{WORLD_TITLE}}` | `MEIO UNIV.` / `메이오 대학교` | `AETHER CORP.` / `아르카디아 마탑` / `세이렌 학원` |
-| `{{GOAL_VAR}}` | `prog` (`과제 완성도 0~100%`) | `trust` (프로젝트 진척도) / `bond` (결계 수복률) |
-| `{{DEADLINE_VAR}}` | `d_day` (`D-14`) | `d_day` (평가일까지 D-7 / 개기월식까지 D-10) |
-| `{{TENSION_VAR}}` | `stress` (`피로·질투 텐션 0~100%`) | `suspicion` (의심도) / `corruption` (타락·유혹 텐션) |
-| `{{MESSENGER_NAME}}` | `LINE` / `7조 단톡방` | `사내 메신저(Slack)` / `마력 통신구` / `학원 톡` |
-| `{{CHAR_META_MAP}}` | `"아야메": { prefix: "aya", tag: "교토·문학부", spot: "도서관 열람실" }` | `"케이": { prefix: "kei", tag: "학생회·서기", spot: "학생회실" }` |
-| `{{ASSET_BASE_URL}}` | `https://.../assets/` | 해당 작품의 Gen-IT CDN `/assets/` 베이스 URL |
+1. **에셋 통일 내보내기**: `832×1216` 생성 후 웹 GUI `📦 Genit 내보내기` ➔ `로스터 전체 일괄 내보내기` + `폴더/원본파일명 유지` + `1024×1536 통일`.
+2. **문서 복제 및 Frontmatter 설정**: `docs/genit/{테마}_젠잇_캐릭터_채팅_v2.2_완성본.md` 생성 (`roster: {로스터명}`, `status: active`).
+3. **고정 인원수 배제 & 동적 확장 설계**: 프롬프트·설정집·HTML·JSX 어디에도 `"N인방"`, `"N명 전원"`을 하드코딩하지 않고 **`CHAR_META` 1줄 추가 + `roster_stats` 동적 파싱**으로 설계.
+4. **CDN URL 확보 & JSX 3종 탑재**: 본문 정상 이미지에서 `ASSET_BASE_URL` 추출 ➔ `Status` · `Talk` · `Board` 3종 JSX에 붙여넣고 `failedUrls` 모노그램 폴백 동작 확인.
+5. **검증 및 실전 점검**: `.\.venv\Scripts\python.exe scripts/validate_genit_work.py --force` 실행 후 인트로 HTML·4탭 `Status`·D20·1:1 `Talk`·`Board` 동작 점검.
 
 ---
 
-## 📋 3. 탭별 불변 규칙 (검증 통과 필수 스펙)
+## 2. 8~12대 전역 변수 (Variables) 표준 슬롯
 
-### ① 탭 1 `[기본]` — 인트로 HTML 작성 3대 불변식
-1. **0칸 정렬 & 빈 줄 금지**: CommonMark+HTML 혼합 파서는 `빈 줄 + 4칸 이상 들여쓰기`를 `<pre><code>` 코드블록으로 오인하므로 모든 HTML 태그는 **들여쓰기 0칸**으로 작성.
-2. **업로드 이미지 매크로(`{{파일명.webp}}`) 격리**: 젠잇이 이를 마크다운 이미지(`![...](blob:...)`)로 치환하므로, 매크로 **바로 위·아래에는 반드시 빈 줄 1줄씩** 넣어 HTML 블록 파싱을 잠시 끊어줌.
-3. **가이드 준수**: `<style>`, `class`, `id`, `on*`, `position: fixed/sticky`, `z-index`, `data:`, `javascript:` 사용 금지 (인라인 `style`만 사용).
+> `[에셋]` 탭 전역 변수에 등록합니다. `roster_stats`와 `items` 같은 장문 문자열은 절대 `setReturnValue`에 넣지 않고 전역 변수로만 관리합니다.
 
-### ② 탭 2 `[프롬프트]` — 12,000자 예산 & 출력 공식
-* **합산 한도**: `메인 프롬프트 + max(루트별 추가 프롬프트) <= 12,000자` (권장 배분: 메인 `9,000~9,800자` + 추가 `1,800~2,500자`, 안전 여유 버퍼 500~700자; 히든 `2,000자`는 별도 독립 버퍼; 장식 문구 대신 개조식 압축 유지하되 Few-shot·관계성·분기 정밀도 강화에 활용).
-* **이미지 출력 공식**: `{{url}}[접두사]/[접두사]_[3자리코드]_[포즈명].webp`
-* **상태창 & 메신저 호출 공식**:
-  * 매 턴 말미: `[@id=Status|turn=...|time=...|location=...|char_name=...|prog=...|d_day=...|affection=...|stress=...|roster_stats=...|line_msg=...|reaction=...]`
-  * 선택 호출(질투 `70+` / 심야 톡 / `[LINE 선톡]`·`[LINE 답장]`): `[@id=Line|room=...|time=...|log=화자:내용;;나:답장;;화자:후속답장]`
+| 구분 | Key | 초기값 예시 | 역할 |
+| :---: | :--- | :--- | :--- |
+| **필수 8종** | `turn` | `1` | 누적 대화 턴 수 (`1, 2, 3...`) |
+| **필수 8종** | `time` | `낮` | 시간대 (`아침` / `낮` / `저녁` / `밤`) |
+| **필수 8종** | `location` | `{{START_SPOT}}` | 직관적 한글 거점명 |
+| **필수 8종** | `char_name` | `{{MAIN_CHAR}}` | 현재 대화 중인 주 화자 |
+| **필수 8종** | `affection` | `20` | 호감도 (**`0~100` 정수, `%` 기호 절대 생략**) |
+| **필수 8종** | `submissiveness` / `stress` | `10` | 굴복·피로 텐션 (**`0~100` 정수**) |
+| **필수 8종** | `tension` | `15` | 현장 열기·질투 텐션 (**`70+` 고조/합류**) |
+| **필수 8종** | `roster_stats` | `캐릭터A:20/10,...` | 동적 주민 호감/보조 영구 기록장 (신규 추가 자동 확장) |
+| **확장 4종** | `day` / `weather` | `1일차 (월)` / `맑음` | 요일별 이벤트·날씨별 복장(`attire`) 연출 |
+| **확장 4종** | `trust` / `items` | `20` / `선물A:2,선물B:1` | 평판/신뢰도(`50+` 비밀 거점 해금) 및 선물함 소지품 |
 
-### ③ 탭 3 `[설정집]` — 모듈식 디테일 확장 패턴 (총 11슬롯 권장)
-* **공개(`숨기기: OFF`) 4종**: ① 주요 거점 공간 매핑(`지역`, 배경 통합 포즈 직접 연결) ② 핵심 목표 룰북(`설정`) ③ 세계관·소문·이벤트(`설정`) ④ 메신저 6인 말투 가이드(`설정`)
-* **히든(`숨기기: ON`, `모드`) 7종**: ①~③ 서브 히로인별 1:1 승격 루트 3종 ④ 합숙/숙박 해프닝 ⑤ 비밀 밀회 스팟(특수 장소 에셋 직결) ⑥ 하렘 쟁탈전 ⑦ 웨딩/엔딩 애프터스토리
-* **UI 한도**: 이름 20자 이내 · 키워드 **각 15자 이내 최대 5개** · 설명 500자 이내 · 프롬프트 500자 이내.
+---
 
-### ④ 탭 4 `[캐릭터]` — 중복 간섭 차단 규격
-* **별명**: 대사창 프로필 자동 매칭용(각 15자 이내, 쉼표 구분).
-* **키워드**: **각 15자 이내 최대 5개**, 캐릭터 간 공통 명사(`동기`, `선배` 단독 등) **중복 절대 금지**.
+## 3. 탭 1 `[설명]` 0칸 정렬 확장형 HTML 표준 템플릿
 
-### ⑤ 탭 5 `[에셋]` — `Status` + `Line` JSX 템플릿 스켈레톤
-* **`ASSET_BASE_URL` + `encodeURIComponent` 패턴**:
-  ```jsx
-  const ASSET_BASE_URL = "https://{CDN_HOST}/media/characters/{UUID}/assets/";
-  const portraitUrl = `${ASSET_BASE_URL}${activeMeta.prefix}/${encodeURIComponent(`${activeMeta.prefix}_${portraitPose}.webp`)}`;
+> CommonMark+HTML 파서 깨짐 방지를 위해 **모든 줄 선행 공백 0칸**, `{{파일명.webp}}` 매크로 **위·아래만 빈 줄 1줄씩**, 다인 명부는 `<details>` 아코디언 + `[NEW RESIDENTS]` 카드로 구성합니다.
+
+```html
+*이 작품의 모든 등장인물은 성인임을 밝힙니다. 본 작품은 문학적 허구의 창작물입니다.*
+
+<div style="max-width:540px;margin:6px auto;border:2px solid #d49b54;border-radius:14px;overflow:hidden;background-color:#13111c;color:#f3f0f8;word-break:keep-all;overflow-wrap:break-word;">
+<div style="padding:22px 16px;text-align:center;background:linear-gradient(135deg,#3b1947,#13111c);border-bottom:1px solid rgba(212,155,84,0.4);">
+<div style="font-size:20px;font-weight:900;color:#fff8e7;">{{WORLD_TITLE}}</div>
+<div style="font-size:12.5px;color:#f5d0fe;margin-top:6px;">{{SUB_TAGLINE}}</div>
+</div>
+<div style="padding:16px;">
+<div style="font-size:14px;font-weight:800;color:#f5c542;margin-bottom:8px;">[NEW RESIDENTS] 최근 합류 인물</div>
+<div style="background-color:rgba(255,255,255,0.04);border:1px solid rgba(244,114,182,0.4);border-radius:12px;padding:12px;margin-bottom:14px;">
+<div style="max-width:290px;margin:0 auto 10px;border-radius:10px;overflow:hidden;">
+
+{{heroine_000_평상.webp}}
+
+</div>
+<div style="font-weight:800;font-size:15px;color:#fbcfe8;">✨ {{CHAR_NAME}}</div>
+<div style="font-size:12.5px;color:#cbd5e1;line-height:1.55;">{{CHAR_SHORT_INTRO}}</div>
+</div>
+<details open style="background-color:rgba(255,255,255,0.02);border:1px solid rgba(147,197,253,0.3);border-radius:12px;padding:12px;">
+<summary style="color:#93c5fd;font-weight:800;font-size:13.5px;cursor:pointer;">📖 주요 인물 명부 (지속 확장)</summary>
+<div style="margin-top:10px;font-size:12.5px;color:#cbd5e1;">기존 인물 카드 복사 영역</div>
+</details>
+</div>
+</div>
+```
+
+---
+
+## 4. 탭 2 `[프롬프트]` — 12,000자 공식 · `ambient` / `dm_from` · D20 & 충돌 방지
+
+* **합산 한도**: `메인 프롬프트 + max(루트별 추가 프롬프트) <= 12,000자` (권장 배분: 메인 `9,000~9,800자` + 추가 `1,800~2,500자`, 프롤로그 `<= 2,000자`, 히든 `<= 2,000자` 독립 버퍼). 장식 문구 증량 대신 개조식 압축을 유지한 채 Few-shot·다인 관계성·분기 정밀도 강화에 활용합니다.
+* **분량 지침 단일화**: 시작 설정별 히든 프롬프트에 출력 글자 수·이미지 수를 따로 적지 않고 **"출력 분량·이미지 규격은 메인 프롬프트를 준수한다"**로 단일 위임합니다.
+* **이미지 출력 공식**: `{{url}}{prefix}/{prefix}_{code}.webp` (슬래시 누락 `{{url}}/xxx_000.webp` 엄금).
+* **탈 얀데레 1:1 DM & `ambient` 지시문 (메인 프롬프트 복붙용)**:
+  ```text
+  [상태창·메신저·반환변수 지시]
+  - 수치(affection, submissiveness, tension, trust)는 % 기호 없이 0~100 정수만 기입한다.
+  - 평소 턴의 70~80%는 dm_from=없음|dm_preview= 로 비우고 ambient에 고요한 풍경·소리 1줄만 적는다.
+  - 개인톡(dm_from)은 최소 3~4턴 쿨타임 후 시간대 전환·헤어진 직후·이벤트 후 [일상·나눔 / 가벼운 부탁 / 수줍은 여운] 위주로 1건만 보낸다. (질투 톡은 호감 75+ & tension 75+ 이상 예외 허용)
+  - [@id=Talk]는 유저가 [1:1 톡 확인/선톡/답장]을 보냈을 때만 Status 윗줄에 출력한다([톡 종료] 시 중단).
+  - [@id=Board]는 새 아침·거점 방문·[알림판 확인] 시에만 Status 윗줄에 출력한다.
+  - 반환변수(tone, event[합계|등급|상황], gift, dm_reply, quest) 수신 시 이번 턴 서사에 즉시 반영하되 D20 낮은 눈금에도 호감도 페널티는 금지한다.
   ```
-* **`Status` 위젯 필수 기능**: ① 상단 헤더(거점·시간·D-Day·턴) ② 메신저 알림 바 + `💬 톡 보내기` 토글(대상 칩 + 인라인 `<input>` 선톡 전송) ③ 포즈 자동 전환 초상화 + 3대 게이지 ④ 6인 거점 이동 배지 ⑤ 스킨십/케어 퀵 버튼.
-* **`Line` 위젯 필수 기능**: ① 1:1 / 그룹톡 자동 판별 헤더 ② `minHeight: 210px` 여백 + `오늘 · {room}` 배지 + `;;` 누적 로그 파싱 ③ `💬 답장하기`(인라인 `<input>` + 즉시 말풍선 반영) · `📴 라인 끄기` 2버튼.
+* **3종 상태창 호출 시그니처**:
+  - `[@id=Status|turn=...|day=...|time=...|weather=...|location=...|char_name=...|affection=...|submissiveness=...|tension=...|trust=...|roster_stats=...|items=...|ambient=...|dm_from=...|dm_preview=...|attire=...|reaction=...]`
+  - `[@id=Talk|room={상대이름}|time={HH:MM}|log={상대:내용;;나:내답장;;상대:후속답장}]`
+  - `[@id=Board|day=...|weather=...|notice={공지1줄}|q1={인물:제목:장소:보상}|q2={...}|q3={...}]`
+
+---
+
+## 5. 탭 5 `[에셋]` — 공식 JSX 3종 (`Status` · `Talk` · `Board`) 스켈레톤 & D20 `EVENT_POOL`
+
+### 공식 샌드박스 준수 불변식
+1. **React 훅**: 반드시 `React.useState(...)` 접두 사용.
+2. **리터럴 `setReturnValue` 200자 제한**: 반드시 `setReturnValue('tone', ...)`, `setReturnValue('event', ...)`, `setReturnValue('gift', ...)`, `setReturnValue('dm_reply', ...)`, `setReturnValue('quest', ...)`처럼 **문자열 리터럴 키로 직접 호출**(루프 호출 금지, 합계 200자 이하).
+3. **클릭 핸들러 전용 호출**: 렌더 본문 호출 절대 금지, `onClick` 내부에서만 동기 실행.
+4. **`fillInput` vs `sendMessage(..., false)`**: 이동·선물·수락·톡 전송은 `sendMessage(..., false)` 즉시 실행, 어프로치·케어 초안은 `fillInput(text, false)`.
+5. **테마 안전 & 폴백**: `light-dark(...)` 또는 CSS 변수 사용, 이미지 `onError` 시 `failedUrls` 모노그램 폴백 렌더링.
+
+```jsx
+function Status(props) {
+  const [activeTab, setActiveTab] = React.useState("status");
+  const [tone, setTone] = React.useState("다정");
+  const [rolledEvent, setRolledEvent] = React.useState(null);
+  const [failedUrls, setFailedUrls] = React.useState({});
+
+  // ★ 신규 캐릭터 추가 시 1줄 추가 (미등록 인원도 roster_stats/char_name에서 자동 인식·모노그램 폴백)
+  const ASSET_BASE_URL = "https://{CDN_HOST}/media/characters/{UUID}/assets/";
+  const CHAR_META = {
+    "{{MAIN_CHAR}}": { prefix: "{{PREFIX}}", tag: "{{TAG}}", spot: "{{START_SPOT}}", icon: "✨", fav: "{{FAV_GIFT}}" }
+  };
+
+  // ★ EVENT_POOL 작성 원칙: 작위적 고백·억지 스킨십 배제, 세계관 날씨·시설·일상 기반 자연 상황 16종
+  const EVENT_POOL = [
+    "갑작스러운 소나기(급히 비를 피할 처마나 실내를 찾아야 함)",
+    "거센 돌풍(바람에 머리카락·소지품이 날려 함께 붙잡아야 함)",
+    "갑작스러운 정전(주변 조명이 꺼져 어둠 속 의지해야 함)",
+    "확성기 안내 방송(근처 행사·긴급 공지가 크게 울려 퍼짐)",
+    "발목 삐끗(발을 헛디뎌 잠깐 부축이 필요한 상황)"
+    // ... 해당 로스터 세계관에 맞는 물리적 일상 해프닝 16종 내외 채우기
+  ];
+
+  const gChar = typeof useTemplateValue === "function" ? useTemplateValue("char_name") : null;
+  const gAff = typeof useTemplateValue === "function" ? useTemplateValue("affection") : null;
+  const cleanInt = (v, fb) => { const n = parseInt(String(v ?? "").replace(/[^0-9-]/g, ""), 10); return isNaN(n) ? fb : Math.min(100, Math.max(0, n)); };
+  const affNum = cleanInt(props.affection !== undefined ? props.affection : gAff, 20);
+  const markFailed = (u) => { if (u) setFailedUrls((p) => (p[u] ? p : { ...p, [u]: true })); };
+
+  // 클릭 핸들러에서만 상태/반환변수 갱신 (리터럴 키 준수)
+  const handleSelectTone = (next) => { setTone(next); if (typeof setReturnValue === "function") setReturnValue('tone', next); };
+  const handleRollEvent = () => {
+    const total = (Math.floor(Math.random() * 20) + 1) + Math.floor(affNum / 25);
+    const tier = total >= 18 ? "💥특급" : total >= 11 ? "✨성공" : total >= 5 ? "😳아슬" : "😈역전";
+    const ev = EVENT_POOL[Math.floor(Math.random() * EVENT_POOL.length)];
+    const payload = `${total}|${tier}|${ev}`;
+    if (typeof setReturnValue === "function") setReturnValue('event', payload);
+    setRolledEvent({ total, tier, ev, payload });
+  };
+  const handleQuickApproach = () => {
+    if (typeof setReturnValue === "function") setReturnValue('tone', tone);
+    const draft = `${String(props.char_name || gChar || "{{MAIN_CHAR}}")} 곁으로 다가가 ${tone}하게 말을 건넨다.`;
+    if (typeof fillInput === "function") fillInput(draft, false);
+    else if (typeof sendMessage === "function") sendMessage(draft, true);
+  };
+  // 4탭 UI: [📊 상태 (+톤 토글/D20/fillInput)] [📍 이동(allCharNames.length)] [🎁 선물] [💌 톡·민원]
+  return null;
+}
+```
+*(참고: `Talk(props)`는 `setReturnValue('dm_reply', ...)` + `sendMessage(..., false)`, `Board(props)`는 `ICON_MAP` 미등록 시 `✨` 폴백 + `setReturnValue('quest', ...)` + `sendMessage(..., false)` 패턴을 동일 적용하며 상세 풀 코드는 `docs/genit/oto_v2_2.md`를 참조합니다.)*
+
+---
+
+## 6. 부록: 신규 캐릭터 추가 1분 체크리스트
+
+1. **`[캐릭터]` 탭**: 신규 인물 등록 (이름 · 별명 · 키워드 5개 비중복 · 소개 · 프롬프트 · 경로 `{{url}}{prefix}/{prefix}_{code}.webp`).
+2. **`[프롬프트]` 탭**: 하단 `[캐릭터 식별자(Prefix) 매핑 테이블]`에 1줄 추가.
+3. **`[에셋]` 탭**: `Status`·`Talk` `CHAR_META` 및 `Board` `ICON_MAP`에 1줄 추가 + `roster_stats` 초기값 끝에 `,이름:초기값` 추가.
+4. **`[설명]` 탭**: `[NEW RESIDENTS]` 섹션에 기존 카드 `<div>` 복사 후 `[이미지 업로드]`와 소개 문구만 교체.

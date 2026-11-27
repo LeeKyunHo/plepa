@@ -25,7 +25,10 @@ description: >-
 ## 3. 고정 실행 절차 (Step-by-Step)
 1. 캐릭터 JSON 편집 시 `sdxl_positive`·`sdxl_nude_positive` 양쪽에 `BREAK` 구분자 및 필수 외형/소품(`signature_accessories`)이 보존되었는지 확인합니다.
 2. 배경 추가 시 색조 오염(`yellow tint`, `amber lighting` 등) 차단 네거티브가 캐릭터 JSON에 유지되는지 점검합니다.
-3. Gen-IT 완성본(`docs/genit/*.md`) 수정 시 메인+추가 프롬프트 합산 12,000자 이하(권장 메인 9,000~9,800자 + 추가 1,800~2,500자), 히든 2,000자(독립 버퍼), 설정집/캐릭터 한도 및 실존 에셋 서픽스(`validate_genit_work.py`) 일치를 확인합니다.
+3. Gen-IT 완성본(`docs/genit/*.md`) 작성·수정 시 아래 마스터 패키지 7대 표준과 실존 에셋 서픽스(`validate_genit_work.py`) 일치를 확인합니다:
+   - 메인+추가 `<= 12,000자` · 히든 `<= 2,000자`(독립 버퍼, 메인 분량 지침 충돌 금지) · 경로 `{{url}}{prefix}/{prefix}_{code}.webp` · `%` 제외 정수.
+   - 고정 인원수 하드코딩 금지(`CHAR_META` 1줄 확장·미등록 자동 인식·`failedUrls` 모노그램 폴백), HTML 0칸 정렬 & `<details>`/`[NEW RESIDENTS]`.
+   - 공식 JSX(`React.` 접두·리터럴 `setReturnValue` 200자·클릭 전용 변경·`fillInput`/`sendMessage(..., false)` 분리·`light-dark()`) 3종(`Status`/`Talk`/`Board`), 탈 얀데레 1:1 DM 3~4턴 쿨타임(`ambient` 70~80%), 자연·일상 중심 D20 `EVENT_POOL`.
 4. 변경 완료 후 해당 로스터의 `precheck`와 계약 테스트를 반드시 실행합니다.
 
 ## 4. 필수 종료 검증 커맨드 (Gate)

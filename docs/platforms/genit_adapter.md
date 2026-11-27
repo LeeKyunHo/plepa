@@ -17,7 +17,7 @@
 | 첫 턴 인사말 | 탭 2 `[프롬프트]` → `프롤로그` | 2,000자 | O |
 | 세계관·모드 확장 | 탭 3 `[설정집]` (11슬롯 권장) | 이름 20자 / 키워드 5개(각 15자) / 설명 500자 / 프롬프트 500자 | 조건부(키워드) |
 | 히로인 6인 프로필 | 탭 4 `[캐릭터]` | 이름 20자 / 별명(각 15자) / 키워드 5개(각 15자) / 소개 300자 / 프롬프트 500자 | 조건부(키워드) |
-| 상태 데이터 & 위젯 | 탭 5 `[에셋]` → 전역 변수 + JSX | 변수 30개(Key 15자, Val 200자) / JSX 50,000자 | 변수 O / JSX X |
+| 상태 데이터 & 위젯 | 탭 5 `[에셋]` → 전역 변수 + JSX 3종 | 변수 8~12개(최대 30개, `roster_stats`/`items` 전역 분리) / JSX 50,000자 / **`setReturnValue` 리터럴 합계 `<= 200자`** | 변수 O / JSX X |
 
 ---
 
@@ -37,15 +37,20 @@
 
 ---
 
-## 3. 상태창 & 양방향 메신저 구현
+## 3. 상태창 · 탈 얀데레 1:1 DM · 알림판 & 공식 JSX 규격
 
-- **상태창 (`Status`)**: 매 턴 마지막 줄에 고정 출력:
+- **공식 JSX 샌드박스 불변식**: `React.` 접두(`React.useState`), 리터럴 키 직접 `setReturnValue`(`tone`, `event`, `gift`, `dm_reply`, `quest` 총 200자 이하), `onClick` 전용 변경, 시스템 액션 `sendMessage(..., false)` vs 롤플레이 `fillInput(..., false)` 분리, `light-dark(...)` 테마 대응 및 **`CHAR_META` 1줄 동적 확장 + `failedUrls` 모노그램 폴백**.
+- **상시 상태창 (`Status`, 4탭 HUD + `%` 생략 0~100 정수 + D20 돌발 이벤트)**:
   ```text
-  [@id=Status|turn=[턴]|time=[낮/밤]|location=[한글장소명]|char_name=[메인히로인]|prog=[진척도]|d_day=[남은일수]|affection=[호감도]|stress=[피로및질투텐션]|roster_stats=[이름:호감/텐션,...]|line_msg=[짧은메신저알림1줄]|reaction=[외적반응또는속마음]]
+  [@id=Status|turn=[정수]|day=[N일차(요일)]|time=[아침/낮/저녁/밤]|weather=[날씨]|location=[한글장소명]|char_name=[주화자]|affection=[정수]|submissiveness=[정수]|tension=[정수]|trust=[정수]|roster_stats=[이름:호감/보조,...]|items=[품목:수량,...]|ambient=[고요한풍경1줄]|dm_from=[발신자또는없음]|dm_preview=[미리보기]|attire=[복장]|reaction=[속마음]]
   ```
-- **메신저 (`Line`)**: 질투 인터셉트(`stress 70+`), 심야 톡, 유저 선톡/답장 시에만 상태창 바로 윗줄에 출력:
+- **조건부 1:1 개인톡 (`Talk`, 탈 얀데레 쿨타임)**: 평소 70~80%는 `dm_from=없음`+`ambient`만 유지하며 **3~4턴 쿨타임** 후 `[일상·나눔 / 가벼운 부탁 / 수줍은 여운]` 1건 도착 (`affection>=75 & tension>=75`일 때만 질투 예외 허용). 유저가 열거나 선톡·답장 시에만 `Status` 윗줄 출력 (`[톡 종료]` 시 중단):
   ```text
-  [@id=Line|room=[방이름]|time=[HH:MM]|log=[화자:내용;;나:내답장;;화자:후속답장]]
+  [@id=Talk|room=[상대이름]|time=[HH:MM]|log=[상대:내용;;나:내답장;;상대:후속답장]]
+  ```
+- **조건부 의뢰·공지 알림판 (`Board`)**: 새 아침·거점 방문·확인 버튼 클릭 시 일일 의뢰 3건 출력 (`[✅ 수락·이동]` 시 `quest` + `sendMessage(..., false)`):
+  ```text
+  [@id=Board|day=[N일차(요일)]|weather=[날씨]|notice=[공지1줄]|q1=[인물:제목:장소:보상]|q2=[...]|q3=[...]]
   ```
 
 ---
