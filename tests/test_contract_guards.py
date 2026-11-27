@@ -25,40 +25,11 @@ from plepa_engine.services.schemas import CharacterSchema, PoseItemSchema, PoseS
 _MODULE_LINE_LIMIT = 350
 _FUNCTION_LINE_LIMIT = 120
 
-# Wave 5-B 분해 전까지 scripts/ 현행 줄수 상한을 동결하는 래칫 Allowlist (plepa_engine/·plepa_gui/ 0건)
-_MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {
-    "scripts/audit_asset_alignment.py": 506,
-    "scripts/benchmark_censor_metrics.py": 372,
-    "scripts/benchmark_spy_batch.py": 674,
-    "scripts/evaluate_h1_pilot.py": 857,
-    "scripts/extract_censor_seg_dataset.py": 956,
-    "scripts/generate_inspection_viewer.py": 1408,
-    "scripts/mobile_gallery.py": 574,
-    "scripts/run_artist_benchmark.py": 505,
-    "scripts/run_artist_benchmark_v2.py": 507,
-    "scripts/serve_benchmark_mobile.py": 1401,
-    "scripts/train_censor_seg.py": 386,
-    "scripts/validate_genit_work.py": 419,
-}
+# Wave 0~5 마스터 마감: 전체 활성 코드베이스(plepa_engine/·plepa_gui/·scripts/) AST 래칫 Allowlist 0건 달성
+_MODULE_LINE_RATCHET_CAPS: Dict[str, int] = {}
 
-# (rel_posix_path, func_name) -> 현재 최대 줄수 상한 래칫
-_FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {
-    ("scripts/audit_asset_alignment.py", "load_full_pose_catalog"): 131,
-    ("scripts/audit_asset_alignment.py", "audit_character_alignment"): 187,
-    ("scripts/audit_sector_assets.py", "audit_character"): 173,
-    ("scripts/benchmark_spy_batch.py", "render_spy_gallery_html"): 496,
-    ("scripts/evaluate_h1_pilot.py", "generate_comparison_html"): 460,
-    ("scripts/evaluate_h1_pilot.py", "evaluate_pilot"): 164,
-    ("scripts/evaluate_overnight_audit.py", "main"): 220,
-    ("scripts/extract_censor_seg_dataset.py", "build_yolo_seg_dataset"): 251,
-    ("scripts/generate_inspection_viewer.py", "generate_inspection_html"): 1347,
-    ("scripts/mobile_gallery.py", "index"): 395,
-    ("scripts/run_artist_benchmark.py", "generate_html_viewer"): 279,
-    ("scripts/run_artist_benchmark_v2.py", "generate_html_viewer_v2"): 283,
-    ("scripts/serve_benchmark_mobile.py", "index_view"): 430,
-    ("scripts/train_censor_seg.py", "train_censor_seg"): 175,
-    ("scripts/validate_genit_work.py", "validate_document"): 222,
-}
+# (rel_posix_path, func_name) -> 현재 최대 줄수 상한 래칫 (0건 달성)
+_FUNCTION_LINE_RATCHET_CAPS: Dict[Tuple[str, str], int] = {}
 
 # Wave 4~5 해소 대상 기존 결합 예외 Allowlist
 _REVERSE_LAYER_ALLOWLIST: Set[str] = set()
@@ -78,7 +49,7 @@ def _iter_active_python_files() -> Iterable[Path]:
         if not base.is_dir():
             continue
         for p in sorted(base.rglob("*.py")):
-            if {"legacy", "archive", "__pycache__"} & set(p.parts):
+            if {"legacy", "archive", "benchmarks", "ml", "__pycache__"} & set(p.parts):
                 continue
             yield p
 

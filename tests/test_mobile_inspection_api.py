@@ -25,8 +25,8 @@ import plepa_engine.services.generation_service as gen_svc_mod
 import plepa_gui.api_routes as api_routes_mod
 import plepa_gui.app as gui_app_mod
 import plepa_gui.pages.mobile_viewer as mobile_viewer_mod
-import scripts.generate_inspection_viewer as giv
-import scripts.serve_benchmark_mobile as sbm
+import scripts.archive.generate_inspection_viewer as giv
+import scripts.archive.serve_benchmark_mobile as sbm
 
 
 def _webp_bytes(color=(120, 40, 200)) -> bytes:

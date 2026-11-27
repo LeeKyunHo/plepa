@@ -363,7 +363,7 @@ def test_custom_yolo_seg_priority_and_train_dry_run(tmp_path, monkeypatch):
     import sys
     import types
     import plepa_engine.censor as censor
-    from scripts.train_censor_seg import main as train_main
+    from scripts.ml.train_censor_seg import main as train_main
 
     censor.unload_censor_models()
     dummy_weight = tmp_path / "models" / "censor_seg.pt"
@@ -469,7 +469,7 @@ def test_custom_yolo_seg_priority_and_train_dry_run(tmp_path, monkeypatch):
 
 def test_extract_yolo_seg_polygons_from_diff(tmp_path):
     """원본·검열본 픽셀 차분 기반 YOLO-seg 폴리곤 추출 및 빈 ground_truth 안전 종료를 검증합니다."""
-    from scripts.extract_censor_seg_dataset import build_yolo_seg_dataset, extract_yolo_seg_polygons_from_diff, main
+    from scripts.ml.extract_censor_seg_dataset import build_yolo_seg_dataset, extract_yolo_seg_polygons_from_diff, main
 
     origin_img = Image.new("RGB", (400, 400), (235, 190, 170))
     censored_img = origin_img.copy()
@@ -637,7 +637,7 @@ def test_mutually_exclusive_hand_occlusion_and_hole_preservation(monkeypatch):
 
 def test_extract_black_censor_mask_and_restore_skin():
     """kiro 단일 완성본의 솔리드 블랙 마스크 추출 및 피부 톤 인페인팅 역복원 검증."""
-    from scripts.extract_censor_seg_dataset import extract_black_censor_mask_and_restore_skin
+    from scripts.ml.extract_censor_seg_dataset import extract_black_censor_mask_and_restore_skin
 
     skin_color = (238, 188, 168)
     img = Image.new("RGB", (400, 400), skin_color)
@@ -738,7 +738,7 @@ def test_p0_bottom_edge_false_positive_gate():
 def test_p0_benchmark_metrics_helpers():
     """Verify Mask IoU and Boundary IoU helper behaviors for P4 evaluation."""
     import numpy as np
-    from scripts.benchmark_censor_metrics import compute_mask_iou, compute_boundary_iou
+    from scripts.ml.benchmark_censor_metrics import compute_mask_iou, compute_boundary_iou
 
     gt = np.zeros((256, 256), dtype=bool)
     gt[60:180, 90:150] = True

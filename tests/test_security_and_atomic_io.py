@@ -22,9 +22,9 @@ from plepa_engine.models import PoseEntry
 from plepa_engine.services import genit_exporter
 from plepa_engine.services.upscale_service import UpscaleService
 from plepa_gui.api_routes import api_router
-import scripts.generate_inspection_viewer as giv
-import scripts.mobile_gallery as mg
-import scripts.serve_benchmark_mobile as sbm
+import scripts.archive.generate_inspection_viewer as giv
+import scripts.archive.mobile_gallery as mg
+import scripts.archive.serve_benchmark_mobile as sbm
 
 
 def _tiny_webp_bytes(color=(120, 40, 200)) -> bytes:
@@ -269,7 +269,7 @@ def test_atomic_file_replacement_preserves_originals_on_failure(tmp_path, monkey
 def test_no_import_time_mkdir_and_queue_retention_cap():
     """C4: 모바일 서버 스크립트 임포트 시 디렉토리 자동 생성 부작용 없음 및 완료 큐 상한(200건) 검증."""
     root = Path(__file__).resolve().parent.parent
-    for rel in ("scripts/serve_benchmark_mobile.py", "scripts/mobile_gallery.py"):
+    for rel in ("scripts/archive/serve_benchmark_mobile.py", "scripts/archive/mobile_gallery.py"):
         tree = ast.parse((root / rel).read_text(encoding="utf-8"))
         for stmt in tree.body:
             for node in ast.walk(stmt):
